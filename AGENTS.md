@@ -146,6 +146,7 @@ Primary work:
 - Own model-provider adapters, model-ready context, signal-analysis prompts, structured transport, and provider reliability evaluation.
 - Jointly evaluate provider/model selection with Role 3: Role 2 assesses integration, latency, privacy, cost, structured output, and reliability; Role 3 assesses quest quality and engine fit.
 - Produce exactly three distinct candidate quests for Role 3 to validate and orchestrate.
+- Produce the AI/data integration build plan for Roles 4 and 5, covering available data, confidence/source metadata, UI-relevant states, mock fixtures, and proposed shared-contract needs without deciding their interaction design.
 - Maintain AI-specific safety, privacy, latency, cost, reliability, moderation, and observability requirements.
 
 Does not own quest lifecycle, deterministic quest rules, or UI decisions. Role 2 supplies analysed signals and AI-generated candidates to Role 3.
@@ -271,6 +272,7 @@ Keep provider payloads, Twitch payloads, UI view models, and persistence records
 ## Collaboration
 
 - Work from separate local clones. Personal ChatGPT/Codex context and uncommitted changes are not shared.
+- Read `docs/TEAM_CONTEXT.md` before starting shared-contract or demo-critical work, and update its coordination board when claiming such work.
 - Start each task from current `main` and use `role-<n>/<short-summary>` branches.
 - Never push directly to `main`; use a pull request for every change.
 - Keep branches short-lived, sync current `main` before review, and integrate at least daily.

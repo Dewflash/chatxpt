@@ -6,7 +6,7 @@ This file tracks cross-project outcomes only. Each contributor updates their own
 
 | ID | Priority | Status | Owner | Outcome | Dependency | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- | --- |
-| P-001 | P0 | IN PROGRESS | Role 1 | Collaboration foundation is merged and available to every contributor. | None | Role guides, playbook, ownership, PR/issue templates, TODOs, changelog workflow, and passing repository checks. |
+| P-001 | P0 | DONE | Role 1 | Collaboration foundation is merged and available to every contributor. | None | Role guides, playbook, ownership, PR/issue templates, TODOs, changelog workflow, and passing repository checks. |
 | P-002 | P0 | READY | Role 1 | Legacy source is mechanically migrated into role-owned boundaries. | P-001 | Existing behaviour preserved; imports/routes work; owners can work without file overlap. |
 | P-003 | P0 | READY | Role 1 | Shared contracts and capability model are frozen for the first integration slice. | P-002 plus owner review | Versioned types cover signals, sessions, participation, quest candidates, quest state, progress, results, platform capabilities, and real/mock metadata. |
 | P-004 | P0 | READY | Role 1 | Supabase Free and Vercel projects are configured with safe development and production environments. | P-003 | Studio, viewer client, and overlay share a test session across devices; secrets remain server-side; local fallback works. |

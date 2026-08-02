@@ -6,7 +6,7 @@ Update this file at the start and end of each Role 1 pass. Do not mark `DONE` wi
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
-| R1-001 | P0 | IN PROGRESS | Merge the beginner-safe team foundation. | None | Root/role guides, playbook, GitHub templates, CODEOWNERS, TODOs, changelog workflow, checks, and pushed PR. |
+| R1-001 | P0 | DONE | Merge the beginner-safe team foundation. | None | Root/role guides, playbook, GitHub templates, CODEOWNERS, TODOs, changelog workflow, checks, and pushed PR. |
 | R1-002 | P0 | READY | Perform the one-time mechanical ownership migration. | R1-001 | Files moved into recorded ownership boundaries with behaviour and checks preserved. |
 | R1-003 | P0 | READY | Freeze version 1 shared contracts and platform-capability model. | R1-002; input from Roles 2-5 | Types and examples reviewed; Twitch-specific payloads excluded from core. |
 | R1-004 | P0 | READY | Create Supabase Free project and minimal schema/realtime channels. | R1-003 | Profiles, sessions, quests, votes, progress/results sync across two browsers; RLS/secrets reviewed. |

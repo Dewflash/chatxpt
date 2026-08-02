@@ -60,7 +60,7 @@ If the API is unavailable, invalid, or slow, the endpoint falls back to determin
 - `src/app` - Next.js routes, API, and overlay
 - `src/components` - interactive product UI
 - `src/lib` - schemas, domain types, mock engine, and model adapter
-- `docs` - product scope, architecture, decisions, workflow, and submission checklist
+- `docs` - product scope, architecture, decisions, shared team context, workflow, and submission checklist
 - `docs/roles` - mandatory per-role authority and to-do lists
 - `changes` - role-owned changelog fragments compiled by Role 1
 - `.github` - code ownership and pull-request/cross-role issue templates

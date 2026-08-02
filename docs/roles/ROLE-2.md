@@ -16,6 +16,7 @@ Turn gameplay and audience activity into reliable, model-ready intelligence and 
 - AI provider adapters, model-ready context, signal-analysis prompts, structured transport, runtime validation, and provider reliability evaluation.
 - Joint provider/model evaluation with Role 3; submit one recommendation to Role 1 before integration.
 - AI-specific privacy, latency, cost, reliability, moderation, and observability evidence.
+- The AI/data integration build plan consumed by Roles 4 and 5: available inputs/outputs, confidence and source metadata, UI-relevant system states, mock fixtures, and proposed shared-contract needs.
 
 ## Does not own
 
@@ -25,7 +26,7 @@ Turn gameplay and audience activity into reliable, model-ready intelligence and 
 
 ## Required handoff
 
-Provide Role 3 with normalised behavioural signals, confidence, traceable context, three candidate quests, validation metadata, and provider/fallback status. Compare provider candidates with Role 3, covering integration, latency, privacy, cost, structured output, reliability, quest quality, and engine fit. Propose contract changes to Role 1 before implementation.
+Provide Role 3 with normalised behavioural signals, confidence, traceable context, three candidate quests, validation metadata, and provider/fallback status. Compare provider candidates with Role 3, covering integration, latency, privacy, cost, structured output, reliability, quest quality, and engine fit. Give Roles 4 and 5 an implementation-ready intelligence integration plan without prescribing their interaction design. Propose contract changes to Role 1 before implementation.
 
 ## Verification
 

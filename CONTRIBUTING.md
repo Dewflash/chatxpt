@@ -10,8 +10,9 @@ Before planning or editing, read:
 2. `docs/TEAM_PLAYBOOK.md`
 3. Your `docs/roles/ROLE-<n>.md`
 4. `docs/DECISIONS.md`
-5. `docs/PROJECT_TODO.md`
-6. Your `docs/roles/ROLE-<n>-TODO.md`
+5. `docs/TEAM_CONTEXT.md`
+6. `docs/PROJECT_TODO.md`
+7. Your `docs/roles/ROLE-<n>-TODO.md`
 
 ## Before starting a task
 
