@@ -46,7 +46,7 @@ If the API is unavailable, invalid, or slow, the endpoint falls back to determin
 - `src/app` - Next.js routes, API, and overlay
 - `src/components` - interactive product UI
 - `src/lib` - schemas, domain types, mock engine, and model adapter
-- `docs` - product scope, architecture, decisions, workflow, and submission checklist
+- `docs` - product scope, architecture, decisions, shared team context, workflow, and submission checklist
 - `.codex/skills/chatxpt-prototype` - shared project workflow for Codex
 - `AGENTS.md` - durable instructions for AI-assisted contributors
 

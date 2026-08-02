@@ -15,6 +15,7 @@ Ownership is temporary. Shared types and API contracts require coordination befo
 ## Daily rhythm
 
 - **Start:** ten-minute check-in; each person states one acceptance signal for the day.
+- **Claim:** update `TEAM_CONTEXT.md` before touching shared contracts or the golden demo path.
 - **Midday:** merge at least once; demo current `main`, not individual branches.
 - **End:** run the complete happy path and record blockers in issues.
 - Keep one stable golden demo scenario that must never break.
@@ -32,5 +33,6 @@ Ownership is temporary. Shared types and API contracts require coordination befo
 - Each teammate should open the same repository so `AGENTS.md` and the repo-local skill apply consistently.
 - Give ChatGPT/Codex one issue and acceptance signal at a time.
 - Ask it to inspect current files before editing; agents do not share live context or uncommitted work across five machines.
+- Distill useful conclusions from private chats into `TEAM_CONTEXT.md` or `DECISIONS.md`; do not commit raw private chat exports.
 - Review every diff and never paste API keys, private viewer data, or competition credentials into chats.
 - ChatGPT Pro and OpenAI API usage are separate; use mock mode until the team deliberately configures runtime API access.
