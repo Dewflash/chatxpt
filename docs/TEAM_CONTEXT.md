@@ -29,7 +29,6 @@ Use `Planned`, `In progress`, `Needs review`, `Blocked`, or `Done` once an area 
 ## Open questions requiring team agreement
 
 - Whether to accept, revise, or reject D-002 in `DECISIONS.md`.
-- D-003 and D-005 are still marked `Proposed`, while `AGENTS.md` and the project skill already require deterministic fallback and producer approval. Either accept those decisions or deliberately relax the corresponding constraints.
 - Which battle-royale-style scenario is the stable golden demo.
 - Who owns shared domain/API contract review.
 - Which deployment target and submission evidence format the team will use.
