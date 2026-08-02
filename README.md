@@ -46,6 +46,8 @@ Run all checks:
 npm run check
 ```
 
+The full check includes an ownership-boundary scan. Role modules may consume approved public entrypoints, but cannot import another role's private files. The factual legacy split and its still-open migration decisions are recorded in [`docs/architecture/LEGACY-MIGRATION-INVENTORY.md`](docs/architecture/LEGACY-MIGRATION-INVENTORY.md).
+
 ## Legacy optional OpenAI adapter
 
 The prototype still contains an optional server-side OpenAI adapter while the role-owned migration is in progress. It is not the accepted MVP provider path, and no teammate is authorised to incur paid API usage for the project. ChatGPT Pro does not provide shared application API billing. Never expose any provider key through a `NEXT_PUBLIC_` variable.

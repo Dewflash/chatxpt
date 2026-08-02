@@ -17,7 +17,8 @@
     "test:integration": "vitest run tests/integration",
     "test:orchestrator": "vitest run tests/integration/orchestrator.test.ts",
     "test:watch": "vitest",
-    "check": "npm run lint && npm run typecheck && npm test && npm run build"
+    "check:boundaries": "node scripts/check-role-boundaries.mjs",
+    "check": "npm run lint && npm run typecheck && npm run check:boundaries && npm test && npm run build"
   },
   "dependencies": {
     "next": "16.2.12",
