@@ -60,6 +60,7 @@ Roles 2 and 3 will jointly recommend a free provider/model path. If any provider
 ## Repository map
 
 - `src/app` - Next.js routes, API, and overlay
+- `src/core` - versioned platform-neutral contracts, public ports, and explicitly non-live contract fixtures
 - `src/components` - interactive product UI
 - `src/lib` - schemas, domain types, mock engine, and model adapter
 - `docs` - product scope, architecture, decisions, shared team context, workflow, and submission checklist
@@ -92,6 +93,8 @@ game signals + chat signals + streamer profile
 The current prototype uses same-origin browser storage and `BroadcastChannel` to synchronize the control room and overlay. The accepted MVP target replaces authoritative live state with Supabase persistence and realtime channels while preserving this local transport for local diagnostics. Twitch, OBS, AI providers, gameplay extraction, persistence, and viewer surfaces remain replaceable adapters around the core contracts.
 
 Role 1's application orchestrator will compose those adapters and Role 2/3 public ports, persist revisioned state, and broadcast role-specific view models. Cross-role work integrates after every wave through producer/consumer contract tests rather than being combined only after five separate builds finish.
+
+The version-one contract schemas and fixtures now live under `src/core/`. Legacy routes still use `src/lib/domain.ts` until the separately gated mechanical migration; the existence of new contracts does not imply the current UI or API is integrated with them yet.
 
 ## Third-party disclosure
 
