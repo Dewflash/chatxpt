@@ -9,7 +9,8 @@
 - [ ] Real Twitch chat/activity contributes audience intelligence where permitted.
 - [ ] Saved streamer personality, intensity, safety, and challenge preferences affect the cycle.
 - [ ] Exactly three Role 2 candidates reach Role 3, and exactly three validated options reach viewers.
-- [ ] One streamer and two viewers share consistent session, vote, winner, progress, result, points, and hype state.
+- [ ] Producer/consumer contract tests pass at every cross-role seam without private implementation imports.
+- [ ] One streamer and two viewers share the same authoritative revision, vote, winner, progress, result, points, and hype state.
 - [ ] The winning quest reaches the real OBS Browser Source overlay.
 - [ ] Success, failure, cancellation, skip, expiry, and reconnect-relevant paths are demonstrable.
 - [ ] No simulated fixture is presented as live-extraction or end-to-end evidence.
@@ -30,6 +31,7 @@
 - [ ] `1`/`2`/`3` Twitch-chat voting fallback is exercised where Twitch access permits it.
 - [ ] Capability/unavailable states are honest; another platform is never implied to be implemented.
 - [ ] Duplicate/late/invalid vote, reconnect, tie, and zero-vote behavior is evidenced.
+- [ ] Duplicate command IDs, stale revisions, clock skew, token expiry, and persistence/broadcast failure behavior is evidenced.
 
 ## Quality, privacy, and responsibility
 

@@ -14,7 +14,7 @@ Turn real OBS Virtual Camera frames and real Twitch audience activity into trust
 
 Role 2 is complete when:
 
-- Separate Role 4 and 5 plans are accepted after one feasibility review each.
+- Separate but synchronised Role 4 and 5 plans are accepted after one feasibility review each, with no missing public seam or circular dependency.
 - Real team-owned gameplay from OBS Virtual Camera produces timestamped, confidence-scored, game-neutral observations.
 - Real Twitch chat produces privacy-aware audience intelligence.
 - OCR and visual algorithms run selectively; unavailable facts are `unknown`.
@@ -32,6 +32,9 @@ Role 2 is complete when:
 - Raw frames are ephemeral. Raw Twitch chat may be retained for at most 24 hours under D-024.
 - AI must be free for the MVP; no paid provider usage is authorised.
 - Test fixtures may be simulated or annotated, but only real-frame/real-chat runs count as live evidence.
+- Expose Role 2 through documented public ports from `src/extraction/` and `src/ai/`; do not import another role's internals.
+- Request shared dependencies through Role 1 so multiple roles do not conflict in `package.json` or the lockfile.
+- Support universal broad visual signals for action games and calibrated HUD facts only for explicitly configured adapters; unsupported facts remain `unknown`.
 
 ## Phase 1: Unblock Roles 4 and 5
 
@@ -39,9 +42,10 @@ Role 2 is complete when:
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D2-01 | Separate plan structure and delivery order for Role 4 and Role 5 | Open | — |
+| D2-01 | Shared plan template, synchronised milestones, and delivery order for Role 4 and Role 5 | Open | — |
 | D2-02 | Required UI-visible intelligence, confidence, unknown, provider, and fallback states | Open | — |
 | D2-03 | Which UI features are P0, P1, or excluded within accepted product direction | Open | — |
+| D2-03A | Cross-plan view-model/command/fixture/dependency matrix and early design-system handoff | Open | — |
 
 ### R2-P01 — Role 4 Streamer Studio plan
 
@@ -50,10 +54,12 @@ Role 2 is complete when:
 **Plan must define:**
 
 - Surfaces and end-to-end streamer flows.
+- Required Role 1 route/embedding mounts, Role 4 public entry point, consumed view models, and emitted commands.
 - OBS Virtual Camera setup/status and real-data disclosure.
 - Profile, preferences, safety, intensity, testing, history, and live controls.
 - AI/algorithmic/unknown states exposed to the streamer.
-- Loading, disconnected, permission-denied, provider-unavailable, and reconnect states.
+- Fixture-backed loading, empty, disconnected, stale, permission-denied, provider-unavailable, fallback, reconnect, and terminal states.
+- A first milestone that publishes design tokens/base-component entry points for Role 5 without waiting for the complete Studio.
 - Dependencies on Roles 1 and 3, milestones, acceptance evidence, and exclusions.
 
 **Acceptance:** Role 4 provides one feasibility response; Joelyrk records one revision; Role 1 is notified; Role 4 can start without inventing scope.
@@ -65,12 +71,28 @@ Role 2 is complete when:
 **Plan must define:**
 
 - Exactly-three-option voting and active quest flows.
+- Required Role 1 route/Extension/hosted/OBS mounts, Role 5 public entry point, consumed view models, and emitted commands.
 - Identity, anonymous fallback, session points, hype, progress, results, and reconnect states.
 - Twitch Extension, hosted fallback, chat fallback, and viewer-facing OBS overlay coverage.
 - AI/algorithmic/unknown disclosure needed by viewers without overwhelming them.
+- Fixture-backed loading, empty, stale, permission, duplicate/late vote, tie, zero-vote, disconnected, fallback, reconnect, and terminal states.
+- Twitch iframe/viewport, mobile, accessibility, reduced-motion, focus, and OBS transparency/readability constraints.
 - Dependencies on Roles 1, 3, and Role 4's visual system; milestones, evidence, and exclusions.
 
 **Acceptance:** Role 5 provides one feasibility response; Joelyrk records one revision; Role 1 is notified; Role 5 can start without inventing scope.
+
+### R2-P02A — Cross-plan integration matrix
+
+**Outcome:** Roles 4 and 5 build separate experiences against one synchronised runtime.
+
+**Work:**
+
+- Align both plans to the shared integration waves and deadlines.
+- List every required view model, command, typed error, capability, canonical fixture ID, route/embedding mount, and upstream owner/deadline.
+- Define the early Role 4 design-system handoff and the Role 1 local Extension/overlay harness needed by Role 5.
+- State explicitly that UIs cannot own AI, extraction, lifecycle, vote resolution, countdown outcomes, permissions, rewards, persistence, or fallback selection.
+
+**Acceptance:** The two feasibility reviews confirm no missing seam or circular dependency; Role 4 and Role 5 can implement concurrently and both name the same canonical fixtures/revisions.
 
 ## Phase 2: Define Role 2 boundaries and real fixtures
 
@@ -89,11 +111,24 @@ Role 2 is complete when:
 **Work:**
 
 - Define Role 2-owned input/output ports adapting Role 1 contracts.
+- Export those ports through documented public entry points and add producer/consumer tests using Role 1's canonical examples.
 - Create real recorded-frame fixtures from team-owned gameplay plus expected annotations stored separately.
 - Create real/sanitised chat fixtures plus explicitly synthetic edge cases for tests only.
 - Propose missing canonical fields to Role 1 without editing `src/core/`.
 
 **Acceptance:** Extraction and AI tests run without Twitch/OBS; fixtures carry provenance; expected answers are not supplied to production analyzers.
+
+### R2-P03A — Early feasibility spikes
+
+**Outcome:** Role 2's highest-risk assumptions are tested before full implementation.
+
+**Work:**
+
+- Consume at least one real browser-delivered OBS Virtual Camera frame through Role 1's provisional `FrameSource`.
+- Measure a minimal motion/activity pass and one selective OCR experiment without freezing the UI thread.
+- With Role 3, test free-provider availability/structured output and confirm the no-credential algorithmic/deterministic route.
+
+**Acceptance:** Executed results, latency/resource observations, failure modes, dependency requests, and immediate recovery recommendations reach Role 1 during the first integration wave.
 
 ## Phase 3: Real-frame gameplay extraction
 
@@ -102,7 +137,7 @@ Role 2 is complete when:
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
 | D2-07 | Frame sampling cadence and adaptive-trigger strategy | Open | — |
-| D2-08 | Lightweight motion, scene, colour/bar, and icon features used in P0 | Open | — |
+| D2-08 | Universal visual feature set versus calibrated HUD-adapter feature set used in P0 | Open | — |
 | D2-09 | OCR engine, preprocessing, region-selection, and temporal confirmation strategy | Open | — |
 | D2-10 | Confidence fusion, stale-data expiry, contradiction handling, and `unknown` thresholds | Open | — |
 | D2-11 | Whether a free vision model materially improves P0 beyond algorithms/OCR | Open | — |
@@ -132,7 +167,9 @@ Role 2 is complete when:
 - Colour/bar movement where reliable.
 - Known icon/template evidence where justified.
 
-**Acceptance:** Algorithms distinguish at least quiet versus active moments on multiple owned action-game examples; false claims become low confidence or `unknown`.
+Universal features may run across action games. Colour bars, icons, text regions, and fact parsers belong to named calibrated adapters and advertise their capabilities.
+
+**Acceptance:** Universal algorithms distinguish at least quiet versus active moments on multiple owned action-game examples; calibrated facts are emitted only by matching adapters; false or unsupported claims become low confidence or `unknown`.
 
 ### R2-P06 — Selective OCR adapter
 
@@ -162,8 +199,9 @@ Role 2 is complete when:
 - Resource pressure.
 - Notable recent event.
 - Confidence, source method, observed time, expiry, and unknown fields.
+- Game-support tier and advertised extraction capabilities.
 
-**Acceptance:** Same contract works across multiple action-game examples; game/HUD-specific details remain inside extraction adapters.
+**Acceptance:** Same contract works across multiple action-game examples; universal versus calibrated capability is explicit; game/HUD-specific details remain inside extraction adapters.
 
 ## Phase 4: Real audience intelligence
 
@@ -191,6 +229,8 @@ Role 2 is complete when:
 - Sample size, confidence, freshness, and supporting aggregate evidence.
 
 **Acceptance:** Tests cover sparse, busy, sarcastic, spammy, contradictory, unsafe, and multilingual/unknown cases; stored records obey D-024.
+
+Raw chat is processed in memory by default. If Joelyrk's D2-15 choice requires temporary persistence, Role 2 supplies the minimum record/expiry requirement and Role 1 implements and tests automatic deletion within 24 hours.
 
 ### R2-P09 — Combined intelligence snapshot
 
@@ -276,7 +316,7 @@ Role 2 is complete when:
 
 **Outcome:** Role 2 delivers stable candidate/intelligence behaviour without requiring consumers to understand extraction/provider internals.
 
-**Acceptance:** Role 3 integration tests consume Role 2 outputs; Role 4/5 plans reflect actual states; Role 1 receives contract proposals, evaluation evidence, performance limits, and open risks.
+**Acceptance:** Role 2 producer tests and Role 3 consumer tests pass against the same canonical examples; Role 3 integration tests consume Role 2 outputs only through public ports; Role 4/5 plans reflect actual states; Role 1 receives contract proposals, evaluation evidence, performance limits, and open risks.
 
 ## Escalate to Role 1 when
 

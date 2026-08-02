@@ -18,6 +18,8 @@ Role 1 is complete when:
 
 - Role-owned directories and imports are stable.
 - Canonical game-neutral contracts connect every role without Twitch or provider payload leakage.
+- The Role 1 application orchestrator is the sole composition, persistence, revision, and broadcast authority.
+- Producer/consumer contract tests and the integration ladder pass from role boundaries through real clients.
 - Supabase Free provides shared persistence/realtime and local algorithmic fallback remains available.
 - Vercel preview and production environments are configured without leaked secrets.
 - A real Twitch app/Extension works in Local or Hosted Test with real chat where possible.
@@ -36,8 +38,9 @@ Run this loop throughout every phase:
 3. Triage failures into the correct role instead of silently absorbing all fixes.
 4. Accept or reject shared-contract proposals quickly so Roles 2-5 remain unblocked.
 5. Assign newly discovered work with an owner, acceptance signal, priority, and deadline.
-6. Review cross-role changes, enforce real/mock disclosure, and merge safe work.
-7. Record durable decisions and update project status.
+6. Integrate the smallest current vertical slice on `main`; do not wait for every role to finish.
+7. Review cross-role changes, enforce real/mock disclosure, and merge safe work.
+8. Record durable decisions and update project status.
 
 ## Phase 1: Establish parallel-safe foundations
 
@@ -48,6 +51,7 @@ Run this loop throughout every phase:
 | D1-01 | Final legacy-file mapping into the five owned source directories | Open | — |
 | D1-02 | Minimum fields and versioning strategy for contract version one | Open | — |
 | D1-03 | Which existing prototype behaviours must remain temporarily reachable during migration | Open | — |
+| D1-03A | Public entry points, shared-file ownership, and dependency-request procedure | Open | — |
 
 ### R1-P01 — Publish authoritative plans
 
@@ -63,22 +67,7 @@ Run this loop throughout every phase:
 
 **Acceptance:** Plans are linked from repository authority; affected owners are required reviewers; checks pass.
 
-### R1-P02 — Mechanical ownership migration
-
-**Outcome:** Existing behaviour lives behind recorded role directories without redesigning another owner's component.
-
-**Work:**
-
-- Map legacy `src/lib/`, `src/components/`, and `src/app/` responsibilities.
-- Move or wrap code into `src/core/`, `src/integrations/`, `src/realtime/`, `src/ai/`, `src/extraction/`, `src/quest-engine/`, `src/streamer/`, `src/design-system/`, and `src/viewer/`.
-- Keep route entry points thin and owned implementations behind them.
-- Preserve the existing prototype until equivalent role-owned paths compile.
-
-**Must not:** Redesign Role 2 algorithms, Role 3 mechanics, or Role 4/5 UX.
-
-**Acceptance:** Existing routes build; imports resolve; CODEOWNERS matches actual paths; no role must edit another role's source to start.
-
-### R1-P03 — Thin contract version one
+### R1-P02 — Thin contracts and application-orchestrator skeleton
 
 **Outcome:** Roles 2 and 3 integrate without waiting for the full platform.
 
@@ -101,15 +90,50 @@ Run this loop throughout every phase:
 - `QuestResult`
 - `RewardEvent`
 - `SignalProvenance` with real source, algorithm/AI method, confidence, timestamp, and `unknown`
+- `ContractEnvelope`, `CommandEnvelope`, `DomainError`, and `HealthStatus`
+- `FrameSource`, `AudienceEventSource`, `IntelligenceProvider`, `CandidateProvider`, and `QuestEngine` ports
+- `StreamerViewModel`, `ViewerViewModel`, `OverlayViewModel`, and role-specific command unions
 
 **Work:**
 
-- Publish Zod schemas, TypeScript types, version fields, and valid examples in `src/core/`.
-- Include contract fixtures for Roles 2 and 3 without importing their implementations.
+- Publish Zod schemas, TypeScript types, version fields, public ports, and valid/invalid examples in `src/core/`.
+- Include producer and consumer contract fixtures/tests for all five roles without importing their implementations.
+- Scaffold the Role 1 application orchestrator: compose ports, authenticate/authorise commands, enforce idempotency/revisions, call Role 3, persist, and broadcast.
+- Require canonical IDs, absolute timestamps, revision/expected-revision, correlation, provenance, typed errors, and `unknown` semantics from `INTEGRATION-CONTRACT.md`.
 - Keep OBS, Twitch, Supabase, provider, and UI payloads behind adapters.
 - Review Role 2/3 proposals in one short response round.
 
-**Acceptance:** Roles 2 and 3 compile independently against the examples; real/unknown provenance is required; breaking changes require Role 1 review.
+**Acceptance:** Producing and consuming examples compile together; invalid/version-mismatch cases fail predictably; no role imports another role's private files; the orchestrator skeleton can run a fixture intelligence -> engine -> persisted/broadcast state cycle.
+
+### R1-P03 — Public-entry scaffolding and mechanical ownership migration
+
+**Outcome:** Existing behaviour moves behind the new contracts without redesigning another owner's component.
+
+**Work:**
+
+- Map legacy `src/lib/`, `src/components/`, and `src/app/` responsibilities before moving files.
+- Create each role directory and documented public entry point.
+- Keep `src/app/` routes/layout/providers thin and Role 1-owned; they mount Role 4/5 public modules.
+- Move or wrap code into `src/core/`, `src/integrations/`, `src/realtime/`, `src/ai/`, `src/extraction/`, `src/quest-engine/`, `src/streamer/`, `src/design-system/`, and `src/viewer/`.
+- Record Role 1 ownership of dependency/lock/config/env/route/migration files and the scoped dependency-request process.
+- Preserve the existing prototype until equivalent role-owned paths compile.
+
+**Must not:** Redesign Role 2 algorithms, Role 3 mechanics, or Role 4/5 UX.
+
+**Acceptance:** Existing routes build; imports resolve; CODEOWNERS matches actual paths; public entry points exist; no role must edit another role's source or a collision-prone shared file to start.
+
+### R1-P03A — Day-one external and capture feasibility spikes
+
+**Outcome:** External blockers fail early enough to recover.
+
+**Work:**
+
+- Attempt Twitch account/2FA, developer-console, app/Extension, and Local/Hosted Test setup.
+- Prove the target browser can select OBS Virtual Camera, recover permission, sample real frames, and avoid overlay recursion.
+- Prove Supabase realtime across two browsers with basic RLS and a clean Vercel preview with safe secret separation.
+- Request Role 2/3's initial free-provider/no-credential feasibility result.
+
+**Acceptance:** Each spike has executed evidence, an owner, a pass/fail result, and an immediate recovery decision for every failure. Full later implementations remain in their normal phases.
 
 ## Phase 2: Shared infrastructure and deployed preview
 
@@ -120,6 +144,8 @@ Run this loop throughout every phase:
 | D1-04 | Minimal Supabase tables, realtime topics, and RLS boundaries | Open | — |
 | D1-05 | Development, preview, and production environment separation | Open | — |
 | D1-06 | Session creation, expiry, reconnect, and room-code policy | Open | — |
+| D1-06A | Revision, command-idempotency, atomic-write, and reconnect-snapshot semantics | Open | — |
+| D1-06B | Broadcaster/moderator/viewer/system/overlay permission matrix and token-expiry behaviour | Open | — |
 
 ### R1-P04 — Supabase Free foundation
 
@@ -129,7 +155,9 @@ Run this loop throughout every phase:
 
 - Create Role 1-controlled project and server-only secrets.
 - Implement minimal profiles, sessions, candidates, votes, active quests, progress/results, and aggregate engagement storage.
-- Configure RLS and realtime channels.
+- Commit reproducible schema migrations, RLS policies, minimal seeds, and environment validation rather than relying on dashboard-only setup.
+- Configure revisioned realtime channels and reconnect snapshots.
+- Prefer in-memory raw-chat processing; if temporary raw chat is stored, implement automatic deletion within 24 hours.
 - Preserve local development transport for diagnostics, not as judged live evidence.
 
 **Acceptance:** Two browser sessions share one room, receive realtime updates, reconnect, and cannot mutate unauthorised state.
@@ -146,17 +174,20 @@ Run this loop throughout every phase:
 
 **Acceptance:** A clean preview deployment succeeds; client bundles contain no secrets; the health path distinguishes configured and unavailable services.
 
-### R1-P06 — Participation service
+### R1-P06 — Application orchestrator and participation service
 
 **Outcome:** Twitch Extension, hosted Quest Board, chat fallback, Studio, and OBS consume one authoritative service.
 
 **Work:**
 
+- Compose Role 1 inputs, Role 2 providers, Role 3's pure engine port, persistence, and realtime publication through the application orchestrator.
 - Implement session state, candidate publication, vote acceptance, tally subscriptions, activation, progress, result, and reconnect APIs.
+- Authenticate/authorise actor classes, deduplicate command IDs, reject stale expected revisions, and persist new revisions atomically before broadcast.
+- Return authoritative snapshots and absolute `startsAt`/`endsAt` timestamps so client clocks never decide outcomes.
 - Keep platform identities/adapters outside the core.
 - Expose capability flags so unsupported platform features receive the correct fallback.
 
-**Acceptance:** Duplicate/invalid votes are rejected; anonymous fallback works; state remains consistent across two viewers and one streamer client.
+**Acceptance:** Duplicate commands/votes do not apply twice; stale/out-of-order updates cannot overwrite newer state; token expiry and write/broadcast failure are visible; anonymous fallback works; one revision remains consistent across two viewers and one streamer client.
 
 ## Phase 3: Real capture, Twitch, and OBS
 
@@ -190,7 +221,9 @@ Run this loop throughout every phase:
 
 - Implement OAuth and token handling server-side.
 - Ingest real chat where permitted and normalise it for Role 2.
+- Parse authorised `1`/`2`/`3` chat votes into the canonical viewer-command path without giving the adapter winner authority.
 - Implement Extension JWT/EBS boundary and channel/session mapping.
+- Handle token refresh, expiry, revocation, wrong-channel access, and anonymous capability fallback.
 - Keep Twitch payloads inside `src/integrations/twitch/`.
 
 **Acceptance:** A real test channel connects; chat arrives with timestamps/provenance; viewer identity is used when available; anonymous fallback remains usable.
@@ -204,7 +237,7 @@ Run this loop throughout every phase:
 - Define the browser media/capture-session interface consumed by Role 2.
 - Let Studio select OBS Virtual Camera and expose frames without persisting raw video.
 - Require a raw-game source/scene to avoid analysing the ChatXPT overlay recursively.
-- Implement OBS Browser Source overlay URL, inactive/reconnect/error behaviour, and setup instructions.
+- Implement the OBS Browser Source URL, data/reconnect contract, secure read capability, and setup instructions; Role 5 implements the overlay visuals from `OverlayViewModel`.
 
 **Acceptance:** Team-owned real gameplay captured in OBS appears in the extraction interface; frames are ephemeral; Role 2 can analyse them; the winning quest appears in OBS.
 
@@ -239,8 +272,9 @@ Run this loop throughout every phase:
 
 - Connect Role 1 capture/chat inputs to Role 2.
 - Connect Role 2 candidate batches to Role 3.
-- Connect Role 3 state/events to the participation service.
+- Connect Role 3 state/events to the Role 1 orchestrator, atomic persistence, and participation service.
 - Preserve source, method, confidence, provider, fallback, and unknown metadata.
+- Run the producer/consumer contract tests at every boundary before accepting the live composition.
 
 **Acceptance:** One real input run reaches a complete quest cycle; free-model unavailability triggers algorithmic/deterministic behaviour without fabricated signals.
 
@@ -267,10 +301,12 @@ Run this loop throughout every phase:
 - Real gameplay + free AI unavailable + algorithmic intelligence + deterministic quest fallback.
 - OCR/vision cannot identify a requested value and reports `unknown`.
 - Viewer reconnect and duplicate vote.
+- Simultaneous/stale streamer commands, out-of-order realtime delivery, clock skew, and duplicate command IDs.
+- Twitch/Extension token expiry plus Supabase write or broadcast failure.
 - Streamer veto/cancel/skip and all terminal outcomes selected by Role 3.
 - OBS overlay reconnect.
 
-**Acceptance:** Results, limitations, screenshots/recordings, commands, and failures are recorded; no simulated run is presented as live evidence.
+**Acceptance:** The same session/cycle revision and authoritative timestamps appear in Studio, two viewer clients, persistence, and OBS; results, limitations, screenshots/recordings, commands, and failures are recorded; no simulated run is presented as live evidence.
 
 ## Phase 5: Freeze and submit
 

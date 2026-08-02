@@ -37,12 +37,15 @@ chat + identity + session events       ephemeral raw-game frames
                exactly 3 structured candidates
                            |
                            v
-               Role 3 deterministic quest engine
+              Role 1 application orchestrator
+                           |
+                           v
+               Role 3 pure deterministic engine
   intervention -> validation/replacement -> voting -> activation
         -> progress -> result/reward -> cooldown/history
                            |
                            v
-         Role 1 participation + session/realtime service
+      Role 1 atomic persistence + participation/realtime
                            |
           +----------------+------------------+
           |                |                  |
@@ -59,9 +62,13 @@ chat + identity + session events       ephemeral raw-game frames
 
 Twitch, OBS, provider, Supabase, and UI payloads terminate at their adapters. Canonical contracts contain platform-neutral facts plus source, method, timestamp, confidence, freshness, and `unknown` provenance.
 
+All cross-role calls use the public ports and canonical envelopes in `docs/build-plans/INTEGRATION-CONTRACT.md`. Role 1's application orchestrator is the only runtime layer that composes Role 2/3, authenticates commands, persists revisions, and broadcasts role-specific view models.
+
 ## Realtime and persistence
 
 Supabase Free is the accepted authoritative MVP store/realtime layer for profiles, sessions, candidates, votes, active quests, progress, results, and aggregate engagement. Vercel hosts the reusable Next.js product. Same-origin storage and `BroadcastChannel` remain local diagnostics, not accepted multi-device or judged-live evidence.
+
+State changes use command IDs, expected/current revisions, server timestamps, typed errors, atomic persistence before broadcast, and reconnect snapshots. Realtime notifications do not replace the persisted source of truth.
 
 All viewer clients use one private participation service. No UI owns authoritative vote, lifecycle, scoring, or reward rules.
 
@@ -69,7 +76,7 @@ All viewer clients use one private participation service. No UI owns authoritati
 
 For the MVP, the streamer configures OBS Virtual Camera to expose the raw game source to ChatXPT Studio. Role 1 owns permission, media, capture-session, and frame-delivery boundaries. Role 2 consumes ephemeral frames and uses lightweight visual algorithms, selective OCR, temporal confirmation, and optional free vision AI.
 
-The system is game-neutral. It may recognise broad action/quiet/transition signals across games and more specific HUD facts only when evidence and confidence are adequate. Missing or unreliable facts are `unknown`; they are never fabricated.
+The system is game-neutral through tiered support. Universal algorithms recognise broad action/quiet/transition signals across action games. Calibrated adapters may recognise specific HUD facts only for configured games with adequate evidence and confidence. Official telemetry is future work. Missing, unsupported, or unreliable facts are `unknown`; they are never fabricated.
 
 A developer Test Lab may analyse team-owned or explicitly authorised gameplay, including the same content streamed through a team-controlled Twitch channel. It is not a feature for silently analysing arbitrary third-party streams.
 

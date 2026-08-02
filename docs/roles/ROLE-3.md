@@ -6,6 +6,8 @@ Read the root `AGENTS.md` before this guide. The root guide is authoritative if 
 
 Execute work through `docs/build-plans/ROLE-3-BUILD-PLAN.md`. Role 1 defines required phases, deadlines, outcomes, and integration acceptance; L0pch decides the named Role 3 component choices at each decision gate.
 
+Implement the pure engine seam in `docs/build-plans/INTEGRATION-CONTRACT.md`; Role 3 returns decisions/state/events/allowed actions while Role 1 owns authentication, persistence, realtime, and platform execution.
+
 ## Mission
 
 Convert Role 2's intelligence and candidate quests into safe, feasible, varied, well-timed quest cycles that respect streamer preferences and produce deterministic state for every UI.
@@ -32,4 +34,4 @@ Consume Role 2 outputs through agreed contracts and emit validated quest state t
 
 ## Verification
 
-Test valid, unsafe, duplicated, badly timed, unavailable-provider, cancellation, skip, success, failure, expiry, and reconnect-relevant lifecycle cases.
+Test the public engine port plus valid, unsafe, duplicated, badly timed, unavailable-provider, duplicate-command, stale-revision, clock-skew, cancellation, skip, success, failure, expiry, and reconnect-relevant lifecycle cases.

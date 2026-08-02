@@ -9,12 +9,23 @@
 /docs/TEAM_PLAYBOOK.md @Dewflash
 /docs/TEAM_WORKFLOW.md @Dewflash
 /docs/build-plans/README.md @Dewflash
+/docs/build-plans/INTEGRATION-CONTRACT.md @Dewflash
 /docs/build-plans/ROLE-1-BUILD-PLAN.md @Dewflash
 /docs/roles/ROLE-1.md @Dewflash
 /docs/roles/ROLE-1-TODO.md @Dewflash
 /src/core/ @Dewflash
 /src/integrations/ @Dewflash
 /src/realtime/ @Dewflash
+/src/app/ @Dewflash
+/tests/integration/ @Dewflash
+/supabase/ @Dewflash
+/package.json @Dewflash
+/package-lock.json @Dewflash
+/.env.example @Dewflash
+/next.config.ts @Dewflash
+/tsconfig.json @Dewflash
+/vitest.config.mts @Dewflash
+/eslint.config.mjs @Dewflash
 /changes/role-1/ @Dewflash
 
 # Role 2: AI intelligence and extraction.
