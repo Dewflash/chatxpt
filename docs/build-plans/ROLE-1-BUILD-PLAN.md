@@ -71,7 +71,7 @@ Run this loop throughout every phase:
 
 **Outcome:** Roles 2 and 3 integrate without waiting for the full platform.
 
-**Status:** In progress — versioned schemas, public port types, non-live canonical fixtures, and schema tests are implemented; role consumer tests and the orchestrator skeleton remain.
+**Status:** Completed — versioned schemas, public ports, non-live fixtures, role-entrypoint consumer tests, and the injected orchestrator skeleton are implemented. Fixture integration tests cover candidate input, pure engine output, authoritative stamping, idempotency, stale and concurrent revisions, authorization, persistence-before-broadcast, and recovery after broadcast failure.
 
 **Canonical contracts:**
 
