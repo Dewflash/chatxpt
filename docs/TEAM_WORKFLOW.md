@@ -44,13 +44,13 @@ Before parallel role work begins, Role 1 performs the one-time mechanical migrat
 ## ChatGPT Pro collaboration
 
 - Each teammate should open the same repository so `AGENTS.md` and the repo-local skill apply consistently.
-- Every teammate and their agent must read the root `AGENTS.md` plus their mandatory `docs/roles/ROLE-<n>.md` guide.
+- Every teammate and their agent must read the root `AGENTS.md`, their mandatory `docs/roles/ROLE-<n>.md` guide/TODO, and their accepted execution plan.
 - Follow `docs/TEAM_PLAYBOOK.md` at the start and end of every pass; it contains the required sync, change-summary, one-batch decision, TODO, changelog, push, and PR sequence.
-- Give ChatGPT/Codex one issue and acceptance signal at a time.
+- Give ChatGPT/Codex one build-plan pass and acceptance signal at a time.
 - Ask it to inspect current files before editing; agents do not share live context or uncommitted work across five machines.
 - Distill useful conclusions from private chats into `TEAM_CONTEXT.md` or `DECISIONS.md`; do not commit raw private chat exports.
 - Review every diff and never paste API keys, private viewer data, or competition credentials into chats.
-- ChatGPT Pro and OpenAI API usage are separate; use mock mode until the team deliberately configures runtime API access.
+- ChatGPT Pro and application API usage are separate. No paid model usage is authorised; use clearly labelled fixtures for component tests and real OBS/Twitch inputs for every live or judged claim.
 
 ## AI decision boundary
 

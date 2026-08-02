@@ -4,6 +4,10 @@
 
 Update only this role's statuses and evidence. Raise shared-contract or UI needs through a `cross-role` GitHub Issue before implementation.
 
+Execute these outcomes through `docs/build-plans/ROLE-3-BUILD-PLAN.md`; its decision gates belong to L0pch unless explicitly marked joint or escalated.
+
+**Next pass:** answer the Phase 1 gate once, then implement R3-P01 owned ports/fixtures and R3-P02 state-machine skeleton without waiting for live AI, Twitch, or Supabase.
+
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
 | R3-001 | P0 | READY | Inspect the prototype and define quest-engine module/state boundaries. | Role 1 migration plan | Proposed interfaces cover candidate input, quest state, votes, progress, result, and fallback. |

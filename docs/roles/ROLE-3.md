@@ -4,6 +4,8 @@
 
 Read the root `AGENTS.md` before this guide. The root guide is authoritative if anything conflicts.
 
+Execute work through `docs/build-plans/ROLE-3-BUILD-PLAN.md`. Role 1 defines required phases, deadlines, outcomes, and integration acceptance; L0pch decides the named Role 3 component choices at each decision gate.
+
 ## Mission
 
 Convert Role 2's intelligence and candidate quests into safe, feasible, varied, well-timed quest cycles that respect streamer preferences and produce deterministic state for every UI.

@@ -58,6 +58,7 @@ npm run check
 - `docs/DECISIONS.md`
 - `docs/PROJECT_TODO.md`
 - Your `docs/roles/ROLE-<n>-TODO.md`
+- Your execution plan: `docs/build-plans/ROLE-<n>-BUILD-PLAN.md` for Roles 1-3, or the accepted Role 2-authored plan for Roles 4-5
 - `changes/README.md`
 
 ## Start of every work pass
@@ -123,12 +124,12 @@ Replace `<n>` and the objective:
 I am Role <n>. Begin this work pass for: <objective>.
 
 Before editing:
-1. Read the root AGENTS.md, TEAM_PLAYBOOK.md, my role guide and TODO, PROJECT_TODO.md, and DECISIONS.md.
+1. Read the root AGENTS.md, TEAM_PLAYBOOK.md, my role guide and TODO, my execution plan, PROJECT_TODO.md, and DECISIONS.md.
 2. Inspect git status and incoming main changes without discarding anything.
 3. Summarise relevant changes since my branch diverged.
 4. Confirm the files my role owns and flag anything outside them.
-5. Turn this objective into one reviewable pass with acceptance evidence.
-6. List every decision I need to make in one batch. Separate component decisions I own from cross-role or project-owner decisions.
+5. Identify the matching plan phase/pass and turn this objective into one reviewable pass with acceptance evidence.
+6. List every open decision in that phase's decision gate in one batch. Separate component decisions I own from cross-role or project-owner decisions.
 7. Identify dependencies and blockers before implementation.
 
 Do not edit another role's files. Update me briefly while working. At the end, verify, update my TODO and change fragment, review the diff, and tell me when it is ready to push and open a PR.
@@ -147,14 +148,14 @@ Do not edit another role's files. Update me briefly while working. At the end, v
 
 ## Decisions in one batch
 
-Codex should inspect first, then present all material decisions needed for the current pass together. For each decision it must state:
+Codex should inspect the current plan phase first, then present all open decisions from that phase together. For each decision it must state:
 
 - The current recorded rule or gap
 - The practical options
 - Its recommendation and consequence
 - Whether the role owner can decide it or a cross-role/project decision is required
 
-The role owner answers once. Codex records accepted component decisions in the role TODO or appropriate documentation. Durable product, architecture, provider, cost, safety, or ownership changes go through Role 1 and `docs/DECISIONS.md`.
+The role owner answers once. Codex records settled component decisions directly in the plan's decision table and reflects work status in the role TODO. Durable product, architecture, provider, cost, safety, or ownership changes go through Role 1 and `docs/DECISIONS.md`.
 
 ## End of every work pass
 
@@ -173,6 +174,7 @@ UI roles also provide screenshots or a short recording. AI/engine roles provide 
 ### 2. Update team records
 
 - Update only your role's `ROLE-<n>-TODO.md`.
+- Update settled decision answers and completed-pass evidence in your execution plan.
 - Add one change fragment under `changes/role-<n>/` using `changes/README.md`.
 - Update relevant technical documentation.
 - Link any cross-role issue or accepted decision.
@@ -206,7 +208,7 @@ Use `fix`, `docs`, `test`, or `chore` instead of `feat` when appropriate. Never 
 
 ### 5. Open the pull request
 
-Fill every section of `.github/pull_request_template.md`. Link the issue, request the required owner, and notify Role 1. Do not merge your own pull request.
+Fill every section of `.github/PULL_REQUEST_TEMPLATE.md`. Link the issue, request the required owner, and notify Role 1. Do not merge your own pull request.
 
 Role 1 checks integration, required reviews, automated checks, changelog fragment, evidence, and effect on the golden Twitch flow before merging.
 

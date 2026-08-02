@@ -8,6 +8,8 @@
 /docs/PROJECT_TODO.md @Dewflash
 /docs/TEAM_PLAYBOOK.md @Dewflash
 /docs/TEAM_WORKFLOW.md @Dewflash
+/docs/build-plans/README.md @Dewflash
+/docs/build-plans/ROLE-1-BUILD-PLAN.md @Dewflash
 /docs/roles/ROLE-1.md @Dewflash
 /docs/roles/ROLE-1-TODO.md @Dewflash
 /src/core/ @Dewflash
@@ -18,6 +20,9 @@
 # Role 2: AI intelligence and extraction.
 /docs/roles/ROLE-2.md @joelyrk @Dewflash
 /docs/roles/ROLE-2-TODO.md @joelyrk @Dewflash
+/docs/build-plans/ROLE-2-BUILD-PLAN.md @joelyrk @Dewflash
+/docs/build-plans/ROLE-4-BUILD-PLAN.md @joelyrk @JYL1m @Dewflash
+/docs/build-plans/ROLE-5-BUILD-PLAN.md @joelyrk @drdexe @Dewflash
 /src/ai/ @joelyrk @Dewflash
 /src/extraction/ @joelyrk @Dewflash
 /changes/role-2/ @joelyrk @Dewflash
@@ -25,6 +30,7 @@
 # Role 3: quest engine.
 /docs/roles/ROLE-3.md @L0pch @Dewflash
 /docs/roles/ROLE-3-TODO.md @L0pch @Dewflash
+/docs/build-plans/ROLE-3-BUILD-PLAN.md @L0pch @Dewflash
 /src/quest-engine/ @L0pch @Dewflash
 /changes/role-3/ @L0pch @Dewflash
 

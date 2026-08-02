@@ -1,6 +1,6 @@
 # Shared Team Context
 
-This is the short, current handoff for all five contributors and their ChatGPT/Codex agents. Root `AGENTS.md` defines authority, `docs/DECISIONS.md` records durable product decisions, `docs/PROJECT_TODO.md` tracks cross-project outcomes, and each role's guide and TODO define its work.
+This is the short, current handoff for all five contributors and their ChatGPT/Codex agents. Root `AGENTS.md` defines authority, `docs/DECISIONS.md` records durable product decisions, `docs/PROJECT_TODO.md` tracks cross-project outcomes, and each role's guide, TODO, and execution plan define its work.
 
 ## Current product baseline
 
@@ -8,7 +8,7 @@ This is the short, current handoff for all five contributors and their ChatGPT/C
 - Twitch is the only supported platform in the current MVP. Other platforms may appear only as disabled `Coming Soon` options.
 - ChatXPT Studio is the full streamer setup and management app; Twitch Live Config provides compact in-stream controls; the Twitch Extension is the primary viewer surface; the hosted Quest Board and Twitch-chat voting are fallbacks; OBS displays broadcast visuals.
 - Supabase Free is the target shared persistence/realtime service and Vercel is the deployment target. Credential-free local transport and deterministic generation remain permanent fallbacks.
-- Gameplay extraction may be simulated when clearly disclosed and implemented behind a replaceable, game-neutral interface.
+- The judged workflow uses real gameplay captured through OBS Virtual Camera and real Twitch activity. Simulated fixtures are test/diagnostic evidence only; unavailable real signals are reported as unknown rather than fabricated.
 - Roles 2 and 3 jointly recommend the AI provider/model. Role 2 owns extraction, behavioural intelligence, provider adapters, and model-ready context. Role 3 owns quest-engine behaviour, quest-domain AI instructions, validation, lifecycle, activation, and safety enforcement.
 - The submission deadline is 9 August 2026. Feature freeze is 7 August at 18:00 SGT; 8 August is reserved for integration, evidence, rehearsal, and recording.
 
@@ -35,8 +35,9 @@ Update a row before starting shared-contract or golden-demo work. Detailed task 
 | Area | Owner | Branch / issue | Intended outcome | Status |
 | --- | --- | --- | --- | --- |
 | Team foundation and integration | `Dewflash` | PR #2 | Merge role authority, workflow, TODO, and changelog foundation | Done |
+| Role 1-3 execution plans | `Dewflash` | `docs/build-plans/` | Concurrent phases, owner decisions, deadlines, real-data evidence, and integration exits | Ready |
 | Role 4/5 MVP build plans | `joelyrk` | Create Role 2 branch/issue after pulling `main` | Separate implementation-ready plans for the streamer and viewer owners | Ready |
-| Quest engine plan | `L0pch` | Create Role 3 branch/issue after pulling `main` | Engine boundary, lifecycle, safety, and AI-quality decisions | Ready |
+| Quest engine implementation | `L0pch` | Start from `ROLE-3-BUILD-PLAN.md` | Engine boundary, lifecycle, safety, fallback, and AI-quality decisions | Ready |
 | Streamer experience | `JYL1m` | Await Role 2 plan and shared contracts | Working Studio and Twitch Live Config against accepted contracts | Planned |
 | Viewer experience | `drdexe` | Await Role 2 plan and shared contracts | Working Extension, fallback board, and overlay against accepted contracts | Planned |
 
@@ -51,7 +52,7 @@ The exact game/scenario remains a team implementation choice, but the stable dem
 3. Quest-engine validation and safe fallback behaviour.
 4. Viewer voting through the Twitch-first participation path.
 5. Winning quest activation, OBS overlay progress, outcome, and non-monetary reward.
-6. Clear labels for real, mocked, simulated, fallback, and not-yet-implemented behaviour.
+6. Clear labels for real input, algorithmic or AI-derived signals, fallback behaviour, uncertainty, and not-yet-implemented behaviour; simulated fixtures cannot be used as live-extraction proof.
 
 ## Safe handoff format
 

@@ -6,6 +6,8 @@ Read the root `AGENTS.md` before this guide. The root guide is authoritative if 
 
 For the current MVP planning pass, Role 2 decides Role 4's build plan under D-016. Role 4 reviews it for feasibility and then owns detailed visual, interaction, accessibility, component, and code decisions that fit the plan.
 
+Before implementation, read the Role 2-authored Role 4 execution plan, provide one consolidated feasibility review, and then follow its accepted phases and acceptance evidence.
+
 ## Mission
 
 Deliver a working, persistent, self-service streamer experience that makes ChatXPT understandable before, during, and after a Twitch stream.

@@ -11,12 +11,13 @@ Every contributor and their ChatGPT/Codex agent must read:
 1. [`AGENTS.md`](AGENTS.md)
 2. [`docs/TEAM_PLAYBOOK.md`](docs/TEAM_PLAYBOOK.md)
 3. The assigned guide and TODO under [`docs/roles/`](docs/roles/)
-4. [`docs/DECISIONS.md`](docs/DECISIONS.md)
-5. [`docs/PROJECT_TODO.md`](docs/PROJECT_TODO.md)
+4. The assigned execution plan under [`docs/build-plans/`](docs/build-plans/) for Roles 1-3, or the accepted Role 2-authored plan for Roles 4-5
+5. [`docs/DECISIONS.md`](docs/DECISIONS.md)
+6. [`docs/PROJECT_TODO.md`](docs/PROJECT_TODO.md)
 
 The playbook includes first-time setup, safe daily Git commands, the required Codex start prompt, one-batch decision handling, verification, changelog fragments, pushing, and pull requests.
 
-This repository begins with one demo-ready vertical slice:
+The checked-in legacy prototype begins with one local diagnostic slice:
 
 1. A producer changes simulated game and audience signals.
 2. ChatXPT produces three contextual sidequests.
@@ -24,7 +25,7 @@ This repository begins with one demo-ready vertical slice:
 4. The winning quest is activated.
 5. A separate overlay route displays its timer, status, and reward.
 
-The deterministic mock engine is always available. A server-side OpenAI adapter is used only when `OPENAI_API_KEY` is configured.
+This simulated path is useful for deterministic tests and migration checks, but it is not accepted as live product evidence. The target MVP uses real gameplay captured through OBS Virtual Camera, real Twitch activity, credential-free algorithmic intelligence, and deterministic quest fallback. Unavailable real signals are reported as `unknown`.
 
 ## Quick start
 
@@ -44,16 +45,16 @@ Run all checks:
 npm run check
 ```
 
-## Optional live AI
+## Legacy optional OpenAI adapter
 
-Add an OpenAI API key to `.env.local`. ChatGPT Pro helps teammates use ChatGPT/Codex, but does not provide shared API billing for this application. Never expose the key through a `NEXT_PUBLIC_` variable.
+The prototype still contains an optional server-side OpenAI adapter while the role-owned migration is in progress. It is not the accepted MVP provider path, and no teammate is authorised to incur paid API usage for the project. ChatGPT Pro does not provide shared application API billing. Never expose any provider key through a `NEXT_PUBLIC_` variable.
 
 ```dotenv
 OPENAI_API_KEY=your_key_here
 OPENAI_MODEL=gpt-5.6-terra
 ```
 
-If the API is unavailable, invalid, or slow, the endpoint falls back to deterministic generation and returns a warning for the producer UI.
+Roles 2 and 3 will jointly recommend a free provider/model path. If any provider is unavailable, invalid, or slow, the product must continue through credential-free algorithmic intelligence and deterministic quest fallback while showing clear provider status.
 
 ## Repository map
 
@@ -62,12 +63,13 @@ If the API is unavailable, invalid, or slow, the endpoint falls back to determin
 - `src/lib` - schemas, domain types, mock engine, and model adapter
 - `docs` - product scope, architecture, decisions, shared team context, workflow, and submission checklist
 - `docs/roles` - mandatory per-role authority and to-do lists
+- `docs/build-plans` - authoritative phase, decision-gate, deadline, and acceptance plans
 - `changes` - role-owned changelog fragments compiled by Role 1
 - `.github` - code ownership and pull-request/cross-role issue templates
 - `.codex/skills/chatxpt-prototype` - shared project workflow for Codex
 - `AGENTS.md` - durable instructions for AI-assisted contributors
 
-## Architecture summary
+## Current prototype architecture before role migration
 
 ```text
 game signals + chat signals + streamer profile
@@ -86,7 +88,7 @@ game signals + chat signals + streamer profile
               /overlay route
 ```
 
-The current prototype uses same-origin browser storage and `BroadcastChannel` to synchronize the control room and overlay. The accepted MVP target replaces authoritative live state with Supabase persistence and realtime channels while preserving this local transport as a credential-free fallback. Twitch, OBS, AI providers, gameplay extraction, persistence, and viewer surfaces remain replaceable adapters around the core contracts.
+The current prototype uses same-origin browser storage and `BroadcastChannel` to synchronize the control room and overlay. The accepted MVP target replaces authoritative live state with Supabase persistence and realtime channels while preserving this local transport for local diagnostics. Twitch, OBS, AI providers, gameplay extraction, persistence, and viewer surfaces remain replaceable adapters around the core contracts.
 
 ## Third-party disclosure
 
@@ -95,4 +97,4 @@ The current prototype uses same-origin browser storage and `BroadcastChannel` to
 - Zod - runtime validation
 - Vitest - automated tests
 
-No third-party datasets are bundled. Demo chat and gameplay events are synthetic.
+No third-party datasets are bundled. Existing demo chat and gameplay events are synthetic and may be used only as test/diagnostic fixtures, not live-extraction evidence.

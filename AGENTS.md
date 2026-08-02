@@ -16,8 +16,8 @@ Build ChatXPT as a cross-platform AI stream director that turns gameplay state, 
 - YouTube, Discord, and other streaming services may appear only as clearly disabled `Coming Soon` options. Do not implement their adapters, authentication, chat ingestion, voting surfaces, or platform-specific behaviour during the Twitch MVP.
 - Keep the core platform-neutral so future adapters remain possible without creating parallel platform work now.
 - Design for game streamers across audience sizes, play styles, and game genres. Do not encode the product, shared contracts, or quest engine around battle-royale-only concepts.
-- A rehearsed demo may use one game or simulated scenario for reliability, but that scenario is evidence, not a product restriction.
-- Gameplay signals may be simulated for the prototype, but simulated data must be disclosed and remain replaceable by capture, computer vision, or official telemetry adapters.
+- A rehearsed demo may use one real, team-owned game stream or prepared real-gameplay scenario for reliability, but that scenario is evidence, not a product restriction.
+- The judged workflow and product demonstration use real gameplay captured through OBS Virtual Camera and real Twitch activity. Simulated fixtures are limited to automated tests, developer diagnostics, and offline reproducibility and cannot be presented as live-extraction evidence.
 
 ## Golden workflow
 
@@ -35,7 +35,7 @@ Streamer starts a Twitch session
 
 ## Non-negotiables
 
-- Preserve a credential-free mock path. The demo must never depend entirely on an external model or network.
+- Preserve a credential-free algorithmic fallback that operates on real captured inputs. Simulated fixtures remain available for tests and diagnostics, but the judged workflow must never present them as live data.
 - Keep API keys, Twitch secrets, extension JWT secrets, and service credentials server-side and out of Git.
 - Never commit private chat exports, personal viewer data, or competition credentials.
 - Generate challenges that are legal, non-harmful, game-appropriate, non-wagering, and easy to understand under pressure.
@@ -44,7 +44,7 @@ Streamer starts a Twitch session
 - Preserve all three MVP participation paths: Twitch Extension primary, hosted Quest Board first fallback, and `1`/`2`/`3` Twitch-chat voting final fallback.
 - Keep the participation interface ready for future authenticated integrations, but do not build a public developer API, external SDK, partner portal, or non-Twitch platform adapter during this MVP.
 - Complete the Twitch workflow before any implementation for another streaming platform. A `Coming Soon` placeholder is not platform support.
-- State clearly what is real, simulated, mocked, or proposed.
+- State clearly what is real, simulated, mocked, or proposed. If a real gameplay signal cannot be determined, report it as unknown instead of fabricating it.
 - Treat `docs/DECISIONS.md` entries marked `Proposed` as open. Do not silently settle an open product or provider decision.
 
 ## Commands
@@ -96,17 +96,17 @@ For the current MVP planning pass, the project owner grants Role 2 authority to 
 
 ### Mandatory role guides
 
-Every contributor and their ChatGPT/Codex agent must read this root guide, `docs/TEAM_PLAYBOOK.md`, the assigned guide, and the assigned TODO under `docs/roles/` before planning or editing. The root guide wins if a role guide conflicts with it. Role guides may clarify component decisions but cannot expand their own authority.
+Every contributor and their ChatGPT/Codex agent must read this root guide, `docs/TEAM_PLAYBOOK.md`, the assigned guide, the assigned TODO under `docs/roles/`, and the assigned execution plan before planning or editing. The root guide wins if a role guide or plan conflicts with it. Role guides and plans may clarify component decisions but cannot expand their own authority.
 
-| Role | GitHub owner | Mandatory guide |
-| --- | --- | --- |
-| Role 1 | `Dewflash` | `docs/roles/ROLE-1.md` |
-| Role 2 | `joelyrk` | `docs/roles/ROLE-2.md` |
-| Role 3 | `L0pch` | `docs/roles/ROLE-3.md` |
-| Role 4 | `JYL1m` | `docs/roles/ROLE-4.md` |
-| Role 5 | `drdexe` | `docs/roles/ROLE-5.md` |
+| Role | GitHub owner | Mandatory guide | Execution plan |
+| --- | --- | --- | --- |
+| Role 1 | `Dewflash` | `docs/roles/ROLE-1.md` | `docs/build-plans/ROLE-1-BUILD-PLAN.md` |
+| Role 2 | `joelyrk` | `docs/roles/ROLE-2.md` | `docs/build-plans/ROLE-2-BUILD-PLAN.md` |
+| Role 3 | `L0pch` | `docs/roles/ROLE-3.md` | `docs/build-plans/ROLE-3-BUILD-PLAN.md` |
+| Role 4 | `JYL1m` | `docs/roles/ROLE-4.md` | Role 2-authored Role 4 plan after its feasibility review |
+| Role 5 | `drdexe` | `docs/roles/ROLE-5.md` | Role 2-authored Role 5 plan after its feasibility review |
 
-The matching work queue is `docs/roles/ROLE-<n>-TODO.md`.
+The matching work queue is `docs/roles/ROLE-<n>-TODO.md`. Plans define phase order, decision gates, and acceptance evidence; TODOs track current status. Roles 1-3 follow the shared concurrent calendar in `docs/build-plans/README.md`.
 
 ### Cross-role handoff authority
 
@@ -148,7 +148,7 @@ Does not own AI implementation, extraction implementation, quest-engine implemen
 
 Primary work:
 
-- Implement manual, simulated, capture-based, computer-vision, or official-telemetry extraction behind Role 1's interface as the project scope permits.
+- Implement real OBS Virtual Camera frame extraction behind Role 1's interface using lightweight visual algorithms, selective OCR, and optional free vision AI. Use simulated data only as test or diagnostic fixtures.
 - Normalise health, kill, knockdown, looting, fight, and match-phase signals.
 - Aggregate noisy events into a current gameplay snapshot with timestamps and confidence scores.
 - Analyse gameplay history and audience activity to identify moments, sentiment, intent, energy, humour, risk appetite, boredom, hype, and repeated requests.
@@ -201,7 +201,7 @@ Primary work:
 - Treat Studio as the complete management product and Twitch Live Config as its focused stream-time companion, not as competing products.
 - Build streamer profiles, game selection, personality, tone, intensity, safety boundaries, forbidden quest types, and accessibility preferences.
 - Make settings persistent so streamers do not repeat setup every stream.
-- Provide simulator controls for gameplay events during the prototype.
+- Provide clearly test-only simulator controls for developer diagnostics; they cannot supply the judged live workflow or live-extraction evidence.
 - Present detected signals and generated quests clearly.
 - Implement veto, approve, start, skip, cancel, succeed, and fail controls.
 - Show Twitch, OBS, AI, and realtime connection health with useful recovery actions.

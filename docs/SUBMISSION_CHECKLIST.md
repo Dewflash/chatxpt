@@ -1,42 +1,68 @@
 # Submission Checklist
 
-## Prototype
+## Real golden workflow
 
-- [ ] Golden scenario works from clean install in mock mode
-- [ ] Optional live-AI scenario works with a server-side key
-- [ ] Control room shows all three signal categories
-- [ ] Three quests can be voted on
-- [ ] Winning quest reaches the overlay
-- [ ] Timer, progress, completion, failure, and skip are demonstrable
-- [ ] Provider failure visibly falls back without breaking the flow
-- [ ] README setup was tested by someone other than the author
+- [ ] Clean setup succeeds from the documented repository instructions.
+- [ ] Role 1-controlled Twitch app/Extension works in Local or Hosted Test with allowlisted broadcaster/viewer accounts.
+- [ ] ChatXPT Studio selects OBS Virtual Camera and receives the raw game scene without recursively analysing the overlay.
+- [ ] Real captured gameplay produces timestamped observations with method, confidence, provenance, and honest `unknown` fields.
+- [ ] Real Twitch chat/activity contributes audience intelligence where permitted.
+- [ ] Saved streamer personality, intensity, safety, and challenge preferences affect the cycle.
+- [ ] Exactly three Role 2 candidates reach Role 3, and exactly three validated options reach viewers.
+- [ ] One streamer and two viewers share consistent session, vote, winner, progress, result, points, and hype state.
+- [ ] The winning quest reaches the real OBS Browser Source overlay.
+- [ ] Success, failure, cancellation, skip, expiry, and reconnect-relevant paths are demonstrable.
+- [ ] No simulated fixture is presented as live-extraction or end-to-end evidence.
 
-## Quality and responsibility
+## AI, algorithms, and fallback
 
-- [ ] No secrets, personal viewer data, or private chat exports in Git history
-- [ ] Third-party libraries, APIs, models, and datasets disclosed
-- [ ] Streamer boundaries and producer approval demonstrated
-- [ ] At least five representative generation cases evaluated
-- [ ] Demo deployment and local fallback both prepared
+- [ ] Roles 2/3 record their joint free provider/model recommendation and evidence.
+- [ ] A real-input run shows the free AI contribution and structured-output validation when available.
+- [ ] Provider unavailable/slow/malformed behavior visibly continues through credential-free algorithms and deterministic quest fallback.
+- [ ] OCR/vision uncertainty produces `unknown` rather than a fabricated gameplay fact.
+- [ ] At least two team-owned action-game HUD/pacing styles and varied audience states are evaluated.
+- [ ] Provider, algorithmic, deterministic fallback, fixture-only, and not-implemented states are clearly distinguished.
 
-## Proposal deck
+## Twitch and participation fallbacks
 
-- [ ] Problem and target users
-- [ ] Product insight and differentiated core loop
-- [ ] Role of AI and why simpler rules alone are insufficient
-- [ ] End-to-end architecture and implementation details
-- [ ] Expected impact and measurable engagement outcomes
-- [ ] Trade-offs, safety, and exception handling
+- [ ] Twitch Extension viewer flow works in the accepted test mode.
+- [ ] Hosted Viewer Quest Board consumes the same authoritative participation state.
+- [ ] `1`/`2`/`3` Twitch-chat voting fallback is exercised where Twitch access permits it.
+- [ ] Capability/unavailable states are honest; another platform is never implied to be implemented.
+- [ ] Duplicate/late/invalid vote, reconnect, tie, and zero-vote behavior is evidenced.
 
-## Demo video
+## Quality, privacy, and responsibility
 
-- [ ] Shows trigger, signals, generation, voting, activation, overlay, and outcome
-- [ ] Includes one live-AI moment and a fallback explanation
-- [ ] Captions and legible UI at presentation resolution
-- [ ] Final upload plays correctly from the submitted link
+- [ ] `npm run check` and `git diff --check` pass on the release commit.
+- [ ] No secrets, `.env.local`, raw private chat exports, personal viewer data, or credentials exist in committed files or evidence.
+- [ ] Raw frames are ephemeral and raw Twitch chat retention is capped at 24 hours.
+- [ ] Third-party libraries, APIs, models, and datasets are disclosed.
+- [ ] Streamer restrictions, safety validation, unknown handling, and emergency behaviour are demonstrated.
+- [ ] Rewards are session-scoped, non-monetary, and non-wagering.
+- [ ] Deployed build and local diagnostic/fallback paths are documented truthfully.
+- [ ] A teammate other than the author tests the setup instructions.
+
+## Proposal deck (maximum 15 slides)
+
+- [ ] Problem, target users, and product promise.
+- [ ] Differentiated gameplay + audience + streamer intelligence loop.
+- [ ] Streamer, viewer, Twitch, OBS, fallback, and future-platform product shape.
+- [ ] End-to-end architecture, role of AI, deterministic authority, and real-input evidence.
+- [ ] Expected engagement impact and measurable outcomes.
+- [ ] Trade-offs, privacy, safety, uncertainty, current limitations, and roadmap.
+
+## Demo video (maximum five minutes)
+
+- [ ] Shows setup/status, real trigger/signals, three quests, streamer behaviour, voting, activation, OBS overlay, progress, and outcome.
+- [ ] Includes a free-AI contribution and the provider-failure fallback story without staging fake live data.
+- [ ] Clearly labels what is real, algorithmic, AI-derived, deterministic fallback, or unavailable.
+- [ ] Captions and UI remain legible at presentation resolution.
+- [ ] Final uploaded link plays correctly for a signed-out judge.
 
 ## Repository and handoff
 
-- [ ] Repository visibility and collaborator requirements confirmed
-- [ ] Source, README, architecture, prompts/configurations, and disclosures included
-- [ ] Submission copy frozen after sending
+- [ ] README, architecture, role plans, prompts/agent configuration, evaluation evidence, privacy/limitations, and third-party disclosures are current.
+- [ ] Clean clone and production URLs are verified from the exact release commit.
+- [ ] `garena-ai-build-challenge` is invited to the private GitHub repository.
+- [ ] Immutable Google Drive submission package is prepared and access tested.
+- [ ] Feature freeze and final submission are recorded; no unverified claims remain.
