@@ -43,7 +43,7 @@ Update a row before starting shared-contract or golden-demo work. Detailed task 
 | Role public entrypoint foundation | `Dewflash` | PR #7 | Collision-free public modules and canonical consumer compatibility tests for Roles 1-5 | Done; Role 1 override disclosed |
 | Application orchestrator foundation | `Dewflash` | PR #8 | Idempotent expected-revision command path with atomic fixture persistence before validated view broadcast | Done |
 | Role dependency guard and legacy inventory | `Dewflash` | PR #9 | Enforce public-only cross-role imports and map legacy seams without deciding migration outcomes | Done |
-| Foundation checkpoint audit | `Dewflash` | `role-1/foundation-audit` / PR #10 | Compile changelog, verify merged main, and publish truthful role-by-role pickup state | Review requested from Roles 2-5 |
+| Foundation checkpoint audit | `Dewflash` | PR #10 | Compile changelog, verify merged main, and publish truthful role-by-role pickup state | Done |
 | Role 4/5 MVP build plans | `joelyrk` | Create Role 2 branch/issue after pulling `main` | Separate implementation-ready plans for the streamer and viewer owners | Ready |
 | Quest engine implementation | `L0pch` | Start from `ROLE-3-BUILD-PLAN.md` | Engine boundary, lifecycle, safety, fallback, and AI-quality decisions | Ready |
 | Streamer experience | `JYL1m` | Await Role 2 plan and shared contracts | Working Studio and Twitch Live Config against accepted contracts | Planned |
