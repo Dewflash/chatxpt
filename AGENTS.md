@@ -59,6 +59,8 @@ npm run check
 
 Run the smallest relevant test while working and `npm run check` before merge handoff.
 
+`npm run check` also runs `npm run check:boundaries`. A role-owned module may import canonical Core and its allowed public dependencies, but may not import another role's private files. Tests may consume the explicit `@/core/testing` fixture entrypoint; product code may not.
+
 ## Five-role ownership model
 
 Each of the five contributors is assigned exactly one role. Role ownership is exclusive for normal work: the owner drives that area's ideation, design, implementation, tests, documentation, and component-level decisions. Contributors must not implement or direct work inside another role unless the project owner explicitly reassigns or approves it.

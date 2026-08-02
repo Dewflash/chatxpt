@@ -11,6 +11,7 @@
 /docs/build-plans/README.md @Dewflash
 /docs/build-plans/INTEGRATION-CONTRACT.md @Dewflash
 /docs/build-plans/ROLE-1-BUILD-PLAN.md @Dewflash
+/docs/architecture/ @Dewflash
 /docs/roles/ROLE-1.md @Dewflash
 /docs/roles/ROLE-1-TODO.md @Dewflash
 /src/core/ @Dewflash
@@ -25,6 +26,7 @@
 /next.config.ts @Dewflash
 /tsconfig.json @Dewflash
 /vitest.config.mts @Dewflash
+/scripts/check-role-boundaries.mjs @Dewflash
 /eslint.config.mjs @Dewflash
 /changes/role-1/ @Dewflash
 

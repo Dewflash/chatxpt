@@ -111,7 +111,7 @@ Run this loop throughout every phase:
 
 **Outcome:** Existing behaviour moves behind the new contracts without redesigning another owner's component.
 
-**Status:** In progress — additive public entrypoints and cross-role compatibility tests are implemented without behavior changes; the legacy file mapping and retention decisions remain open, so no ambiguous legacy file has moved.
+**Status:** In progress — additive public entrypoints, cross-role compatibility tests, an executable dependency-boundary guard, and a factual legacy inventory are implemented without behavior changes. D1-01 and D1-03 remain open, so no ambiguous legacy file has moved.
 
 **Work:**
 
