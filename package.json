@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:contracts": "vitest run src/core/contracts.test.ts",
+    "test:integration": "vitest run tests/integration",
     "test:watch": "vitest",
     "check": "npm run lint && npm run typecheck && npm test && npm run build"
   },

@@ -61,6 +61,11 @@ Roles 2 and 3 will jointly recommend a free provider/model path. If any provider
 
 - `src/app` - Next.js routes, API, and overlay
 - `src/core` - versioned platform-neutral contracts, public ports, and explicitly non-live contract fixtures
+- `src/integrations` and `src/realtime` - Role 1 public adapter and authoritative-state boundaries
+- `src/ai` and `src/extraction` - Role 2 public intelligence and extraction boundaries
+- `src/quest-engine` - Role 3 pure engine boundary
+- `src/streamer` and `src/design-system` - Role 4 public streamer and shared-visual-system boundaries
+- `src/viewer` - Role 5 public participation and overlay boundary
 - `src/components` - interactive product UI
 - `src/lib` - schemas, domain types, mock engine, and model adapter
 - `docs` - product scope, architecture, decisions, shared team context, workflow, and submission checklist
@@ -95,6 +100,8 @@ The current prototype uses same-origin browser storage and `BroadcastChannel` to
 Role 1's application orchestrator will compose those adapters and Role 2/3 public ports, persist revisioned state, and broadcast role-specific view models. Cross-role work integrates after every wave through producer/consumer contract tests rather than being combined only after five separate builds finish.
 
 The version-one contract schemas and fixtures now live under `src/core/`. Legacy routes still use `src/lib/domain.ts` until the separately gated mechanical migration; the existence of new contracts does not imply the current UI or API is integrated with them yet.
+
+Each role also has an additive public `index.ts` in its owned source directory. These entrypoints expose only accepted shared seams; they are not placeholder product implementations, and the deliberately empty design-system entrypoint leaves visual decisions with Role 4.
 
 ## Third-party disclosure
 
