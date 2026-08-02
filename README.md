@@ -2,7 +2,7 @@
 
 ChatXPT is an AI-powered livestream engagement engine. It combines gameplay state, viewer sentiment, and streamer preferences to generate short sidequests, lets viewers vote, and displays the winning challenge as a live overlay.
 
-The product is game-neutral and intended for game streamers across audience sizes, play styles, and genres. Twitch is the only platform implemented for the current MVP, but it is isolated behind adapters rather than embedded into the core product model.
+The product is game-neutral and intended for game streamers across audience sizes, play styles, and genres. Twitch is the only platform in scope for the current MVP and remains isolated behind adapters rather than embedded into the core product model. The checked-in local slice does not yet implement the accepted Twitch surfaces.
 
 ## Team start here
 
@@ -18,7 +18,7 @@ The playbook includes first-time setup, safe daily Git commands, the required Co
 
 This repository begins with one demo-ready vertical slice:
 
-1. A producer changes simulated game and audience signals.
+1. A streamer or demo operator changes simulated game and audience signals.
 2. ChatXPT produces three contextual sidequests.
 3. Viewers vote on the options.
 4. The winning quest is activated.
@@ -53,7 +53,7 @@ OPENAI_API_KEY=your_key_here
 OPENAI_MODEL=gpt-5.6-terra
 ```
 
-If the API is unavailable, invalid, or slow, the endpoint falls back to deterministic generation and returns a warning for the producer UI.
+If the API is unavailable, invalid, or slow, the endpoint falls back to deterministic generation and returns a warning in the streamer-facing control UI.
 
 ## Repository map
 

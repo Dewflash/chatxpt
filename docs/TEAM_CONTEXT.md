@@ -5,7 +5,7 @@ This is the short, current handoff for all five contributors and their ChatGPT/C
 ## Current product baseline
 
 - ChatXPT is one reusable, game-neutral Next.js/TypeScript product with a platform-neutral core.
-- Twitch is the only supported platform in the current MVP. Other platforms may appear only as disabled `Coming Soon` options.
+- Twitch is the only platform in scope for the current MVP. Its accepted surfaces remain target work until their acceptance evidence passes; other platforms may appear only as disabled `Coming Soon` options.
 - ChatXPT Studio is the full streamer setup and management app; Twitch Live Config provides compact in-stream controls; the Twitch Extension is the primary viewer surface; the hosted Quest Board and Twitch-chat voting are fallbacks; OBS displays broadcast visuals.
 - Supabase Free is the target shared persistence/realtime service and Vercel is the deployment target. Credential-free local transport and deterministic generation remain permanent fallbacks.
 - Gameplay extraction may be simulated when clearly disclosed and implemented behind a replaceable, game-neutral interface.
@@ -35,6 +35,7 @@ Update a row before starting shared-contract or golden-demo work. Detailed task 
 | Area | Owner | Branch / issue | Intended outcome | Status |
 | --- | --- | --- | --- | --- |
 | Team foundation and integration | `Dewflash` | PR #2 | Merge role authority, workflow, TODO, and changelog foundation | Done |
+| Shared documentation alignment | `Dewflash` | `role-1/docs-alignment` | Align stale scope, architecture, and agent guidance with accepted decisions | Needs review |
 | Role 4/5 MVP build plans | `joelyrk` | Create Role 2 branch/issue after pulling `main` | Separate implementation-ready plans for the streamer and viewer owners | Ready |
 | Quest engine plan | `L0pch` | Create Role 3 branch/issue after pulling `main` | Engine boundary, lifecycle, safety, and AI-quality decisions | Ready |
 | Streamer experience | `JYL1m` | Await Role 2 plan and shared contracts | Working Studio and Twitch Live Config against accepted contracts | Planned |

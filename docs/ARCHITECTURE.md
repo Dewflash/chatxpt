@@ -1,49 +1,75 @@
 # Architecture
 
-## Prototype shape
+## Reality status
 
-ChatXPT is one Next.js application with two presentation surfaces and one generation endpoint.
+ChatXPT remains one Next.js/TypeScript application, but the repository distinguishes the working local prototype from the accepted multi-device Twitch MVP target.
 
-- **Control room:** edits synthetic gameplay, sentiment, and streamer signals; generates quests; records votes; activates a winner.
-- **Overlay:** reads the activated quest and renders a transparent browser-source layout.
-- **Generation endpoint:** validates input, attempts optional model generation, and falls back to a deterministic engine.
+| Capability | Current implementation | Accepted MVP target |
+| --- | --- | --- |
+| Quest generation | Server-side OpenAI adapter with validated structured output and deterministic fallback | Provider remains replaceable; Roles 2 and 3 submit a joint recommendation before changing it |
+| Gameplay and audience input | Synthetic controls and demo data | Normalised Twitch/audience and replaceable gameplay-extraction adapters, with simulation clearly disclosed |
+| Participation state | `localStorage` plus `BroadcastChannel` | One private, platform-neutral participation service backed by Supabase Free |
+| Streamer surface | Local control room | Full ChatXPT Studio plus compact Twitch Live Config |
+| Viewer surface | Voting inside the local control room | Twitch Extension primary, hosted Quest Board fallback, Twitch-chat `1`/`2`/`3` final fallback |
+| Broadcast output | Separate `/overlay` browser route | OBS browser overlay consuming normalised participation state |
+| Deployment | Local Next.js application | One reusable Vercel deployment with server-side secrets |
 
-## Data flow
+The current path is valid demo evidence only when it is labelled accurately. Target entries are not considered implemented until their acceptance evidence is executed.
+
+## Target boundaries
 
 ```text
-Control room
-  -> POST /api/sidequests
-      -> validate request with Zod
-      -> OpenAI Responses API when a server key exists
-      -> deterministic fallback on missing key or provider failure
-  <- three validated sidequests + provider metadata
-  -> viewer votes in local UI
-  -> activated quest written to localStorage + BroadcastChannel
-Overlay
-  <- reads initial localStorage state and later broadcast/storage events
+Twitch events/chat       gameplay extraction       streamer profile
+       \                       |                         /
+        -> normalised platform-neutral events and snapshots
+                              |
+                 behavioural intelligence (Role 2)
+                              |
+        AI candidates + deterministic fallback candidates
+                              |
+           quest validation and lifecycle (Role 3)
+                              |
+          private participation service (Role 1)
+             /              |               \
+ Twitch Extension   hosted Quest Board   Twitch-chat fallback
+             \              |               /
+               authoritative vote and quest state
+                              |
+                Studio / Live Config / OBS overlay
 ```
 
-## Why this architecture
+- `src/core/` owns platform-neutral contracts and session/capability models.
+- `src/integrations/` owns Twitch, OBS, persistence, and other external boundaries.
+- `src/realtime/` owns authoritative participation transport and subscriptions.
+- `src/ai/` and `src/extraction/` own behavioural intelligence, provider adapters, model-ready context, and extraction implementation.
+- `src/quest-engine/` owns deterministic quest rules, validation, lifecycle, safety, scoring, and fallbacks.
+- `src/streamer/` and `src/design-system/` own streamer surfaces and shared visual foundations.
+- `src/viewer/` owns Twitch viewer, hosted fallback, and viewer-facing overlay UX.
 
-- Demonstrates the complete experience with minimal operational risk.
-- Mock generation makes judging and development reproducible.
-- Server-only provider code prevents accidental API-key exposure.
-- Domain types and adapters leave room for later WebSocket, telemetry, and platform integrations.
+The legacy `src/lib/`, `src/components/`, and `src/app/` files remain the current prototype until Role 1 completes the authorised mechanical migration. That migration must preserve behaviour and must not redesign another role's component.
 
-## Safety and failure handling
+## Contract and adapter rules
 
-- Streamer boundaries are included in generation context.
-- Quests are limited to in-game behavior and entertainment actions.
-- Live generation output is runtime-validated.
-- Invalid input returns a 400 response.
-- Provider errors fall back to deterministic options.
-- The producer is the final approval point before activation.
+- The core consumes normalised ChatXPT events; Twitch payloads never become core types.
+- Viewer clients consume a private participation contract and never own authoritative vote state.
+- Supabase records and realtime messages remain persistence/transport adapters rather than domain contracts.
+- Provider payloads remain behind server-only adapters and API routes.
+- Local storage and deterministic generation remain credential-free fallbacks, not the authoritative multi-device path.
+- Every external result is runtime-validated before it affects quest or participation state.
 
-## Likely next adapters
+## Safety and lifecycle
 
-Only add these after a team decision:
+- Streamer preferences, accessibility needs, and forbidden quest types are explicit engine inputs.
+- Deterministic validation rejects unsafe, illegal, humiliating, monetary, infeasible, or duplicate quests before viewers see them.
+- Role 3 owns intervention, approval, automatic/manual activation, veto, interruption, and emergency-control mechanics under D-009.
+- The streamer must retain an effective veto/emergency control even when Role 3 permits automatic proposal or activation.
+- Quest state covers proposed, voting, active, succeeded, failed, cancelled, skipped, and expired.
+- Model latency, refusal, invalid output, outage, and shared-infrastructure failure are expected paths with visible fallback behaviour.
 
-- WebSocket session service for viewers and OBS synchronization
-- Twitch or YouTube chat sentiment adapter
-- Game telemetry or manual hotkey adapter
-- Persistent session/event store for analytics
+## Integration order
+
+1. Mechanically migrate legacy source into the five role-owned boundaries without changing behaviour.
+2. Freeze version 1 core and participation contracts with affected-owner review.
+3. Add Supabase persistence/realtime and preserve the local fallback.
+4. Connect Vercel, Twitch test surfaces, and the OBS contract with secrets kept server-side.
+5. Integrate Roles 2-5 through one golden Twitch workflow and execute both live and fallback evidence.

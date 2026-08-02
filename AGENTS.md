@@ -8,7 +8,7 @@ Build ChatXPT as a cross-platform AI stream director that turns gameplay state, 
 
 - ChatXPT does not host livestream video. Twitch, YouTube, Discord, and future platforms remain the viewing surfaces.
 - Build a platform-neutral ChatXPT Core surrounded by input and output adapters.
-- Twitch is the only supported platform in the current build: Twitch inputs, a Twitch Extension for viewers, and an OBS browser overlay for broadcast graphics.
+- Twitch is the only platform in scope for the current build. The accepted target includes Twitch inputs, a Twitch Extension for viewers, and an OBS browser overlay for broadcast graphics; do not claim these are implemented until their acceptance evidence passes.
 - ChatXPT Studio is the streamer-facing setup and control experience.
 - ChatXPT Studio is the primary full management surface. It owns Twitch connection and installation guidance, persistent streamer profiles, challenge preferences, safety limits, game settings, voting/reward settings, integration health, testing, history, and advanced session controls.
 - The Twitch Extension Live Config page embeds a smaller ChatXPT live-control surface inside the Twitch Creator Dashboard. It is for stream-time status, proposed-quest review, approve/reject, skip/cancel/result controls, quick intensity changes, vote visibility, and emergency pause.

@@ -13,7 +13,7 @@ Build the smallest complete and judge-visible product slice. Preserve the determ
 2. Identify the observable user outcome and which part of the core loop it affects.
 3. Preserve gameplay state, viewer sentiment, and streamer profile as distinct inputs.
 4. Keep provider calls behind the server API and validate all external output.
-5. Maintain producer approval before a quest reaches the overlay.
+5. Maintain deterministic validation and effective streamer veto/emergency controls before a quest can affect the live experience; follow Role 3's accepted approval and activation mechanics.
 6. Verify mock mode first, then verify live AI only when credentials are available.
 7. Run the relevant focused test and `npm run check` before declaring the slice ready.
 
@@ -23,7 +23,7 @@ Build the smallest complete and judge-visible product slice. Preserve the determ
 - Prefer challenges understood in a glance and completed within the current match.
 - Never produce dangerous, illegal, humiliating, discriminatory, sexual, monetary, or real-world physical dares.
 - Respect streamer boundaries and avoid deliberately sabotaging teammates without consent.
-- Expose why a quest fits the signals in producer UI, not in the stream overlay.
+- Expose why a quest fits the signals in streamer-facing UI, not in the stream overlay.
 - Treat model latency, refusal, invalid output, and outage as normal failure cases with a deterministic fallback.
 
 ## Change routing

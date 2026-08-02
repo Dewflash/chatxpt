@@ -15,7 +15,7 @@
 
 - [ ] No secrets, personal viewer data, or private chat exports in Git history
 - [ ] Third-party libraries, APIs, models, and datasets disclosed
-- [ ] Streamer boundaries and producer approval demonstrated
+- [ ] Streamer boundaries, deterministic validation, and the chosen approval/veto controls demonstrated
 - [ ] At least five representative generation cases evaluated
 - [ ] Demo deployment and local fallback both prepared
 

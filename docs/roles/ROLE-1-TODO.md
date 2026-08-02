@@ -14,7 +14,7 @@ Update this file at the start and end of each Role 1 pass. Do not mark `DONE` wi
 | R1-006 | P0 | READY | Register Twitch app and Extension test version. | Twitch account with 2FA | OAuth callback, test channel/allowlist, Viewer/Config/Live Config paths, Local or Hosted Test documented. |
 | R1-007 | P0 | READY | Define and test OBS integration contract and setup. | R1-003 | Browser source loads overlay, hides when inactive, reconnects, and consumes normalised state. |
 | R1-008 | P0 | BLOCKED | Integrate Roles 2-5 into the golden workflow. | R1-003 through R1-007; role deliverables | End-to-end evidence plus failure/fallback run. |
-| R1-009 | P1 | READY | Maintain GitHub issues, decisions, changelog compilation, and integration notes. | Ongoing | Every merged PR has owner review, fragment, verification, and recorded cross-role outcomes. |
+| R1-009 | P1 | IN PROGRESS | Maintain GitHub issues, decisions, changelog compilation, and integration notes. | Ongoing | Every merged PR has owner review, fragment, verification, and recorded cross-role outcomes. |
 | R1-010 | P1 | BLOCKED | Assemble submission artifacts and invite Garena collaborator. | R1-008 | Required README/disclosures, deck, video, private repo access, and final checklist. |
 
 ## Decisions Role 1 still owns

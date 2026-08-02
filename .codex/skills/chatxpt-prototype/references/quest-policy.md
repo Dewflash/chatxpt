@@ -2,7 +2,7 @@
 
 ## Required output qualities
 
-Return three options that differ in play pattern, not merely wording. Every option includes a short title, one unambiguous instruction, a duration or completion condition, difficulty, reward points, and a producer-only rationale tied to current signals.
+Return three options that differ in play pattern, not merely wording. Every option includes a short title, one unambiguous instruction, a duration or completion condition, difficulty, reward points, and a streamer-facing rationale tied to current signals.
 
 ## Adaptation rules
 
@@ -18,4 +18,4 @@ Return three options that differ in play pattern, not merely wording. Every opti
 
 Reject and fall back when output ignores a streamer boundary, depends on unavailable mechanics, requests real money or dangerous acts, targets a person for humiliation, cannot be judged complete/failed, or duplicates another option's core action.
 
-The producer is the final approval boundary before activation.
+Deterministic safety and feasibility validation is a non-bypassable boundary. Role 3 defines explicit approval, automatic/manual activation, veto, interruption, and emergency-control mechanics; the streamer must retain an effective veto or emergency control.

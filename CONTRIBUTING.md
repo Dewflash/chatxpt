@@ -40,7 +40,7 @@ Before planning or editing, read:
 ## Definition of done
 
 - The happy path works in mock mode.
-- Failure behavior is understandable to the producer.
+- Failure behavior is understandable to the streamer or live operator.
 - Relevant tests are updated.
 - `npm run check` passes.
 - `git diff --check` passes.
