@@ -4,13 +4,15 @@
 
 Read the root `AGENTS.md` before this guide. The root guide is authoritative if anything conflicts. Detailed viewer and overlay scope will be refined by the owner without weakening the baseline below.
 
+For the current MVP planning pass, Role 2 decides Role 5's build plan under D-016. Role 5 reviews it for feasibility and then owns detailed visual, interaction, accessibility, component, and code decisions that fit the plan.
+
 ## Mission
 
 Deliver clear, fast, enjoyable participation across the Twitch Extension, hosted fallback Quest Board, Twitch-chat fallback, and viewer-facing OBS overlay visuals.
 
 ## Owns
 
-- Twitch Extension viewer product and UX decisions.
+- Twitch Extension viewer implementation and detailed product/UX decisions within the accepted D-016 build plan.
 - Hosted Viewer Quest Board and fallback participation UX.
 - Voting, reactions, hype, progress, results, rewards, reconnect, and error presentation.
 - Viewer-facing OBS overlay visuals; Role 1 retains the OBS integration contract.
