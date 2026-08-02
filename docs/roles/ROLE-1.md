@@ -4,6 +4,8 @@
 
 Read the root `AGENTS.md` before this guide. The root guide is authoritative if anything conflicts.
 
+Execute work through `docs/build-plans/ROLE-1-BUILD-PLAN.md`. It defines the phase order, owner decision gates, deadlines, and acceptance evidence; this guide defines ownership.
+
 ## Mission
 
 Keep ChatXPT coherent and demonstrable end to end. Own platform-neutral contracts, Twitch and OBS boundaries, realtime/persistence integration, session lifecycle, deployment coordination, and final integration evidence.

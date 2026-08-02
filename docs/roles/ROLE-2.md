@@ -4,6 +4,8 @@
 
 Read the root `AGENTS.md` before this guide. The root guide is authoritative if anything conflicts.
 
+Execute work through `docs/build-plans/ROLE-2-BUILD-PLAN.md`. Role 1 defines required phases, deadlines, outcomes, and integration acceptance; Joelyrk decides the named Role 2 component choices at each decision gate.
+
 ## Mission
 
 Turn gameplay and audience activity into reliable, model-ready intelligence and exactly three structured quest candidates for Role 3.

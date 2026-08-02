@@ -13,6 +13,7 @@ Before planning or editing, read:
 5. `docs/TEAM_CONTEXT.md`
 6. `docs/PROJECT_TODO.md`
 7. Your `docs/roles/ROLE-<n>-TODO.md`
+8. Your execution plan under `docs/build-plans/` for Roles 1-3, or the accepted Role 2-authored plan for Roles 4-5
 
 ## Before starting a task
 
@@ -21,7 +22,7 @@ Before planning or editing, read:
 3. Update local `main` with `git pull --ff-only`.
 4. Claim or create one issue with a clear acceptance signal.
 5. Create `role-<n>/<short-summary>` from current `main`.
-6. Ask Codex for every material decision required by this pass in one batch.
+6. Match the task to one execution-plan pass and ask Codex for every open decision in that phase in one batch.
 7. Keep implementation inside the assigned role's owned directories.
 
 ## Pull requests
@@ -39,7 +40,8 @@ Before planning or editing, read:
 
 ## Definition of done
 
-- The happy path works in mock mode.
+- Component logic works against clearly labelled fixtures; any live or integration claim is backed by real captured input.
+- Missing gameplay facts remain `unknown`, and algorithmic/provider/deterministic fallback state is visible.
 - Failure behavior is understandable to the producer.
 - Relevant tests are updated.
 - `npm run check` passes.
