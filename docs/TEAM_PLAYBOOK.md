@@ -54,6 +54,7 @@ npm run check
 
 - `AGENTS.md`
 - This playbook
+- `docs/build-plans/INTEGRATION-CONTRACT.md`
 - Your `docs/roles/ROLE-<n>.md`
 - `docs/DECISIONS.md`
 - `docs/PROJECT_TODO.md`
@@ -124,13 +125,14 @@ Replace `<n>` and the objective:
 I am Role <n>. Begin this work pass for: <objective>.
 
 Before editing:
-1. Read the root AGENTS.md, TEAM_PLAYBOOK.md, my role guide and TODO, my execution plan, PROJECT_TODO.md, and DECISIONS.md.
+1. Read the root AGENTS.md, TEAM_PLAYBOOK.md, INTEGRATION-CONTRACT.md, my role guide and TODO, my execution plan, PROJECT_TODO.md, and DECISIONS.md.
 2. Inspect git status and incoming main changes without discarding anything.
 3. Summarise relevant changes since my branch diverged.
 4. Confirm the files my role owns and flag anything outside them.
 5. Identify the matching plan phase/pass and turn this objective into one reviewable pass with acceptance evidence.
 6. List every open decision in that phase's decision gate in one batch. Separate component decisions I own from cross-role or project-owner decisions.
 7. Identify dependencies and blockers before implementation.
+8. Name the public entry point and producer/consumer contract test for this pass. Do not import another role's private files.
 
 Do not edit another role's files. Update me briefly while working. At the end, verify, update my TODO and change fragment, review the diff, and tell me when it is ready to push and open a PR.
 ```
@@ -142,6 +144,8 @@ Do not edit another role's files. Update me briefly while working. At the end, v
 - Let your role owner decide component details; do not escalate every small choice to Role 1.
 - Create a `cross-role` GitHub Issue before work that requires another role.
 - If a shared contract is missing, use mocks that satisfy the last accepted contract and request the change from Role 1.
+- Do not edit `src/app/`, dependency/lock/config/env files, or Supabase migrations unless you are Role 1 or have a recorded scoped grant. Request dependencies from Role 1 with purpose, version, runtime/bundle risk, and fallback.
+- Merge and exercise the smallest cross-role vertical slice after each wave; do not postpone integration until every component is complete.
 - Keep mock, simulated, and live behaviour visibly distinguishable.
 - Run the smallest relevant checks while working.
 - Do not mix refactors, new features, and unrelated fixes in one pull request.
@@ -169,7 +173,7 @@ git diff --check
 git status --short
 ```
 
-UI roles also provide screenshots or a short recording. AI/engine roles provide evaluation or test evidence. State what is real, mocked, simulated, inspected, and actually executed.
+UI roles also provide screenshots or a short recording. AI/engine roles provide evaluation or test evidence. A cross-role change provides both producer and consumer contract-test evidence plus the integrated revision/flow exercised. State what is real, mocked, simulated, inspected, and actually executed.
 
 ### 2. Update team records
 

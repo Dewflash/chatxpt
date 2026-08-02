@@ -8,12 +8,13 @@ Before planning or editing, read:
 
 1. `AGENTS.md`
 2. `docs/TEAM_PLAYBOOK.md`
-3. Your `docs/roles/ROLE-<n>.md`
-4. `docs/DECISIONS.md`
-5. `docs/TEAM_CONTEXT.md`
-6. `docs/PROJECT_TODO.md`
-7. Your `docs/roles/ROLE-<n>-TODO.md`
-8. Your execution plan under `docs/build-plans/` for Roles 1-3, or the accepted Role 2-authored plan for Roles 4-5
+3. `docs/build-plans/INTEGRATION-CONTRACT.md`
+4. Your `docs/roles/ROLE-<n>.md`
+5. `docs/DECISIONS.md`
+6. `docs/TEAM_CONTEXT.md`
+7. `docs/PROJECT_TODO.md`
+8. Your `docs/roles/ROLE-<n>-TODO.md`
+9. Your execution plan under `docs/build-plans/` for Roles 1-3, or the accepted Role 2-authored plan for Roles 4-5
 
 ## Before starting a task
 
@@ -41,6 +42,7 @@ Before planning or editing, read:
 ## Definition of done
 
 - Component logic works against clearly labelled fixtures; any live or integration claim is backed by real captured input.
+- The changed public seam passes both producer and consumer contract tests; a wave is not done until its smallest vertical slice is merged and exercised on `main`.
 - Missing gameplay facts remain `unknown`, and algorithmic/provider/deterministic fallback state is visible.
 - Failure behavior is understandable to the producer.
 - Relevant tests are updated.

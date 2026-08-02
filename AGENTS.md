@@ -40,6 +40,8 @@ Streamer starts a Twitch session
 - Never commit private chat exports, personal viewer data, or competition credentials.
 - Generate challenges that are legal, non-harmful, game-appropriate, non-wagering, and easy to understand under pressure.
 - Keep Twitch-specific types inside the Twitch adapter. The core consumes normalised ChatXPT events.
+- Route runtime composition through Role 1's application orchestrator: Role 2 analyses/generates, Role 3 decides, Role 1 authenticates/persists/broadcasts, and Roles 4/5 render and emit commands.
+- Integrate after every wave through public ports and producer/consumer contract tests. Five separately working modules are not a working product.
 - Route every viewer client through one private, platform-neutral participation service. Do not place authoritative vote state inside the Twitch Extension or another UI client.
 - Preserve all three MVP participation paths: Twitch Extension primary, hosted Quest Board first fallback, and `1`/`2`/`3` Twitch-chat voting final fallback.
 - Keep the participation interface ready for future authenticated integrations, but do not build a public developer API, external SDK, partner portal, or non-Twitch platform adapter during this MVP.
@@ -88,7 +90,7 @@ Role 1 may inspect, redirect, assist, and modify any role when required for inte
 For the current MVP planning pass, the project owner grants Role 2 authority to decide the build plans for Roles 4 and 5. This is a deliberate exception to normal component planning ownership and is limited to the plans themselves.
 
 - Role 2 decides MVP outcomes, surface and flow coverage, feature priority, required product states, AI/data requirements, mock/live boundaries, milestones, acceptance criteria, exclusions, and handoff order for both UI roles.
-- Role 2 produces a separate implementation-ready plan for Role 4 and Role 5 and sends each plan to its implementing owner and Role 1.
+- Role 2 produces separate but synchronised implementation-ready plans for Roles 4 and 5, includes the shared dependency/fixture/contract matrix required by D-034, and sends each plan to its implementing owner and Role 1.
 - Roles 4 and 5 review their plan for feasibility, identify conflicts or missing requirements in one response, and then implement it. They retain detailed visual, interaction, accessibility, component, and code decisions that do not contradict the approved plan.
 - Role 2 may revise the plans after comparison, but may not edit Role 4 or Role 5 source files or implement their UI work under this grant.
 - Any disagreement that changes scope, ownership, shared contracts, safety, cost, or the golden workflow goes to Role 1, who remains final authority.
@@ -96,7 +98,7 @@ For the current MVP planning pass, the project owner grants Role 2 authority to 
 
 ### Mandatory role guides
 
-Every contributor and their ChatGPT/Codex agent must read this root guide, `docs/TEAM_PLAYBOOK.md`, the assigned guide, the assigned TODO under `docs/roles/`, and the assigned execution plan before planning or editing. The root guide wins if a role guide or plan conflicts with it. Role guides and plans may clarify component decisions but cannot expand their own authority.
+Every contributor and their ChatGPT/Codex agent must read this root guide, `docs/TEAM_PLAYBOOK.md`, `docs/build-plans/INTEGRATION-CONTRACT.md`, the assigned guide, the assigned TODO under `docs/roles/`, and the assigned execution plan before planning or editing. The root guide wins if a role guide or plan conflicts with it. Role guides and plans may clarify component decisions but cannot expand their own authority.
 
 | Role | GitHub owner | Mandatory guide | Execution plan |
 | --- | --- | --- | --- |
@@ -131,11 +133,13 @@ Primary work:
 - Define shared contracts for platform events, gameplay events, stream sessions, viewers, votes, quests, progress, and results.
 - Define the private participation-service contract for session state, quest options, votes, reactions, live tallies, quest progress, results, and realtime event subscriptions.
 - Define the stream lifecycle: offline, preparing, live, voting, quest active, cooldown, and ended.
+- Own the application orchestrator that composes Role 2/3 ports, authenticates and deduplicates commands, persists authoritative revisions, and broadcasts role-specific view state.
 - Research and document what Twitch currently supports through OAuth, EventSub, chat, Extensions, Extension JWTs/EBS, PubSub, testing, and channel metadata.
 - Build the Twitch adapter without leaking Twitch payloads into ChatXPT Core.
 - Own the OBS bridge contract for stream status, browser-overlay state, source control, and future screenshot inputs.
 - Define the replaceable gameplay-data extraction contract consumed by the core and implemented by Role 2.
 - Own the Supabase persistence/realtime boundary and the Vercel production deployment.
+- Own thin `src/app/` route/layout/provider entry points, shared dependency/lock/config/env files, Supabase migrations/RLS, canonical contract tests, and the cross-role integration harness.
 - Maintain the golden integration test from Twitch/gameplay input to vote, overlay, and result.
 
 Does not own AI implementation, extraction implementation, quest-engine implementation, or final UI styling.
@@ -157,6 +161,7 @@ Primary work:
 - Own model-provider adapters, model-ready context, signal-analysis prompts, structured transport, and provider reliability evaluation.
 - Jointly evaluate provider/model selection with Role 3: Role 2 assesses integration, latency, privacy, cost, structured output, and reliability; Role 3 assesses quest quality and engine fit.
 - Produce exactly three distinct candidate quests for Role 3 to validate and orchestrate.
+- Expose public Role 2 ports and producer contract tests; do not persist session/lifecycle/UI state or import another role's private implementation.
 - Decide and deliver the current MVP build plans for Roles 4 and 5 under the scoped planning grant above.
 - Maintain AI-specific safety, privacy, latency, cost, reliability, moderation, and observability requirements.
 
@@ -183,6 +188,7 @@ Primary work:
 - Validate Role 2's AI-generated candidates before they can reach a streamer or viewer.
 - Maintain a curated deterministic fallback quest library using the same candidate schema.
 - Define how streamer vetoes, vote results, quest outcomes, and recent history influence the next quest cycle.
+- Expose a pure public engine port returning state/events/allowed actions; Role 1 owns authentication, persistence, realtime, and platform execution.
 
 Role 3 owns these mechanics; their exact timings and defaults are not project-owner decisions unless they cross a non-negotiable or another role boundary.
 
@@ -210,7 +216,7 @@ Primary work:
 - Own the shared ChatXPT visual system: brand tokens, typography, colours, spacing, base components, and accessibility conventions consumed by Role 5.
 - Define streamer-experience measurements such as setup completion, time to readiness, control usage, vetoes, and interruptions; Role 1 selects final submission KPIs.
 
-The streamer should choose understandable experience settings. Exposing raw model names is an open decision, not a default requirement.
+The streamer chooses understandable experience settings. Provider and raw model names are not exposed as the normal control under D-022.
 
 ### Role 5: Viewer Quest Board UI/UX
 
@@ -252,12 +258,15 @@ Role 5 owns viewer-facing OBS overlay visuals inside `src/viewer/`; Role 1 owns 
 - Create new role-specific source inside the owning role's directory.
 - Do not edit, move, rename, or delete files in another role's directory except through the recorded Role 1 integration override.
 - Role 1 exclusively owns shared domain contracts in `src/core/`.
+- Role 1 exclusively owns thin `src/app/` route/layout/provider files, shared dependency/lock/config/env files, Supabase migrations/RLS, and `tests/integration/`. Role-specific UI and logic stay behind public entry points in the owning directories.
+- A role that needs a dependency proposes it to Role 1 with purpose, version, runtime/bundle risk, and fallback. Role 1 applies the shared-file edit or grants one explicitly scoped exception.
+- Role 4 owns design-system implementation/styles under `src/design-system/`; Role 1 owns only the app-level import/wiring and Role 5 consumes the public design-system entry point.
 - If another role needs a directory or contract change, submit a cross-role proposal to the owner and notify the project owner before adoption.
 - Files outside the mapped directories are not automatically shared. Their ownership must be recorded before role-specific work changes them.
 
 ### One-time ownership migration
 
-Role 1 is authorised to perform the initial mechanical migration from the legacy shared `src/lib/`, `src/components/`, and `src/app/` layout into the five owned source directories. This exception is limited to moving files, reconnecting imports/routes, and preserving existing behaviour. Role 1 must not redesign another role's algorithms, AI behaviour, or UX during the migration. Once a file enters its mapped directory, exclusive ownership transfers immediately to that role.
+Role 1 is authorised to perform the initial mechanical migration from the legacy shared `src/lib/`, `src/components/`, and `src/app/` layout behind the five role boundaries. `src/app/` remains thin and Role 1-owned while it mounts the role-owned modules. This exception is limited to moving files, reconnecting imports/routes, and preserving existing behaviour. Role 1 must not redesign another role's algorithms, AI behaviour, or UX during the migration. Once a file enters its mapped role directory, exclusive ownership transfers immediately to that role.
 
 ## Shared contracts
 
@@ -271,14 +280,21 @@ StreamerProfile
 StreamSession
 ParticipationCapabilities
 QuestCandidate
+CandidateBatch
 Vote
-ActiveQuest
+QuestCycleState
 QuestProgress
 QuestResult
 RewardEvent
+ContractEnvelope
+CommandEnvelope
+DomainError
+StreamerViewModel
+ViewerViewModel
+OverlayViewModel
 ```
 
-Keep provider payloads, Twitch payloads, UI view models, and persistence records outside these domain contracts. Prefer explicit adapters over conditionals scattered through core code.
+Keep provider payloads, Twitch payloads, component-local UI state, and persistence records outside the neutral domain contracts. Role 1 may define role-specific view-model contracts beside the application boundary. Prefer explicit ports/adapters over conditionals or direct cross-role imports.
 
 ## Collaboration
 
@@ -286,7 +302,7 @@ Keep provider payloads, Twitch payloads, UI view models, and persistence records
 - Read `docs/TEAM_CONTEXT.md` before starting shared-contract or demo-critical work, and update its coordination board when claiming such work.
 - Start each task from current `main` and use `role-<n>/<short-summary>` branches.
 - Never push directly to `main`; use a pull request for every change.
-- Keep branches short-lived, sync current `main` before review, and integrate at least daily.
+- Keep branches short-lived, sync current `main` before review, and integrate the smallest vertical slice after every wave and at least daily.
 - Role 1 controls final integration and merging. A pull request that touches another role's files requires that role owner's review.
 - Maintain `CODEOWNERS` for role directories and require automated checks before merge.
 - Do not edit another role's implementation or make decisions for that role, except through the recorded Role 1 integration override or the scoped D-016 Role 2 planning grant.
@@ -297,7 +313,7 @@ Keep provider payloads, Twitch payloads, UI view models, and persistence records
 - Require one reviewer; require two reviewers for shared contracts, safety logic, authentication, or demo-critical integration.
 - State what was actually verified; never upgrade source inspection into runtime proof.
 - Update `docs/DECISIONS.md` when the team settles Twitch scope, Supabase, AI provider/routing, gameplay extraction, identity, or rewards.
-- Every role must preserve the golden Twitch demo and mock fallback.
+- Every role must preserve the golden Twitch demo, real-input algorithmic path, and deterministic fallback; simulated fixtures remain test/diagnostic only.
 - Every pull request adds a role-owned change fragment under `changes/role-<n>/`; Role 1 compiles release-ready entries into `CHANGELOG.md`.
 
 ## Global delivery evidence
@@ -312,7 +328,5 @@ Keep provider payloads, Twitch payloads, UI view models, and persistence records
 
 ## Current open decisions
 
-- Direct OpenAI API versus OpenRouter or another provider-routing layer; Roles 2 and 3 submit one joint recommendation.
-- Experience presets versus raw AI-model selection for streamers.
-- Browser/OBS capture, desktop capture, or official telemetry for the first real gameplay signal.
-- Anonymous, Twitch-scoped, or cross-platform viewer rewards and identity.
+- Which genuinely free provider/model, if any, Roles 2 and 3 jointly recommend behind the mandatory no-credential path.
+- Component-level decision gates marked `Open` in the Role 1-3 build plans and the forthcoming Role 4/5 plans.

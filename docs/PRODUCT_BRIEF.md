@@ -16,7 +16,7 @@ ChatXPT does not replace Twitch or host video. The streamer installs and connect
 - Viewers who want meaningful influence rather than passive chat spam.
 - Streamer teams or moderators who need clear, safe live controls.
 
-The shared product is game-neutral. A reliable real game may be chosen for the demonstration without narrowing the architecture to that title or genre.
+The shared product is game-neutral through tiered capability: universal broad visual signals across action games, calibrated HUD facts for configured games, and future official telemetry. A reliable real game may be chosen for the demonstration without narrowing the architecture to that title or genre.
 
 ## Core inputs
 
@@ -42,7 +42,7 @@ ChatXPT is not merely a poll or a generic chatbot. It closes the loop between wh
 - A judge understands the value and core loop in under 30 seconds.
 - A streamer completes one-time Twitch/OBS setup, saves preferences, and starts a later session without repeating full setup.
 - Real gameplay captured through OBS Virtual Camera and real Twitch activity drive candidate generation; missing observations are honestly `unknown`.
-- Exactly three validated, game-neutral options reach one streamer and two viewer clients with consistent realtime state.
+- Exactly three validated, capability-aware game-neutral options reach one streamer and two viewer clients with the same authoritative session/cycle revision.
 - Voting, activation, OBS display, progress, terminal result, session points, and hype complete end to end.
 - A free AI contribution is evidenced when available; provider failure continues through algorithms on real inputs and deterministic quest fallback.
 - Twitch Extension, hosted Viewer Quest Board, and Twitch-chat voting capabilities/fallbacks are represented honestly.

@@ -11,9 +11,10 @@ Every contributor and their ChatGPT/Codex agent must read:
 1. [`AGENTS.md`](AGENTS.md)
 2. [`docs/TEAM_PLAYBOOK.md`](docs/TEAM_PLAYBOOK.md)
 3. The assigned guide and TODO under [`docs/roles/`](docs/roles/)
-4. The assigned execution plan under [`docs/build-plans/`](docs/build-plans/) for Roles 1-3, or the accepted Role 2-authored plan for Roles 4-5
-5. [`docs/DECISIONS.md`](docs/DECISIONS.md)
-6. [`docs/PROJECT_TODO.md`](docs/PROJECT_TODO.md)
+4. [`docs/build-plans/INTEGRATION-CONTRACT.md`](docs/build-plans/INTEGRATION-CONTRACT.md)
+5. The assigned execution plan under [`docs/build-plans/`](docs/build-plans/) for Roles 1-3, or the accepted Role 2-authored plan for Roles 4-5
+6. [`docs/DECISIONS.md`](docs/DECISIONS.md)
+7. [`docs/PROJECT_TODO.md`](docs/PROJECT_TODO.md)
 
 The playbook includes first-time setup, safe daily Git commands, the required Codex start prompt, one-batch decision handling, verification, changelog fragments, pushing, and pull requests.
 
@@ -63,7 +64,7 @@ Roles 2 and 3 will jointly recommend a free provider/model path. If any provider
 - `src/lib` - schemas, domain types, mock engine, and model adapter
 - `docs` - product scope, architecture, decisions, shared team context, workflow, and submission checklist
 - `docs/roles` - mandatory per-role authority and to-do lists
-- `docs/build-plans` - authoritative phase, decision-gate, deadline, and acceptance plans
+- `docs/build-plans` - authoritative integration contract plus phase, decision-gate, deadline, and acceptance plans
 - `changes` - role-owned changelog fragments compiled by Role 1
 - `.github` - code ownership and pull-request/cross-role issue templates
 - `.codex/skills/chatxpt-prototype` - shared project workflow for Codex
@@ -89,6 +90,8 @@ game signals + chat signals + streamer profile
 ```
 
 The current prototype uses same-origin browser storage and `BroadcastChannel` to synchronize the control room and overlay. The accepted MVP target replaces authoritative live state with Supabase persistence and realtime channels while preserving this local transport for local diagnostics. Twitch, OBS, AI providers, gameplay extraction, persistence, and viewer surfaces remain replaceable adapters around the core contracts.
+
+Role 1's application orchestrator will compose those adapters and Role 2/3 public ports, persist revisioned state, and broadcast role-specific view models. Cross-role work integrates after every wave through producer/consumer contract tests rather than being combined only after five separate builds finish.
 
 ## Third-party disclosure
 

@@ -31,6 +31,8 @@ Role 3 is complete when:
 - Do not edit canonical contracts in `src/core/`; propose changes to Role 1.
 - Do not trust AI output without deterministic validation.
 - Do not infer missing real gameplay facts. Consume Role 2 confidence/unknown values and degrade safely.
+- Return deterministic state/events/allowed actions through the public `QuestEngine` port; do not persist, broadcast, authenticate, or call integration services.
+- Accept canonical command IDs, expected revisions, and authoritative absolute time from Role 1; do not use a UI clock as lifecycle authority.
 - Rewards remain session-scoped, non-monetary, and non-wagering.
 - Simulated/crafted candidates are allowed for engine tests only; judged integration uses real Role 2 intelligence.
 
@@ -51,6 +53,7 @@ Role 3 is complete when:
 **Work:**
 
 - Define Role 3-owned ports adapting canonical contracts.
+- Export one documented public engine entry point and add consumer contract tests against Role 1/2 canonical examples.
 - Create valid, unsafe, impossible, duplicated, stale, low-confidence, unknown-heavy, provider-failed, and malformed candidate fixtures.
 - Propose missing canonical fields to Role 1.
 
@@ -67,7 +70,7 @@ Role 3 is complete when:
 - Succeeded, failed, cancelled, skipped, or expired.
 - Cooldown/return to idle.
 
-**Acceptance:** Legal transitions work; illegal commands return typed errors; time and randomness are injectable for deterministic tests.
+**Acceptance:** Legal transitions work; illegal, duplicate, and stale-revision commands return typed decisions/errors; time and randomness are injectable; events carry correlation/revision data expected by the Role 1 orchestrator.
 
 ## Phase 2: Intervention and streamer control
 
@@ -84,7 +87,7 @@ Role 3 is complete when:
 
 **Outcome:** Quest cycles begin at suitable moments using real intelligence and streamer preferences.
 
-**Inputs:** Activity intensity, downtime, audience energy/boredom/hype/risk, streamer profile, current lifecycle state, recent quests/outcomes, confidence, freshness, and unknown fields.
+**Inputs:** Activity intensity, downtime, audience energy/boredom/hype/risk, streamer profile, current lifecycle state, recent quests/outcomes, game-support tier/capabilities, confidence, freshness, and unknown fields.
 
 **Acceptance:** Tests cover quiet, active, unsafe, repetitive, uncertain, stale, and unknown-heavy moments; low confidence cannot masquerade as a known event.
 
@@ -118,6 +121,7 @@ Role 3 is complete when:
 - Legal/non-harmful/non-wagering safety.
 - Streamer restrictions and accessibility.
 - Feasibility for known real state; unknown fields cannot justify a specific factual challenge.
+- Capability fit: universal quests may use universal signals, while calibrated HUD facts require the matching advertised capability.
 - Clarity under stream pressure.
 - Duration/difficulty fit.
 - Duplication and diversity.
@@ -172,6 +176,8 @@ Role 3 is complete when:
 
 **Acceptance:** Tests cover normal majority, ties, zero votes, late votes, vote changes, duplicate rejection assumptions, disconnect, cancellation, and expiry.
 
+Role 1 owns vote authentication, acceptance, storage, and deduplication. Role 3 consumes the accepted vote/tally or close-vote command and deterministically resolves the outcome.
+
 ### R3-P09 — Winner activation and interruption
 
 **Outcome:** One winner becomes an active quest only when Role 3 permits it.
@@ -193,7 +199,7 @@ Role 3 is complete when:
 
 **Outcome:** Every active quest reaches a clear terminal state or remains explicitly active.
 
-**Acceptance:** Progress is bounded and timestamped; automatic evidence requires adequate real-signal confidence; manual controls follow permissions; all terminal paths are tested.
+**Acceptance:** Progress is bounded and timestamped with authoritative absolute time; automatic evidence requires adequate real-signal confidence; manual controls follow permissions; duplicate/stale terminal commands do not apply twice; all terminal paths are tested.
 
 ### R3-P11 — Session rewards and history
 
@@ -235,6 +241,7 @@ Role 3 is complete when:
 - Normal voting, ties, zero votes, veto, cancellation, skip, expiry, success, and failure.
 - Automatic progress with adequate evidence and refusal when evidence is uncertain.
 - Reconnect-relevant state reconstruction.
+- Duplicate command IDs, stale expected revisions, simultaneous control attempts, server/client clock skew, and out-of-order delivery assumptions.
 - Multiple action-game contexts without game-specific core rules.
 
 **Acceptance:** Deterministic tests pass; Role 2 live outputs drive the engine; Role 1 receives lifecycle/safety evidence and declared limitations.
@@ -245,11 +252,11 @@ Role 3 is complete when:
 
 **Handoffs:**
 
-- Role 1: commands, events, persistence/realtime needs, idempotency assumptions.
+- Role 1: public engine port, commands, events, revision/idempotency requirements, atomic persistence inputs, and realtime view-state needs.
 - Role 4: available streamer actions, reasons, veto/emergency states.
 - Role 5: options, vote state, active quest, progress, results, rewards, reconnect states.
 
-**Acceptance:** No UI implements lifecycle, validation, tie, reward, or permission rules; contract proposals are reviewed; real golden workflow reaches every terminal state needed for evidence.
+**Acceptance:** Role 3 consumer/producer contract tests pass against Role 1/2 canonical examples; no UI implements lifecycle, validation, tie, reward, timer authority, or permission rules; the engine has no Supabase/Twitch/UI imports; real golden workflow reaches every terminal state needed for evidence.
 
 ## Escalate to Role 1 when
 
