@@ -20,7 +20,7 @@ const commandEnvelopeFields = {
   actor: actorSchema,
 };
 
-const streamerQuestCommandSchema = z
+export const streamerQuestCommandSchema = z
   .object({
     ...commandEnvelopeFields,
     type: z.literal("streamer.quest"),
@@ -29,7 +29,7 @@ const streamerQuestCommandSchema = z
   })
   .strict();
 
-const viewerVoteCommandSchema = z
+export const viewerVoteCommandSchema = z
   .object({
     ...commandEnvelopeFields,
     type: z.literal("viewer.vote"),
@@ -37,7 +37,7 @@ const viewerVoteCommandSchema = z
   })
   .strict();
 
-const viewerReactionCommandSchema = z
+export const viewerReactionCommandSchema = z
   .object({
     ...commandEnvelopeFields,
     type: z.literal("viewer.react"),
@@ -45,7 +45,7 @@ const viewerReactionCommandSchema = z
   })
   .strict();
 
-const systemIntelligenceCommandSchema = z
+export const systemIntelligenceCommandSchema = z
   .object({
     ...commandEnvelopeFields,
     type: z.literal("system.intelligence-ready"),
