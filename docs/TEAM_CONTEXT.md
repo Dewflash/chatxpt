@@ -41,7 +41,7 @@ Update a row before starting shared-contract or golden-demo work. Detailed task 
 | Cross-role integration contract | `Dewflash` | `docs/build-plans/INTEGRATION-CONTRACT.md` | Public seams, orchestrator, shared ownership, realtime correctness, and test ladder | Ready |
 | Canonical contract implementation | `Dewflash` | PR #6 | Versioned schemas, public ports, explicitly non-live fixtures, and schema tests | Done |
 | Role public entrypoint foundation | `Dewflash` | PR #7 | Collision-free public modules and canonical consumer compatibility tests for Roles 1-5 | Done; Role 1 override disclosed |
-| Application orchestrator foundation | `Dewflash` | `role-1/orchestrator-foundation` | Idempotent expected-revision command path with atomic fixture persistence before validated view broadcast | In progress |
+| Application orchestrator foundation | `Dewflash` | `role-1/orchestrator-foundation` / PR #8 | Idempotent expected-revision command path with atomic fixture persistence before validated view broadcast | Review requested from Roles 2-5 |
 | Role 4/5 MVP build plans | `joelyrk` | Create Role 2 branch/issue after pulling `main` | Separate implementation-ready plans for the streamer and viewer owners | Ready |
 | Quest engine implementation | `L0pch` | Start from `ROLE-3-BUILD-PLAN.md` | Engine boundary, lifecycle, safety, fallback, and AI-quality decisions | Ready |
 | Streamer experience | `JYL1m` | Await Role 2 plan and shared contracts | Working Studio and Twitch Live Config against accepted contracts | Planned |
