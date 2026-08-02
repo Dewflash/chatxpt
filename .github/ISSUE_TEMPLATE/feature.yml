@@ -3,6 +3,18 @@ description: Claim a small, demo-visible product outcome
 title: "[Feature] "
 labels: ["feature"]
 body:
+  - type: dropdown
+    id: role
+    attributes:
+      label: Owning role
+      options:
+        - Role 1 - Integrations and shared platform
+        - Role 2 - AI intelligence and data extraction
+        - Role 3 - Quest engine
+        - Role 4 - Streamer Studio UI/UX
+        - Role 5 - Viewer Quest Board UI/UX
+    validations:
+      required: true
   - type: textarea
     id: outcome
     attributes:
@@ -22,10 +34,19 @@ body:
     attributes:
       label: Dependencies and files
       description: Note shared contracts or likely overlap.
+  - type: textarea
+    id: exclusions
+    attributes:
+      label: Out of scope
+      description: State what this slice deliberately does not implement.
   - type: checkboxes
     id: safety
     attributes:
       label: Guardrails
       options:
-        - label: Mock mode remains functional
+        - label: Mock mode remains functional or the exception is explicitly approved
+          required: true
         - label: No credentials or personal viewer data are introduced
+          required: true
+        - label: Cross-role work has a linked `cross-role` issue
+          required: false

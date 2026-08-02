@@ -1,0 +1,42 @@
+# Role 1 is the default integration owner.
+* @Dewflash
+
+# Repository authority, workflow, shared configuration, and integration.
+/AGENTS.md @Dewflash
+/.github/ @Dewflash
+/docs/DECISIONS.md @Dewflash
+/docs/PROJECT_TODO.md @Dewflash
+/docs/TEAM_PLAYBOOK.md @Dewflash
+/docs/TEAM_WORKFLOW.md @Dewflash
+/docs/roles/ROLE-1.md @Dewflash
+/docs/roles/ROLE-1-TODO.md @Dewflash
+/src/core/ @Dewflash
+/src/integrations/ @Dewflash
+/src/realtime/ @Dewflash
+/changes/role-1/ @Dewflash
+
+# Role 2: AI intelligence and extraction.
+/docs/roles/ROLE-2.md @joelyrk @Dewflash
+/docs/roles/ROLE-2-TODO.md @joelyrk @Dewflash
+/src/ai/ @joelyrk @Dewflash
+/src/extraction/ @joelyrk @Dewflash
+/changes/role-2/ @joelyrk @Dewflash
+
+# Role 3: quest engine.
+/docs/roles/ROLE-3.md @L0pch @Dewflash
+/docs/roles/ROLE-3-TODO.md @L0pch @Dewflash
+/src/quest-engine/ @L0pch @Dewflash
+/changes/role-3/ @L0pch @Dewflash
+
+# Role 4: streamer product and shared design system.
+/docs/roles/ROLE-4.md @JYL1m @Dewflash
+/docs/roles/ROLE-4-TODO.md @JYL1m @Dewflash
+/src/streamer/ @JYL1m @Dewflash
+/src/design-system/ @JYL1m @Dewflash
+/changes/role-4/ @JYL1m @Dewflash
+
+# Role 5: viewer, fallback, and viewer-facing overlay UX.
+/docs/roles/ROLE-5.md @drdexe @Dewflash
+/docs/roles/ROLE-5-TODO.md @drdexe @Dewflash
+/src/viewer/ @drdexe @Dewflash
+/changes/role-5/ @drdexe @Dewflash
