@@ -6,7 +6,7 @@ Update this file at the start and end of each Role 1 pass. Do not mark `DONE` wi
 
 Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan defines phase order, owner decisions, deadlines, and pass-level evidence.
 
-**Next:** decide the Phase 1 gate once, publish R1-P02's thin contracts/orchestrator skeleton first, then complete R1-P03's public-entry ownership migration behind them. Run R1-P03A Twitch/OBS/Supabase/Vercel feasibility spikes in parallel.
+**Next:** keep ambiguous legacy moves deferred until their recorded decisions are settled; proceed with decision-free R1-P03 work and the R1-P03A Twitch/OBS/Supabase/Vercel feasibility spikes.
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
@@ -14,7 +14,7 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 | R1-012 | P0 | DONE | Publish and operationalise the concurrent Role 1-3 build plans. | R1-001; D-017 through D-029 | Three plans define phases, decision gates, deadlines, real-data rules, acceptance evidence, ownership, onboarding links, and required reviews; `npm run check` and `git diff --check` pass. |
 | R1-013 | P0 | DONE | Publish the binding cross-role integration contract and close plan-level integration gaps. | R1-012; D-030 through D-036 | Orchestrator/seams, shared-file ownership, realtime semantics, contract ladder, risk spikes, tiered game support, and synchronised Role 4/5 plan requirements are authoritative; `npm run check` and `git diff --check` pass. |
 | R1-002 | P0 | IN PROGRESS | Perform the one-time public-entry ownership migration. | R1-003 skeleton; open legacy mapping decisions | Additive public paths and compatibility tests are implemented; ambiguous legacy moves remain deferred until mapping/retention decisions are settled. |
-| R1-003 | P0 | IN PROGRESS | Freeze version 1 contracts, public ports, orchestrator skeleton, and capability model. | R1-001; input from Roles 2-5 | Versioned schemas/ports and non-live fixtures exist with focused tests; remaining evidence is role consumer tests and the orchestrator fixture cycle without direct cross-role imports. |
+| R1-003 | P0 | DONE | Freeze version 1 contracts, public ports, orchestrator skeleton, and capability model. | R1-001; input from Roles 2-5 | Versioned schemas/ports, non-live fixtures, all-role consumer tests, and the candidate -> engine -> atomic commit -> validated view/broadcast fixture cycle pass, including duplicate, stale, concurrent, denial, and recovery cases. |
 | R1-004 | P0 | READY | Create Supabase Free project and minimal revisioned schema/realtime channels. | R1-003 | Committed migrations/RLS/env validation; profiles, sessions, quests, votes, progress/results sync across two browsers with idempotency/reconnect evidence and any retained raw chat auto-deletes within 24 hours. |
 | R1-005 | P0 | READY | Connect Vercel deployment and safe environment variables. | R1-004 | Role 1 deployment succeeds; preview/production URLs documented; no secrets in client or Git. |
 | R1-006 | P0 | BLOCKED | Register Twitch app and Extension test version. | R1-011 | OAuth callback, test channel/allowlist, Viewer/Config/Live Config paths, Local or Hosted Test documented. |

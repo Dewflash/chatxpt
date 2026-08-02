@@ -99,6 +99,8 @@ The current prototype uses same-origin browser storage and `BroadcastChannel` to
 
 Role 1's application orchestrator will compose those adapters and Role 2/3 public ports, persist revisioned state, and broadcast role-specific view models. Cross-role work integrates after every wave through producer/consumer contract tests rather than being combined only after five separate builds finish.
 
+The additive orchestrator skeleton is implemented behind injected authorization, candidate-reader, engine, repository, projection, clock, ID, and publisher ports. Its in-memory harness is fixture-only; it proves idempotency, stale-revision rejection, atomic commit-before-broadcast, concurrent-write protection, and persisted recovery state, not Supabase or live multi-device behavior.
+
 The version-one contract schemas and fixtures now live under `src/core/`. Legacy routes still use `src/lib/domain.ts` until the separately gated mechanical migration; the existence of new contracts does not imply the current UI or API is integrated with them yet.
 
 Each role also has an additive public `index.ts` in its owned source directory. These entrypoints expose only accepted shared seams; they are not placeholder product implementations, and the deliberately empty design-system entrypoint leaves visual decisions with Role 4.
