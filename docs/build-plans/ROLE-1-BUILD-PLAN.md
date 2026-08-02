@@ -49,9 +49,9 @@ Run this loop throughout every phase:
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
 | D1-01 | Final legacy-file mapping into the five owned source directories | Open | — |
-| D1-02 | Minimum fields and versioning strategy for contract version one | Open | — |
+| D1-02 | Minimum fields and versioning strategy for contract version one | Resolved by D-031/D-035 | Version `1.0.0`; required canonical envelope/revision/provenance/error fields from the integration contract; producer and consumer tests accompany changes. |
 | D1-03 | Which existing prototype behaviours must remain temporarily reachable during migration | Open | — |
-| D1-03A | Public entry points, shared-file ownership, and dependency-request procedure | Open | — |
+| D1-03A | Public entry points, shared-file ownership, and dependency-request procedure | Resolved by D-032 | Role 1 owns collision-prone composition files; Roles 2-5 export public entries and request shared dependencies through Role 1 unless granted a scoped edit. |
 
 ### R1-P01 — Publish authoritative plans
 
@@ -70,6 +70,8 @@ Run this loop throughout every phase:
 ### R1-P02 — Thin contracts and application-orchestrator skeleton
 
 **Outcome:** Roles 2 and 3 integrate without waiting for the full platform.
+
+**Status:** In progress — versioned schemas, public port types, non-live canonical fixtures, and schema tests are implemented; role consumer tests and the orchestrator skeleton remain.
 
 **Canonical contracts:**
 
@@ -144,7 +146,7 @@ Run this loop throughout every phase:
 | D1-04 | Minimal Supabase tables, realtime topics, and RLS boundaries | Open | — |
 | D1-05 | Development, preview, and production environment separation | Open | — |
 | D1-06 | Session creation, expiry, reconnect, and room-code policy | Open | — |
-| D1-06A | Revision, command-idempotency, atomic-write, and reconnect-snapshot semantics | Open | — |
+| D1-06A | Revision, command-idempotency, atomic-write, and reconnect-snapshot semantics | Resolved by D-035 | Server timestamps, command IDs, expected/current revisions, idempotency, atomic persistence before broadcast, typed errors, and reconnect snapshots. |
 | D1-06B | Broadcaster/moderator/viewer/system/overlay permission matrix and token-expiry behaviour | Open | — |
 
 ### R1-P04 — Supabase Free foundation
