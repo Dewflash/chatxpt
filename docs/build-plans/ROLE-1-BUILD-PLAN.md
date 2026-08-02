@@ -53,7 +53,7 @@ Run this loop throughout every phase:
 
 **Outcome:** Roles 1-3 receive detailed concurrent build plans and decision gates.
 
-**Status:** Complete on `role-1/build-plans-1-3`; authority/onboarding links are wired and the full repository check passes.
+**Status:** Complete in PR #4; authority/onboarding links are wired and the full repository check passes.
 
 **Work:**
 
