@@ -1,0 +1,31 @@
+name: Feature slice
+description: Claim a small, demo-visible product outcome
+title: "[Feature] "
+labels: ["feature"]
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: User-visible outcome
+      description: Describe one observable result.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance signal
+      description: How will the team prove this works?
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and files
+      description: Note shared contracts or likely overlap.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Guardrails
+      options:
+        - label: Mock mode remains functional
+        - label: No credentials or personal viewer data are introduced

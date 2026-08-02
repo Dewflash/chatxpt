@@ -1,0 +1,4 @@
+interface:
+  display_name: "ChatXPT Prototype"
+  short_description: "Build and validate the ChatXPT prototype"
+  default_prompt: "Use $chatxpt-prototype to implement the next demo-ready ChatXPT feature."
