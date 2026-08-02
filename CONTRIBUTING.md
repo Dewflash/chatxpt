@@ -2,9 +2,9 @@
 
 ## Before starting
 
-1. Pull `main` and read `AGENTS.md`.
+1. Pull `main` and read `AGENTS.md` plus `docs/TEAM_CONTEXT.md`.
 2. Claim or create one issue with a clear acceptance signal.
-3. Create a short-lived branch from `main`.
+3. Create a short-lived `feature/`, `fix/`, or `docs/` branch from `main`.
 4. Add your name to the issue, not to a permanent subsystem silo.
 
 ## Pull requests

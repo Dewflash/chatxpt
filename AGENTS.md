@@ -31,6 +31,7 @@ Run the smallest relevant test while working and `npm run check` before merge ha
 
 ## Collaboration
 
+- Read `docs/TEAM_CONTEXT.md` before starting shared-contract or demo-critical work, and update its coordination board when claiming such work.
 - Use `feature/<area>-<summary>`, `fix/<area>-<summary>`, or `docs/<summary>` branches.
 - Keep pull requests small and include screenshots for UI work.
 - State what was actually verified; never upgrade source inspection into runtime proof.
