@@ -16,6 +16,8 @@ Every contributor and their ChatGPT/Codex agent must read:
 6. [`docs/DECISIONS.md`](docs/DECISIONS.md)
 7. [`docs/PROJECT_TODO.md`](docs/PROJECT_TODO.md)
 
+The current merged foundation checkpoint and role-by-role pickup state are summarised in [`docs/FOUNDATION-HANDOFF-2026-08-03.md`](docs/FOUNDATION-HANDOFF-2026-08-03.md).
+
 The playbook includes first-time setup, safe daily Git commands, the required Codex start prompt, one-batch decision handling, verification, changelog fragments, pushing, and pull requests.
 
 The checked-in legacy prototype begins with one local diagnostic slice:
