@@ -83,6 +83,17 @@ Role 1 may inspect, redirect, assist, and modify any role when required for inte
 - If an urgent demo failure makes prior review impossible, Role 1 may apply the minimum safe fix, immediately notify the owner, and record what changed and why.
 - After the urgent condition ends, component-level decisions return to the assigned owner.
 
+### Scoped Role 2 planning grant
+
+For the current MVP planning pass, the project owner grants Role 2 authority to decide the build plans for Roles 4 and 5. This is a deliberate exception to normal component planning ownership and is limited to the plans themselves.
+
+- Role 2 decides MVP outcomes, surface and flow coverage, feature priority, required product states, AI/data requirements, mock/live boundaries, milestones, acceptance criteria, exclusions, and handoff order for both UI roles.
+- Role 2 produces a separate implementation-ready plan for Role 4 and Role 5 and sends each plan to its implementing owner and Role 1.
+- Roles 4 and 5 review their plan for feasibility, identify conflicts or missing requirements in one response, and then implement it. They retain detailed visual, interaction, accessibility, component, and code decisions that do not contradict the approved plan.
+- Role 2 may revise the plans after comparison, but may not edit Role 4 or Role 5 source files or implement their UI work under this grant.
+- Any disagreement that changes scope, ownership, shared contracts, safety, cost, or the golden workflow goes to Role 1, who remains final authority.
+- This grant does not give Role 2 authority over Role 3's quest-engine plan or Role 1's integration plan.
+
 ### Mandatory role guides
 
 Every contributor and their ChatGPT/Codex agent must read this root guide, `docs/TEAM_PLAYBOOK.md`, the assigned guide, and the assigned TODO under `docs/roles/` before planning or editing. The root guide wins if a role guide conflicts with it. Role guides may clarify component decisions but cannot expand their own authority.
@@ -146,10 +157,10 @@ Primary work:
 - Own model-provider adapters, model-ready context, signal-analysis prompts, structured transport, and provider reliability evaluation.
 - Jointly evaluate provider/model selection with Role 3: Role 2 assesses integration, latency, privacy, cost, structured output, and reliability; Role 3 assesses quest quality and engine fit.
 - Produce exactly three distinct candidate quests for Role 3 to validate and orchestrate.
-- Produce the AI/data integration build plan for Roles 4 and 5, covering available data, confidence/source metadata, UI-relevant states, mock fixtures, and proposed shared-contract needs without deciding their interaction design.
+- Decide and deliver the current MVP build plans for Roles 4 and 5 under the scoped planning grant above.
 - Maintain AI-specific safety, privacy, latency, cost, reliability, moderation, and observability requirements.
 
-Does not own quest lifecycle, deterministic quest rules, or UI decisions. Role 2 supplies analysed signals and AI-generated candidates to Role 3.
+Does not own quest lifecycle, deterministic quest rules, Role 4/5 source implementation, or their detailed execution decisions after the build plans are accepted. Role 2 supplies analysed signals and AI-generated candidates to Role 3.
 
 **Open decision:** OpenRouter is the current leading candidate, not yet selected. Roles 2 and 3 compare it with alternatives and send one joint recommendation to Role 1 before integration or model-picker work.
 
@@ -181,7 +192,7 @@ Does not own extraction implementation, provider-adapter code, audience-analysis
 
 **Owner:** `JYL1m`.
 
-**Owns:** the complete streamer and moderator experience, including its product and UX decisions.
+**Owns:** implementation of the complete streamer and moderator experience plus detailed product and UX decisions within the accepted D-016 build plan.
 
 Primary work:
 
@@ -205,7 +216,7 @@ The streamer should choose understandable experience settings. Exposing raw mode
 
 **Owner:** `drdexe`.
 
-**Owns:** viewer participation and its product and UX decisions across the Twitch Extension and ChatXPT-owned fallback surfaces.
+**Owns:** implementation of viewer participation plus detailed product and UX decisions within the accepted D-016 build plan across the Twitch Extension and ChatXPT-owned fallback surfaces.
 
 Primary work:
 
@@ -278,7 +289,7 @@ Keep provider payloads, Twitch payloads, UI view models, and persistence records
 - Keep branches short-lived, sync current `main` before review, and integrate at least daily.
 - Role 1 controls final integration and merging. A pull request that touches another role's files requires that role owner's review.
 - Maintain `CODEOWNERS` for role directories and require automated checks before merge.
-- Do not edit another role's implementation or make decisions for that role, except through the recorded Role 1 integration override.
+- Do not edit another role's implementation or make decisions for that role, except through the recorded Role 1 integration override or the scoped D-016 Role 2 planning grant.
 - Route cross-role proposals to the owning role for comparison and notify the project owner before adoption.
 - Use GitHub Issues as the persistent cross-role handoff record. If the owner resolves something through Codex, Role 1 records the result back in the repository or issue.
 - Do not change another role's public contract without that owner's review and the project owner's awareness.

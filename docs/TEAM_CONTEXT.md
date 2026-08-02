@@ -26,7 +26,7 @@ Role 1 is the final authority and may deconflict, redirect, or assist any role u
 
 ## Immediate coordinated assignment
 
-Role 2 will produce the AI/data integration build plan that Roles 4 and 5 can implement against. It must define available inputs, outputs, confidence and source metadata, loading/failure/fallback states, mock fixtures, and proposed contract needs. Role 2 does not decide the streamer or viewer interaction design: Roles 4 and 5 retain their UI/UX and implementation authority and compare the plan with their component needs. Role 1 resolves any disagreement.
+For the current MVP planning pass, Role 2 has scoped authority to decide the separate build plans for Roles 4 and 5. Each plan covers outcomes, surfaces and flows, priorities, required states, AI/data requirements, mock/live boundaries, milestones, acceptance criteria, exclusions, and handoff order. Roles 4 and 5 provide one feasibility review and then implement their plan, retaining detailed visual, interaction, accessibility, component, and code decisions that do not contradict it. Role 2 may revise the plans but may not implement or edit Role 4/5 source. Role 1 remains final authority and resolves disagreements.
 
 ## Coordination board
 
@@ -35,7 +35,7 @@ Update a row before starting shared-contract or golden-demo work. Detailed task 
 | Area | Owner | Branch / issue | Intended outcome | Status |
 | --- | --- | --- | --- | --- |
 | Team foundation and integration | `Dewflash` | PR #2 | Merge role authority, workflow, TODO, and changelog foundation | Done |
-| AI/data plan for UI consumers | `joelyrk` | Create Role 2 branch/issue after pulling `main` | Implementation-ready intelligence contract plan for Roles 4 and 5 | Ready |
+| Role 4/5 MVP build plans | `joelyrk` | Create Role 2 branch/issue after pulling `main` | Separate implementation-ready plans for the streamer and viewer owners | Ready |
 | Quest engine plan | `L0pch` | Create Role 3 branch/issue after pulling `main` | Engine boundary, lifecycle, safety, and AI-quality decisions | Ready |
 | Streamer experience | `JYL1m` | Await Role 2 plan and shared contracts | Working Studio and Twitch Live Config against accepted contracts | Planned |
 | Viewer experience | `drdexe` | Await Role 2 plan and shared contracts | Working Extension, fallback board, and overlay against accepted contracts | Planned |

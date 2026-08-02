@@ -16,17 +16,17 @@ Turn gameplay and audience activity into reliable, model-ready intelligence and 
 - AI provider adapters, model-ready context, signal-analysis prompts, structured transport, runtime validation, and provider reliability evaluation.
 - Joint provider/model evaluation with Role 3; submit one recommendation to Role 1 before integration.
 - AI-specific privacy, latency, cost, reliability, moderation, and observability evidence.
-- The AI/data integration build plan consumed by Roles 4 and 5: available inputs/outputs, confidence and source metadata, UI-relevant system states, mock fixtures, and proposed shared-contract needs.
+- The current MVP build plans for Roles 4 and 5 under D-016, including outcomes, surface/flow coverage, priorities, required states, AI/data requirements, mock/live boundaries, milestones, acceptance criteria, exclusions, and handoff order.
 
 ## Does not own
 
 - Shared contracts or Twitch/OBS integration.
 - Quest timing, lifecycle, scoring, deterministic safety enforcement, or activation behaviour.
-- Streamer, viewer, or overlay UX.
+- Role 4/5 source implementation or detailed visual, interaction, accessibility, component, and code decisions that fit the approved build plans.
 
 ## Required handoff
 
-Provide Role 3 with normalised behavioural signals, confidence, traceable context, three candidate quests, validation metadata, and provider/fallback status. Compare provider candidates with Role 3, covering integration, latency, privacy, cost, structured output, reliability, quest quality, and engine fit. Give Roles 4 and 5 an implementation-ready intelligence integration plan without prescribing their interaction design. Propose contract changes to Role 1 before implementation.
+Provide Role 3 with normalised behavioural signals, confidence, traceable context, three candidate quests, validation metadata, and provider/fallback status. Compare provider candidates with Role 3, covering integration, latency, privacy, cost, structured output, reliability, quest quality, and engine fit. Give Roles 4 and 5 separate implementation-ready MVP build plans, collect one feasibility comparison from each owner, revise as needed, and notify Role 1. Propose contract changes to Role 1 before implementation.
 
 ## Verification
 
