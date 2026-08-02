@@ -1,0 +1,84 @@
+name: Cross-role proposal
+description: Request another role to compare and decide a feature, contract, or dependency before implementation.
+title: "[Cross-role] "
+labels:
+  - cross-role
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not implement the cross-role portion before the target owner compares it and `@Dewflash` is notified.
+  - type: dropdown
+    id: originating_role
+    attributes:
+      label: Originating role
+      options:
+        - Role 1 - Integrations and shared platform
+        - Role 2 - AI intelligence and data extraction
+        - Role 3 - Quest engine
+        - Role 4 - Streamer Studio UI/UX
+        - Role 5 - Viewer Quest Board UI/UX
+    validations:
+      required: true
+  - type: dropdown
+    id: target_role
+    attributes:
+      label: Target role
+      options:
+        - Role 1 - Integrations and shared platform
+        - Role 2 - AI intelligence and data extraction
+        - Role 3 - Quest engine
+        - Role 4 - Streamer Studio UI/UX
+        - Role 5 - Viewer Quest Board UI/UX
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+      description: State the evidenced need without prescribing another role's implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal from the originating role
+      description: Explain the desired outcome, relevant evidence, and why it crosses ownership.
+    validations:
+      required: true
+  - type: textarea
+    id: affected_contracts
+    attributes:
+      label: Affected contracts, files, or decisions
+      description: Link relevant types, issues, decisions, screenshots, or evaluation evidence.
+    validations:
+      required: true
+  - type: textarea
+    id: target_comparison
+    attributes:
+      label: Target owner's comparison
+      description: Target owner completes this with its existing approach, trade-offs, recommendation, and dependencies.
+      placeholder: "Target owner: edit after comparison."
+    validations:
+      required: false
+  - type: dropdown
+    id: proposed_status
+    attributes:
+      label: Current status
+      options:
+        - Awaiting target comparison
+        - Awaiting project-owner awareness
+        - Accepted
+        - Rejected
+        - Deferred
+    validations:
+      required: true
+  - type: checkboxes
+    id: authority
+    attributes:
+      label: Authority checks
+      options:
+        - label: I have mentioned the target owner and `@Dewflash` in the issue text or comments.
+          required: true
+        - label: I have not implemented the cross-role portion.
+          required: true
