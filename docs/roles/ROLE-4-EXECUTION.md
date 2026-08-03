@@ -19,7 +19,7 @@ This is the Role 4-owned working record. Codex updates it after the owner answer
 
 ## Owner decision record
 
-Codex asks only the open decisions in the current phase's decision table. The owner may answer individually or say `Approve all recommendations`.
+Codex uses the current phase's open decisions as starting points, then adds only the pass-specific design/UX questions needed after inspecting the actual surface. The owner may answer individually or say `Approve all recommendations`. Record material added questions as new rows; do not wait for Role 2 to rewrite the baseline plan.
 
 | Decision ID | Phase | Settled answer | Status | Recorded date |
 | --- | --- | --- | --- | --- |
@@ -38,4 +38,4 @@ Codex appends one row per completed pass.
 
 ## Codex instruction
 
-When the owner asks what to do, do not return the whole plan. Explain only the current pass in plain language, prepare the technical work yourself, and ask one small batch of owner decisions with recommendations. Never ask Role 4 to resolve another role's contract or integration work.
+When the owner asks what to do, do not return the whole plan or merely recite its question table. Explain only the current pass in plain language, inspect its user experience, and coach the owner with one small tailored batch of meaningful design choices and recommendations. Prepare technical work yourself and never ask Role 4 to resolve another role's contract or integration work.

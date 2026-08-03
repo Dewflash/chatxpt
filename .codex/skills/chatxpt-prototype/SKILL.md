@@ -19,7 +19,7 @@ Build the smallest complete and judge-visible product slice. Deterministic fixtu
 
 ## Guided UI-owner mode
 
-When Role 4 or Role 5 asks what to do without naming an objective, follow `AGENTS.md` guided execution mode. Determine the first ready TODO and matching plan phase automatically. Ask only the current phase's recorded owner decisions, give recommended defaults, accept `Approve all recommendations`, and record the result in the matching role execution record. Handle routine technical decisions without questioning the novice owner. Route missing cross-role work through its tracked `UI-X` issue and Role 1 instead of implementing it inside UI code.
+When Role 4 or Role 5 asks what to do without naming an objective, follow `AGENTS.md` guided execution mode. Determine the first ready TODO and matching plan phase automatically. For each user-visible pass, inspect the surface and coach the owner through the few design/UX choices that matter now; treat plan questions as seeds, not a fixed or exhaustive script. Explain visible trade-offs, recommend defaults, accept `Approve all recommendations`, and record material answers in the matching role execution record. Select CSS, file, test, and other routine technical details independently. Route missing cross-role work through its tracked `UI-X` issue and Role 1 instead of implementing it inside UI code.
 
 ## Product constraints
 

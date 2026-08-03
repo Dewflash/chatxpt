@@ -151,7 +151,7 @@ or:
 I am Role 5. What do I need to do?
 ```
 
-Codex then follows the guided execution mode in `AGENTS.md`: it finds the first ready pass, performs the technical inspection, explains `We will ...`, and asks one batch containing only the owner decisions for that phase. The owner may reply `Approve all recommendations`. Codex records the answers and continues. It does not push or open a pull request until the owner approves the reviewed result.
+Codex then follows the guided execution mode in `AGENTS.md`: it finds the first ready pass, performs the technical and UX inspection, explains `We will ...`, and asks one tailored design-coaching batch for that pass. Plan questions are starter examples rather than a script; Codex adds or adapts questions to help the owner think through the actual surface. The owner may reply `Approve all recommendations`. Codex records material answers and continues. It does not push or open a pull request until the owner approves the reviewed result.
 
 ## During a work pass
 

@@ -25,11 +25,13 @@ Role 5 implements one phase at a time.
 
 Role 5 may split a phase into small pull requests, but may not start later fallbacks or visual polish to bypass an incomplete primary-flow exit. Role 5 starts Phase 1 after Role 4 publishes the minimum `@/design-system` handoff; it does not wait for the complete Studio.
 
-### How Codex asks a novice owner for design decisions
+### How Codex coaches a novice owner through design decisions
 
-The decision tables below are prompts, not a demand that Role 5 already knows design terminology. Before asking, Codex must explain each choice in plain language and may show a tiny text wireframe. It must never ask a jargon-only question such as `Flexbox or Grid?`. It explains the visible result first, recommends a default, and then selects the appropriate implementation technique. Role 5 may reply `Approve all recommendations`.
+The decision tables below are starter prompts and minimum areas to consider, not a fixed or exhaustive questionnaire. For every user-visible pass, Codex inspects the actual viewer/overlay task and generates a small, relevant batch that helps Role 5 think about the experience. It may reword, omit an irrelevant example, add a better question, or show a tiny text wireframe. It should cover the user goal and, where relevant, organisation, information hierarchy, layout/responsiveness, interaction feedback, error/recovery UX, visual tone, motion, accessibility, and trust.
 
-Role 2 owns this baseline plan. Role 5's settled answers are recorded in `docs/roles/ROLE-5-EXECUTION.md`, so Role 5 does not edit another owner's plan. Codex checks that record and asks only unanswered decisions from the current phase.
+Codex explains the visible result and trade-off first, recommends a default, and then selects the appropriate implementation technique. It must never ask a jargon-only question such as `Flexbox or Grid?`: Role 5 decides how the viewer experience should behave and feel; Codex decides whether Grid, Flexbox, or another implementation produces that result. Role 5 may reply `Approve all recommendations`.
+
+Role 2 owns this baseline plan. Role 5's settled answers are recorded in `docs/roles/ROLE-5-EXECUTION.md`, so Role 5 does not edit another owner's plan. Codex checks that record to avoid repeating settled choices, then asks only the relevant unresolved choices for the current pass.
 
 ## Definition of done
 
@@ -127,7 +129,7 @@ Required upstream seams UI-X05 through UI-X08, UI-X10, and the early Role 4 desi
 
 ### Owner design gate
 
-Codex first prepares the technical feasibility review itself, then asks these visual/product questions together:
+Codex first prepares the technical feasibility review itself, then uses these as starting points for a tailored visual/product discussion:
 
 | ID | What Codex asks Role 5 | Choices explained in plain language | Recommended starting point | Baseline status |
 | --- | --- | --- | --- | --- |
