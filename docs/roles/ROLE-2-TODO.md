@@ -11,7 +11,7 @@ Execute these outcomes through `docs/build-plans/ROLE-2-BUILD-PLAN.md`; its deci
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
 | R2-001 | P0 | READY | Inspect the prototype and implement Role 2's public port/fixture boundary against provisional contracts. | Role 1 provisional contracts | Public entry points and producer/consumer tests name inputs, outputs, provenance, capabilities, fixtures, and no cross-role internal imports. |
-| R2-009 | P0 | READY | Decide and deliver separate but synchronised current-MVP build plans for Roles 4 and 5 under D-016. | Current prototype; D-016; integration contract | Plans share deadlines/dependency matrix and define view models, commands, fixture states, route mounts, public entries, P0/P1/exclusions, acceptance evidence, and early design-system handoff; each owner provides one feasibility review and Role 1 is notified. |
+| R2-009 | P0 | IN PROGRESS | Decide and deliver separate but synchronised current-MVP build plans for Roles 4 and 5 under D-016. | Current prototype; D-016; integration contract | Plans share deadlines/dependency matrix and define view models, commands, fixture states, route mounts, public entries, P0/P1/exclusions, acceptance evidence, and early design-system handoff; each owner provides one feasibility review and Role 1 is notified. |
 | R2-002 | P0 | BLOCKED | Implement tiered real-frame extraction from Role 1's OBS Virtual Camera interface. | Shared extraction contract and real frame source | Universal activity signals work across multiple owned action-game examples; calibrated adapters emit specific HUD facts only when supported; confidence/capabilities/unknown and resource measurements are evidenced. |
 | R2-003 | P0 | BLOCKED | Implement audience/gameplay snapshot and behavioural intelligence. | R2-002; audience contract | Timestamped/confidence-scored output for energy, sentiment, intent, humour, risk, boredom, hype, and repeated requests. |
 | R2-004 | P0 | READY | Define provider evaluation criteria with Role 3. | Accepted D-014 | Joint comparison covers OpenRouter and alternatives, latency, cost, privacy, reliability, structured output, quest quality, and fallback. |
@@ -28,3 +28,9 @@ Execute these outcomes through `docs/build-plans/ROLE-2-BUILD-PLAN.md`; its deci
 - Provider adapter design and evaluation method
 
 Provider/model adoption is a joint Role 2/Role 3 recommendation and requires Role 1 awareness because it affects cost and external services.
+
+## Current R2-009 evidence
+
+- D2-01 through D2-03A were answered as one batch on 3 August 2026.
+- Drafts exist at `docs/build-plans/ROLE-4-BUILD-PLAN.md`, `docs/build-plans/ROLE-5-BUILD-PLAN.md`, and `docs/build-plans/ROLE-4-5-DELIVERY-MATRIX.md`.
+- Outstanding before `DONE`: one feasibility review from each implementing owner, one Role 2 revision/comparison, and Role 1 notification.
