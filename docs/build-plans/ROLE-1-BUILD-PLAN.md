@@ -145,7 +145,7 @@ Run this loop throughout every phase:
 
 **Outcome:** Roles 4 and 5 can ask only what to do and receive one safe, reviewable current pass.
 
-**Status:** In progress on `role-1/ui-plan-safety-corrections`; Role 2/4/5 review remains required before the corrected baseline is accepted.
+**Status:** Completed in merged PR #27. Role 1 explicitly waived the outstanding reviewer requests; Role 4/5 feasibility acceptance remains independently tracked in issues #15/#16.
 
 **Work:**
 
