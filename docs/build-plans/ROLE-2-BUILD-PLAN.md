@@ -42,10 +42,12 @@ Role 2 is complete when:
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D2-01 | Shared plan template, synchronised milestones, and delivery order for Role 4 and Role 5 | Open | — |
-| D2-02 | Required UI-visible intelligence, confidence, unknown, provider, and fallback states | Open | — |
-| D2-03 | Which UI features are P0, P1, or excluded within accepted product direction | Open | — |
-| D2-03A | Cross-plan view-model/command/fixture/dependency matrix and early design-system handoff | Open | — |
+| D2-01 | Shared plan template, synchronised milestones, and delivery order for Role 4 and Role 5 | Resolved by Joelyrk | Separate Role 4 and Role 5 plans use sequential gated phases: an owner completes and verifies one phase before beginning the next. The roles may progress concurrently once shared dependencies are available. |
+| D2-02 | Required UI-visible intelligence, confidence, unknown, provider, and fallback states | Resolved by Joelyrk | Studio exposes detailed confidence, freshness, unknown, capture, provider, and fallback states. Viewer surfaces use simplified context-aware/fallback disclosure. OBS omits technical detail unless degradation affects the displayed quest. |
+| D2-03 | Which UI features are P0, P1, or excluded within accepted product direction | Resolved by Joelyrk | P0 covers Role 4 setup-to-live-control and Role 5 voting-to-result across all three participation paths plus OBS. P1 covers deeper history/analytics, reaction polish, and diagnostic refinements. Provider/model pickers, non-Twitch integrations, persistent rewards, and simulated-live claims are excluded. |
+| D2-03A | Cross-plan view-model/command/fixture/dependency matrix and early design-system handoff | Resolved by Joelyrk | Publish two standalone plans plus one authoritative shared matrix. Role 4 publishes minimum design tokens/base components first; Role 5 consumes that entry point without waiting for the complete Studio. |
+
+**Draft deliverables (3 August 2026):** `ROLE-4-BUILD-PLAN.md`, `ROLE-5-BUILD-PLAN.md`, and `ROLE-4-5-DELIVERY-MATRIX.md`. Each plan is awaiting its implementing owner's one consolidated feasibility review. R2-P01/R2-P02/R2-P02A remain in progress until Role 2 records one revision and notifies Role 1.
 
 ### R2-P01 — Role 4 Streamer Studio plan
 
