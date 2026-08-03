@@ -16,7 +16,7 @@ Every contributor and their ChatGPT/Codex agent must read:
 6. [`docs/DECISIONS.md`](docs/DECISIONS.md)
 7. [`docs/PROJECT_TODO.md`](docs/PROJECT_TODO.md)
 
-The current merged foundation checkpoint and role-by-role pickup state are summarised in [`docs/FOUNDATION-HANDOFF-2026-08-03.md`](docs/FOUNDATION-HANDOFF-2026-08-03.md).
+The original merged foundation checkpoint is summarised in [`docs/FOUNDATION-HANDOFF-2026-08-03.md`](docs/FOUNDATION-HANDOFF-2026-08-03.md). Role 1's current persistence/realtime implementation and exact evidence boundary are in [`docs/SUPABASE-HANDOFF-2026-08-03.md`](docs/SUPABASE-HANDOFF-2026-08-03.md).
 
 The playbook includes first-time setup, safe daily Git commands, the required Codex start prompt, one-batch decision handling, verification, changelog fragments, pushing, and pull requests.
 
@@ -48,6 +48,8 @@ Run all checks:
 npm run check
 ```
 
+Run the focused Role 1 persistence/realtime suite with `npm run test:persistence`. A fully empty local Supabase configuration intentionally selects the credential-free in-memory runtime. The pinned Supabase CLI and database workflow are documented in [`supabase/README.md`](supabase/README.md); local database execution additionally requires a Docker-compatible runtime.
+
 The full check includes an ownership-boundary scan. Role modules may consume approved public entrypoints, but cannot import another role's private files. The factual legacy split and its still-open migration decisions are recorded in [`docs/architecture/LEGACY-MIGRATION-INVENTORY.md`](docs/architecture/LEGACY-MIGRATION-INVENTORY.md).
 
 ## Legacy optional OpenAI adapter
@@ -66,6 +68,7 @@ Roles 2 and 3 will jointly recommend a free provider/model path. If any provider
 - `src/app` - Next.js routes, API, and overlay
 - `src/core` - versioned platform-neutral contracts, public ports, and explicitly non-live contract fixtures
 - `src/integrations` and `src/realtime` - Role 1 public adapter and authoritative-state boundaries
+- `supabase` - Role 1-owned reproducible schema, RLS, private realtime policy, and local CLI configuration
 - `src/ai` and `src/extraction` - Role 2 public intelligence and extraction boundaries
 - `src/quest-engine` - Role 3 pure engine boundary
 - `src/streamer` and `src/design-system` - Role 4 public streamer and shared-visual-system boundaries
@@ -99,11 +102,11 @@ game signals + chat signals + streamer profile
               /overlay route
 ```
 
-The current prototype uses same-origin browser storage and `BroadcastChannel` to synchronize the control room and overlay. The accepted MVP target replaces authoritative live state with Supabase persistence and realtime channels while preserving this local transport for local diagnostics. Twitch, OBS, AI providers, gameplay extraction, persistence, and viewer surfaces remain replaceable adapters around the core contracts.
+The checked-in legacy prototype still uses same-origin browser storage and `BroadcastChannel` to synchronize its control room and overlay. The new Role 1 runtime now implements Supabase-backed authoritative persistence/private snapshot broadcasting and a production-shaped in-memory fallback behind public ports, but the legacy routes are not silently rewired before their migration decisions. Twitch, OBS, AI providers, gameplay extraction, persistence, and viewer surfaces remain replaceable adapters around the core contracts.
 
 Role 1's application orchestrator will compose those adapters and Role 2/3 public ports, persist revisioned state, and broadcast role-specific view models. Cross-role work integrates after every wave through producer/consumer contract tests rather than being combined only after five separate builds finish.
 
-The additive orchestrator skeleton is implemented behind injected authorization, candidate-reader, engine, repository, projection, clock, ID, and publisher ports. Its in-memory harness is fixture-only; it proves idempotency, stale-revision rejection, atomic commit-before-broadcast, concurrent-write protection, and persisted recovery state, not Supabase or live multi-device behavior.
+The application orchestrator is implemented behind injected authorization, candidate-reader, engine, repository, projection, clock, ID, and publisher ports. The Role 1 persistence runtime now binds its repository, immutable candidate store, and sanitised snapshot publisher into that seam. Automated tests prove local idempotency, stale/concurrent-write rejection, lifecycle recovery, permission denial, persist-before-notify ordering, reconnect revision handling, and static migration/RLS requirements. They do not claim a real Supabase cloud round trip until project credentials and compatible database runtime evidence exist.
 
 The version-one contract schemas and fixtures now live under `src/core/`. Legacy routes still use `src/lib/domain.ts` until the separately gated mechanical migration; the existence of new contracts does not imply the current UI or API is integrated with them yet.
 
@@ -114,6 +117,8 @@ Each role also has an additive public `index.ts` in its owned source directory. 
 - Next.js and React - application framework and UI
 - OpenAI JavaScript SDK and Responses API - optional structured generation
 - Zod - runtime validation
+- Supabase JavaScript client and CLI - shared persistence, private realtime transport, and reproducible database migrations
+- `server-only` - build-time protection against importing secret-key adapters into client components
 - Vitest - automated tests
 
 No third-party datasets are bundled. Existing demo chat and gameplay events are synthetic and may be used only as test/diagnostic fixtures, not live-extraction evidence.

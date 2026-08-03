@@ -145,11 +145,11 @@ Run this loop throughout every phase:
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D1-04 | Minimal Supabase tables, realtime topics, and RLS boundaries | Open | — |
-| D1-05 | Development, preview, and production environment separation | Open | — |
-| D1-06 | Session creation, expiry, reconnect, and room-code policy | Open | — |
+| D1-04 | Minimal Supabase tables, realtime topics, and RLS boundaries | Resolved by D-037, D-038 | Relational identity/revision constraints surround versioned JSONB canonical payloads; server-only writes and role-sanitised snapshot topics are mandatory. |
+| D1-05 | Development, preview, and production environment separation | Resolved by D-039 | Credential-free local fallback plus one shared Supabase Free preview/demo project; isolated production promotion follows when deployment requires it. |
+| D1-06 | Session creation, expiry, reconnect, and room-code policy | Resolved by D-040 | One active session per broadcaster; eight-character room code; two-hour inactive preparing expiry; heartbeat-driven live duration; ten-minute reconnect grace; explicit/Twitch/grace ending. |
 | D1-06A | Revision, command-idempotency, atomic-write, and reconnect-snapshot semantics | Resolved by D-035 | Server timestamps, command IDs, expected/current revisions, idempotency, atomic persistence before broadcast, typed errors, and reconnect snapshots. |
-| D1-06B | Broadcaster/moderator/viewer/system/overlay permission matrix and token-expiry behaviour | Open | — |
+| D1-06B | Broadcaster/moderator/viewer/system/overlay permission matrix and token-expiry behaviour | Resolved by D-038, D-041 | Server-authoritative capability enforcement; broadcaster full control, moderator quest controls, viewer participation, system candidates, read-only OBS; expired tokens lose access and must recover through an allowed path. |
 
 ### R1-P04 — Supabase Free foundation
 

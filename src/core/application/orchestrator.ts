@@ -24,6 +24,7 @@ import {
   type ViewModelProjectionInput,
 } from "../contracts";
 import type { OrchestratorDependencies } from "./ports";
+import { canonicalJsonStringify, commandFingerprint } from "./fingerprint";
 import type {
   AcceptedCommandReceipt,
   AuthoritativeSessionState,
@@ -33,10 +34,6 @@ import type {
 
 function error(code: DomainError["code"], message: string, retryable = false): DomainError {
   return domainErrorSchema.parse({ code, message, retryable });
-}
-
-function commandFingerprint(command: CommandEnvelope): string {
-  return JSON.stringify(command);
 }
 
 function sameCommand(receipt: AcceptedCommandReceipt, fingerprint: string): boolean {
@@ -237,6 +234,18 @@ function validateViews(views: RoleViewModels, envelope: ContractEnvelope): RoleV
     ) {
       return error("internal", "Projected view envelope does not match authoritative state", true);
     }
+  }
+  if (
+    canonicalJsonStringify(parsed.streamer.data.session) !==
+      canonicalJsonStringify(parsed.viewer.data.session) ||
+    canonicalJsonStringify(parsed.streamer.data.session) !==
+      canonicalJsonStringify(parsed.overlay.data.session) ||
+    canonicalJsonStringify(parsed.streamer.data.questCycle) !==
+      canonicalJsonStringify(parsed.viewer.data.questCycle) ||
+    canonicalJsonStringify(parsed.streamer.data.questCycle) !==
+      canonicalJsonStringify(parsed.overlay.data.questCycle)
+  ) {
+    return error("internal", "Projected role views disagree on authoritative state", true);
   }
 
   return {

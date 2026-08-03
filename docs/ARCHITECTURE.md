@@ -66,9 +66,17 @@ All cross-role calls use the public ports and canonical envelopes in `docs/build
 
 ## Realtime and persistence
 
-Supabase Free is the accepted authoritative MVP store/realtime layer for profiles, sessions, candidates, votes, active quests, progress, results, and aggregate engagement. Vercel hosts the reusable Next.js product. Same-origin storage and `BroadcastChannel` remain local diagnostics, not accepted multi-device or judged-live evidence.
+Supabase Free is the accepted authoritative MVP store/realtime layer. The Role 1 foundation uses relational session identity, lifecycle, uniqueness, revision, and foreign-key constraints around versioned JSONB canonical payloads. It stores profiles, sessions, quest cycles/candidate batches, accepted command receipts, accepted participation facts, quest events, lifecycle operations, short-lived realtime access grants, and role-sanitised reconnect snapshots. Raw chat is not stored by this foundation.
 
 State changes use command IDs, expected/current revisions, server timestamps, typed errors, atomic persistence before broadcast, and reconnect snapshots. Realtime notifications do not replace the persisted source of truth.
+
+Only ChatXPT's server key may write product tables or call state-changing RPCs. Browser, Twitch Extension, and OBS clients submit commands through Role 1 services; they never write authoritative Supabase rows. All exposed tables have RLS enabled and direct `anon`/`authenticated` table privileges revoked.
+
+The database persists a general viewer snapshot with viewer identity, personal points, and accepted vote choice removed. Streamer, viewer, and overlay snapshots broadcast on separate private topics only after the snapshot transaction commits. A Supabase-authenticated principal needs a short-lived server-issued session/view grant to join one topic; clients cannot publish to it. Reconnecting clients subscribe first, fetch their latest authorised snapshot, and ignore duplicate or older revisions.
+
+One broadcaster may have one preparing/live ChatXPT session. Preparing sessions expire after two inactive hours. Live duration has no fixed maximum while broadcaster heartbeats continue; a disconnect starts one non-extending ten-minute reconnect grace, which a returning heartbeat clears. Manual end, confirmed Twitch offline, or grace expiry closes access without deleting session history.
+
+Credential-free local work uses the same application ports with in-memory state and permissions. This is a functional developer fallback, not shared-cloud or multi-browser evidence. Vercel hosting and the real Supabase Free project activation remain separately evidenced deployment work.
 
 All viewer clients use one private participation service. No UI owns authoritative vote, lifecycle, scoring, or reward rules.
 
@@ -96,7 +104,7 @@ No paid model usage is authorised for the MVP.
 
 - Streamer restrictions are enforced deterministically before a quest reaches viewers.
 - Quests must be legal, non-harmful, game-appropriate, non-wagering, and understandable under pressure.
-- Raw frames are ephemeral. Raw Twitch chat may be retained for debugging/evaluation for at most 24 hours; aggregate signals and outcomes are preferred.
+- Raw frames are ephemeral. The current foundation processes raw Twitch chat in memory and does not create a raw-chat table; any later Role 2 request for short-lived debugging retention still requires Role 1 approval and automatic deletion within the accepted 24-hour maximum.
 - Twitch identity is used when available; anonymous participation remains supported.
 - Points and hype are session-scoped and non-monetary.
 - Simulated fixtures are limited to tests, diagnostics, and offline reproduction. Live claims require real captured gameplay and real Twitch activity.

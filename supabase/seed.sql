@@ -1,0 +1,3 @@
+-- ChatXPT intentionally ships without product data seeds.
+-- Canonical fixture state remains inside the test harness and must never be
+-- confused with real shared-cloud or live-stream evidence.

@@ -16,15 +16,22 @@
     "test:contracts": "vitest run src/core/contracts.test.ts",
     "test:integration": "vitest run tests/integration",
     "test:orchestrator": "vitest run tests/integration/orchestrator.test.ts",
+    "test:persistence": "vitest run tests/integration/environment.test.ts tests/integration/permissions.test.ts tests/integration/session-lifecycle.test.ts tests/integration/persistence.test.ts tests/integration/realtime-subscriber.test.ts tests/integration/supabase-adapters.test.ts tests/integration/supabase-migration.test.ts",
     "test:watch": "vitest",
+    "supabase:start": "supabase start",
+    "supabase:reset": "supabase db reset --local",
+    "supabase:lint": "supabase db lint --local --level warning --fail-on error",
+    "supabase:test": "supabase test db",
     "check:boundaries": "node scripts/check-role-boundaries.mjs",
     "check": "npm run lint && npm run typecheck && npm run check:boundaries && npm test && npm run build"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.111.0",
     "next": "16.2.12",
     "openai": "7.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "server-only": "0.0.1",
     "zod": "4.4.3"
   },
   "devDependencies": {
@@ -33,6 +40,7 @@
     "@types/react-dom": "19.2.4",
     "eslint": "9.39.2",
     "eslint-config-next": "16.2.12",
+    "supabase": "2.111.0",
     "typescript": "5.9.3",
     "vitest": "4.1.10"
   },
