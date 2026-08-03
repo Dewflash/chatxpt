@@ -66,5 +66,59 @@
       "notes": "Privacy-review the recording before upload and keep unrestricted share links out of Git."
     }
   ],
-  "entries": []
+  "entries": [
+    {
+      "id": "E-20260803-R1-001",
+      "capturedAt": "2026-08-03T19:17:34+08:00",
+      "owner": { "role": "role-1", "github": "Dewflash" },
+      "reviewer": { "role": "role-1", "github": "Dewflash" },
+      "evidenceClass": "inspection-only",
+      "result": "passed",
+      "claim": "Evidence-manifest validation, privacy safeguards, repository checks, and production build pass for the R1-017 foundation.",
+      "resourceIds": [],
+      "surfaces": [
+        {
+          "name": "evidence-manifest repository validation",
+          "deviceClass": "server",
+          "viewport": null
+        }
+      ],
+      "source": {
+        "gitCommit": "8ed4b38",
+        "branch": "role-1/evidence-manifest",
+        "prNumber": 32
+      },
+      "authoritativeState": {
+        "sessionRef": null,
+        "questCycleRef": null,
+        "revision": null
+      },
+      "inputs": [
+        {
+          "kind": "inspection",
+          "description": "Repository evidence schema, manifest, validator, workflow hooks, and deliberately invalid validator-test records."
+        }
+      ],
+      "commands": [
+        "npm run check:evidence",
+        "npm run test:evidence",
+        "npm run lint",
+        "npm run check",
+        "git diff --check"
+      ],
+      "artifacts": [
+        {
+          "storage": "github-pr",
+          "reference": "PR #32",
+          "mediaType": "text/html",
+          "privacyReviewed": true,
+          "sha256": null
+        }
+      ],
+      "limitations": [
+        "This proves repository evidence controls only; it is not product-runtime or judged Twitch, OBS, cloud, AI, extraction, UI, or multi-client evidence.",
+        "The manifest intentionally contains no judged product evidence yet."
+      ]
+    }
+  ]
 }
