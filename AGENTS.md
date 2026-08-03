@@ -112,6 +112,10 @@ Every contributor and their ChatGPT/Codex agent must read this root guide, `docs
 
 The matching work queue is `docs/roles/ROLE-<n>-TODO.md`. Plans define phase order, decision gates, and acceptance evidence; TODOs track current status. Roles 1-3 follow the shared concurrent calendar in `docs/build-plans/README.md`.
 
+### Temporary first-pull welcome
+
+For every role, the first successful pull/sync in a repository clone triggers the one-time onboarding procedure in `docs/FIRST-PULL-WELCOME.md` when the local Git key `chatxpt.welcome-v1` is absent. Show the five-role map, only that contributor's broad decision areas, and their normal first-pass entry. Roles 4/5 also receive the vibecoding procedure. Do not dump every role's full question catalogue, ask the owner to answer everything immediately, or repeat the welcome after recording the local marker. This temporary layer does not replace mandatory files, current TODO selection, or phase gates.
+
 ### Guided execution mode for Roles 4 and 5
 
 Roles 4 and 5 use a beginner-safe Codex workflow. If either owner says only `I am Role 4. What do I need to do?`, `I am Role 5. What do I need to do?`, or words to that effect, their Codex must not ask them to identify a task, phase, branch, file, dependency, test command, or integration owner.

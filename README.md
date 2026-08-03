@@ -20,6 +20,8 @@ The original merged foundation checkpoint is summarised in [`docs/FOUNDATION-HAN
 
 The playbook includes first-time setup, safe daily Git commands, the required Codex start prompt, one-batch decision handling, verification, changelog fragments, pushing, and pull requests.
 
+On the first pull in each clone, Codex follows [`docs/FIRST-PULL-WELCOME.md`](docs/FIRST-PULL-WELCOME.md): everyone sees the team map and their own decision areas, while Roles 4/5 also receive the one-time vibecoding guide. A local Git marker prevents the welcome from repeating on ordinary pulls.
+
 Role 4 and Role 5 may simply tell Codex `I am Role 4. What do I need to do?` or `I am Role 5. What do I need to do?`. Codex selects their first ready pass, explains the design choices with recommendations, handles routine technical/Git decisions, and records answers in `docs/roles/ROLE-4-EXECUTION.md` or `docs/roles/ROLE-5-EXECUTION.md`.
 
 The checked-in legacy prototype begins with one local diagnostic slice:

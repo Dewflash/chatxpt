@@ -13,6 +13,14 @@ If a command reports a conflict or something unexpected, stop. Do not force-push
 
 ## First-time setup on each computer
 
+At the beginning of the first Codex session, the contributor may say:
+
+```text
+I am Role <n>. Git pull.
+```
+
+Codex protects local work, performs the safe sync, and follows `docs/FIRST-PULL-WELCOME.md`. The welcome is shown once per clone using a local Git marker; it is not repeated on normal daily pulls.
+
 1. Accept the GitHub collaborator invitation.
 2. Install Git, Node.js 20.9 or later, and npm.
 3. Clone and enter the repository:
@@ -54,6 +62,7 @@ npm run check
 
 - `AGENTS.md`
 - This playbook
+- `docs/FIRST-PULL-WELCOME.md` when the one-time local welcome has not yet been shown
 - `docs/build-plans/INTEGRATION-CONTRACT.md`
 - Your `docs/roles/ROLE-<n>.md`
 - `docs/DECISIONS.md`
