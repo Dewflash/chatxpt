@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "1.0.0",
+  "updatedAt": "2026-08-03",
+  "resources": [
+    {
+      "id": "twitch-broadcaster",
+      "label": "Twitch broadcaster account with 2FA",
+      "owner": { "role": "role-1", "github": "Dewflash" },
+      "status": "owner-action-required",
+      "requiredBy": "R1-P07 Twitch developer readiness",
+      "custody": "private-team-channel",
+      "notes": "Store the account identity and credentials privately; the manifest records only readiness."
+    },
+    {
+      "id": "viewer-session-a",
+      "label": "First allowlisted viewer session",
+      "owner": { "role": "role-1", "github": "Dewflash" },
+      "status": "owner-action-required",
+      "requiredBy": "R1-P12 two-viewer integration",
+      "custody": "private-team-channel",
+      "notes": "Use a browser profile or device isolated from the broadcaster session."
+    },
+    {
+      "id": "viewer-session-b",
+      "label": "Second allowlisted viewer session",
+      "owner": { "role": "role-1", "github": "Dewflash" },
+      "status": "owner-action-required",
+      "requiredBy": "R1-P12 two-viewer integration",
+      "custody": "private-team-channel",
+      "notes": "Use a browser profile or device isolated from viewer session A."
+    },
+    {
+      "id": "obs-gameplay-machine",
+      "label": "OBS and team-owned gameplay machine",
+      "owner": { "role": "role-1", "github": "Dewflash" },
+      "status": "owner-action-required",
+      "requiredBy": "R1-P09 OBS capture and overlay",
+      "custody": "local-only",
+      "notes": "Maintain a raw-game scene without the ChatXPT overlay to avoid capture recursion."
+    },
+    {
+      "id": "streamer-desktop-browser",
+      "label": "Desktop browser for Studio and Live Config evidence",
+      "owner": { "role": "role-4", "github": "JYL1m" },
+      "status": "assigned",
+      "requiredBy": "R4 responsive and interaction evidence",
+      "custody": "local-only",
+      "notes": "Record browser and viewport, not account identity."
+    },
+    {
+      "id": "viewer-mobile-browser",
+      "label": "Mobile or narrow browser for viewer evidence",
+      "owner": { "role": "role-5", "github": "drdexe" },
+      "status": "assigned",
+      "requiredBy": "R5 responsive and interaction evidence",
+      "custody": "local-only",
+      "notes": "A real device, emulator, or narrow browser is acceptable when identified truthfully."
+    },
+    {
+      "id": "demo-recording",
+      "label": "Demo screen and audio recording",
+      "owner": { "role": "role-1", "github": "Dewflash" },
+      "status": "assigned",
+      "requiredBy": "R1-P14 submission evidence",
+      "custody": "private-team-drive",
+      "notes": "Privacy-review the recording before upload and keep unrestricted share links out of Git."
+    }
+  ],
+  "entries": []
+}

@@ -38,6 +38,7 @@ npm run ...
 
 - Result:
 - Screenshots/recording for UI changes:
+- Evidence manifest ID(s), or reason none applies:
 - Evaluation/test evidence for AI or engine changes:
 - Producer/consumer contract evidence:
 - Authoritative session/cycle revision exercised:
@@ -54,6 +55,7 @@ npm run ...
 - [ ] My role TODO is updated.
 - [ ] A fragment was added under `changes/role-<n>/`.
 - [ ] Documentation reflects the implemented behaviour.
+- [ ] New runtime, screenshot, recording, evaluation, or inspection evidence is recorded in `docs/evidence/manifest.json`, or this PR explains why no evidence entry applies.
 - [ ] Settled decision-gate answers and completed-pass evidence are recorded in my execution plan.
 - [ ] Public seams use canonical examples and do not import another role's private modules.
 - [ ] Both producer and consumer contract tests pass when a cross-role seam changed.

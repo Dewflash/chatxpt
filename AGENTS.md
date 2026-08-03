@@ -337,6 +337,7 @@ Keep provider payloads, Twitch payloads, component-local UI state, and persisten
 - Keep pull requests small and include screenshots or recordings for UI changes.
 - Require one reviewer; require two reviewers for shared contracts, safety logic, authentication, or demo-critical integration.
 - State what was actually verified; never upgrade source inspection into runtime proof.
+- Record every runtime run, screenshot, recording, evaluation, or inspection used as project evidence in `docs/evidence/manifest.json`; the evidence class, actual input, immutable source revision, command/interaction, artifact reference, reviewer, and limitations must pass `npm run check:evidence`.
 - Update `docs/DECISIONS.md` when the team settles Twitch scope, Supabase, AI provider/routing, gameplay extraction, identity, or rewards.
 - Every role must preserve the golden Twitch demo, real-input algorithmic path, and deterministic fallback; simulated fixtures remain test/diagnostic only.
 - Every pull request adds a role-owned change fragment under `changes/role-<n>/`; Role 1 compiles release-ready entries into `CHANGELOG.md`.
