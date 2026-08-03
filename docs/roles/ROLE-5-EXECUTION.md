@@ -12,7 +12,7 @@ This is the Role 5-owned working record. Codex updates it after the owner answer
 | --- | --- |
 | Plan | `docs/build-plans/ROLE-5-BUILD-PLAN.md` plus the shared delivery matrix |
 | Current phase | R5-P01 feasibility review |
-| Current TODO | R5-001 (`READY`) |
+| Current TODO | R5-001 (`IN PROGRESS`) |
 | Source editing allowed now | No; finish and accept the feasibility review first |
 | Persistent handoff | [GitHub issue #16](https://github.com/Dewflash/chatxpt/issues/16) |
 | Next implementation branch | Codex selects `role-5/<short-phase-outcome>` after the review is accepted |
@@ -28,13 +28,15 @@ Codex uses the current phase's open decisions as starting points, then adds only
 | D5-03 | R5-P01 | Reaction and celebration intensity | Open | — |
 | D5-04 | R5-P01 | Existing references or reversible Codex defaults | Open | — |
 
+The technical recommendations from the pre-PR #27 feasibility review are preserved separately as F5-01 through F5-04 in `ROLE-5-FEASIBILITY-REVIEW.md`. They do not answer or replace the D5 design/UX decisions above.
+
 ## Pass record
 
 Codex appends one row per completed pass.
 
 | Pass | Branch / PR | Outcome | Evidence actually run | Real / memory / fixture boundary | Remaining blocker / next pass |
 | --- | --- | --- | --- | --- | --- |
-| — | — | No Role 5 implementation has started. | — | Planning only | Complete R5-P01 feasibility review |
+| R5-P01 feasibility submission | PR #28 / issue #16 | Technical review submitted and reconciled with current main; no UI source implementation started. | `git diff --check`; full repository check recorded in the Role 5 change fragment | Planning and source inspection only | Role 5 answers the current UX batch; Role 2 records accept/revise response |
 
 ## Codex instruction
 
