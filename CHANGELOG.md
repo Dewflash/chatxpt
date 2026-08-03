@@ -21,6 +21,7 @@ The format follows Keep a Changelog categories: `Added`, `Changed`, `Fixed`, `Se
 - Granted Role 2 scoped authority to author the synchronised Role 4 and Role 5 build plans while preserving their source and detailed UX ownership ([#3](https://github.com/Dewflash/chatxpt/pull/3)).
 - Made public seams, Role 1 orchestration, producer/consumer tests, revisioned realtime rules, tiered game capabilities, and integration after every wave binding team requirements ([#5](https://github.com/Dewflash/chatxpt/pull/5)).
 - Compiled the foundation checkpoint, published one role-by-role pickup/open-decision/verification/reality handoff, and reconciled its merged coordination status ([#10](https://github.com/Dewflash/chatxpt/pull/10), [#11](https://github.com/Dewflash/chatxpt/pull/11)).
+- Reconciled the merged Supabase foundation status and pointed Role 1 directly to the still-pending shared preview activation and cloud evidence ([#13](https://github.com/Dewflash/chatxpt/pull/13)).
 
 ### Security
 

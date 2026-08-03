@@ -6,7 +6,7 @@ Update this file at the start and end of each Role 1 pass. Do not mark `DONE` wi
 
 Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan defines phase order, owner decisions, deadlines, and pass-level evidence.
 
-**Next:** review/merge the implemented R1-P04 foundation, then activate the team-owned Supabase Free preview and execute its migration, pgTAP/RLS, private realtime, and two-client evidence. Keep ambiguous legacy moves deferred and leave Twitch, OBS, Vercel, AI/extraction, quest mechanics, and UI to their later passes/owners.
+**Next:** activate the team-owned Supabase Free preview from the R1-P04 foundation merged in PR #12, then execute its migration, pgTAP/RLS, private realtime, and two-client evidence. Keep ambiguous legacy moves deferred and leave Twitch, OBS, Vercel, AI/extraction, quest mechanics, and UI to their later passes/owners.
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |

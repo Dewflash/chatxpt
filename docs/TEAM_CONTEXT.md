@@ -44,7 +44,7 @@ Update a row before starting shared-contract or golden-demo work. Detailed task 
 | Application orchestrator foundation | `Dewflash` | PR #8 | Idempotent expected-revision command path with atomic fixture persistence before validated view broadcast | Done |
 | Role dependency guard and legacy inventory | `Dewflash` | PR #9 | Enforce public-only cross-role imports and map legacy seams without deciding migration outcomes | Done |
 | Foundation checkpoint audit | `Dewflash` | PR #10 | Compile changelog, verify merged main, and publish truthful role-by-role pickup state | Done |
-| Supabase persistence/realtime foundation | `Dewflash` | [`role-1/supabase-foundation` / PR #12](https://github.com/Dewflash/chatxpt/pull/12) | Revisioned server-only persistence, session lifecycle, permissions, sanitised snapshots, local fallback, and recovery tests; shared cloud activation remains separate evidence | Needs review |
+| Supabase persistence/realtime foundation | `Dewflash` | [PR #12](https://github.com/Dewflash/chatxpt/pull/12) | Revisioned server-only persistence, session lifecycle, permissions, sanitised snapshots, local fallback, and recovery tests; shared cloud activation remains separate evidence | Done |
 | Role 4/5 MVP build plans | `joelyrk` | Create Role 2 branch/issue after pulling `main` | Separate implementation-ready plans for the streamer and viewer owners | Ready |
 | Quest engine implementation | `L0pch` | Start from `ROLE-3-BUILD-PLAN.md` | Engine boundary, lifecycle, safety, fallback, and AI-quality decisions | Ready |
 | Streamer experience | `JYL1m` | Await Role 2 plan and shared contracts | Working Studio and Twitch Live Config against accepted contracts | Planned |
