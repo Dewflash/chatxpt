@@ -6,9 +6,11 @@ Detailed product work begins from Role 2's scoped D-016 build plan. Role 5 suppl
 
 The feasibility review must also check `docs/build-plans/INTEGRATION-CONTRACT.md`: public entries, viewer/overlay view models, commands/errors/fixtures, Role 1 route/Extension/OBS mounts, upstream deadlines, and Role 4's early token handoff.
 
+**Current pass:** R5-001 feasibility review is recorded in `docs/roles/ROLE-5-FEASIBILITY-REVIEW.md` and submitted in GitHub issue #16. Keep source implementation blocked until Role 2 records the accepted/revised baseline; Role 1 has been notified through the issue.
+
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
-| R5-001 | P0 | READY | Review Role 2's viewer/overlay build plan for feasibility in one response, then record the implementation baseline. | Role 2 R2-009 plan | Review identifies conflicts, missing requirements, shared-contract needs, and implementation risks; Role 2 records any revision and Role 1 is notified. |
+| R5-001 | P0 | IN PROGRESS | Review Role 2's viewer/overlay build plan for feasibility in one response, then record the implementation baseline. | Role 2 R2-009 plan | Consolidated review and approved D5-01 through D5-04 decisions are submitted in issue #16; completion still requires Role 2 to record the accepted/revised baseline. |
 | R5-002 | P0 | BLOCKED | Consume Role 4's early design-system entry point in viewer components. | R4-002 minimum handoff and R5-001 | Role 5 starts without waiting for complete Studio; components remain readable, fast, accessible, responsive, and distinct from streamer controls. |
 | R5-003 | P0 | BLOCKED | Build the Twitch Extension public module for voting and active quests. | Role 1 participation/view-model contract and local harness; Role 3 examples | Exactly three options, acknowledgement, tally, authoritative countdown, tie/cancel/winner, active quest, progress, result, and all canonical failure/reconnect fixtures render without vote/engine logic. |
 | R5-004 | P0 | BLOCKED | Build hosted Viewer Quest Board fallback. | R5-001; participation contract | Link/room entry and voting work across mobile and desktop without separate account requirement. |
