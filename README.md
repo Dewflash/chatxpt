@@ -20,6 +20,10 @@ The original merged foundation checkpoint is summarised in [`docs/FOUNDATION-HAN
 
 The playbook includes first-time setup, safe daily Git commands, the required Codex start prompt, one-batch decision handling, verification, changelog fragments, pushing, and pull requests.
 
+On the first pull in each clone, Codex follows [`docs/FIRST-PULL-WELCOME.md`](docs/FIRST-PULL-WELCOME.md): everyone sees the team map and their own decision areas, while Roles 4/5 also receive the one-time vibecoding guide. A local Git marker prevents the welcome from repeating on ordinary pulls.
+
+Role 4 and Role 5 may simply tell Codex `I am Role 4. What do I need to do?` or `I am Role 5. What do I need to do?`. Codex selects their first ready pass, explains the design choices with recommendations, handles routine technical/Git decisions, and records answers in `docs/roles/ROLE-4-EXECUTION.md` or `docs/roles/ROLE-5-EXECUTION.md`.
+
 The checked-in legacy prototype begins with one local diagnostic slice:
 
 1. A producer changes simulated game and audience signals.
@@ -78,6 +82,7 @@ Roles 2 and 3 will jointly recommend a free provider/model path. If any provider
 - `docs` - product scope, architecture, decisions, shared team context, workflow, and submission checklist
 - `docs/roles` - mandatory per-role authority and to-do lists
 - `docs/build-plans` - authoritative integration contract plus phase, decision-gate, deadline, and acceptance plans
+- `docs/evidence` and `docs/research` - Role 1-owned truthful evidence manifest, test resources, and problem-solution/originality validation records
 - `changes` - role-owned changelog fragments compiled by Role 1
 - `.github` - code ownership and pull-request/cross-role issue templates
 - `.codex/skills/chatxpt-prototype` - shared project workflow for Codex

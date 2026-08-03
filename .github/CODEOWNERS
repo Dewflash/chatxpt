@@ -5,6 +5,7 @@
 /AGENTS.md @Dewflash
 /.github/ @Dewflash
 /docs/DECISIONS.md @Dewflash
+/docs/FIRST-PULL-WELCOME.md @Dewflash
 /docs/PROJECT_TODO.md @Dewflash
 /docs/TEAM_PLAYBOOK.md @Dewflash
 /docs/TEAM_WORKFLOW.md @Dewflash
@@ -12,6 +13,8 @@
 /docs/build-plans/INTEGRATION-CONTRACT.md @Dewflash
 /docs/build-plans/ROLE-1-BUILD-PLAN.md @Dewflash
 /docs/architecture/ @Dewflash
+/docs/evidence/ @Dewflash
+/docs/research/ @Dewflash
 /docs/roles/ROLE-1.md @Dewflash
 /docs/roles/ROLE-1-TODO.md @Dewflash
 /src/core/ @Dewflash
@@ -50,6 +53,7 @@
 # Role 4: streamer product and shared design system.
 /docs/roles/ROLE-4.md @JYL1m @Dewflash
 /docs/roles/ROLE-4-TODO.md @JYL1m @Dewflash
+/docs/roles/ROLE-4-EXECUTION.md @JYL1m @Dewflash
 /src/streamer/ @JYL1m @Dewflash
 /src/design-system/ @JYL1m @Dewflash
 /changes/role-4/ @JYL1m @Dewflash
@@ -57,5 +61,6 @@
 # Role 5: viewer, fallback, and viewer-facing overlay UX.
 /docs/roles/ROLE-5.md @drdexe @Dewflash
 /docs/roles/ROLE-5-TODO.md @drdexe @Dewflash
+/docs/roles/ROLE-5-EXECUTION.md @drdexe @Dewflash
 /src/viewer/ @drdexe @Dewflash
 /changes/role-5/ @drdexe @Dewflash

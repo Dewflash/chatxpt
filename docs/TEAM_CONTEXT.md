@@ -45,10 +45,11 @@ Update a row before starting shared-contract or golden-demo work. Detailed task 
 | Role dependency guard and legacy inventory | `Dewflash` | PR #9 | Enforce public-only cross-role imports and map legacy seams without deciding migration outcomes | Done |
 | Foundation checkpoint audit | `Dewflash` | PR #10 | Compile changelog, verify merged main, and publish truthful role-by-role pickup state | Done |
 | Supabase persistence/realtime foundation | `Dewflash` | [PR #12](https://github.com/Dewflash/chatxpt/pull/12) | Revisioned server-only persistence, session lifecycle, permissions, sanitised snapshots, local fallback, and recovery tests; shared cloud activation remains separate evidence | Done |
-| Role 4/5 MVP build plans | `joelyrk` | `role-2/ui-build-plans` | Separate implementation-ready plans for the streamer and viewer owners | Needs review |
+| Guided UI-plan safety corrections | `Dewflash` using the D-015 integration override | [PR #27](https://github.com/Dewflash/chatxpt/pull/27); issues #15-#26 | Beginner-safe execution, explained design gates, corrected priorities, personal-viewer/fallback gaps, and persistent owner handoffs without UI source changes | Needs review |
+| Role 4/5 MVP build plans | `joelyrk` | [PR #14](https://github.com/Dewflash/chatxpt/pull/14); feasibility [#15](https://github.com/Dewflash/chatxpt/issues/15)/[#16](https://github.com/Dewflash/chatxpt/issues/16) | Separate beginner-guided plans for the streamer and viewer owners; one feasibility response and Role 2 comparison remain required | Needs review |
 | Quest engine implementation | `L0pch` | Start from `ROLE-3-BUILD-PLAN.md` | Engine boundary, lifecycle, safety, fallback, and AI-quality decisions | Ready |
-| Streamer experience | `JYL1m` | Await Role 2 plan and shared contracts | Working Studio and Twitch Live Config against accepted contracts | Planned |
-| Viewer experience | `drdexe` | Await Role 2 plan and shared contracts | Working Extension, fallback board, and overlay against accepted contracts | Planned |
+| Streamer experience | `JYL1m` | Start with [issue #15](https://github.com/Dewflash/chatxpt/issues/15) and `ROLE-4-EXECUTION.md` | Working Studio and Twitch Live Config against accepted contracts | Ready |
+| Viewer experience | `drdexe` | Start with [issue #16](https://github.com/Dewflash/chatxpt/issues/16) and `ROLE-5-EXECUTION.md` | Working Extension, fallback board, and overlay against accepted contracts | Ready |
 
 Use `Planned`, `Ready`, `In progress`, `Needs review`, `Blocked`, or `Done`. A row is a coordination signal, not a substitute for a branch, issue, pull request, role TODO, or decision entry.
 

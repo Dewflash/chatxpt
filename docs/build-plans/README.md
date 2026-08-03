@@ -68,7 +68,7 @@ At the start of a phase, the role's Codex agent must:
 1. Read the current build-plan decision table.
 2. Ask only the open decisions assigned to that owner, in one consolidated batch.
 3. Give a recommendation and implementation consequence for each.
-4. Record the owner's settled answers in the plan before implementation.
+4. Record the owner's settled answers before implementation. Roles 1-3 update their owned plan; Roles 4/5 update their role-owned execution record while Role 2 retains the baseline-plan file.
 5. Send shared-contract, cost, safety, privacy, or scope decisions to Role 1.
 
 Internal decisions do not require Role 1 approval unless they cross those boundaries. Role 1 remains informed through the pull request and may redirect work under the recorded integration override.

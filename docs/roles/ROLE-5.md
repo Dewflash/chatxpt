@@ -8,6 +8,8 @@ For the current MVP planning pass, Role 2 decides Role 5's build plan under D-01
 
 Before implementation, read the Role 2-authored Role 5 execution plan, provide one consolidated feasibility review, and then follow its accepted phases and acceptance evidence.
 
+Role 5 may begin a session with only `I am Role 5. What do I need to do?`. Codex must follow the guided execution mode in `AGENTS.md`, choose the current ready pass, and ask only the current phase's owner decisions with recommendations. Role 5 does not need to identify technical tasks or Git steps. Settled Role 5 choices and pass evidence are recorded in `docs/roles/ROLE-5-EXECUTION.md`; Role 2 retains ownership of edits to the baseline plan.
+
 Also follow `docs/build-plans/INTEGRATION-CONTRACT.md`: export public viewer/overlay modules, consume Role 1 view models, emit commands, and keep vote/engine/persistence/permission/timer authority outside the UI.
 
 ## Mission

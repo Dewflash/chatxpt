@@ -112,6 +112,29 @@ Every contributor and their ChatGPT/Codex agent must read this root guide, `docs
 
 The matching work queue is `docs/roles/ROLE-<n>-TODO.md`. Plans define phase order, decision gates, and acceptance evidence; TODOs track current status. Roles 1-3 follow the shared concurrent calendar in `docs/build-plans/README.md`.
 
+### Temporary first-pull welcome
+
+For every role, the first successful pull/sync in a repository clone triggers the one-time onboarding procedure in `docs/FIRST-PULL-WELCOME.md` when the local Git key `chatxpt.welcome-v1` is absent. Show the five-role map, only that contributor's broad decision areas, and their normal first-pass entry. Roles 4/5 also receive the vibecoding procedure. Do not dump every role's full question catalogue, ask the owner to answer everything immediately, or repeat the welcome after recording the local marker. This temporary layer does not replace mandatory files, current TODO selection, or phase gates.
+
+### Guided execution mode for Roles 4 and 5
+
+Roles 4 and 5 use a beginner-safe Codex workflow. If either owner says only `I am Role 4. What do I need to do?`, `I am Role 5. What do I need to do?`, or words to that effect, their Codex must not ask them to identify a task, phase, branch, file, dependency, test command, or integration owner.
+
+The agent must instead:
+
+1. Read the mandatory files and the role-owned execution record under `docs/roles/ROLE-<n>-EXECUTION.md`.
+2. Inspect Git state without discarding work. Pull `main` only when the tree is clean, then explain relevant incoming changes in plain language.
+3. Select the first `READY` item in the role TODO and map it to the current plan phase. If the plan is still awaiting feasibility acceptance, perform the feasibility review before editing source.
+4. State one bounded pass as `We will ...`; name its user-visible outcome, owned files, dependencies, and acceptance evidence.
+5. For every user-visible pass, run a short design-coaching gate. Use the plan's questions as starter examples, then inspect the actual surface and generate the most relevant questions about user goal, organisation and hierarchy, layout and responsiveness, interaction feedback, error/recovery UX, visual tone, motion, accessibility, and trust. Ask only choices that materially affect this pass, explain them without jargon, give a recommendation and consequence, and accept `Approve all recommendations` as a complete response. The plan tables are neither an exhaustive questionnaire nor fixed wording.
+6. Make routine technical choices independently from repository evidence. Do not ask the owner to choose file structure, branch names, test tools, command syntax, contract ownership, or other normal implementation details.
+7. After the owner answers, record the decisions in the role execution record and continue through the current bounded pass without asking for repeated permission for ordinary in-scope edits and tests. Never cross into the next phase before the current exit is accepted.
+8. Stop and escalate only for a shared-contract or ownership change, material product scope, safety/privacy/security, external cost/service choice, destructive action, missing credentials, or a genuine blocker that cannot be handled through the accepted fixture boundary.
+9. If another role is required, draft or update the `cross-role` GitHub Issue, name the target owner and required-by phase, notify Role 1, and keep the UI on the accepted fixture/disabled path. Do not ask the novice owner to design the other role's solution.
+10. At the end, run the required checks, capture UI evidence, update the role TODO/execution record/change fragment, review the diff in plain language, and ask one final question: whether to commit, push, and open the pull request. Never merge the role owner's own pull request.
+
+The agent should minimise questions, not owner authority or design thinking. Role 4 still decides its visual and streamer interaction choices; Role 5 still decides its viewer and overlay interaction choices. Codex actively helps the owner consider relevant alternatives instead of merely reading a preset list. When a non-visual pass genuinely creates no owner decision, the agent explains the UX implications it checked and proceeds.
+
 ### Cross-role handoff authority
 
 The five contributors work from separate computers and repository clones. GitHub is the persistent coordination system; personal ChatGPT/Codex conversations are not shared team memory.

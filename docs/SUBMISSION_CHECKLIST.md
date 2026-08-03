@@ -66,5 +66,16 @@
 - [ ] README, architecture, role plans, prompts/agent configuration, evaluation evidence, privacy/limitations, and third-party disclosures are current.
 - [ ] Clean clone and production URLs are verified from the exact release commit.
 - [ ] `garena-ai-build-challenge` is invited to the private GitHub repository.
-- [ ] Immutable Google Drive submission package is prepared and access tested.
-- [ ] Feature freeze and final submission are recorded; no unverified claims remain.
+- [ ] The Google Drive folder name exactly matches the submitted team name and contains the deck PDF, source repository link/equivalent, and demo video.
+- [ ] Google Drive and every linked artifact are accessible from a signed-out or designated reviewer account.
+- [ ] The submission email is sent to `outreachsg@garena.com` with the Google Drive link.
+- [ ] Immutable Google Drive submission package is prepared and access tested; no deliverable is modified after submission.
+- [ ] Feature freeze, submission time, sender, recipient, folder link, repository commit, and final confirmation are recorded; no unverified claims remain.
+
+## Problem-solution fit and originality evidence
+
+- [ ] At least two relevant streamer/viewer conversations or one streamer plus observed viewer usability sessions are recorded without unnecessary personal data.
+- [ ] The actual current workaround and most painful moment are distinguished from team assumptions.
+- [ ] A concise alternatives comparison explains why gameplay + audience + profile + deterministic orchestration is different from a static poll, reward redemption, chat suggestion, or generic chatbot.
+- [ ] Expected impact is expressed as measurable hypotheses such as setup time, vote participation, quest completion, reconnect success, or streamer control burden.
+- [ ] Deck and demo claims link back to evidence or are explicitly labelled as hypotheses.

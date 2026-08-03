@@ -6,7 +6,7 @@ Update this file at the start and end of each Role 1 pass. Do not mark `DONE` wi
 
 Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan defines phase order, owner decisions, deadlines, and pass-level evidence.
 
-**Next:** activate the team-owned Supabase Free preview from the R1-P04 foundation merged in PR #12, then execute its migration, pgTAP/RLS, private realtime, and two-client evidence. Keep ambiguous legacy moves deferred and leave Twitch, OBS, Vercel, AI/extraction, quest mechanics, and UI to their later passes/owners.
+**Next:** complete the guided UI-plan correction/tracking pass, then run R1-015 (browser-safe UI gateway/harness) concurrently with activation of the team-owned Supabase Free preview. Keep ambiguous legacy moves deferred and leave AI/extraction, quest mechanics, and detailed UI implementation to their owners.
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
@@ -23,11 +23,18 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 | R1-009 | P1 | READY | Maintain GitHub issues, decisions, changelog compilation, and integration notes. | Ongoing | Every merged PR has owner review, fragment, verification, and recorded cross-role outcomes. |
 | R1-010 | P1 | BLOCKED | Assemble submission artifacts and invite Garena collaborator. | R1-008 | Required README/disclosures, deck, video, private repo access, and final checklist. |
 | R1-011 | P0 | READY | Create the Role 1-controlled Twitch account and enable 2FA for developer application and Extension registration. | None | Role 1 can access the Twitch developer console and begin app/Extension setup without committing credentials. |
+| R1-014 | P0 | IN PROGRESS | Make Role 4/5 planning beginner-safe and convert every missing UI dependency into persistent work. | PR #14; D-042/D-043 | PR #27 contains guided mode, explained phase design gates, role-owned execution records, corrected P0/P1 tasks, feasibility issues #15/#16, UI-X issues #17-#26, owner notification, and green repository checks; affected-owner review remains. |
+| R1-015 | P0 | READY | Implement the browser-safe UI gateway, authorised command client, local multi-surface harness, and shared UI verification stack. | R1-003; UI-X01/UI-X02/UI-X05 | Thin Role 1 mounts exercise Role 4/5 public modules, typed commands/revisions/auth failures, canonical fixtures, component interaction tests, and real-browser screenshots without exposing secrets or diagnostic state as live. |
+| R1-016 | P0 | READY | Implement private per-viewer recovery plus hosted-board discovery and Twitch-chat delivery seams. | R1-003/R1-004; UI-X07/UI-X08/UI-X10; D1-06D/D1-06E | Each viewer restores only their accepted vote/points, shared broadcasts remain sanitised, direct-link/code/optional QR entry works, and real chat delivery never overclaims acknowledgement. |
+| R1-017 | P0 | BLOCKED | Establish the evidence manifest and real-test resource matrix for every role. | R1-014 / PR #27 merge | Every screenshot/run records evidence class, surface, revision, accounts/devices, command, date, and reviewer; broadcaster, two viewers, OBS machine, mobile/browser, and recording owner are assigned without committing identities/secrets. |
+| R1-018 | P0 | READY | Gather problem-solution-fit, originality, usability, and expected-impact evidence while the build proceeds. | None | At least two relevant conversations or one streamer plus viewer observations, a truthful alternatives comparison, measurable hypotheses, and recorded product changes/limitations support the deck. |
+| R1-019 | P0 | BLOCKED | Execute exact submission operations and freeze the immutable package. | R1-008/R1-010 | Team-named Drive folder contains all three deliverables and repository link; access is tested; email is sent to the brief's recipient; post-submission mutation is prohibited and recorded. |
 
 ## Decisions Role 1 still owns
 
 - Shared contract acceptance and breaking changes
 - Supabase schema/realtime boundaries and Vercel deployment
 - Twitch/OBS integration scope
+- UI client/harness/test-stack choices, per-viewer recovery, hosted discovery, and chat delivery policy
 - Integration overrides and cross-role disputes
 - Final KPIs, demo narrative, feature freeze, and submission

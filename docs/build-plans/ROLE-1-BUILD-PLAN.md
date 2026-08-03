@@ -27,6 +27,8 @@ Role 1 is complete when:
 - Role 2 intelligence drives Role 3, Role 3 drives authoritative quest state, and Roles 4/5 render that state.
 - Two viewers can participate in the same session and see consistent results.
 - The judged run uses real gameplay and real Twitch activity; uncertain signals become `unknown`.
+- Roles 4/5 can begin from a plain-language prompt, receive only their current design decisions, and never need to infer integration ownership or Git procedure.
+- Problem-solution fit, originality, expected impact, and usability evidence are gathered alongside implementation rather than invented during deck assembly.
 - Checks, evidence, disclosures, deck, video, repository access, and final submission are complete.
 
 ## Continuous lead loop
@@ -139,6 +141,34 @@ Run this loop throughout every phase:
 
 **Acceptance:** Each spike has executed evidence, an owner, a pass/fail result, and an immediate recovery decision for every failure. Full later implementations remain in their normal phases.
 
+### R1-P03B — Guided UI-owner operating foundation
+
+**Outcome:** Roles 4 and 5 can ask only what to do and receive one safe, reviewable current pass.
+
+**Status:** In progress on `role-1/ui-plan-safety-corrections`; Role 2/4/5 review remains required before the corrected baseline is accepted.
+
+**Work:**
+
+- Define the Role 4/5 guided execution mode, explained phase design gates, and role-owned execution records.
+- Keep technical/Git choices with Codex and component visual decisions with the role owner.
+- Convert every missing cross-role UI requirement into a persistent issue with an owner and required-by phase.
+- Ensure a blocked UI uses an accepted fixture/disabled path and never implements another role's backend.
+
+**Acceptance:** A zero-context Role 4 or Role 5 prompt deterministically selects the first ready task, asks one explained decision batch, records answers, and names the exact escalation path without source-boundary drift.
+
+### R1-P03C — Early product-fit and originality evidence
+
+**Outcome:** The team has real evidence for the judging criteria before deck and video assembly.
+
+**Work:**
+
+- Run a small set of streamer/viewer conversations or usability walkthroughs and record non-sensitive findings.
+- Compare the problem and closed-loop value against current manual polls, static rewards, chat suggestions, and generic chatbot workflows without making unsupported competitor claims.
+- Record one measurable setup, participation, reliability, or engagement hypothesis and the evidence available by submission.
+- Feed verified findings into product copy, prioritisation, deck, and demo narrative.
+
+**Acceptance:** Evidence records distinguish observed feedback from assumptions; at least two relevant participants or one real streamer plus viewer observations inform the problem, trade-offs, and expected impact.
+
 ## Phase 2: Shared infrastructure and deployed preview
 
 ### Role 1 decision gate
@@ -150,6 +180,9 @@ Run this loop throughout every phase:
 | D1-06 | Session creation, expiry, reconnect, and room-code policy | Resolved by D-040 | One active session per broadcaster; eight-character room code; two-hour inactive preparing expiry; heartbeat-driven live duration; ten-minute reconnect grace; explicit/Twitch/grace ending. |
 | D1-06A | Revision, command-idempotency, atomic-write, and reconnect-snapshot semantics | Resolved by D-035 | Server timestamps, command IDs, expected/current revisions, idempotency, atomic persistence before broadcast, typed errors, and reconnect snapshots. |
 | D1-06B | Broadcaster/moderator/viewer/system/overlay permission matrix and token-expiry behaviour | Resolved by D-038, D-041 | Server-authoritative capability enforcement; broadcaster full control, moderator quest controls, viewer participation, system candidates, read-only OBS; expired tokens lose access and must recover through an allowed path. |
+| D1-06C | Browser-safe UI command/read client, local role-surface harness, and shared UI verification stack | Open | — |
+| D1-06D | Private per-viewer vote acknowledgement, session-points read model, and reconnect recovery without shared-state leakage | Open | — |
+| D1-06E | Hosted-fallback discovery/share path and Twitch-chat announcement/acknowledgement policy | Open | — |
 
 ### R1-P04 — Supabase Free foundation
 
@@ -192,6 +225,32 @@ Run this loop throughout every phase:
 - Expose capability flags so unsupported platform features receive the correct fallback.
 
 **Acceptance:** Duplicate commands/votes do not apply twice; stale/out-of-order updates cannot overwrite newer state; token expiry and write/broadcast failure are visible; anonymous fallback works; one revision remains consistent across two viewers and one streamer client.
+
+### R1-P06A — Browser-safe UI gateway and local integration harness
+
+**Outcome:** Roles 4/5 render and emit commands through one safe development seam without owning routes, authentication, persistence, or shared test configuration.
+
+**Work:**
+
+- Implement the accepted UI-X01/UI-X02/UI-X05 setup/readiness, command, health, fixture-harness, and token-expiry interfaces.
+- Mount local-only Studio, Config, Live Config, viewer, hosted-board, and transparent-overlay harness surfaces through thin Role 1 routes.
+- Select and pin one DOM-capable React interaction-test path and one browser/screenshot path; own package, lockfile, and shared configuration changes.
+- Expose canonical fixture selection with permanent fixture/diagnostic labelling and no route that can be mistaken for live evidence.
+
+**Acceptance:** Roles 4/5 consumer tests and local surfaces work without private imports; commands return typed results/current revision; auth/expiry/failure fixtures are reproducible; the production build excludes or clearly protects the diagnostic harness.
+
+### R1-P06B — Private viewer and fallback-delivery seams
+
+**Outcome:** Viewer acknowledgement and every fallback remain usable without leaking identity or relying on UI-owned authority.
+
+**Work:**
+
+- Implement UI-X10 as a session-scoped, authorised per-viewer command receipt/read path for accepted choice and points, including anonymous-token reconnect rules.
+- Preserve sanitised shared viewer broadcasts; never broadcast another viewer's personal fields.
+- Implement UI-X08 room lookup, direct authorised link, copy/share data, and optional QR payload without making QR/account creation mandatory.
+- Implement UI-X07 platform-neutral chat copy/templates and Role 1-owned Twitch outbound delivery with a bounded acknowledgement policy that respects rate limits.
+
+**Acceptance:** Two viewers receive the same shared tally/cycle while seeing only their own accepted choice/points; reconnect restores permitted personal state; hosted discovery works; chat fallback never claims an acknowledgement the Twitch path did not deliver.
 
 ## Phase 3: Real capture, Twitch, and OBS
 
@@ -324,7 +383,8 @@ Run this loop throughout every phase:
 - Compile changelog fragments.
 - Finalise README, architecture, prompts/agent configuration, third-party disclosures, privacy/limitations, and clean-clone instructions.
 - Assemble the maximum 15-slide PDF and maximum five-minute video.
-- Add `garena-ai-build-challenge` to the private repository and prepare the immutable Drive package.
+- Name the Google Drive folder exactly after the team, include the repository link, confirm access, and send the three required deliverables to `outreachsg@garena.com`.
+- Add `garena-ai-build-challenge` to the private repository, prepare the immutable Drive package, and do not modify submitted deliverables afterward.
 
 **Acceptance:** Clean-clone verification passes; deployed links work; deck/video meet limits; repository access and submission package are confirmed.
 

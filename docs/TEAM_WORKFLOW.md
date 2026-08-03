@@ -44,7 +44,7 @@ Before broad migration, Role 1 publishes the provisional public contracts/orches
 ## ChatGPT Pro collaboration
 
 - Each teammate should open the same repository so `AGENTS.md` and the repo-local skill apply consistently.
-- Every teammate and their agent must read the root `AGENTS.md`, `docs/build-plans/INTEGRATION-CONTRACT.md`, their mandatory `docs/roles/ROLE-<n>.md` guide/TODO, and their accepted execution plan.
+- Every teammate and their agent must read the root `AGENTS.md`, `docs/build-plans/INTEGRATION-CONTRACT.md`, their mandatory `docs/roles/ROLE-<n>.md` guide/TODO, and their accepted execution plan. Roles 4/5 also use their role-owned guided execution record and may begin by asking only what they need to do.
 - Follow `docs/TEAM_PLAYBOOK.md` at the start and end of every pass; it contains the required sync, change-summary, one-batch decision, TODO, changelog, push, and PR sequence.
 - Give ChatGPT/Codex one build-plan pass and acceptance signal at a time.
 - Ask it to inspect current files before editing; agents do not share live context or uncommitted work across five machines.
