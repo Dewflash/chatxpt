@@ -2,7 +2,7 @@
 
 **Owner:** Role 1 (`Dewflash`)
 
-**Pass:** R1-P04 implementation foundation on `role-1/supabase-foundation`
+**Pass:** R1-P04 implementation foundation, merged to `main` in [PR #12](https://github.com/Dewflash/chatxpt/pull/12)
 
 ## Outcome
 
