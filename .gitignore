@@ -38,6 +38,8 @@ tmp/
 
 # Deployment tooling
 .vercel/
+supabase/.temp/
+supabase/.branches/
 
 # TypeScript
 *.tsbuildinfo

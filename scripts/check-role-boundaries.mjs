@@ -45,7 +45,7 @@ function resolveLocalTarget(sourceProjectPath, specifier) {
 
 function publicRootTarget(targetProjectPath, targetArea) {
   const target = targetProjectPath.replace(/\.(?:js|jsx|mjs|mts|ts|tsx)$/, "").replace(/\/index$/, "");
-  return target === targetArea.root;
+  return target === targetArea.root || target === "src/realtime/server";
 }
 
 function isTestFile(sourceProjectPath) {
@@ -177,6 +177,8 @@ function selfTest() {
     ["src/viewer/example.tsx", "@/design-system/private-button", "public index"],
     ["src/streamer/example.test.ts", "@/core/testing", null],
     ["src/streamer/example.ts", "@/core/testing", "public index"],
+    ["tests/integration/example.test.ts", "@/realtime/server", null],
+    ["src/viewer/example.tsx", "@/realtime/server", "viewer"],
   ];
   for (const [source, specifier, expectedFragment] of cases) {
     const result = validateImport(source, specifier);

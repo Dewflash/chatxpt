@@ -1,0 +1,89 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  PersistenceConfigurationError,
+  createConfiguredPersistenceRuntime,
+  publicRealtimeEnvironment,
+  resolveServerPersistenceEnvironment,
+} from "../../src/realtime/server";
+
+const CHECKED_AT = 1_786_000_000_000;
+
+describe("Role 1 persistence environment", () => {
+  it("uses credential-free memory mode only for a completely unconfigured local environment", () => {
+    const environment = resolveServerPersistenceEnvironment(
+      { NEXT_PUBLIC_APP_ENV: "local" },
+      CHECKED_AT,
+    );
+
+    expect(environment.mode).toBe("memory");
+    expect(environment.health.status).toBe("ready");
+  });
+
+  it("fails closed when Supabase configuration is partial", () => {
+    const environment = resolveServerPersistenceEnvironment(
+      {
+        NEXT_PUBLIC_APP_ENV: "preview",
+        NEXT_PUBLIC_SUPABASE_URL: "https://fixture.supabase.co",
+      },
+      CHECKED_AT,
+    );
+
+    expect(environment.mode).toBe("misconfigured");
+    if (environment.mode !== "misconfigured") return;
+    expect(environment.missing).toEqual([
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+      "SUPABASE_SECRET_KEY",
+    ]);
+    expect(environment.health.status).toBe("misconfigured");
+  });
+
+  it("fails closed on an invalid deployment name instead of silently selecting local memory", () => {
+    const environment = resolveServerPersistenceEnvironment(
+      { NEXT_PUBLIC_APP_ENV: "prodution" },
+      CHECKED_AT,
+    );
+
+    expect(environment.mode).toBe("misconfigured");
+    expect(environment.deployment).toBe("invalid");
+  });
+
+  it("accepts current key names and exposes only public realtime configuration", () => {
+    const environment = resolveServerPersistenceEnvironment(
+      {
+        NEXT_PUBLIC_APP_ENV: "preview",
+        NEXT_PUBLIC_SUPABASE_URL: "https://fixture.supabase.co",
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fixture",
+        SUPABASE_SECRET_KEY: "sb_secret_fixture",
+      },
+      CHECKED_AT,
+    );
+
+    expect(environment.mode).toBe("supabase");
+    if (environment.mode !== "supabase") return;
+    expect(publicRealtimeEnvironment(environment)).toEqual({
+      url: "https://fixture.supabase.co",
+      publishableKey: "sb_publishable_fixture",
+    });
+    expect(JSON.stringify(publicRealtimeEnvironment(environment))).not.toContain("sb_secret_fixture");
+  });
+
+  it("supports legacy anon and service-role key names during Supabase migration", () => {
+    const environment = resolveServerPersistenceEnvironment({
+      NEXT_PUBLIC_APP_ENV: "preview",
+      NEXT_PUBLIC_SUPABASE_URL: "https://fixture.supabase.co",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "legacy-anon",
+      SUPABASE_SERVICE_ROLE_KEY: "legacy-service-role",
+    });
+
+    expect(environment.mode).toBe("supabase");
+  });
+
+  it("builds the local runtime but refuses to compose a misconfigured preview", () => {
+    const local = resolveServerPersistenceEnvironment({ NEXT_PUBLIC_APP_ENV: "local" });
+    expect(createConfiguredPersistenceRuntime(local).mode).toBe("memory");
+
+    const preview = resolveServerPersistenceEnvironment({ NEXT_PUBLIC_APP_ENV: "preview" });
+    expect(() => createConfiguredPersistenceRuntime(preview)).toThrow(PersistenceConfigurationError);
+  });
+});

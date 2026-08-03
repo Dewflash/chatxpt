@@ -1,0 +1,345 @@
+import {
+  acceptedCommandReceiptSchema,
+  authoritativeSessionStateSchema,
+  canonicalJsonStringify,
+  candidateBatchSchema,
+  type AcceptedCommandReceipt,
+  type AuthoritativeSessionState,
+  type CandidateBatch,
+  type CommitAuthoritativeStateInput,
+  type CommitAuthoritativeStateResult,
+  type RoleViewModels,
+} from "../core";
+import {
+  PREPARING_SESSION_EXPIRY_MS,
+  SESSION_RECONNECT_GRACE_MS,
+  PersistenceConflictError,
+  type BootstrapSessionInput,
+  type CandidateBatchRepository,
+  type CommitSessionLifecycleInput,
+  type LifecycleStoreCommitResult,
+  type RoleSnapshotPublisher,
+  type RealtimeAccessGrant,
+  type RealtimeAccessGrantStore,
+  type SessionLifecycleCommitResult,
+  type SessionLifecycleStore,
+  type SessionPresenceAction,
+  type SessionPresenceResult,
+  type SnapshotRole,
+} from "./types";
+import { sanitizeRoleViewsForBroadcast } from "./sanitization";
+
+interface MemoryLifecycleMetadata {
+  lastActivityAt: number;
+  lastHeartbeatAt: number | null;
+  reconnectDeadlineAt: number | null;
+}
+
+function clone<T>(value: T): T {
+  return structuredClone(value);
+}
+
+function active(status: AuthoritativeSessionState["session"]["status"]): boolean {
+  return status === "preparing" || status === "live";
+}
+
+export class MemoryChatXptPersistence
+  implements CandidateBatchRepository, RoleSnapshotPublisher, RealtimeAccessGrantStore, SessionLifecycleStore
+{
+  private readonly states = new Map<string, AuthoritativeSessionState>();
+  private readonly receipts = new Map<string, AcceptedCommandReceipt>();
+  private readonly batches = new Map<string, CandidateBatch>();
+  private readonly snapshots = new Map<string, RoleViewModels>();
+  private readonly roomSessions = new Map<string, string>();
+  private readonly broadcasterActiveSessions = new Map<string, string>();
+  private readonly lifecycle = new Map<string, MemoryLifecycleMetadata>();
+  private readonly lifecycleOperations = new Map<string, SessionLifecycleCommitResult>();
+  private readonly accessGrants = new Map<string, RealtimeAccessGrant>();
+
+  async bootstrap(input: BootstrapSessionInput): Promise<void> {
+    const state = authoritativeSessionStateSchema.parse(input.state);
+    if (state.session.status !== "preparing" || state.session.revision !== 0) {
+      throw new Error("A bootstrapped session must be preparing at revision zero");
+    }
+    if (state.session.createdAt !== input.createdAt) {
+      throw new Error("Bootstrap timestamp must match canonical session state");
+    }
+    if (!/^[A-HJ-NP-Z2-9]{8}$/.test(input.roomCode)) {
+      throw new Error("Fallback room code is invalid");
+    }
+    if (this.states.has(state.session.sessionId)) {
+      throw new PersistenceConflictError("session-id", "Session ID already exists");
+    }
+    if (this.roomSessions.has(input.roomCode)) {
+      throw new PersistenceConflictError("room-code", "Room code already exists");
+    }
+    if (this.broadcasterActiveSessions.has(state.session.broadcasterId)) {
+      throw new PersistenceConflictError(
+        "active-broadcaster",
+        "Broadcaster already has an active session",
+      );
+    }
+
+    this.states.set(state.session.sessionId, clone(state));
+    this.roomSessions.set(input.roomCode, state.session.sessionId);
+    this.broadcasterActiveSessions.set(state.session.broadcasterId, state.session.sessionId);
+    this.lifecycle.set(state.session.sessionId, {
+      lastActivityAt: input.createdAt,
+      lastHeartbeatAt: null,
+      reconnectDeadlineAt: null,
+    });
+  }
+
+  async load(sessionId: string): Promise<AuthoritativeSessionState | null> {
+    const state = this.states.get(sessionId);
+    return state === undefined ? null : clone(state);
+  }
+
+  async findOperation(operationId: string): Promise<SessionLifecycleCommitResult | null> {
+    const result = this.lifecycleOperations.get(operationId);
+    return result === undefined ? null : clone(result);
+  }
+
+  async findReceipt(commandId: string): Promise<AcceptedCommandReceipt | null> {
+    const receipt = this.receipts.get(commandId);
+    return receipt === undefined ? null : clone(receipt);
+  }
+
+  async commit(input: CommitAuthoritativeStateInput): Promise<CommitAuthoritativeStateResult> {
+    const existing = this.receipts.get(input.command.commandId);
+    if (existing !== undefined) {
+      return { status: "duplicate", receipt: clone(existing) };
+    }
+
+    const current = this.states.get(input.command.sessionId);
+    if (current === undefined || current.session.revision !== input.expectedRevision) {
+      return { status: "stale", currentRevision: current?.session.revision ?? 0 };
+    }
+    if (
+      input.nextState.session.sessionId !== input.command.sessionId ||
+      input.nextState.session.revision !== input.expectedRevision + 1 ||
+      input.nextState.questCycle.envelope.revision !== input.expectedRevision + 1
+    ) {
+      throw new Error("Authoritative commit violates session or revision invariants");
+    }
+
+    const receipt = acceptedCommandReceiptSchema.parse({
+      command: input.command,
+      commandFingerprint: input.commandFingerprint,
+      state: input.nextState,
+      events: input.events,
+      acceptedAt: input.acceptedAt,
+    });
+    this.replaceState(receipt.state);
+    this.receipts.set(input.command.commandId, clone(receipt));
+    const updatedLifecycle = this.lifecycle.get(input.command.sessionId);
+    if (updatedLifecycle !== undefined) {
+      updatedLifecycle.lastActivityAt = input.acceptedAt;
+    }
+    return { status: "committed", receipt: clone(receipt) };
+  }
+
+  async store(batch: CandidateBatch): Promise<void> {
+    const parsed = candidateBatchSchema.parse(batch);
+    const existing = this.batches.get(parsed.envelope.messageId);
+    if (existing !== undefined) {
+      if (canonicalJsonStringify(existing) === canonicalJsonStringify(parsed)) return;
+      throw new PersistenceConflictError("unknown", "Candidate batch ID was reused");
+    }
+    this.batches.set(parsed.envelope.messageId, clone(parsed));
+  }
+
+  async read(candidateBatchId: string, sessionId: string): Promise<CandidateBatch | null> {
+    const batch = this.batches.get(candidateBatchId);
+    if (batch === undefined || batch.envelope.sessionId !== sessionId) return null;
+    return clone(batch);
+  }
+
+  async publish(views: RoleViewModels): Promise<void> {
+    const parsed = sanitizeRoleViewsForBroadcast(views);
+    const sessionId = parsed.streamer.envelope.sessionId;
+    if (
+      parsed.viewer.envelope.sessionId !== sessionId ||
+      parsed.overlay.envelope.sessionId !== sessionId ||
+      parsed.viewer.envelope.revision !== parsed.streamer.envelope.revision ||
+      parsed.overlay.envelope.revision !== parsed.streamer.envelope.revision
+    ) {
+      throw new Error("Role snapshots must share one session and revision");
+    }
+    this.snapshots.set(sessionId, clone(parsed));
+  }
+
+  async readSnapshot<Role extends SnapshotRole>(
+    sessionId: string,
+    role: Role,
+  ): Promise<RoleViewModels[Role] | null> {
+    const views = this.snapshots.get(sessionId);
+    return views === undefined ? null : clone(views[role]);
+  }
+
+  async grant(input: Omit<RealtimeAccessGrant, "revokedAt">): Promise<RealtimeAccessGrant> {
+    if (!this.states.has(input.sessionId)) throw new Error("Cannot grant access to a missing session");
+    const value: RealtimeAccessGrant = { ...input, revokedAt: null };
+    this.accessGrants.set(this.grantKey(input.principalId, input.sessionId, input.viewRole), value);
+    return clone(value);
+  }
+
+  async revoke(
+    principalId: string,
+    sessionId: string,
+    viewRole: SnapshotRole,
+    revokedAt: number,
+  ): Promise<void> {
+    const key = this.grantKey(principalId, sessionId, viewRole);
+    const existing = this.accessGrants.get(key);
+    if (existing !== undefined) this.accessGrants.set(key, { ...existing, revokedAt });
+  }
+
+  async canRead(
+    principalId: string,
+    sessionId: string,
+    viewRole: SnapshotRole,
+    at: number,
+  ): Promise<boolean> {
+    const access = this.accessGrants.get(this.grantKey(principalId, sessionId, viewRole));
+    return access !== undefined && access.revokedAt === null && access.expiresAt > at;
+  }
+
+  async commitLifecycle(
+    input: CommitSessionLifecycleInput,
+  ): Promise<LifecycleStoreCommitResult> {
+    const existing = this.lifecycleOperations.get(input.operationId);
+    if (existing !== undefined) {
+      return { status: "duplicate", result: clone(existing) };
+    }
+    const current = this.states.get(input.sessionId);
+    if (current === undefined) return { status: "missing" };
+    if (current.session.revision !== input.expectedRevision) {
+      return { status: "stale", currentRevision: current.session.revision };
+    }
+
+    const metadata = this.lifecycle.get(input.sessionId);
+    if (
+      input.action === "start" &&
+      metadata !== undefined &&
+      metadata.lastActivityAt <= input.occurredAt - PREPARING_SESSION_EXPIRY_MS
+    ) {
+      return { status: "expired" };
+    }
+    if (input.action === "expire" && metadata !== undefined) {
+      const preparingDue =
+        current.session.status === "preparing" &&
+        metadata.lastActivityAt <= input.occurredAt - PREPARING_SESSION_EXPIRY_MS;
+      const reconnectDue =
+        current.session.status === "live" &&
+        metadata.reconnectDeadlineAt !== null &&
+        metadata.reconnectDeadlineAt <= input.occurredAt;
+      if (!preparingDue && !reconnectDue) return { status: "not-due" };
+    }
+
+    const nextState = authoritativeSessionStateSchema.parse(input.nextState);
+    if (
+      nextState.session.sessionId !== input.sessionId ||
+      nextState.session.revision !== input.expectedRevision + 1 ||
+      nextState.questCycle.envelope.revision !== input.expectedRevision + 1
+    ) {
+      throw new Error("Lifecycle commit violates session or revision invariants");
+    }
+    const result: SessionLifecycleCommitResult = {
+      sessionId: input.sessionId,
+      action: input.action,
+      revision: nextState.session.revision,
+      state: clone(nextState),
+      occurredAt: input.occurredAt,
+    };
+    this.replaceState(nextState);
+    this.lifecycleOperations.set(input.operationId, clone(result));
+    if (metadata !== undefined) {
+      metadata.lastActivityAt = input.occurredAt;
+      metadata.reconnectDeadlineAt = null;
+    }
+    return { status: "committed", result };
+  }
+
+  async touch(
+    sessionId: string,
+    action: SessionPresenceAction,
+    occurredAt: number,
+  ): Promise<SessionPresenceResult | null> {
+    const state = this.states.get(sessionId);
+    const metadata = this.lifecycle.get(sessionId);
+    if (state?.session.status !== "live" || metadata === undefined) return null;
+    if (occurredAt < metadata.lastActivityAt) {
+      return {
+        sessionId,
+        status: "live",
+        revision: state.session.revision,
+        lastActivityAt: metadata.lastActivityAt,
+        lastHeartbeatAt: metadata.lastHeartbeatAt,
+        reconnectDeadlineAt: metadata.reconnectDeadlineAt,
+      };
+    }
+    metadata.lastActivityAt = occurredAt;
+    if (action === "heartbeat") {
+      metadata.lastHeartbeatAt = occurredAt;
+      metadata.reconnectDeadlineAt = null;
+    } else {
+      metadata.reconnectDeadlineAt ??= occurredAt + SESSION_RECONNECT_GRACE_MS;
+    }
+    return {
+      sessionId,
+      status: "live",
+      revision: state.session.revision,
+      lastActivityAt: metadata.lastActivityAt,
+      lastHeartbeatAt: metadata.lastHeartbeatAt,
+      reconnectDeadlineAt: metadata.reconnectDeadlineAt,
+    };
+  }
+
+  async due(at: number): Promise<readonly AuthoritativeSessionState[]> {
+    const due: AuthoritativeSessionState[] = [];
+    for (const [sessionId, state] of this.states) {
+      const metadata = this.lifecycle.get(sessionId);
+      if (metadata === undefined) continue;
+      const preparingExpired =
+        state.session.status === "preparing" &&
+        metadata.lastActivityAt <= at - PREPARING_SESSION_EXPIRY_MS;
+      const reconnectExpired =
+        state.session.status === "live" &&
+        metadata.reconnectDeadlineAt !== null &&
+        metadata.reconnectDeadlineAt <= at;
+      if (preparingExpired || reconnectExpired) due.push(clone(state));
+    }
+    return due;
+  }
+
+  private replaceState(nextState: AuthoritativeSessionState): void {
+    const previous = this.states.get(nextState.session.sessionId);
+    this.states.set(nextState.session.sessionId, clone(nextState));
+    if (previous !== undefined && active(previous.session.status) && !active(nextState.session.status)) {
+      this.broadcasterActiveSessions.delete(previous.session.broadcasterId);
+    }
+    if (active(nextState.session.status)) {
+      this.broadcasterActiveSessions.set(
+        nextState.session.broadcasterId,
+        nextState.session.sessionId,
+      );
+    }
+  }
+
+  private grantKey(principalId: string, sessionId: string, role: SnapshotRole): string {
+    return `${principalId}:${sessionId}:${role}`;
+  }
+}
+
+export function createMemoryPersistenceRuntime() {
+  const backend = new MemoryChatXptPersistence();
+  return {
+    mode: "memory" as const,
+    sessions: backend,
+    lifecycle: backend,
+    candidates: backend,
+    snapshots: backend,
+    accessGrants: backend,
+  };
+}
