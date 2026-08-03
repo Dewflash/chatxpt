@@ -1,9 +1,9 @@
-# Align shared product and architecture guidance
+# Align streamer-control and reality-status guidance
 
 - **Type:** Fixed
 - **Role:** Role 1
 - **Issue/PR:** Pending
-- **Summary:** Align stale product, architecture, submission, and Codex guidance with the accepted Twitch, participation-service, infrastructure, and quest-control decisions.
-- **Integration impact:** Clarifies boundaries for all roles without changing role-owned source implementation or open provider, extraction, and UI decisions.
-- **Verification:** `npm run check`, `git diff --check`, and conflict scan against `docs/DECISIONS.md`.
-- **Reality status:** Documentation distinguishes the working local prototype from accepted but not-yet-implemented Twitch, Supabase, Vercel, and multi-client targets.
+- **Summary:** Align the project skill and quest policy with Role 3's accepted control authority, use streamer-facing terminology, and label the legacy local slice separately from the unimplemented Twitch surfaces.
+- **Integration impact:** Clarifies shared guidance for all roles without changing canonical contracts, role-owned implementation, or open provider and extraction decisions.
+- **Verification:** Merge current `origin/main`, run `npm run check`, run `git diff --check`, and compare the final PR delta with `docs/DECISIONS.md`.
+- **Reality status:** Documentation-only clarification; no Twitch, OBS, Supabase, Vercel, AI, extraction, UI, or end-to-end capability is claimed as implemented.

@@ -4,6 +4,10 @@
 
 Read the root `AGENTS.md` before this guide. The root guide is authoritative if anything conflicts.
 
+Execute work through `docs/build-plans/ROLE-2-BUILD-PLAN.md`. Role 1 defines required phases, deadlines, outcomes, and integration acceptance; Joelyrk decides the named Role 2 component choices at each decision gate.
+
+Implement only through the public seams in `docs/build-plans/INTEGRATION-CONTRACT.md`; Role 2 returns intelligence/candidates and never owns session persistence, lifecycle, broadcasting, routes, or UI state.
+
 ## Mission
 
 Turn gameplay and audience activity into reliable, model-ready intelligence and exactly three structured quest candidates for Role 3.
@@ -26,8 +30,8 @@ Turn gameplay and audience activity into reliable, model-ready intelligence and 
 
 ## Required handoff
 
-Provide Role 3 with normalised behavioural signals, confidence, traceable context, three candidate quests, validation metadata, and provider/fallback status. Compare provider candidates with Role 3, covering integration, latency, privacy, cost, structured output, reliability, quest quality, and engine fit. Give Roles 4 and 5 separate implementation-ready MVP build plans, collect one feasibility comparison from each owner, revise as needed, and notify Role 1. Propose contract changes to Role 1 before implementation.
+Provide Role 3 with normalised behavioural signals, capability tier, confidence, traceable context, three candidate quests, validation metadata, and provider/fallback status through canonical ports. Compare provider candidates with Role 3, covering integration, latency, privacy, cost, structured output, reliability, quest quality, and engine fit. Give Roles 4 and 5 separate but synchronised implementation-ready MVP plans plus their shared dependency/fixture/contract matrix, collect one feasibility comparison from each owner, revise as needed, and notify Role 1. Propose contract changes to Role 1 before implementation.
 
 ## Verification
 
-Maintain representative extraction and AI evaluation cases, malformed-output tests, provider-failure behaviour, latency observations, and a credential-free test path.
+Maintain producer/consumer contract tests, representative universal/calibrated extraction and AI evaluation cases, malformed-output tests, provider-failure behaviour, latency/resource observations, and a credential-free test path.

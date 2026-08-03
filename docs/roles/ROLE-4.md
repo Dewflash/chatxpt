@@ -6,6 +6,10 @@ Read the root `AGENTS.md` before this guide. The root guide is authoritative if 
 
 For the current MVP planning pass, Role 2 decides Role 4's build plan under D-016. Role 4 reviews it for feasibility and then owns detailed visual, interaction, accessibility, component, and code decisions that fit the plan.
 
+Before implementation, read the Role 2-authored Role 4 execution plan, provide one consolidated feasibility review, and then follow its accepted phases and acceptance evidence.
+
+Also follow `docs/build-plans/INTEGRATION-CONTRACT.md`: export a public UI module, consume Role 1 view models, emit commands, and keep AI/engine/persistence/permission/timer authority outside the UI.
+
 ## Mission
 
 Deliver a working, persistent, self-service streamer experience that makes ChatXPT understandable before, during, and after a Twitch stream.
@@ -29,4 +33,4 @@ Consume Role 1 contracts and Role 3 state. Propose missing settings or commands 
 
 ## Verification
 
-Provide a working site against agreed mock and live contracts, responsive screenshots or recordings, loading/error/reconnect states, accessibility checks, and a complete setup-to-live-control walkthrough.
+Provide consumer contract tests, a public UI module mounted by Role 1, responsive screenshots or recordings, canonical loading/error/reconnect states, accessibility checks, and a complete setup-to-live-control walkthrough.

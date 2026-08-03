@@ -1,75 +1,106 @@
-# Architecture
+# ChatXPT Architecture
 
-## Reality status
+## Accepted MVP shape
 
-ChatXPT remains one Next.js/TypeScript application, but the repository distinguishes the working local prototype from the accepted multi-device Twitch MVP target.
+ChatXPT is one game-neutral Next.js/TypeScript product with a platform-neutral core and replaceable input/output adapters. It does not host livestream video. Twitch remains the viewing platform; ChatXPT adds analysis, quest orchestration, participation, and broadcast visuals.
 
-| Capability | Current implementation | Accepted MVP target |
-| --- | --- | --- |
-| Quest generation | Server-side OpenAI adapter with validated structured output and deterministic fallback | Provider remains replaceable; Roles 2 and 3 submit a joint recommendation before changing it |
-| Gameplay and audience input | Synthetic controls and demo data | Normalised Twitch/audience and replaceable gameplay-extraction adapters, with simulation clearly disclosed |
-| Participation state | `localStorage` plus `BroadcastChannel` | One private, platform-neutral participation service backed by Supabase Free |
-| Streamer surface | Local control room | Full ChatXPT Studio plus compact Twitch Live Config |
-| Viewer surface | Voting inside the local control room | Twitch Extension primary, hosted Quest Board fallback, Twitch-chat `1`/`2`/`3` final fallback |
-| Broadcast output | Separate `/overlay` browser route | OBS browser overlay consuming normalised participation state |
-| Deployment | Local Next.js application | One reusable Vercel deployment with server-side secrets |
+Twitch is the only implemented platform for the MVP. YouTube, Discord, and other services may appear only as disabled `Coming Soon` capabilities.
 
-The current path is valid demo evidence only when it is labelled accurately. Target entries are not considered implemented until their acceptance evidence is executed.
+## Surfaces
 
-## Target boundaries
+- **ChatXPT Studio:** complete streamer setup, persistent profile/preferences, OBS Virtual Camera selection, connection health, testing, history, and advanced session controls.
+- **Twitch Live Config:** compact stream-time status, quest review/actions, intensity, voting visibility, and emergency controls inside Twitch.
+- **Twitch Extension:** primary viewer voting, active quest, progress, reactions, hype, results, and session points.
+- **Hosted Viewer Quest Board:** first participation fallback when Extension interaction is unavailable.
+- **Twitch-chat voting:** final `1`/`2`/`3` fallback.
+- **OBS Browser Source:** broadcast-only quest overlay; it is not the main configuration or voting surface.
+
+## Data flow
 
 ```text
-Twitch events/chat       gameplay extraction       streamer profile
-       \                       |                         /
-        -> normalised platform-neutral events and snapshots
-                              |
-                 behavioural intelligence (Role 2)
-                              |
-        AI candidates + deterministic fallback candidates
-                              |
-           quest validation and lifecycle (Role 3)
-                              |
-          private participation service (Role 1)
-             /              |               \
- Twitch Extension   hosted Quest Board   Twitch-chat fallback
-             \              |               /
-               authoritative vote and quest state
-                              |
-                Studio / Live Config / OBS overlay
+Twitch adapter                         OBS Virtual Camera
+chat + identity + session events       ephemeral raw-game frames
+              \                         /
+               v                       v
+             normalised Role 1 input contracts
+                           |
+                           v
+          Role 2 extraction + audience intelligence
+      visual algorithms + selective OCR + optional free AI
+                           |
+        real observations + confidence + provenance + unknown
+                           |
+            streamer profile and saved restrictions
+                           |
+                           v
+             Role 2 candidate generation adapter
+               exactly 3 structured candidates
+                           |
+                           v
+              Role 1 application orchestrator
+                           |
+                           v
+               Role 3 pure deterministic engine
+  intervention -> validation/replacement -> voting -> activation
+        -> progress -> result/reward -> cooldown/history
+                           |
+                           v
+      Role 1 atomic persistence + participation/realtime
+                           |
+          +----------------+------------------+
+          |                |                  |
+    streamer UI      viewer surfaces      OBS overlay
 ```
 
-- `src/core/` owns platform-neutral contracts and session/capability models.
-- `src/integrations/` owns Twitch, OBS, persistence, and other external boundaries.
-- `src/realtime/` owns authoritative participation transport and subscriptions.
-- `src/ai/` and `src/extraction/` own behavioural intelligence, provider adapters, model-ready context, and extraction implementation.
-- `src/quest-engine/` owns deterministic quest rules, validation, lifecycle, safety, scoring, and fallbacks.
-- `src/streamer/` and `src/design-system/` own streamer surfaces and shared visual foundations.
-- `src/viewer/` owns Twitch viewer, hosted fallback, and viewer-facing overlay UX.
+## Ownership and boundaries
 
-The legacy `src/lib/`, `src/components/`, and `src/app/` files remain the current prototype until Role 1 completes the authorised mechanical migration. That migration must preserve behaviour and must not redesign another role's component.
+- `src/core/`, `src/integrations/`, and `src/realtime/`: Role 1 contracts, platform adapters, session lifecycle, participation, persistence, and integration.
+- `src/extraction/` and `src/ai/`: Role 2 real-frame/chat intelligence, context, provider adapters, and candidate output.
+- `src/quest-engine/`: Role 3 deterministic intervention, validation, fallback, lifecycle, voting resolution, progress, results, and rewards.
+- `src/streamer/` and `src/design-system/`: Role 4 streamer surfaces and shared visual system.
+- `src/viewer/`: Role 5 viewer, fallback, and overlay experiences.
 
-## Contract and adapter rules
+Twitch, OBS, provider, Supabase, and UI payloads terminate at their adapters. Canonical contracts contain platform-neutral facts plus source, method, timestamp, confidence, freshness, and `unknown` provenance.
 
-- The core consumes normalised ChatXPT events; Twitch payloads never become core types.
-- Viewer clients consume a private participation contract and never own authoritative vote state.
-- Supabase records and realtime messages remain persistence/transport adapters rather than domain contracts.
-- Provider payloads remain behind server-only adapters and API routes.
-- Local storage and deterministic generation remain credential-free fallbacks, not the authoritative multi-device path.
-- Every external result is runtime-validated before it affects quest or participation state.
+All cross-role calls use the public ports and canonical envelopes in `docs/build-plans/INTEGRATION-CONTRACT.md`. Role 1's application orchestrator is the only runtime layer that composes Role 2/3, authenticates commands, persists revisions, and broadcasts role-specific view models.
 
-## Safety and lifecycle
+## Realtime and persistence
 
-- Streamer preferences, accessibility needs, and forbidden quest types are explicit engine inputs.
-- Deterministic validation rejects unsafe, illegal, humiliating, monetary, infeasible, or duplicate quests before viewers see them.
-- Role 3 owns intervention, approval, automatic/manual activation, veto, interruption, and emergency-control mechanics under D-009.
-- The streamer must retain an effective veto/emergency control even when Role 3 permits automatic proposal or activation.
-- Quest state covers proposed, voting, active, succeeded, failed, cancelled, skipped, and expired.
-- Model latency, refusal, invalid output, outage, and shared-infrastructure failure are expected paths with visible fallback behaviour.
+Supabase Free is the accepted authoritative MVP store/realtime layer for profiles, sessions, candidates, votes, active quests, progress, results, and aggregate engagement. Vercel hosts the reusable Next.js product. Same-origin storage and `BroadcastChannel` remain local diagnostics, not accepted multi-device or judged-live evidence.
 
-## Integration order
+State changes use command IDs, expected/current revisions, server timestamps, typed errors, atomic persistence before broadcast, and reconnect snapshots. Realtime notifications do not replace the persisted source of truth.
 
-1. Mechanically migrate legacy source into the five role-owned boundaries without changing behaviour.
-2. Freeze version 1 core and participation contracts with affected-owner review.
-3. Add Supabase persistence/realtime and preserve the local fallback.
-4. Connect Vercel, Twitch test surfaces, and the OBS contract with secrets kept server-side.
-5. Integrate Roles 2-5 through one golden Twitch workflow and execute both live and fallback evidence.
+All viewer clients use one private participation service. No UI owns authoritative vote, lifecycle, scoring, or reward rules.
+
+## Gameplay capture and extraction
+
+For the MVP, the streamer configures OBS Virtual Camera to expose the raw game source to ChatXPT Studio. Role 1 owns permission, media, capture-session, and frame-delivery boundaries. Role 2 consumes ephemeral frames and uses lightweight visual algorithms, selective OCR, temporal confirmation, and optional free vision AI.
+
+The system is game-neutral through tiered support. Universal algorithms recognise broad action/quiet/transition signals across action games. Calibrated adapters may recognise specific HUD facts only for configured games with adequate evidence and confidence. Official telemetry is future work. Missing, unsupported, or unreliable facts are `unknown`; they are never fabricated.
+
+A developer Test Lab may analyse team-owned or explicitly authorised gameplay, including the same content streamed through a team-controlled Twitch channel. It is not a feature for silently analysing arbitrary third-party streams.
+
+## AI and deterministic fallback
+
+Roles 2 and 3 jointly recommend a free provider/model. Role 2 owns provider transport, signal context, reliability, and candidate generation. Role 3 owns quest objectives, quality, deterministic validation, replacement, and lifecycle use.
+
+Provider failure must not stop the workflow:
+
+1. Role 2 runs credential-free algorithms against the same real gameplay/chat inputs and still emits exactly three candidates.
+2. Role 3 rejects unsafe, impossible, repetitive, or unsupported candidates and replaces them from its deterministic, unknown-safe fallback library.
+3. Surfaces show provider/algorithmic/fallback state without claiming unavailable facts.
+
+No paid model usage is authorised for the MVP.
+
+## Safety, privacy, and evidence
+
+- Streamer restrictions are enforced deterministically before a quest reaches viewers.
+- Quests must be legal, non-harmful, game-appropriate, non-wagering, and understandable under pressure.
+- Raw frames are ephemeral. Raw Twitch chat may be retained for debugging/evaluation for at most 24 hours; aggregate signals and outcomes are preferred.
+- Twitch identity is used when available; anonymous participation remains supported.
+- Points and hype are session-scoped and non-monetary.
+- Simulated fixtures are limited to tests, diagnostics, and offline reproduction. Live claims require real captured gameplay and real Twitch activity.
+
+## Current migration state
+
+The repository began as a local control-room/overlay prototype using synthetic inputs, optional OpenAI generation, local storage, and `BroadcastChannel`. That path may remain temporarily reachable while Role 1 performs the mechanical migration, but it is fixture/diagnostic behaviour and not the accepted MVP architecture or judged evidence.

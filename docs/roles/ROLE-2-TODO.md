@@ -4,11 +4,15 @@
 
 Update only this role's statuses and evidence. Raise shared-contract needs through a `cross-role` GitHub Issue before implementation.
 
+Execute these outcomes through `docs/build-plans/ROLE-2-BUILD-PLAN.md`; its decision gates belong to Joelyrk unless explicitly marked joint or escalated.
+
+**Next pass:** answer the Phase 1 gate once and deliver R2-P01/R2-P02 plus R2-P02A (separate but synchronised Role 4/5 plans and dependency matrix). Then begin R2-P03 ports/real owned fixtures and R2-P03A risk spikes without waiting for full Twitch, OBS, or Role 3 implementation.
+
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
-| R2-001 | P0 | READY | Inspect current prototype and propose Role 2's owned module boundary after migration. | Role 1 migration plan | File/API proposal names inputs, outputs, mocks, and no cross-role edits. |
-| R2-009 | P0 | READY | Decide and deliver separate current-MVP build plans for Roles 4 and 5 under the scoped D-016 grant. | Current prototype; D-016 | Each plan defines outcomes, surfaces/flows, priorities, required states, AI/data needs, mock/live boundaries, milestones, acceptance criteria, exclusions, and handoff order; each owner provides one feasibility review and Role 1 is notified. |
-| R2-002 | P0 | BLOCKED | Implement game-neutral manual/simulated extraction behind Role 1's interface. | Shared extraction contract | Health/status, action outcome, intensity, downtime, team, phase, and resource examples with tests. |
+| R2-001 | P0 | READY | Inspect the prototype and implement Role 2's public port/fixture boundary against provisional contracts. | Role 1 provisional contracts | Public entry points and producer/consumer tests name inputs, outputs, provenance, capabilities, fixtures, and no cross-role internal imports. |
+| R2-009 | P0 | READY | Decide and deliver separate but synchronised current-MVP build plans for Roles 4 and 5 under D-016. | Current prototype; D-016; integration contract | Plans share deadlines/dependency matrix and define view models, commands, fixture states, route mounts, public entries, P0/P1/exclusions, acceptance evidence, and early design-system handoff; each owner provides one feasibility review and Role 1 is notified. |
+| R2-002 | P0 | BLOCKED | Implement tiered real-frame extraction from Role 1's OBS Virtual Camera interface. | Shared extraction contract and real frame source | Universal activity signals work across multiple owned action-game examples; calibrated adapters emit specific HUD facts only when supported; confidence/capabilities/unknown and resource measurements are evidenced. |
 | R2-003 | P0 | BLOCKED | Implement audience/gameplay snapshot and behavioural intelligence. | R2-002; audience contract | Timestamped/confidence-scored output for energy, sentiment, intent, humour, risk, boredom, hype, and repeated requests. |
 | R2-004 | P0 | READY | Define provider evaluation criteria with Role 3. | Accepted D-014 | Joint comparison covers OpenRouter and alternatives, latency, cost, privacy, reliability, structured output, quest quality, and fallback. |
 | R2-005 | P0 | BLOCKED | Implement chosen provider adapter and model-ready context. | Joint recommendation accepted by Role 1 | Server-only provider path returns validated structured output; no vendor payload leaks into core. |

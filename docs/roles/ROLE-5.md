@@ -6,6 +6,10 @@ Read the root `AGENTS.md` before this guide. The root guide is authoritative if 
 
 For the current MVP planning pass, Role 2 decides Role 5's build plan under D-016. Role 5 reviews it for feasibility and then owns detailed visual, interaction, accessibility, component, and code decisions that fit the plan.
 
+Before implementation, read the Role 2-authored Role 5 execution plan, provide one consolidated feasibility review, and then follow its accepted phases and acceptance evidence.
+
+Also follow `docs/build-plans/INTEGRATION-CONTRACT.md`: export public viewer/overlay modules, consume Role 1 view models, emit commands, and keep vote/engine/persistence/permission/timer authority outside the UI.
+
 ## Mission
 
 Deliver clear, fast, enjoyable participation across the Twitch Extension, hosted fallback Quest Board, Twitch-chat fallback, and viewer-facing OBS overlay visuals.
@@ -29,4 +33,4 @@ Consume the private participation and quest-state contracts from Roles 1 and 3. 
 
 ## Verification
 
-Provide working viewer, fallback, and overlay sites against agreed mock and live contracts, multi-device vote evidence, responsive screenshots or recordings, and loading/error/reconnect/accessibility coverage.
+Provide consumer contract tests, public viewer/fallback/overlay modules mounted by Role 1, same-revision multi-device vote evidence, responsive screenshots or recordings, and canonical loading/error/reconnect/accessibility coverage.

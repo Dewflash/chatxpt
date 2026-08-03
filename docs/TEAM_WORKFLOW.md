@@ -20,14 +20,14 @@ If an idea or feature crosses a role boundary, the originating contributor must 
 
 Cross-role proposals use GitHub Issues as the persistent record because contributors work from separate computers and repository clones. Mention the target owner and `@Dewflash`; the target owner adds its comparison and recommendation before implementation. The project owner may resolve issues from the primary Codex task, but Role 1 must copy the settled outcome back into the issue or decision log.
 
-Before parallel role work begins, Role 1 performs the one-time mechanical migration from the legacy shared source layout into the role-owned directories defined in `AGENTS.md`. The migration must preserve behaviour and cannot be used to redesign another role's component.
+Before broad migration, Role 1 publishes the provisional public contracts/orchestrator ports and maps legacy ownership. Role 1 then performs the mechanical migration behind those seams. The migration must preserve behaviour and cannot redesign another role's component.
 
 ## Daily rhythm
 
 - **Start:** ten-minute check-in; each person states one acceptance signal for the day.
 - **Claim:** update `TEAM_CONTEXT.md` before touching shared contracts or the golden demo path.
 - **Midday:** merge at least once; demo current `main`, not individual branches.
-- **End:** run the complete happy path and record blockers in issues.
+- **End:** run the smallest integrated vertical slice on current `main` and record blockers in issues.
 - Keep one stable golden demo scenario that must never break.
 
 ## Branch and merge policy
@@ -44,13 +44,13 @@ Before parallel role work begins, Role 1 performs the one-time mechanical migrat
 ## ChatGPT Pro collaboration
 
 - Each teammate should open the same repository so `AGENTS.md` and the repo-local skill apply consistently.
-- Every teammate and their agent must read the root `AGENTS.md` plus their mandatory `docs/roles/ROLE-<n>.md` guide.
+- Every teammate and their agent must read the root `AGENTS.md`, `docs/build-plans/INTEGRATION-CONTRACT.md`, their mandatory `docs/roles/ROLE-<n>.md` guide/TODO, and their accepted execution plan.
 - Follow `docs/TEAM_PLAYBOOK.md` at the start and end of every pass; it contains the required sync, change-summary, one-batch decision, TODO, changelog, push, and PR sequence.
-- Give ChatGPT/Codex one issue and acceptance signal at a time.
+- Give ChatGPT/Codex one build-plan pass and acceptance signal at a time.
 - Ask it to inspect current files before editing; agents do not share live context or uncommitted work across five machines.
 - Distill useful conclusions from private chats into `TEAM_CONTEXT.md` or `DECISIONS.md`; do not commit raw private chat exports.
 - Review every diff and never paste API keys, private viewer data, or competition credentials into chats.
-- ChatGPT Pro and OpenAI API usage are separate; use mock mode until the team deliberately configures runtime API access.
+- ChatGPT Pro and application API usage are separate. No paid model usage is authorised; use clearly labelled fixtures for component tests and real OBS/Twitch inputs for every live or judged claim.
 
 ## AI decision boundary
 
