@@ -39,12 +39,13 @@ All deadlines use Singapore time and inherit the integration exits in `docs/buil
 | --- | --- | --- | --- | --- | --- |
 | Canonical `1.0.0` role view/command/error schemas and fixture baseline | Role 1 | Roles 4/5 | Phase 1 | Implemented on `main` | Consume `@/core`/role public entries only |
 | Memory persistence, sanitised role snapshots, reconnect subscriber, and permission classes | Role 1 | Roles 4/5 through thin wiring | Phase 1 integration | Implemented foundation; browser command client/harness pending | Canonical fixture wrappers; no direct persistence |
-| Config/Live Config/viewer/hosted/OBS local harness and authorised command dispatcher (UI-X05) | Role 1 | Roles 4/5 | Phase 1 exit | Required request | Render-only components against fixture callbacks |
+| Config/Live Config/viewer/hosted/OBS local harness, UI verification stack, and authorised command dispatcher (UI-X05) | Role 1 | Roles 4/5 | Phase 1 exit | Required request | Render-only components against fixture callbacks; no role independently adds shared test dependencies |
 | Minimum tokens/base components from `@/design-system` | Role 4 | Role 5 | 4 Aug, 12:00 | Required early handoff | Role 5 may define public props/fixtures first, but does not copy temporary tokens |
 | Streamer setup/profile/session seams (UI-X01–UI-X03) | Roles 1/3 | Role 4 | Phase 2 | Required requests | Disabled/fixture-labelled adapters only; no competing canonical command |
 | Intelligence/provider/unknown examples (UI-X09) | Role 2 | Role 4 and evidence consumers | Phase 2 | Planned in R2-P03/R2-P03A | Existing minimal unknown-safe Core fixture |
 | Quest lifecycle/action/tie/reward examples (UI-X06) | Role 3 through Role 1 | Roles 4/5 | R4 Phase 3; R5 Phase 2 | Planned in R3-P02 through R3-P14 | Canonical shape fixtures without asserting unsettled mechanics |
-| Hosted-room and chat acknowledgement seams (UI-X07/UI-X08) | Role 1 | Role 5 | Phase 3 | Required requests | Present unavailable/fixture-only state; do not parse chat or infer access |
+| Hosted-room discovery/access and chat announcement/acknowledgement seams (UI-X07/UI-X08) | Role 1 | Role 5 | Phase 3 | Required requests | Present unavailable/fixture-only state; do not parse/send chat or infer access inside Role 5 |
+| Private per-viewer vote receipt, points, and reconnect state (UI-X10) | Role 1 | Role 5 | Phase 2 | Required request | Command-result fixture may demonstrate immediate acknowledgement; shared snapshot must not be treated as personal recovery state |
 | Twitch Local/Hosted Test shells and identity/JWT mapping | Role 1 | Roles 4/5 | Phase 3/integration | Planned in R1-P07/R1-P08 | Local fixture harness, explicitly not Twitch evidence |
 | OBS capture setup and secure browser-overlay read mount | Role 1 | Role 4 setup and Role 5 overlay | Phase 3/integration | Planned in R1-P09 | Fixture overlay plus documented unverified state |
 | Shared preview deployment and real multi-client snapshot path | Role 1 | Roles 4/5 | Phase 4 | Supabase source foundation implemented; cloud/Vercel evidence pending | Credential-free memory runtime, labelled accordingly |
@@ -61,11 +62,11 @@ These are requested mounts. Role 1 owns every file under `src/app/`, Twitch Exte
 | Twitch Config | Role 4, `@/streamer` | Twitch Extension Config Path backed by a thin Role 1 entry | Install/configuration-safe view | Authorised Twitch configuration actions | R4 Phase 3 |
 | Twitch Live Config | Role 4, `@/streamer` | Twitch Extension Live Config Path backed by a thin Role 1 entry | `StreamerViewModel` plus actor capability | `StreamerQuestCommand` and approved quick-setting commands | R4 Phase 3 |
 | Twitch viewer Extension | Role 5, `@/viewer` | Twitch Extension Viewer Path backed by a thin Role 1 entry | `ViewerViewModel` and Twitch context/identity mapped by Role 1 | `ViewerVoteCommand` and `ViewerReactionCommand` | R5 Phase 2 |
-| Hosted Quest Board | Role 5, `@/viewer` | `/quest-board/[roomCode]` | `ViewerViewModel`, room/access result | Same canonical viewer commands | R5 Phase 3 |
-| Twitch-chat fallback instructions | Role 5, `@/viewer` | Mounted within viewer/streamer-safe surfaces selected by Role 1 | Participation mode/capability plus counted-status response | No chat parsing; Role 1 maps real chat to viewer commands | R5 Phase 3 |
+| Hosted Quest Board | Role 5, `@/viewer` | `/quest-board/[roomCode]` plus Role 1-authorised direct-link/share data | `ViewerViewModel`, room/access/share result | Same canonical viewer commands | R5 Phase 3 |
+| Twitch-chat fallback instructions | Role 5, `@/viewer` | Copy/template module consumed by Role 1's Twitch adapter and mounted in safe UI surfaces | Participation mode/capability plus counted-status response | No chat parsing or sending; Role 1 maps real chat to viewer commands and owns outbound delivery | R5 Phase 3 |
 | OBS browser overlay | Role 5, `@/viewer` | `/overlay` using a Role 1-issued session-bound read grant | `OverlayViewModel` | None; strictly read-only | R5 Phase 3 |
 
-Exact Extension asset paths and secure grant transport remain Role 1 decisions D1-08/D1-09. The requested UI module boundaries must remain stable if the thin mount path changes.
+Exact Extension view types and asset paths remain Role 1 decision D1-08. OBS capture/session behaviour remains D1-09. Secure hosted/overlay/per-viewer grant transport is tracked by UI-X08/UI-X10 and the accepted D-041 permission classes. The requested UI module boundaries must remain stable if a thin mount path changes.
 
 ## Accepted contracts to consume
 
@@ -73,7 +74,7 @@ Exact Extension asset paths and secure grant transport remain Role 1 decisions D
 | --- | --- | --- | --- |
 | `StreamerViewModel` | `@/core`, exposed through `@/streamer` | Role 4 | Session, persisted profile, service health, gameplay/audience snapshots, and quest cycle at one revision |
 | `StreamerQuestCommand` | `@/core`, exposed through `@/streamer` | Role 4 | Approve, reject, start, pause, cancel, skip, succeed, fail, and emergency-pause requests with actor, ID, and expected revision |
-| `ViewerViewModel` | `@/core`, exposed through `@/viewer` | Role 5 | Participation mode/capabilities, vote/reaction permissions, viewer acknowledgement, session points, hype, connection, and quest cycle |
+| `ViewerViewModel` | `@/core`, exposed through `@/viewer` | Role 5 | Shared participation mode/capabilities, vote/reaction permissions, hype, connection, and quest cycle; personal vote/points fields require the authorised UI-X10 delivery path |
 | `ViewerVoteCommand` | `@/core`, exposed through `@/viewer` | Role 5 | One candidate choice with actor, command ID, issued time, and expected revision |
 | `ViewerReactionCommand` | `@/core`, exposed through `@/viewer` | Role 5 | One bounded reaction request; server remains authoritative |
 | `OverlayViewModel` | `@/core`, exposed through `@/viewer` | Role 5 | Read-only session, hype, quest cycle, authoritative timestamps, and connection state |
@@ -88,15 +89,16 @@ These are contract requirements discovered during planning, not accepted schema 
 
 | Request ID | Owner | Required capability | Why existing contract is insufficient | Required by |
 | --- | --- | --- | --- | --- |
-| UI-X01 | Role 1 | Streamer setup/readiness view for Twitch connection/installation, OBS Virtual Camera selection/permission/capture, session readiness, and diagnostic/live labels | `StreamerViewModel.services` gives health but not the self-service setup data or safe actions | R4 Phase 2 |
-| UI-X02 | Role 1 | Browser-safe authorised client for profile updates, session start/end, Twitch setup, capture setup, and quest-command dispatch, returning typed result/error and current revision | Only quest commands are canonical today; UIs must not call Supabase or integration internals | R4 Phases 2-3 |
-| UI-X03 | Roles 1 and 3 | Accepted settings contract for voting/reward preferences and quick intensity changes, including which changes are legal mid-session | Current profile has general experience/restriction fields but no accepted voting/reward settings or update command | R4 Phases 2-3 |
-| UI-X04 | Role 1 | Streamer session-history/summary read model with retention-safe quest outcomes and aggregate engagement | No history view exists in `StreamerViewModel` | R4 Phase 5 (P1) |
-| UI-X05 | Role 1 | Local Extension/Config/Live Config/hosted-board/overlay harness with canonical role snapshots, command dispatcher, auth classes, and token-expiry controls | Role-owned UI modules cannot implement route, identity, permission, or realtime composition | R4 Phase 1 and R5 Phase 1 |
-| UI-X06 | Role 3 through Role 1 | Canonical examples for every quest state, available action, tie/zero-vote resolution, interruption, terminal result, progress method, and reward state | Current schemas define shapes but Role 3's mechanics and examples remain open | R4 Phase 3 and R5 Phases 2-3 |
-| UI-X07 | Role 1 | Twitch-chat fallback counted/rejected/late acknowledgement and aggregate availability state through a platform-neutral presentation seam | Role 5 owns instructions, but cannot parse chat or infer whether Role 1 accepted a chat vote | R5 Phase 3 |
-| UI-X08 | Role 1 | Hosted-board room lookup/access result and anonymous/authenticated grant flow without direct table access | `ViewerViewModel` begins after access; it does not describe room-entry failures | R5 Phase 3 |
-| UI-X09 | Role 2 | Canonical intelligence examples for known, low-confidence, unknown, stale, capture denied, provider available, algorithmic, and fallback states | Current Core fixtures contain only a minimal unknown-safe case | R4 Phase 2 and UI evidence |
+| [UI-X01 / #17](https://github.com/Dewflash/chatxpt/issues/17) | Role 1 | Streamer setup/readiness view for Twitch connection/installation, OBS Virtual Camera selection/permission/capture, session readiness, and diagnostic/live labels | `StreamerViewModel.services` gives health but not the self-service setup data or safe actions | R4 Phase 2 |
+| [UI-X02 / #18](https://github.com/Dewflash/chatxpt/issues/18) | Role 1 | Browser-safe authorised client for profile updates, session start/end, Twitch setup, capture setup, and quest-command dispatch, returning typed result/error and current revision | Only quest commands are canonical today; UIs must not call Supabase or integration internals | R4 Phases 2-3 |
+| [UI-X03 / #19](https://github.com/Dewflash/chatxpt/issues/19) | Roles 1 and 3 | Accepted settings contract for voting/reward preferences and quick intensity changes, including which changes are legal mid-session | Current profile has general experience/restriction fields but no accepted voting/reward settings or update command | R4 Phases 2-3 |
+| [UI-X04 / #20](https://github.com/Dewflash/chatxpt/issues/20) | Role 1 | Streamer session-history/summary read model with retention-safe quest outcomes and aggregate engagement | No history view exists in `StreamerViewModel` | R4 Phase 5 (P1) |
+| [UI-X05 / #21](https://github.com/Dewflash/chatxpt/issues/21) | Role 1 | Local Extension/Config/Live Config/hosted-board/overlay harness with canonical role snapshots, command dispatcher, auth classes, token-expiry controls, and one approved component/browser test and screenshot path | Role-owned UI modules cannot implement route, identity, permission, realtime composition, or collision-prone shared test configuration | R4 Phase 1 and R5 Phase 1 |
+| [UI-X06 / #22](https://github.com/Dewflash/chatxpt/issues/22) | Role 3 through Role 1 | Canonical examples for every quest state, available action, tie/zero-vote resolution, interruption, terminal result, progress method, and reward state | Current schemas define shapes but Role 3's mechanics and examples remain open | R4 Phase 3 and R5 Phases 2-3 |
+| [UI-X07 / #23](https://github.com/Dewflash/chatxpt/issues/23) | Role 1 | Twitch-chat fallback poll-open/final-result delivery plus a bounded counted/rejected/late acknowledgement policy through a platform-neutral template/presentation seam | Role 5 owns understandable copy, but cannot parse or send chat, infer acceptance, or promise individual acknowledgement without a real Twitch delivery path | R5 Phase 3 |
+| [UI-X08 / #24](https://github.com/Dewflash/chatxpt/issues/24) | Role 1 | Hosted-board room lookup/access result, authorised direct link, copy/share data, optional streamer QR payload, and anonymous/authenticated grant flow without direct table access | `ViewerViewModel` begins after access and does not explain how viewers discover the fallback or how room-entry failures recover | R5 Phase 3 |
+| [UI-X09 / #25](https://github.com/Dewflash/chatxpt/issues/25) | Role 2 | Canonical intelligence examples for known, low-confidence, unknown, stale, capture denied, provider available, algorithmic, and fallback states | Current Core fixtures contain only a minimal unknown-safe case | R4 Phase 2 and UI evidence |
+| [UI-X10 / #26](https://github.com/Dewflash/chatxpt/issues/26) | Role 1 | Private per-viewer command receipt/read model for accepted choice and session points, including authenticated/anonymous reconnect behaviour | Shared viewer broadcasts correctly remove identity, personal points, and accepted choice; Role 5 otherwise cannot restore or safely display personal acknowledgement | R5 Phase 2 |
 
 Any request that changes `src/core/` requires a `cross-role` issue and Role 1 coordination before implementation. Until accepted, UI owners may create component-level adapters and explicitly labelled fixtures matching the last accepted public contract, but may not create competing canonical types.
 
@@ -104,7 +106,7 @@ Any request that changes `src/core/` requires a `cross-role` issue and Role 1 co
 
 | Class | Examples | UI rule |
 | --- | --- | --- |
-| Authoritative | Session/cycle revision, capabilities, participation mode, allowed actions, accepted vote, tallies, active candidate, progress, result, points, hype, `startsAt`, `endsAt`, health | Render the latest validated role view; never recompute or overwrite authority |
+| Authoritative | Session/cycle revision, capabilities, participation mode, allowed actions, tallies, active candidate, progress, result, shared hype, `startsAt`, `endsAt`, health; personal accepted vote/points only from UI-X10 | Render the latest validated authorised view; never recompute, overwrite, or obtain personal fields from a shared broadcast |
 | Presentation-derived | Remaining-time display from server timestamps, percentage labels, confidence bands, responsive layout, local focus/expanded state | May be calculated locally, but cannot trigger lifecycle, winner, expiry, reward, or permission decisions |
 | Fixture-only | Loading harness, simulated failure injection, synthetic quest cycles, diagnostic capture examples | Visibly label as test/diagnostic; never include in live evidence |
 | Not implemented | Provider/model picker, non-Twitch adapters, public SDK/API, persistent cross-stream economy, client-side winner/tie/reward logic | Do not render as working; disabled `Coming Soon` is allowed only where accepted |
@@ -164,7 +166,8 @@ Role 1 owns canonical fixtures under `@/core/testing`. UI owners may keep render
 | `r5.identity.authenticated.v1` | Twitch viewer identity available | Canonical view |
 | `r5.identity.anonymous.v1` | Safe anonymous participation | Canonical view |
 | `r5.vote.open.v1` | Exactly three options, tallies, authoritative end time | UI-X06 |
-| `r5.vote.accepted.v1` | Viewer choice acknowledged | Canonical `acceptedCandidateId` |
+| `r5.vote.accepted.v1` | The authorised viewer's choice is acknowledged | Requires UI-X10 or its accepted command-result path; never source from the shared broadcast |
+| `r5.viewer.personal-restored.v1` | The authorised viewer's accepted choice and points return after reconnect without exposing another viewer | Requires UI-X10 |
 | `r5.vote.duplicate-late-set.v1` | Duplicate and expired/late responses | `DomainError` wrappers |
 | `r5.vote.tie-zero-set.v1` | Tie and zero-vote variants without client resolution | UI-X06 |
 | `r5.quest.winner.v1` | Authoritative winner/activation transition | UI-X06 |
@@ -188,6 +191,12 @@ Role 4 Phase 1 publishes a stable `@/design-system` entry point before completin
 - An additive-change rule: breaking token/component changes require Role 5 review after the handoff.
 
 Role 5 consumes only the public entry point and never copies or edits `src/design-system/` internals. If the final component list needs a shared dependency, Role 4 proposes it to Role 1 before editing `package.json`.
+
+## Shared UI verification and evidence path
+
+Role 1 selects and installs one compatible component-interaction test path plus one real-browser screenshot/end-to-end path under UI-X05. The preferred minimal direction is a DOM-capable React testing setup for fast component behaviour and Playwright for browser, responsive, accessibility, and screenshot evidence. Role 1 confirms exact packages/versions and owns shared configuration; Roles 4/5 do not independently modify the lockfile.
+
+Every captured artifact is entered in a Role 1-owned evidence manifest with surface, viewport/device, session/cycle revision where relevant, capture date, and one of: real Twitch/OBS/cloud, memory-backed integration, fixture-only, or unverified. A file or screenshot without that label is not judged evidence.
 
 ## Shared evidence checklist
 

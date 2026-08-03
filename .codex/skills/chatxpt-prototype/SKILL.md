@@ -17,6 +17,10 @@ Build the smallest complete and judge-visible product slice. Deterministic fixtu
 6. Verify component logic against clearly labelled fixtures; verify every live/integration claim with real captured input and report unavailable facts as `unknown`.
 7. Run the relevant producer/consumer contract test, focused test, and `npm run check` before declaring the slice ready.
 
+## Guided UI-owner mode
+
+When Role 4 or Role 5 asks what to do without naming an objective, follow `AGENTS.md` guided execution mode. Determine the first ready TODO and matching plan phase automatically. Ask only the current phase's recorded owner decisions, give recommended defaults, accept `Approve all recommendations`, and record the result in the matching role execution record. Handle routine technical decisions without questioning the novice owner. Route missing cross-role work through its tracked `UI-X` issue and Role 1 instead of implementing it inside UI code.
+
 ## Product constraints
 
 - Generate exactly three meaningfully distinct quest options for a vote.

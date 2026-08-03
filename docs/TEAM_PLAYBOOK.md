@@ -137,6 +137,22 @@ Before editing:
 Do not edit another role's files. Update me briefly while working. At the end, verify, update my TODO and change fragment, review the diff, and tell me when it is ready to push and open a PR.
 ```
 
+### Simpler start for Roles 4 and 5
+
+Role 4 and Role 5 do not need to know their objective in advance. They may start with only:
+
+```text
+I am Role 4. What do I need to do?
+```
+
+or:
+
+```text
+I am Role 5. What do I need to do?
+```
+
+Codex then follows the guided execution mode in `AGENTS.md`: it finds the first ready pass, performs the technical inspection, explains `We will ...`, and asks one batch containing only the owner decisions for that phase. The owner may reply `Approve all recommendations`. Codex records the answers and continues. It does not push or open a pull request until the owner approves the reviewed result.
+
 ## During a work pass
 
 - Work on one issue or clearly bounded outcome.
@@ -159,7 +175,7 @@ Codex should inspect the current plan phase first, then present all open decisio
 - Its recommendation and consequence
 - Whether the role owner can decide it or a cross-role/project decision is required
 
-The role owner answers once. Codex records settled component decisions directly in the plan's decision table and reflects work status in the role TODO. Durable product, architecture, provider, cost, safety, or ownership changes go through Role 1 and `docs/DECISIONS.md`.
+The role owner answers once. For Roles 1-3, Codex records settled component decisions directly in the plan's decision table. For Roles 4/5, Role 2 retains the baseline-plan files, so Codex records the UI owner's answers in `ROLE-4-EXECUTION.md` or `ROLE-5-EXECUTION.md` and sends plan-level revisions through the feasibility issue. Every role reflects work status in its TODO. Durable product, architecture, provider, cost, safety, or ownership changes go through Role 1 and `docs/DECISIONS.md`.
 
 ## End of every work pass
 
@@ -178,7 +194,7 @@ UI roles also provide screenshots or a short recording. AI/engine roles provide 
 ### 2. Update team records
 
 - Update only your role's `ROLE-<n>-TODO.md`.
-- Update settled decision answers and completed-pass evidence in your execution plan.
+- Update settled decision answers and completed-pass evidence in your execution plan; Roles 4/5 use their role-owned `ROLE-<n>-EXECUTION.md` records rather than editing Role 2's baseline plan.
 - Add one change fragment under `changes/role-<n>/` using `changes/README.md`.
 - Update relevant technical documentation.
 - Link any cross-role issue or accepted decision.

@@ -4,7 +4,7 @@
 
 **Plan owner:** Role 2 (`joelyrk`) under D-016
 
-**Status:** Awaiting Role 5's one consolidated feasibility review
+**Status:** Awaiting Role 5's one consolidated feasibility review in [issue #16](https://github.com/Dewflash/chatxpt/issues/16)
 
 **Primary directory:** `src/viewer/`
 
@@ -24,6 +24,12 @@ Role 5 implements one phase at a time.
 4. Begin the next phase only after the current phase exit is reviewable.
 
 Role 5 may split a phase into small pull requests, but may not start later fallbacks or visual polish to bypass an incomplete primary-flow exit. Role 5 starts Phase 1 after Role 4 publishes the minimum `@/design-system` handoff; it does not wait for the complete Studio.
+
+### How Codex asks a novice owner for design decisions
+
+The decision tables below are prompts, not a demand that Role 5 already knows design terminology. Before asking, Codex must explain each choice in plain language and may show a tiny text wireframe. It must never ask a jargon-only question such as `Flexbox or Grid?`. It explains the visible result first, recommends a default, and then selects the appropriate implementation technique. Role 5 may reply `Approve all recommendations`.
+
+Role 2 owns this baseline plan. Role 5's settled answers are recorded in `docs/roles/ROLE-5-EXECUTION.md`, so Role 5 does not edit another owner's plan. Codex checks that record and asks only unanswered decisions from the current phase.
 
 ## Definition of done
 
@@ -111,7 +117,7 @@ Current accepted inputs and outputs:
 - `ViewerVoteCommand` and `ViewerReactionCommand` emitted through a Role 1-authorised dispatcher.
 - Role 1 snapshot/reconnect health and Twitch/hosted access context supplied outside Role 5 internals.
 
-Required upstream seams UI-X05 through UI-X08 and the early Role 4 design-system handoff are defined in the shared matrix. Role 5 must flag any missing tie/zero-vote, chat acknowledgement, room access, or route/harness contract in its feasibility review and may not create competing canonical definitions.
+Required upstream seams UI-X05 through UI-X08, UI-X10, and the early Role 4 design-system handoff are defined in the shared matrix. Role 5 must flag any missing tie/zero-vote, personal receipt/reconnect, chat delivery, room discovery/access, or route/harness contract in its feasibility review and may not create competing canonical definitions.
 
 ## Phase 0 / R5-P01: Feasibility review and implementation baseline
 
@@ -119,17 +125,28 @@ Required upstream seams UI-X05 through UI-X08 and the early Role 4 design-system
 
 **Outcome:** Role 5 confirms the plan can be implemented across Twitch, hosted fallback, chat fallback, and OBS without inventing authority.
 
+### Owner design gate
+
+Codex first prepares the technical feasibility review itself, then asks these visual/product questions together:
+
+| ID | What Codex asks Role 5 | Choices explained in plain language | Recommended starting point | Baseline status |
+| --- | --- | --- | --- | --- |
+| D5-01 | What should the viewer experience feel like? | A game HUD feels competitive; a community party feels expressive; a clean Twitch panel prioritises speed. | A clean, high-energy Twitch panel: fast to understand, with celebration reserved for meaningful quest moments. | Open |
+| D5-02 | How should voting feel? | Tapping the whole quest card is fastest; a separate vote button is explicit; selecting then confirming reduces mistakes. | Select an accessible full card, then use one clear Vote button; preserve the selected state while waiting for authority. | Open |
+| D5-03 | How loud should reactions and celebrations be? | Minimal feedback stays calm; arcade effects add hype but can obscure voting and strain Extension performance. | Short, bounded celebrations that never cover the options or block the next action, with reduced-motion alternatives. | Open |
+| D5-04 | Does Role 5 already have viewer/overlay references it wants Codex to follow? | Existing screenshots can guide composition; otherwise Codex applies Role 4's system and proposes reversible layouts. | Do not block on references; begin from Role 4 tokens and review compact, mobile, and overlay screenshots. | Open |
+
 ### Work
 
 - Read the root guide, integration contract, Role 5 guide/TODO, this plan, and the shared matrix.
 - Return one consolidated response covering conflicts, missing requirements, route/harness needs, Extension/mobile/CSP constraints, OBS risks, dependency requests, and the smallest viable recovery for each issue.
-- Compare UI-X05 through UI-X08 with current Role 1/3 work.
+- Compare UI-X05 through UI-X08 and UI-X10 with current Role 1/3 work.
 - Confirm that Role 4's minimum design-system handoff is sufficient to start Phase 1.
 - Identify any package request with purpose, version, client/server impact, bundle/runtime risk, and no-package fallback; Role 1 owns installation.
 
 ### Exit evidence
 
-- One written feasibility review is sent to Role 2 and Role 1.
+- One written feasibility review is posted to [issue #16](https://github.com/Dewflash/chatxpt/issues/16), where Role 2 and Role 1 can compare it.
 - Role 2 records one revision or explicitly records that no revision was needed.
 - Every blocker has an owner and required-by phase.
 - No source implementation starts before this exit.
@@ -143,6 +160,14 @@ Required upstream seams UI-X05 through UI-X08 and the early Role 4 design-system
 **Integration wave:** Wave 1 — Boundaries
 
 **Outcome:** Role 5 publishes stable public render/command seams and proves it can consume Role 4's visual foundation across viewer and overlay contexts.
+
+### Owner design gate
+
+| ID | What Codex asks Role 5 | Choices explained in plain language | Recommended starting point | Baseline status |
+| --- | --- | --- | --- | --- |
+| D5-05 | How should the three quest options rearrange across screen sizes? | A horizontal grid compares quickly on desktop; one stacked column works inside narrow Twitch/mobile panels. | One column for Twitch/mobile and a three-card grid for the wider hosted board; Codex chooses Grid/Flexbox internally. | Open |
+| D5-06 | Which shared visual treatments should be louder for viewers? | Badges communicate status, ribbons spotlight one item, and progress bars show authoritative progress. | Reuse Role 4 components, enlarge touch areas, and reserve the ribbon or spotlight treatment for the winning or active quest. | Open |
+| D5-07 | How should buttons respond visually? | Colour-only feedback is weak; small press, loading, and accepted states feel responsive; large animations can imply a result before the server replies. | Immediate press feedback, then a clear pending state; celebrate only after authoritative acknowledgement. | Open |
 
 ### P0 work
 
@@ -170,6 +195,15 @@ Required upstream seams UI-X05 through UI-X08 and the early Role 4 design-system
 
 **Outcome:** The primary Twitch viewer surface completes voting and active-quest presentation against canonical state without owning the outcome.
 
+### Owner design gate
+
+| ID | What Codex asks Role 5 | Choices explained in plain language | Recommended starting point | Baseline status |
+| --- | --- | --- | --- | --- |
+| D5-08 | How should an accepted vote be confirmed? | A brief toast is noticeable but disappears; persistent highlighting remains understandable during reconnects. | Keep the selected card visibly marked and add a short accessible confirmation message after the server accepts it. | Open |
+| D5-09 | When should live tallies become visually prominent? | Showing them before voting can influence choices; showing them after voting rewards participation while preserving a cleaner first choice. | Keep options primary before voting, then reveal stronger tally bars after the viewer votes while still respecting the authoritative view. | Open |
+| D5-10 | What should happen when a quest wins? | A full-screen celebration is dramatic but disruptive; an inline winner transition preserves context. | A short inline winner and activation transition under one second, never blocking the active quest and disabled under reduced motion. | Open |
+| D5-11 | Which engagement number should be most prominent? | Personal points reward the individual; community hype reinforces collective participation. | Community hype is the primary shared signal; personal session points remain secondary and private. | Open |
+
 ### P0 states and flow
 
 1. Load/authorise and show offline, unavailable, or ready state from Role 1.
@@ -191,7 +225,7 @@ Required upstream seams UI-X05 through UI-X08 and the early Role 4 design-system
 
 ### Required fixtures
 
-`r5.loading.no-snapshot.v1`, `r5.session.offline.v1`, `r5.mode.extension-ready.v1`, all `r5.identity.*`, all `r5.vote.*`, all `r5.quest.*`, `r5.engagement.points-hype.v1`, `r5.realtime.reconnecting.v1`, and `r5.realtime.permission-expired.v1`.
+`r5.loading.no-snapshot.v1`, `r5.session.offline.v1`, `r5.mode.extension-ready.v1`, all `r5.identity.*`, all `r5.vote.*`, all `r5.quest.*`, `r5.viewer.personal-restored.v1`, `r5.engagement.points-hype.v1`, `r5.realtime.reconnecting.v1`, and `r5.realtime.permission-expired.v1`.
 
 ### Exit checks
 
@@ -208,6 +242,15 @@ Required upstream seams UI-X05 through UI-X08 and the early Role 4 design-system
 **Integration wave:** Wave 3 — Behaviour
 
 **Outcome:** Every accepted participation/output fallback renders the same authoritative quest cycle through the correct role-safe surface.
+
+### Owner design gate
+
+| ID | What Codex asks Role 5 | Choices explained in plain language | Recommended starting point | Baseline status |
+| --- | --- | --- | --- | --- |
+| D5-12 | How should viewers enter the hosted fallback? | A direct link is frictionless; a room code works when links cannot be opened; a QR code helps a streamer move viewers to mobile but must never be required on Twitch. | Direct authorised link first, eight-character code fallback, and an optional streamer-share QR supplied through Role 1. | Open |
+| D5-13 | How should chat-only instructions be written? | Long explanations are clear but spammy; concise numbered instructions are fast but need a poll-open announcement. | One concise poll-open message mapping `1`/`2`/`3`, bounded acknowledgement behaviour from Role 1, and one final result message. | Open |
+| D5-14 | Where should the OBS quest card sit? | Top, bottom, and side positions can each collide with different game HUDs; one fixed centre overlay is most obstructive. | A compact edge-card layout with safe-area variants; verify the default against the selected demo game and keep critical gameplay visible. | Open |
+| D5-15 | What should viewers see during reconnect? | A blocking screen is obvious but hides the latest quest; a banner preserves context while warning that data may be stale. | Retain the latest safe quest state with a prominent reconnecting banner and disable commands until authority returns. | Open |
 
 ### P0 hosted Quest Board
 
@@ -253,6 +296,12 @@ All `r5.mode.*`, `r5.board.room-error-set.v1`, `r5.chat.acknowledgement-set.v1`,
 
 **Outcome:** The complete vote-to-result experience is integrated across real clients and ready for the golden workflow.
 
+### Owner design gate
+
+| ID | What Codex asks Role 5 | Choices explained in plain language | Recommended starting point | Baseline status |
+| --- | --- | --- | --- | --- |
+| D5-16 | Which viewer moment should lead Role 5's evidence? | Voting proves speed, winner and overlay prove shared payoff, and reconnect proves reliability. | Lead with two viewers voting into the same winner and OBS quest, then show reconnect and fallback as proof of robustness. Role 1 retains final demo narrative authority. | Open |
+
 ### P0 work
 
 - Exercise exactly three validated candidates -> two viewer votes -> authoritative tally -> winner -> OBS active quest -> progress -> terminal result -> session points/hype.
@@ -278,6 +327,12 @@ All `r5.mode.*`, `r5.board.room-error-set.v1`, `r5.chat.acknowledgement-set.v1`,
 
 This phase starts only if Phase 4 has passed and Role 1 agrees the work cannot destabilise the golden workflow or violate Extension performance limits.
 
+### Owner design gate
+
+| ID | What Codex asks Role 5 | Choices explained in plain language | Recommended starting point | Baseline status |
+| --- | --- | --- | --- | --- |
+| D5-17 | If there is time for only one refinement, what should receive it? | Reaction polish increases energy, explanations increase clarity, and result transitions strengthen the payoff. | Improve the weakest observed P0 usability point first; otherwise refine the winner-to-active-quest transition. | Open |
+
 ### P1 work
 
 - Refine reaction, hype, result, and reward celebration with reduced-motion alternatives.
@@ -294,7 +349,7 @@ This phase starts only if Phase 4 has passed and Role 1 agrees the work cannot d
 
 ## Feasibility review response format
 
-Role 5 returns one response before Phase 1:
+Role 5's Codex posts one response to [issue #16](https://github.com/Dewflash/chatxpt/issues/16) before Phase 1:
 
 ```text
 Plan reviewed: ROLE-5-BUILD-PLAN.md + shared matrix
