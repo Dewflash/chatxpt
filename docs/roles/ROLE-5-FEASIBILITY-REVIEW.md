@@ -6,7 +6,7 @@
 
 **Date:** 3 August 2026
 
-**Plan reviewed:** `docs/build-plans/ROLE-5-BUILD-PLAN.md` and `docs/build-plans/ROLE-4-5-DELIVERY-MATRIX.md`
+**Plan reviewed:** `docs/build-plans/ROLE-5-BUILD-PLAN.md` and `docs/build-plans/ROLE-4-5-DELIVERY-MATRIX.md`; reconciled with merged PR #27 and PR #29 on 3 August 2026
 
 **Review status:** Submitted to Role 2 and Role 1 in [issue #16, comment 5163871816](https://github.com/Dewflash/chatxpt/issues/16#issuecomment-5163871816). Role 2 must record the accepted baseline or one revision before Role 5 starts source implementation.
 
@@ -14,24 +14,28 @@
 
 ## Consolidated response
 
-### Role 5 owner decisions
+### Reconciliation with current main
 
-The current merged plan references four Role 5 decision areas without defining `D5-01` through `D5-04` inline. Role 5 maps those IDs to the four component-decision areas in `ROLE-5-TODO.md` and approved all recommendations on 3 August 2026:
+The first review was authored from commit `dba25f4`, before PR #27 added the adaptive Role 5 design gates and complete UI-X matrix. Current main now defines D5-01 through D5-04 as viewer feeling, vote interaction, celebration intensity, and visual references. Those UX decisions remain open in `ROLE-5-EXECUTION.md`; the earlier technical recommendations must not overwrite them.
 
-| ID | Approved Role 5 decision | Implementation consequence |
+Role 1 preserved the technically valid recommendations below under distinct feasibility IDs while resolving PR #28's merge conflict. Role 2 still owns the accept/revise comparison, and Role 5 still owns the current tailored UX answers.
+
+### Preserved Role 5 feasibility recommendations
+
+| ID | Preserved Role 5 recommendation | Current disposition |
 | --- | --- | --- |
-| D5-01 | Export four public modules: `TwitchViewerPanel`, `HostedQuestBoard`, `TwitchChatVoteInstructions`, and read-only `QuestOverlay`. Use a conservative transparent OBS safe area with reduced motion. | Role 1 receives stable mount boundaries; overlay rendering cannot emit commands or contain participation authority. |
-| D5-02 | Never update tallies optimistically. Await authoritative command results, retain the latest safe snapshot while reconnecting, and recommend immediate command acknowledgement plus an authorised reconnect fetch for private votes/points. Do not add a private per-viewer realtime channel for the MVP unless Role 1 proves it is necessary. | Shared realtime remains suitable for tallies/hype; private viewer state remains session-scoped and cannot leak between viewers. |
-| D5-03 | Use the same canonical state and commands in the hosted fallback, with direct links, eight-character room codes, and anonymous access. QR is optional and never required. Chat fallback displays only Role 1-authoritative instructions and acknowledgement. | Fallback UX stays consistent without direct database access, Twitch parsing, or invented acknowledgement. |
-| D5-04 | Add no new P0 runtime dependency. Keep proposed telemetry session-scoped and minimal: surface loaded, vote submitted/result, reconnect result, and reaction result, without raw chat or personal identifiers. | Protects the Extension load budget and privacy boundary; Role 1 retains final analytics/KPI authority. |
+| F5-01 | Export `TwitchViewerPanel`, `HostedQuestBoard`, `TwitchChatVoteInstructions`, and read-only `QuestOverlay`; keep the overlay command-free with conservative safe areas and reduced motion. | Preserved as a Role 5 component proposal for Role 2 comparison. Exact public names remain Role 5-owned; Role 1 owns mounts. |
+| F5-02 | Never update tallies optimistically; await authoritative command results, retain the latest safe shared snapshot while reconnecting, and prefer immediate private command acknowledgement plus an authorised reconnect fetch over a new private realtime topic unless evidence requires one. | Non-optimistic authority is accepted by existing rules. The private recovery transport remains Role 1 decision UI-X10/#26. |
+| F5-03 | Reuse canonical state/commands for the hosted fallback, with direct links, eight-character room codes, anonymous access, optional QR, and Role 1-authoritative chat acknowledgement. | Preserved and aligned with D-040/D-041 plus UI-X07/#23 and UI-X08/#24; delivery remains Role 1 work. |
+| F5-04 | Add no new P0 runtime dependency; if telemetry is later approved, keep it session-scoped and limited to surface load, command result, reconnect result, and reaction result without raw chat or personal identifiers. | No dependency request is accepted for this pass. Telemetry remains a Role 1 KPI/privacy decision and is not implemented. |
 
-### Feasible as written
+### Feasible as currently phased
 
-No, not against the currently merged upstream surface. The planned Role 5 product is feasible without changing its Twitch-first scope, but implementation exits depend on the accepted clarifications and handoffs below. Role 5 can begin public prop and render-state design after this review is accepted; it must not invent missing vote, lifecycle, access, identity, fallback, timer, reward, or persistence authority.
+Conditionally yes. PR #27 corrected the plan structure and tracks every known upstream seam, but implementation exits still depend on the accepted clarifications and handoffs below. Role 5 may begin only after Role 2 records its accept/revise response and the current Role 5 UX batch is recorded; it must not invent missing vote, lifecycle, access, identity, fallback, timer, reward, or persistence authority.
 
 ### Conflicts or missing requirements
 
-1. `R5-007` is marked P1 in `ROLE-5-TODO.md`, while the build plan makes basic reactions, session points, community hype, and reconnect behaviour P0. Split this work into a P0 functional slice and P1 animation/explanation polish, or reclassify the existing TODO row as P0 with the P1 subset stated explicitly.
+1. The former `R5-007` P0/P1 mismatch is resolved on current main as R5-007A (P0 functional baseline) and R5-007B (P1 polish).
 2. The merged Core fixture set proves only a minimal idle viewer/overlay boundary. It does not yet supply the Role 5 catalogue required by Phases 1 through 3.
 3. The fixture-gallery requirement must preserve the boundary rule that product code does not import `@/core/testing`. Role 5 will keep canonical fixture imports in test/diagnostic-only modules or accept fixture values through dependency-injected harness props supplied by Role 1.
 4. The plan requires a community hype meter, but the current view exposes an unbounded non-negative integer. Role 1 must either publish an authoritative scale/level or confirm that P0 presents the value without converting it into a percentage.
@@ -123,14 +127,16 @@ Initial consumer tests can use schema parsing, pure view helpers, and React serv
 | Secure OBS mount is late | Role 1 | Phase 3/4 | Verify the Role 5 component against fixture `OverlayViewModel` states only and report the real Browser Source run as unverified. |
 | Extension bundle exceeds the policy budget | Roles 1 and 5 | Phase 4 | Remove nonessential animation/assets and retain the primary vote/active/result path; do not weaken accessibility or authoritative-state handling. |
 
-### Requested plan revision
+### Requested plan revision status after PR #27
 
-1. Resolve the R5-007 P0/P1 mismatch by making basic reactions, points, hype, and reconnect P0 and reserving richer animation/explanation for P1.
-2. Record the accepted delivery owner and required-by phase for UI-X05 through UI-X10, including whether any item requires a Core schema change and separate cross-role issue.
-3. Clarify that canonical `@/core/testing` imports remain test/diagnostic-only and that Role 1 injects fixtures into any mounted development gallery.
-4. Record the accepted authoritative representation or example mapping for tie and zero-vote resolution.
-5. Record the accepted bounded reaction catalogue and community-hype presentation scale, or explicitly accept label/value-only P0 fallbacks.
-6. Record UI-X10's accepted private viewer recovery approach. Role 5 recommends immediate command results plus an authorised reconnect fetch while keeping the shared realtime topic sanitised.
+| Original request | Current status |
+| --- | --- |
+| Split basic P0 engagement/reconnect from P1 polish | Resolved by R5-007A/R5-007B on main. |
+| Record UI-X05 through UI-X10 owners, phases, and issues | Resolved in the shared delivery matrix and issues #21-#26. |
+| Keep `@/core/testing` imports test/diagnostic-only and inject mounted fixtures | Resolved in the shared delivery matrix. |
+| Publish tie and zero-vote representation/examples | Still pending Role 3 through Role 1 in UI-X06/#22. |
+| Publish bounded reactions and an authoritative hype scale or label-only fallback | Still pending Role 3/Role 1 comparison; Role 5 must not invent either. |
+| Accept the private viewer recovery approach | Still pending Role 1 in UI-X10/#26; F5-02 preserves Role 5's recommendation. |
 
 ## Role 5 implementation baseline after acceptance
 

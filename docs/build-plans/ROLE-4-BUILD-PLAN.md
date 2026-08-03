@@ -4,7 +4,7 @@
 
 **Plan owner:** Role 2 (`joelyrk`) under D-016
 
-**Status:** Awaiting Role 4's one consolidated feasibility review
+**Status:** Awaiting Role 4's one consolidated feasibility review in [issue #15](https://github.com/Dewflash/chatxpt/issues/15)
 
 **Primary directories:** `src/streamer/`, `src/design-system/`
 
@@ -24,6 +24,14 @@ Role 4 implements one phase at a time.
 4. Begin the next phase only after the current phase exit is reviewable.
 
 Role 4 may split a phase into small pull requests, but may not start later-phase product work to bypass an incomplete exit. Role 5 may progress concurrently once the Phase 1 design-system handoff is stable.
+
+### How Codex coaches a novice owner through design decisions
+
+The decision tables below are starter prompts and minimum areas to consider, not a fixed or exhaustive questionnaire. For every user-visible pass, Codex inspects the actual streamer task and generates a small, relevant batch that helps Role 4 think about the experience. It may reword, omit an irrelevant example, add a better question, or show a tiny text wireframe. It should cover the user goal and, where relevant, organisation, information hierarchy, layout/responsiveness, interaction feedback, error/recovery UX, visual tone, motion, accessibility, and trust.
+
+Codex explains the visible result and trade-off first, recommends a default, and then selects the appropriate implementation technique. It must never ask a jargon-only question such as `Flexbox or Grid?`: Role 4 decides whether the content should feel like cards, sections, a sidebar, or another understandable arrangement; Codex decides whether Grid, Flexbox, or another implementation produces that result. Role 4 may reply `Approve all recommendations`.
+
+Role 2 owns this baseline plan. Role 4's settled answers are recorded in `docs/roles/ROLE-4-EXECUTION.md`, so Role 4 does not edit another owner's plan. Codex checks that record to avoid repeating settled choices, then asks only the relevant unresolved choices for the current pass.
 
 ## Definition of done
 
@@ -114,6 +122,17 @@ Required upstream seams UI-X01 through UI-X06 and UI-X09 are defined in the shar
 
 **Outcome:** Role 4 confirms that the plan can be implemented without silently inventing contracts or scope.
 
+### Owner design gate
+
+Codex first prepares the technical feasibility review itself, then uses these as starting points for a tailored visual/product discussion:
+
+| ID | What Codex asks Role 4 | Choices explained in plain language | Recommended starting point | Baseline status |
+| --- | --- | --- | --- | --- |
+| D4-01 | What should Studio feel like at first glance? | A serious broadcast control room, a playful quest/game interface, or a plain utility dashboard. | A clean broadcast control room with a few playful quest accents; trustworthy during setup and energetic only around quests. | Open |
+| D4-02 | How should the main Studio be organised? | A left sidebar keeps major areas visible; top tabs save horizontal space; a step-by-step flow guides one task at a time. | Desktop sidebar for Setup, Profile, Live Quests, and Test Lab; guided steps inside first-time Setup; compact mobile navigation. Add History only if the optional P1 phase is approved and built. | Open |
+| D4-03 | How much information should be visible? | Large guided sections are easier for beginners; dense panels help during a live stream; showing everything at once becomes noisy. | Spacious and guided before the stream, compact and status-dense during the stream. | Open |
+| D4-04 | Does Role 4 already have brand references it wants Codex to follow? | Existing colours, logos, or screenshots can guide the system; otherwise Codex creates reversible defaults and Role 4 reviews screenshots. | Do not block on assets; begin with an original dark/light system and one energetic accent, then revise from screenshots. | Open |
+
 ### Work
 
 - Read the root guide, integration contract, Role 4 guide/TODO, this plan, and the shared matrix.
@@ -124,7 +143,7 @@ Required upstream seams UI-X01 through UI-X06 and UI-X09 are defined in the shar
 
 ### Exit evidence
 
-- One written feasibility review is sent to Role 2 and Role 1.
+- One written feasibility review is posted to [issue #15](https://github.com/Dewflash/chatxpt/issues/15), where Role 2 and Role 1 can compare it.
 - Role 2 records one revision or explicitly records that no revision was needed.
 - Every blocker has an owner and required-by phase.
 - No source implementation starts before this exit.
@@ -138,6 +157,15 @@ Required upstream seams UI-X01 through UI-X06 and UI-X09 are defined in the shar
 **Integration wave:** Wave 1 — Boundaries
 
 **Outcome:** Role 4 publishes a stable public UI seam and the minimum accessible design-system contract needed by both UI roles.
+
+### Owner design gate
+
+| ID | What Codex asks Role 4 | Choices explained in plain language | Recommended starting point | Baseline status |
+| --- | --- | --- | --- | --- |
+| D4-05 | How should cards and controls be arranged? | Rows work well for toolbars; columns and card grids organise larger dashboard sections. Codex can combine both and choose Flexbox/Grid internally. | Grid for page/card layout and Flexbox for button/status rows; no owner decision about CSS syntax is required. | Open |
+| D4-06 | Where should ribbons, badges, and progress treatments appear? | Badges are compact status labels; ribbons are louder highlights; progress bars show time or completion. | Use badges for service/state health, reserve one ribbon treatment for the selected/winning quest, and use progress only for real authoritative progress. | Open |
+| D4-07 | How animated should the shared interface feel? | No motion is calm; subtle motion confirms actions; arcade motion feels energetic but can distract and cost performance. | Subtle button/card feedback and quest transitions, always with reduced-motion and no continuous decorative animation. | Open |
+| D4-08 | What component character should the shared design system use? | Sharp corners feel technical; very round shapes feel playful; medium rounding balances both. | Medium-radius, high-contrast panels with clear focus rings and generous touch targets. | Open |
 
 ### P0 work
 
@@ -163,6 +191,15 @@ Required upstream seams UI-X01 through UI-X06 and UI-X09 are defined in the shar
 **Integration wave:** Wave 2 — Core
 
 **Outcome:** A new or returning streamer can reach a truthful ready-to-stream state through Studio.
+
+### Owner design gate
+
+| ID | What Codex asks Role 4 | Choices explained in plain language | Recommended starting point | Baseline status |
+| --- | --- | --- | --- | --- |
+| D4-09 | Should first-time setup be one long page or a guided sequence? | One page exposes everything; a stepper reduces overload and shows progress. | A short guided setup sequence, followed by a reusable readiness dashboard for returning streamers. | Open |
+| D4-10 | How should many customisation settings be grouped? | Separate pages are clearest but slower; tabs are compact; collapsible advanced sections keep uncommon choices out of the way. | Five understandable groups: Game, Streamer Style, Quest Intensity, Safety/Restrictions, and Accessibility; advanced details collapsed. | Open |
+| D4-11 | How should readiness be communicated? | One overall score is simple but can hide the real blocker; a checklist shows exactly what needs attention. | A checklist with individual Twitch, capture, intelligence, realtime, and session status plus one clear next action; no misleading readiness percentage. | Open |
+| D4-12 | How much AI/extraction detail should be visible? | Technical detail builds trust but can overwhelm; hiding it makes failures confusing. | Plain status and confidence first, with expandable method/provenance details for curious streamers and testers. | Open |
 
 ### P0 flow A — First-time setup
 
@@ -213,6 +250,15 @@ Required upstream seams UI-X01 through UI-X06 and UI-X09 are defined in the shar
 
 **Outcome:** Streamers and moderators control an authoritative quest cycle from Studio or the compact Twitch surface without duplicated business rules.
 
+### Owner design gate
+
+| ID | What Codex asks Role 4 | Choices explained in plain language | Recommended starting point | Baseline status |
+| --- | --- | --- | --- | --- |
+| D4-13 | How should three proposed quests be compared? | Three side-by-side cards are fast on wide screens; a stacked list is clearer in narrow Twitch views. | Responsive three-card comparison in Studio and a stacked compact list in Live Config. | Open |
+| D4-14 | Which actions deserve confirmation? | Confirming everything is slow; confirming destructive/end-state actions prevents accidental disruption. | Confirm cancel, skip, fail, and end-session actions; approve/start/pause remain immediate; emergency pause stays one obvious immediate action. | Open |
+| D4-15 | How should live controls be prioritised? | Showing every action equally creates a dangerous button wall; primary and overflow groups focus attention. | One primary contextual action, visible emergency pause, and secondary allowed actions in a clearly labelled group or menu. | Open |
+| D4-16 | How compact should Twitch Live Config be? | Dense layouts show more state; spacious layouts are easier under pressure. | One-column status-first layout with the active/proposed quest and current allowed actions above secondary details. | Open |
+
 ### P0 work
 
 - Render proposed, voting, active, progress, terminal, cooldown, paused/emergency, and ended states from `StreamerViewModel`.
@@ -246,6 +292,12 @@ All `r4.quest.*`, `r4.error.command-set.v1`, `r4.realtime.reconnecting.v1`, and 
 
 **Outcome:** The complete streamer path is integrated with Role 1/2/3 and ready for the golden workflow.
 
+### Owner design gate
+
+| ID | What Codex asks Role 4 | Choices explained in plain language | Recommended starting point | Baseline status |
+| --- | --- | --- | --- | --- |
+| D4-17 | Which streamer moment should lead Role 4's evidence? | Setup proves frictionlessness; quest review proves control; live recovery proves reliability. | Lead with returning-streamer readiness into proposed-quest review, then include setup and recovery as supporting evidence. Role 1 retains final demo narrative authority. | Open |
+
 ### P0 work
 
 - Exercise setup -> saved profile -> session readiness -> real intelligence -> exactly three validated candidates -> controls -> voting visibility -> active quest -> result -> ended session.
@@ -268,6 +320,12 @@ All `r4.quest.*`, `r4.error.command-set.v1`, `r4.realtime.reconnecting.v1`, and 
 
 This phase starts only if Phase 4 has passed and Role 1 agrees the work cannot destabilise the golden workflow.
 
+### Owner design gate
+
+| ID | What Codex asks Role 4 | Choices explained in plain language | Recommended starting point | Baseline status |
+| --- | --- | --- | --- | --- |
+| D4-18 | If there is time for only one refinement, what should receive it? | History helps retention, diagnostics helps recovery, and visual polish helps presentation. | Improve the weakest observed P0 usability point first; otherwise add a concise post-stream summary rather than broad analytics. | Open |
+
 ### P1 work
 
 - Add richer retained session history and post-stream aggregate summary through UI-X04.
@@ -283,7 +341,7 @@ This phase starts only if Phase 4 has passed and Role 1 agrees the work cannot d
 
 ## Feasibility review response format
 
-Role 4 returns one response before Phase 1:
+Role 4's Codex posts one response to [issue #15](https://github.com/Dewflash/chatxpt/issues/15) before Phase 1:
 
 ```text
 Plan reviewed: ROLE-4-BUILD-PLAN.md + shared matrix

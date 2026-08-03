@@ -33,4 +33,4 @@ Provider/model adoption is a joint Role 2/Role 3 recommendation and requires Rol
 
 - D2-01 through D2-03A were answered as one batch on 3 August 2026.
 - Drafts exist at `docs/build-plans/ROLE-4-BUILD-PLAN.md`, `docs/build-plans/ROLE-5-BUILD-PLAN.md`, and `docs/build-plans/ROLE-4-5-DELIVERY-MATRIX.md`.
-- Outstanding before `DONE`: one feasibility review from each implementing owner, one Role 2 revision/comparison, and Role 1 notification.
+- Outstanding before `DONE`: Role 4 feasibility review in [issue #15](https://github.com/Dewflash/chatxpt/issues/15), Role 5 feasibility review in [issue #16](https://github.com/Dewflash/chatxpt/issues/16), one Role 2 revision/comparison, and Role 1 notification. UI-X dependencies are tracked in issues #17-#26.

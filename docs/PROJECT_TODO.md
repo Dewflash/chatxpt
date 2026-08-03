@@ -18,6 +18,8 @@ This file tracks cross-project outcomes only. Each contributor updates their own
 | P-010 | P1 | BLOCKED | Role 1 | Submission evidence and disclosures are complete. | P-009 | README, architecture, prompts/agent config, third-party list, screenshots, evaluation results, and limitations. |
 | P-011 | P1 | BLOCKED | Role 1 | Proposal deck and five-minute demo are final. | P-010 | Maximum 15-slide PDF and maximum five-minute video demonstrate complete core experience. |
 | P-012 | P0 | BLOCKED | Role 1 | Private submission repository is ready for judging. | Final verification | `garena-ai-build-challenge` added as collaborator; immutable Google Drive submission package prepared. |
+| P-013 | P0 | READY | Role 1 | Problem-solution fit, originality, usability, and expected-impact claims are backed by recorded evidence. | Ongoing product access | Relevant streamer/viewer observations, truthful alternatives comparison, measurable hypotheses, and resulting priorities are available for the deck/demo. |
+| P-014 | P0 | DONE | Role 1 with Roles 2/4/5 handoff | UI plans are beginner-safe and every upstream seam is assigned before source implementation. | PR #27; issues #15-#26 | Guided execution records, adaptive design coaching, corrected P0/P1 queues, persistent feasibility reviews/UI-X issues, and Role 1 integration backlog are merged. Individual feasibility acceptances remain tracked by #15/#16 rather than blocking this foundation outcome. |
 
 ## Schedule gates
 
