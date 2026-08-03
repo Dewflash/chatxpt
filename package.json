@@ -18,6 +18,8 @@
     "test:orchestrator": "vitest run tests/integration/orchestrator.test.ts",
     "test:persistence": "vitest run tests/integration/environment.test.ts tests/integration/permissions.test.ts tests/integration/session-lifecycle.test.ts tests/integration/persistence.test.ts tests/integration/realtime-subscriber.test.ts tests/integration/supabase-adapters.test.ts tests/integration/supabase-migration.test.ts",
     "test:evidence": "node --test scripts/check-evidence-manifest.test.mjs",
+    "test:ui": "vitest run src/realtime/browser.test.ts src/app/diagnostics/ui-harness/harness-client.test.tsx tests/integration/ui-gateway.test.ts",
+    "test:e2e": "playwright test",
     "test:watch": "vitest",
     "supabase:start": "supabase start",
     "supabase:reset": "supabase db reset --local",
@@ -37,11 +39,17 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.1",
     "@types/node": "26.1.2",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "eslint": "9.39.2",
     "eslint-config-next": "16.2.12",
+    "jsdom": "26.1.0",
     "supabase": "2.111.0",
     "typescript": "5.9.3",
     "vitest": "4.1.10"

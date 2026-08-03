@@ -6,4 +6,5 @@ export * from "./profile";
 export * from "./quests";
 export * from "./session";
 export * from "./signals";
+export * from "./ui-gateway";
 export * from "./views";

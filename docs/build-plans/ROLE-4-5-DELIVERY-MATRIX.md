@@ -39,7 +39,7 @@ All deadlines use Singapore time and inherit the integration exits in `docs/buil
 | --- | --- | --- | --- | --- | --- |
 | Canonical `1.0.0` role view/command/error schemas and fixture baseline | Role 1 | Roles 4/5 | Phase 1 | Implemented on `main` | Consume `@/core`/role public entries only |
 | Memory persistence, sanitised role snapshots, reconnect subscriber, and permission classes | Role 1 | Roles 4/5 through thin wiring | Phase 1 integration | Implemented foundation; browser command client/harness pending | Canonical fixture wrappers; no direct persistence |
-| Config/Live Config/viewer/hosted/OBS local harness, UI verification stack, and authorised command dispatcher (UI-X05) | Role 1 | Roles 4/5 | Phase 1 exit | Required request | Render-only components against fixture callbacks; no role independently adds shared test dependencies |
+| Config/Live Config/viewer/hosted/OBS local harness, UI verification stack, and authorised command dispatcher (UI-X05) | Role 1 | Roles 4/5 | Phase 1 exit | Implemented by R1-015/D-054; role-owned component mounts remain dependent on Role 4/5 exports | Use the injected typed gateway and `/diagnostics/ui-harness/*`; no role independently adds shared test dependencies |
 | Minimum tokens/base components from `@/design-system` | Role 4 | Role 5 | 4 Aug, 12:00 | Required early handoff | Role 5 may define public props/fixtures first, but does not copy temporary tokens |
 | Streamer setup/profile/session seams (UI-X01–UI-X03) | Roles 1/3 | Role 4 | Phase 2 | Required requests | Disabled/fixture-labelled adapters only; no competing canonical command |
 | Intelligence/provider/unknown examples (UI-X09) | Role 2 | Role 4 and evidence consumers | Phase 2 | Planned in R2-P03/R2-P03A | Existing minimal unknown-safe Core fixture |
@@ -86,6 +86,8 @@ Exact Extension view types and asset paths remain Role 1 decision D1-08. OBS cap
 ## Required upstream seam requests
 
 These are contract requirements discovered during planning, not accepted schema changes. The owning role must compare them with its implementation and record the outcome before the dependent phase exits.
+
+UI-X01, UI-X02, and UI-X05 were accepted by D-054 and implemented as the R1-015 browser-safe setup/readiness, command/result, health, fixture-scenario, and protected route seam. This does not implement Role 4 or Role 5 presentation; their public components mount into the accepted host when delivered.
 
 | Request ID | Owner | Required capability | Why existing contract is insufficient | Required by |
 | --- | --- | --- | --- | --- |
@@ -194,7 +196,7 @@ Role 5 consumes only the public entry point and never copies or edits `src/desig
 
 ## Shared UI verification and evidence path
 
-Role 1 selects and installs one compatible component-interaction test path plus one real-browser screenshot/end-to-end path under UI-X05. The preferred minimal direction is a DOM-capable React testing setup for fast component behaviour and Playwright for browser, responsive, accessibility, and screenshot evidence. Role 1 confirms exact packages/versions and owns shared configuration; Roles 4/5 do not independently modify the lockfile.
+Role 1 selected and pinned Vitest 4.1 with jsdom 26.1, React Testing Library 16.3, User Event 14.6, Jest DOM 6.9, and Playwright 1.62 with Chromium under UI-X05. Roles 4/5 add owned component tests through the shared configuration and browser flows through `tests/e2e/`; they do not independently modify the lockfile.
 
 Every captured artifact is entered in a Role 1-owned evidence manifest with surface, viewport/device, session/cycle revision where relevant, capture date, and one of: real Twitch/OBS/cloud, memory-backed integration, fixture-only, or unverified. A file or screenshot without that label is not judged evidence.
 

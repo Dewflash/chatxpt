@@ -25,3 +25,13 @@ export {
   createConfiguredPersistenceRuntime,
   type ConfiguredPersistenceRuntime,
 } from "./server-runtime";
+export {
+  DiagnosticUiGateway,
+  diagnosticUiGateway,
+} from "./ui-gateway-diagnostic";
+export {
+  bearerToken,
+  diagnosticHarnessEnabled,
+  mutationRequestAllowed,
+  type UiGatewayServer,
+} from "./ui-gateway-server";
