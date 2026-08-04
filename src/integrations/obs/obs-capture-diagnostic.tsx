@@ -4,12 +4,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   BrowserObsFrameSource,
-  ObsCaptureError,
   listBrowserVideoInputs,
   requestBrowserVideoPermission,
   type ObsCaptureStatus,
   type ObsVideoInput,
 } from "./browser-frame-source";
+import {
+  captureFailureStatus,
+  getObsCaptureControlState,
+} from "./obs-capture-diagnostic-state";
 import styles from "./obs-capture-diagnostic.module.css";
 
 interface CapturedFrameSummary {
@@ -38,6 +41,7 @@ export function ObsCaptureDiagnostic() {
   const [frameCount, setFrameCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [permissionBusy, setPermissionBusy] = useState(false);
+  const permissionBusyRef = useRef(false);
   const controllerRef = useRef<AbortController | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -49,6 +53,12 @@ export function ObsCaptureDiagnostic() {
     captureStatus.state === "requesting-permission" ||
     captureStatus.state === "ready" ||
     captureStatus.state === "stale";
+  const controls = getObsCaptureControlState({
+    permissionBusy,
+    running,
+    hasSelectedObsDevice: selectedDevice?.isObsVirtualCamera === true,
+    rawGameConfirmed,
+  });
 
   useEffect(() => {
     void refreshDevices(false);
@@ -56,6 +66,7 @@ export function ObsCaptureDiagnostic() {
   }, []);
 
   async function refreshDevices(requireObs: boolean) {
+    if (permissionBusyRef.current || controllerRef.current !== null) return;
     try {
       const nextDevices = await listBrowserVideoInputs();
       setDevices(nextDevices);
@@ -70,6 +81,8 @@ export function ObsCaptureDiagnostic() {
   }
 
   async function grantPermission() {
+    if (permissionBusyRef.current || controllerRef.current !== null) return;
+    permissionBusyRef.current = true;
     setPermissionBusy(true);
     setError(null);
     try {
@@ -90,25 +103,17 @@ export function ObsCaptureDiagnostic() {
         retryable: true,
       });
     } catch (reason) {
-      const message =
-        reason instanceof ObsCaptureError
-          ? reason.message
-          : "Camera permission could not be completed.";
-      setError(message);
-      setCaptureStatus({
-        state: reason instanceof ObsCaptureError ? reason.state : "unavailable",
-        checkedAt: Date.now(),
-        deviceId: null,
-        deviceLabel: null,
-        message,
-        retryable: true,
-      });
+      const status = captureFailureStatus(reason, Date.now());
+      setError(status.message);
+      setCaptureStatus(status);
     } finally {
+      permissionBusyRef.current = false;
       setPermissionBusy(false);
     }
   }
 
   async function startCapture() {
+    if (permissionBusyRef.current || controllerRef.current !== null) return;
     if (selectedDevice === null || !selectedDevice.isObsVirtualCamera) {
       setError("Select an identified OBS Virtual Camera before starting capture.");
       return;
@@ -118,7 +123,6 @@ export function ObsCaptureDiagnostic() {
       return;
     }
 
-    controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
     setError(null);
@@ -196,10 +200,14 @@ export function ObsCaptureDiagnostic() {
             <li>Start OBS Virtual Camera, then grant browser camera permission here.</li>
           </ol>
 
-          <button type="button" onClick={grantPermission} disabled={permissionBusy || running}>
+          <button type="button" onClick={grantPermission} disabled={!controls.canGrantPermission}>
             {permissionBusy ? "Requesting permission…" : "Grant permission and find OBS"}
           </button>
-          <button type="button" onClick={() => void refreshDevices(true)} disabled={running}>
+          <button
+            type="button"
+            onClick={() => void refreshDevices(true)}
+            disabled={!controls.canRefreshDevices}
+          >
             Refresh devices
           </button>
 
@@ -208,7 +216,7 @@ export function ObsCaptureDiagnostic() {
             <select
               value={selectedDeviceId}
               onChange={(event) => setSelectedDeviceId(event.target.value)}
-              disabled={running}
+              disabled={!controls.canEditSetup}
             >
               <option value="">Select OBS Virtual Camera</option>
               {devices.map((device) => (
@@ -229,7 +237,7 @@ export function ObsCaptureDiagnostic() {
               type="checkbox"
               checked={rawGameConfirmed}
               onChange={(event) => setRawGameConfirmed(event.target.checked)}
-              disabled={running}
+              disabled={!controls.canEditSetup}
             />
             I confirm the Virtual Camera scene is raw gameplay and excludes the ChatXPT overlay.
           </label>
@@ -238,11 +246,11 @@ export function ObsCaptureDiagnostic() {
             <button
               type="button"
               onClick={() => void startCapture()}
-              disabled={running || selectedDevice === null || !rawGameConfirmed}
+              disabled={!controls.canStartCapture}
             >
               Start real capture
             </button>
-            <button type="button" onClick={stopCapture} disabled={!running}>
+            <button type="button" onClick={stopCapture} disabled={!controls.canStopCapture}>
               Stop and release camera
             </button>
           </div>

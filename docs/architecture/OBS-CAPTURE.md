@@ -30,7 +30,8 @@ The route returns `404` in production even if the environment flag is present. I
 - Frames carry canonical source `obs-virtual-camera`, capture/receive timestamps, dimensions, session/correlation IDs, revision, and `live` or `diagnostic` evidence class.
 - Frame pixels remain in an ephemeral `ImageBitmap`; the adapter does not encode, upload, log, cache, or persist raw frames.
 - Consumers call `release()` after each frame. The operation is idempotent and closes the bitmap.
-- Aborting iteration pauses the hidden video element, removes its stream, stops every media track, and reports `ended`.
+- Aborting iteration, including while the browser permission request is still pending, ends promptly, pauses and detaches any created video, stops every acquired or late-arriving media track, and reports `ended`.
+- Permission discovery and active capture are serialised so a late discovery result cannot overwrite an active capture status.
 - Permission denial and unavailable devices throw a typed `ObsCaptureError` and publish the matching capture status.
 - A connected source without current video becomes `stale`; it does not emit a synthetic replacement frame.
 
@@ -44,4 +45,4 @@ The current pass does not implement or claim:
 - the final Studio capture setup UX;
 - OBS Browser Source output or overlay reconnect;
 - a live Twitch golden workflow;
-- real-device evidence until OBS Virtual Camera is installed, running, selected, and visually inspected in the target browser.
+- real-frame evidence until the enabled and running OBS Virtual Camera is permissioned, selected, and visually inspected in the target browser.

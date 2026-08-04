@@ -82,6 +82,43 @@ describe("OBS Virtual Camera device discovery", () => {
 });
 
 describe("BrowserObsFrameSource", () => {
+  it("aborts immediately while browser permission is pending and cleans up a late stream", async () => {
+    const { stop, stream } = captureStream();
+    const controller = new AbortController();
+    let resolvePermission: ((value: MediaStream) => void) | undefined;
+    const getUserMedia = vi.fn(
+      () =>
+        new Promise<MediaStream>((resolve) => {
+          resolvePermission = resolve;
+        }),
+    );
+    const source = new BrowserObsFrameSource(
+      {
+        sessionId: "capture-session",
+        correlationId: "capture-correlation",
+        deviceId: "obs-device",
+        evidenceClass: "diagnostic",
+        permissionTimeoutMs: 60_000,
+      },
+      {
+        mediaDevices: {
+          getUserMedia,
+          enumerateDevices: vi.fn(async () => []),
+        },
+        now: () => 1_786_100_000_000,
+      },
+    );
+
+    const next = source.frames(controller.signal)[Symbol.asyncIterator]().next();
+    await vi.waitFor(() => expect(getUserMedia).toHaveBeenCalledTimes(1));
+    controller.abort();
+
+    await expect(next).resolves.toEqual({ done: true, value: undefined });
+    resolvePermission?.(stream);
+    await vi.waitFor(() => expect(stop).toHaveBeenCalledTimes(1));
+    expect(source.getStatus().state).toBe("ended");
+  });
+
   it("yields a real-source ephemeral frame and releases browser resources", async () => {
     const { stop, stream } = captureStream();
     const video = captureVideo();

@@ -158,13 +158,15 @@ async function getUserMediaWithTimeout(
   mediaDevices: BrowserMediaDevices,
   constraints: MediaStreamConstraints,
   timeoutMs: number,
+  signal?: AbortSignal,
 ): Promise<MediaStream> {
-  let timedOut = false;
+  let discardLateStream = false;
   let timeout: ReturnType<typeof setTimeout> | null = null;
+  let abortRequest: (() => void) | null = null;
   const pendingStream = mediaDevices.getUserMedia(constraints);
   void pendingStream
     .then((lateStream) => {
-      if (timedOut) {
+      if (discardLateStream) {
         for (const track of lateStream.getTracks()) track.stop();
       }
     })
@@ -172,7 +174,7 @@ async function getUserMediaWithTimeout(
 
   const timeoutResult = new Promise<never>((_resolve, reject) => {
     timeout = setTimeout(() => {
-      timedOut = true;
+      discardLateStream = true;
       reject(
         new ObsCaptureError(
           "unavailable",
@@ -183,10 +185,25 @@ async function getUserMediaWithTimeout(
     }, Math.max(1, timeoutMs));
   });
 
+  const abortResult = new Promise<never>((_resolve, reject) => {
+    abortRequest = () => {
+      discardLateStream = true;
+      const error = new Error("OBS capture was stopped while camera permission was pending");
+      error.name = "AbortError";
+      reject(error);
+    };
+    if (signal?.aborted) {
+      abortRequest();
+      return;
+    }
+    signal?.addEventListener("abort", abortRequest, { once: true });
+  });
+
   try {
-    return await Promise.race([pendingStream, timeoutResult]);
+    return await Promise.race([pendingStream, timeoutResult, abortResult]);
   } finally {
     if (timeout !== null) clearTimeout(timeout);
+    if (abortRequest !== null) signal?.removeEventListener("abort", abortRequest);
   }
 }
 
@@ -290,6 +307,7 @@ export class BrowserObsFrameSource implements FrameSource {
           },
         },
         this.options.permissionTimeoutMs ?? 10_000,
+        signal,
       );
 
       const track = stream.getVideoTracks()[0];
