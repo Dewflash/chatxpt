@@ -102,9 +102,9 @@ Role 2 is complete when:
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D2-04 | Internal extraction/AI module structure and port layout | Open | — |
-| D2-05 | Real owned gameplay scenarios and annotation method for evaluation | Open | — |
-| D2-06 | How Role 2 represents partial, stale, conflicting, and unknown observations internally | Open | — |
+| D2-04 | Internal extraction/AI module structure and port layout | Resolved by Joelyrk | Keep `src/extraction/` responsible for Role 1 source adapters, frame/audience analysis, observation fusion, and canonical snapshot production. Keep `src/ai/` responsible for intelligence composition, context, candidate strategies, and provider adapters. Export canonical-port implementations/factories only; inject browser, OCR, clock, and provider dependencies so tests do not require live services. |
+| D2-05 | Real owned gameplay scenarios and annotation method for evaluation | Resolved by Joelyrk | Evaluate two short team-owned or explicitly authorised gameplay samples: one quiet/transition sequence and one high-action sequence, preferably with contrasting HUD styles. Keep sampled frames separate from timestamped expected annotations and keep synthetic edge cases separately labelled; production analyzers never receive expected answers. Exact assets remain pending team-owned sample availability. |
+| D2-06 | How Role 2 represents partial, stale, conflicting, and unknown observations internally | Resolved by Joelyrk | Preserve per-source evidence candidates with provenance, confidence, observed/received time, expiry, and availability state, then fuse each signal independently into canonical `known`, `unknown`, `stale`, or `unavailable`. Use `conflicting` when similarly credible evidence disagrees, retain previous values only for stale observations, and defer numeric thresholds to D2-10. Any new canonical field is proposed to Role 1 rather than added here. |
 
 ### R2-P03 — Owned ports and boundary fixtures
 
@@ -119,6 +119,8 @@ Role 2 is complete when:
 - Propose missing canonical fields to Role 1 without editing `src/core/`.
 
 **Acceptance:** Extraction and AI tests run without Twitch/OBS; fixtures carry provenance; expected answers are not supplied to production analyzers.
+
+**Progress (4 August 2026):** The public extraction pipeline interfaces, injected observation-fusion boundary, canonical snapshot builders, validating intelligence/candidate provider factories, and Role 2 producer tests are implemented on `role-2/intelligence-boundary`. Fixture-only UI-X09 proposal payloads cover known, low-confidence, unsupported, stale, capture-denied, provider, algorithmic, and deterministic-fallback presentation states. Role 1 promotion into canonical `@/core/testing`, real owned gameplay/chat fixtures, and real `FrameSource` execution remain pending and are not claimed as live evidence.
 
 ### R2-P03A — Early feasibility spikes
 
