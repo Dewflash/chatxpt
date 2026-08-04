@@ -12,3 +12,17 @@ export type {
   GameplayFrameObservation,
   PlatformEvent,
 } from "../core";
+export {
+  BrowserObsFrameSource,
+  ObsCaptureError,
+  isObsVirtualCameraLabel,
+  listBrowserVideoInputs,
+  requestBrowserVideoPermission,
+} from "./obs/browser-frame-source";
+export type {
+  BrowserObsFrameSourceOptions,
+  ObsCaptureState,
+  ObsCaptureStatus,
+  ObsVideoInput,
+} from "./obs/browser-frame-source";
+export { ObsCaptureDiagnostic } from "./obs/obs-capture-diagnostic";

@@ -84,6 +84,8 @@ All viewer clients use one private participation service. No UI owns authoritati
 
 For the MVP, the streamer configures OBS Virtual Camera to expose the raw game source to ChatXPT Studio. Role 1 owns permission, media, capture-session, and frame-delivery boundaries. Role 2 consumes ephemeral frames and uses lightweight visual algorithms, selective OCR, temporal confirmation, and optional free vision AI.
 
+The browser capture adapter requires explicit permission and an explicit device selection. The diagnostic path accepts only a device labelled as OBS Virtual Camera and requires confirmation that the Virtual Camera scene excludes the ChatXPT overlay. Each sampled frame carries an `obs-virtual-camera` envelope, timestamp, dimensions, revision, and evidence class, is delivered as an ephemeral `ImageBitmap`, and must be released after consumption. Permission denial, missing devices, stale video, and ended tracks are reported without inventing an image or gameplay state. See `docs/architecture/OBS-CAPTURE.md`.
+
 The system is game-neutral through tiered support. Universal algorithms recognise broad action/quiet/transition signals across action games. Calibrated adapters may recognise specific HUD facts only for configured games with adequate evidence and confidence. Official telemetry is future work. Missing, unsupported, or unreliable facts are `unknown`; they are never fabricated.
 
 A developer Test Lab may analyse team-owned or explicitly authorised gameplay, including the same content streamed through a team-controlled Twitch channel. It is not a feature for silently analysing arbitrary third-party streams.
