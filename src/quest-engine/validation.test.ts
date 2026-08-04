@@ -98,6 +98,72 @@ describe("DefaultCandidateValidator", () => {
     );
   });
 
+  it.each([
+    {
+      category: "harmful-instruction",
+      title: "Toxic Drink",
+      instruction: "Drink bleach before the next match begins.",
+    },
+    {
+      category: "illegal-instruction",
+      title: "Shoplifting Dare",
+      instruction: "Shoplift an item from a store before continuing the stream.",
+    },
+    {
+      category: "physical-dare",
+      title: "Push-Up Break",
+      instruction: "Do 20 push-ups before the next match begins.",
+    },
+  ])("hard-rejects concrete $category output", ({ category, title, instruction }) => {
+    const candidate = changedCandidate(role3FixtureCandidateBatch.candidates[0], {
+      candidateId: `unsafe-${category}`,
+      title,
+      instruction,
+      rationale: "Concrete unsafe instruction fixture for deterministic validation.",
+      sourceSignalIds: [],
+    });
+    const result = new DefaultCandidateValidator().validate(candidate, {
+      intelligence: intelligence(),
+      profile,
+      currentState: role3FixtureIdleState,
+      recentQuests: [],
+      acceptedCandidates: [],
+      now: ROLE_3_FIXTURE_TIME,
+    });
+
+    expect(result).toMatchObject({
+      accepted: false,
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: "unsafe",
+          severity: "reject",
+          evidence: expect.arrayContaining([category]),
+          repairable: false,
+        }),
+      ]),
+    });
+  });
+
+  it("does not treat an in-game objective verb as a real-world illegal instruction", () => {
+    const candidate = changedCandidate(role3FixtureCandidateBatch.candidates[0], {
+      candidateId: "game-objective-language",
+      title: "Objective Takeover",
+      instruction: "Steal the objective from the opposing team during the next 60 seconds.",
+      rationale: "A game-scoped objective challenge without a real-world target.",
+      sourceSignalIds: [],
+    });
+    const result = new DefaultCandidateValidator().validate(candidate, {
+      intelligence: intelligence(),
+      profile,
+      currentState: role3FixtureIdleState,
+      recentQuests: [],
+      acceptedCandidates: [],
+      now: ROLE_3_FIXTURE_TIME,
+    });
+
+    expect(result.accepted).toBe(true);
+  });
+
   it("rejects streamer boundaries, accessibility conflicts, and recent repetition", () => {
     const candidate = role3FixtureCandidateBatch.candidates[1];
     const result = new DefaultCandidateValidator().validate(candidate, {

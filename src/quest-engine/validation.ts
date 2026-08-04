@@ -191,12 +191,52 @@ const fallbackLibrary: readonly FallbackDefinition[] = [
   },
 ] as const;
 
-const safetyPatterns = [
-  /\b(password|credential|api key|secret key|private key)\b/i,
-  /\b(real money|cash|bet|wager|gambl(?:e|ing))\b/i,
-  /\b(humiliat(?:e|ing|ion)|harass|discriminat(?:e|ion)|sexual)\b/i,
-  /\b(self[- ]?harm|dangerous act|illegal act)\b/i,
-  /\b(dox|address|phone number|personal data)\b/i,
+const safetyRules = [
+  {
+    category: "sensitive-data",
+    patterns: [/\b(password|credential|api key|secret key|private key)\b/i],
+  },
+  {
+    category: "wagering",
+    patterns: [/\b(real money|cash|bet|wager|gambl(?:e|ing))\b/i],
+  },
+  {
+    category: "humiliation-or-sexual",
+    patterns: [/\b(humiliat(?:e|ing|ion)|harass|discriminat(?:e|ion)|sexual)\b/i],
+  },
+  {
+    category: "harmful-instruction",
+    patterns: [
+      /\b(self[- ]?harm|dangerous act)\b/i,
+      /\b(drink|swallow|ingest|consume|eat)\b.{0,40}\b(bleach|poison|detergent|cleaning (?:fluid|product)|household chemical|medication|pills?)\b/i,
+      /\b(bleach|poison|detergent|cleaning (?:fluid|product)|household chemical)\b.{0,40}\b(drink|swallow|ingest|consume|eat)\b/i,
+      /\b(cut|burn|choke|strangle|stab|electrocute|injure|hurt)\b.{0,40}\b(yourself|someone|another person|viewer|streamer)\b/i,
+      /\b(run|walk|step|jump)\b.{0,30}\b(traffic|moving vehicle|roof|ledge)\b/i,
+    ],
+  },
+  {
+    category: "illegal-instruction",
+    patterns: [
+      /\b(illegal act|shoplift|burglarize)\b/i,
+      /\b(break|sneak)\s+into\s+(?:a\s+)?(home|house|store|shop|car|vehicle)\b/i,
+      /\b(hack|phish)\b.{0,30}\b(account|password|network|website|server)\b/i,
+      /\bsteal\b.{0,30}\b(wallet|phone|car|vehicle|money|cash|credit card|identity)\b/i,
+      /\b(buy|sell|take|use)\b.{0,30}\b(illegal drugs?|stolen goods?|fake id)\b/i,
+    ],
+  },
+  {
+    category: "physical-dare",
+    patterns: [
+      /\b(do|perform|complete)\s+(?:\d+\s+|some\s+)?(push[- ]?ups?|sit[- ]?ups?|squats?|burpees?|jumping jacks?)\b/i,
+      /\b(hold|stop)\b.{0,20}\b(?:your\s+)?breath\b/i,
+      /\b(stand|balance|hop)\b.{0,20}\b(?:on\s+)?(?:one|a single)\s+(leg|foot)\b/i,
+      /\b(blindfold yourself|cover your eyes)\b/i,
+    ],
+  },
+  {
+    category: "privacy",
+    patterns: [/\b(dox|address|phone number|personal data)\b/i],
+  },
 ] as const;
 
 const factDependencies = [
@@ -324,8 +364,18 @@ export class DefaultCandidateValidator {
     const issues: CandidateValidationIssue[] = [];
     const text = `${candidate.title} ${candidate.instruction} ${candidate.rationale}`;
 
-    if (safetyPatterns.some((pattern) => pattern.test(text))) {
-      issues.push(issue("unsafe", "reject", "Candidate violates the legal, non-harmful, non-wagering safety boundary."));
+    const matchedSafetyCategories = safetyRules
+      .filter(({ patterns }) => patterns.some((pattern) => pattern.test(text)))
+      .map(({ category }) => category);
+    if (matchedSafetyCategories.length > 0) {
+      issues.push(
+        issue(
+          "unsafe",
+          "reject",
+          "Candidate violates the legal, non-harmful, non-wagering, or no-physical-dare safety boundary.",
+          matchedSafetyCategories,
+        ),
+      );
     }
 
     const restrictions = [...context.profile.restrictions, ...context.profile.forbiddenQuestTypes];
