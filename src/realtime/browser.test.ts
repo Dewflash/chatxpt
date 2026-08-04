@@ -76,4 +76,38 @@ describe("FetchUiGatewayClient", () => {
     expect(result.error.code).toBe("dependency-unavailable");
     expect(result.error.retryable).toBe(true);
   });
+
+  it("maps rejected access-token retrieval to a typed dependency error", async () => {
+    const request = vi.fn();
+    const client = new FetchUiGatewayClient({
+      fetch: request as typeof fetch,
+      getAccessToken: async () => {
+        throw new Error("token provider unavailable");
+      },
+    });
+
+    const result = await client.dispatch({
+      surface: "viewer",
+      scenario: "ready",
+      command: {
+        contractVersion: CONTRACT_VERSION,
+        sessionId: "fixture-session",
+        questCycleId: "fixture-cycle",
+        commandId: "fixture-token-failure",
+        correlationId: "fixture-token-failure-correlation",
+        expectedRevision: 1,
+        issuedAt: 1_786_000_001_000,
+        actor: { kind: "viewer", actorId: "fixture-viewer" },
+        type: "viewer.vote",
+        candidateId: "fixture-candidate-1",
+      },
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.commandId).toBe("fixture-token-failure");
+    expect(result.error.code).toBe("dependency-unavailable");
+    expect(result.error.retryable).toBe(true);
+    expect(request).not.toHaveBeenCalled();
+  });
 });

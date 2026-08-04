@@ -245,6 +245,24 @@ export const uiGatewaySnapshotSchema = z.discriminatedUnion("role", [
           path: ["surface"],
         });
       }
+      const allowedActorKinds =
+        snapshot.surface === "live-config"
+          ? ["broadcaster", "moderator"]
+          : ["broadcaster"];
+      if (
+        snapshot.auth.status !== "authenticated" ||
+        snapshot.auth.actorKind === null ||
+        !allowedActorKinds.includes(snapshot.auth.actorKind)
+      ) {
+        context.addIssue({
+          code: "custom",
+          message:
+            snapshot.surface === "live-config"
+              ? "Live Config snapshots require an active broadcaster or moderator"
+              : "Studio and Config snapshots require an active broadcaster",
+          path: ["auth"],
+        });
+      }
     }),
   z
     .object({
@@ -262,6 +280,17 @@ export const uiGatewaySnapshotSchema = z.discriminatedUnion("role", [
           path: ["surface"],
         });
       }
+      const authenticatedViewer =
+        snapshot.auth.status === "authenticated" && snapshot.auth.actorKind === "viewer";
+      const anonymousViewer =
+        snapshot.auth.status === "anonymous" && snapshot.auth.actorKind === "anonymous";
+      if (!authenticatedViewer && !anonymousViewer) {
+        context.addIssue({
+          code: "custom",
+          message: "Viewer snapshots require an active viewer or anonymous participant",
+          path: ["auth"],
+        });
+      }
     }),
   z
     .object({
@@ -277,6 +306,16 @@ export const uiGatewaySnapshotSchema = z.discriminatedUnion("role", [
           code: "custom",
           message: "Overlay snapshots require the overlay surface",
           path: ["surface"],
+        });
+      }
+      if (
+        snapshot.auth.status !== "authenticated" ||
+        snapshot.auth.actorKind !== "overlay"
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: "Overlay snapshots require active overlay access",
+          path: ["auth"],
         });
       }
     }),

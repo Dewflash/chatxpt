@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   CONTRACT_VERSION,
   uiGatewayCommandSchema,
+  uiGatewaySnapshotSchema,
   type UiGatewayDispatchRequest,
   type UiGatewaySurface,
 } from "../../src/core";
@@ -130,6 +131,50 @@ describe("Role 1 diagnostic UI gateway", () => {
     expect(result.snapshot.surface).toBe(surface);
     expect(result.snapshot.view.envelope.evidenceClass).toBe("fixture");
     expect(result.snapshot.currentRevision).toBe(0);
+  });
+
+  it("rejects successful snapshots with inactive or surface-incompatible actors", async () => {
+    const gateway = new DiagnosticUiGateway();
+    const studio = await gateway.read(
+      { surface: "studio", sessionId: "fixture-session", scenario: "ready" },
+      "diagnostic-broadcaster",
+    );
+    const liveConfig = await gateway.read(
+      { surface: "live-config", sessionId: "fixture-session", scenario: "ready" },
+      "diagnostic-moderator",
+    );
+    const viewer = await gateway.read(
+      { surface: "viewer", sessionId: "fixture-session", scenario: "ready" },
+      "diagnostic-viewer",
+    );
+    const hosted = await gateway.read(
+      { surface: "hosted-board", sessionId: "fixture-session", scenario: "ready" },
+      "diagnostic-anonymous",
+    );
+    const overlay = await gateway.read(
+      { surface: "overlay", sessionId: "fixture-session", scenario: "ready" },
+      "diagnostic-overlay",
+    );
+
+    expect(studio.ok && liveConfig.ok && viewer.ok && hosted.ok && overlay.ok).toBe(true);
+    if (!studio.ok || !liveConfig.ok || !viewer.ok || !hosted.ok || !overlay.ok) return;
+
+    const invalidSnapshots = [
+      { ...studio.snapshot, auth: { status: "expired", actorKind: null, expiresAt: null } },
+      {
+        ...studio.snapshot,
+        surface: "config",
+        auth: liveConfig.snapshot.auth,
+      },
+      { ...liveConfig.snapshot, auth: viewer.snapshot.auth },
+      { ...viewer.snapshot, auth: studio.snapshot.auth },
+      { ...hosted.snapshot, auth: { status: "unauthenticated", actorKind: null, expiresAt: null } },
+      { ...overlay.snapshot, auth: viewer.snapshot.auth },
+    ];
+
+    for (const snapshot of invalidSnapshots) {
+      expect(uiGatewaySnapshotSchema.safeParse(snapshot).success).toBe(false);
+    }
   });
 
   it("reproduces permission and configuration readiness failures", async () => {

@@ -126,11 +126,11 @@ export class FetchUiGatewayClient implements UiGatewayClient {
         error: internalError("UI command request is invalid"),
       };
     }
-    const headers = await this.authHeaders();
-    headers.set("content-type", "application/json");
-    headers.set("x-chatxpt-command", "1");
     let response: Response;
     try {
+      const headers = await this.authHeaders();
+      headers.set("content-type", "application/json");
+      headers.set("x-chatxpt-command", "1");
       response = await this.request(joinUrl(this.baseUrl, "/api/ui-gateway/v1/commands"), {
         method: "POST",
         headers,
