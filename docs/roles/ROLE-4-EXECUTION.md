@@ -11,11 +11,11 @@ This is the Role 4-owned working record. Codex updates it after the owner answer
 | Field | Current value |
 | --- | --- |
 | Plan | `docs/build-plans/ROLE-4-BUILD-PLAN.md` plus the shared delivery matrix |
-| Current phase | R4-P01 feasibility review |
-| Current TODO | R4-001 (`READY`) |
-| Source editing allowed now | No; finish and accept the feasibility review first |
-| Persistent handoff | [GitHub issue #15](https://github.com/Dewflash/chatxpt/issues/15) |
-| Next implementation branch | Codex selects `role-4/<short-phase-outcome>` after the review is accepted |
+| Current phase | R4-P02 shared visual-system foundation |
+| Current TODO | R4-002 (`READY`) |
+| Source editing allowed now | Yes, on a fresh branch after [PR #30](https://github.com/Dewflash/chatxpt/pull/30) merges; remain inside `src/design-system` and the accepted Role 4 boundary |
+| Persistent handoff | [GitHub issue #15](https://github.com/Dewflash/chatxpt/issues/15) and [PR #30](https://github.com/Dewflash/chatxpt/pull/30) |
+| Next implementation branch | `role-4/design-system-foundation` |
 
 ## Owner decision record
 
@@ -23,10 +23,10 @@ Codex uses the current phase's open decisions as starting points, then adds only
 
 | Decision ID | Phase | Settled answer | Status | Recorded date |
 | --- | --- | --- | --- | --- |
-| D4-01 | R4-P01 | Studio's overall visual feeling | Open | — |
-| D4-02 | R4-P01 | Main Studio navigation/organisation | Open | — |
-| D4-03 | R4-P01 | Guided versus dense information balance | Open | — |
-| D4-04 | R4-P01 | Existing references or reversible Codex defaults | Open | — |
+| D4-01 | R4-P01 | Clean broadcast-control-room feeling: calm and trustworthy for setup, with energetic colour reserved for quests and important live moments. | Accepted | 2026-08-03 |
+| D4-02 | R4-P01 | Desktop sidebar for Setup, Profile, Live Quests, and Test Lab; compact narrow-screen navigation; guided first-time Setup; History only after approved P1 work. | Accepted | 2026-08-03 |
+| D4-03 | R4-P01 | Spacious and explanatory before streaming; compact and status-dense during a live session. | Accepted | 2026-08-03 |
+| D4-04 | R4-P01 | Existing violet/lime prototype is a loose reference only; use reversible accessible dark/light tokens, CSP-safe system/local fonts, and allow later brand assets without blocking P0. | Accepted | 2026-08-03 |
 
 ## Pass record
 
@@ -34,7 +34,8 @@ Codex appends one row per completed pass.
 
 | Pass | Branch / PR | Outcome | Evidence actually run | Real / memory / fixture boundary | Remaining blocker / next pass |
 | --- | --- | --- | --- | --- | --- |
-| — | — | No Role 4 implementation has started. | — | Planning only | Complete R4-P01 feasibility review |
+| R4-P01 feasibility submission | `role-4/feasibility-review` / [issue #15 comment](https://github.com/Dewflash/chatxpt/issues/15#issuecomment-5164904061) | Owner decisions settled and consolidated technical review submitted; no UI source implementation started. | `git diff --check`; full `npm run check` | Source/document inspection plus fixture/memory verification only | Cleared on 2026-08-04 by Role 1 acknowledgement and Role 1/Role 2 approval of [PR #30](https://github.com/Dewflash/chatxpt/pull/30) |
+| R4-P01 acceptance | `role-4/feasibility-review` / [PR #30](https://github.com/Dewflash/chatxpt/pull/30) | Role 2 accepted the plan with no scope revision, Role 1 approved the handoff, R4-001 moved to `DONE`, and R4-002 moved to `READY`. | GitHub review records; documentation `git diff --check`; full repository check before final push | Coordination and documentation evidence only; no Role 4 UI source implementation | Merge PR #30, branch from current `main`, then begin R4-P02 |
 
 ## Codex instruction
 
