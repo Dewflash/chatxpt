@@ -109,10 +109,10 @@ Role 3 is complete when:
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D3-08 | Validation order and hard-reject versus warning rules | Open | — |
-| D3-09 | Candidate repair versus replacement policy | Open | — |
-| D3-10 | Difficulty, duration, clarity, diversity, and repetition thresholds | Open | — |
-| D3-11 | Fallback taxonomy, selection, seeding, and history sensitivity | Open | — |
+| D3-08 | Validation order and hard-reject versus warning rules | Accepted | Validate safety, streamer/accessibility boundaries, evidence and feasibility, confidence/duration/clarity, diversity/repetition, then lifecycle timing. Safety, boundary, unsupported/unknown evidence, low confidence, bad duration/clarity, duplication, repetition, and timing conflicts hard-reject; only acceptable-but-low preferred quality warns. |
+| D3-09 | Candidate repair versus replacement policy | Accepted | Do not semantically repair candidate objectives. Every rejection is non-repairable and is replaced by a separately validated deterministic fallback; never weaken a rule or silently rewrite unsafe output. |
+| D3-10 | Difficulty, duration, clarity, diversity, and repetition thresholds | Accepted | Require confidence at least 0.5, overall duration 15-180 seconds with easy 15-90, medium 30-150, and hard 45-180 second bands, at most 36 meaningful instruction words, pairwise token similarity below 0.55, and the accepted five-cycle/30-minute repetition window. Preserve canonical easy/medium/hard values and schema bounds; warn between 0.5 and the preferred 0.65 confidence. |
+| D3-11 | Fallback taxonomy, selection, seeding, and history sensitivity | Accepted | Use a curated game-neutral library spanning low-risk strategy, commentary, teaching, reflection, and focus patterns. Order it by stable hash of Role 1-supplied session/cycle seed, validate against the same profile/evidence/history rules, use no ambient randomness, and return typed exhaustion instead of relaxing safety or repetition. |
 
 ### R3-P05 — Deterministic validation pipeline
 

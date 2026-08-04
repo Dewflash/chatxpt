@@ -6,7 +6,7 @@ Update only this role's statuses and evidence. Raise shared-contract or UI needs
 
 Execute these outcomes through `docs/build-plans/ROLE-3-BUILD-PLAN.md`; its decision gates belong to L0pch unless explicitly marked joint or escalated.
 
-**Next pass:** coordinate timer [#36](https://github.com/Dewflash/chatxpt/issues/36), intervention composition [#37](https://github.com/Dewflash/chatxpt/issues/37), and emergency state [#38](https://github.com/Dewflash/chatxpt/issues/38) with Role 1; then wire the verified Role 3 policies and finish R3-P02 cooldown/expiry coverage against the accepted contracts.
+**Next pass:** coordinate timer [#36](https://github.com/Dewflash/chatxpt/issues/36), intervention composition [#37](https://github.com/Dewflash/chatxpt/issues/37), and emergency state [#38](https://github.com/Dewflash/chatxpt/issues/38) with Role 1; ask Role 1 to compose `DefaultCandidateAssembler` after intervention and before `system.intelligence-ready`, then finish cooldown/expiry coverage against the accepted contracts.
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
@@ -15,7 +15,7 @@ Execute these outcomes through `docs/build-plans/ROLE-3-BUILD-PLAN.md`; its deci
 | R3-003 | P0 | IN PROGRESS | Implement intervention, timing, repetition, cooldown, and streamer-boundary rules. | Role 2 snapshot contract exists; Role 1 composition/state decisions tracked in [#37](https://github.com/Dewflash/chatxpt/issues/37) and [#38](https://github.com/Dewflash/chatxpt/issues/38) | Pure policy tests cover quiet, busy, unsafe, repetitive, uncertain, stale, and unknown-heavy moments without UI assumptions; orchestrator wiring remains blocked on the recorded context seam. |
 | R3-004 | P0 | READY | Define provider/AI quality criteria with Role 2. | Accepted D-014 | Joint comparison covers quest quality, game fit, structured output, latency, cost, reliability, and fallback. |
 | R3-005 | P0 | BLOCKED | Define quest-domain AI objectives, generation instructions, and validation use. | Joint recommendation and candidate contract | Exactly three candidates are feasible, distinct, concise, game-neutral, and explainably accepted/rejected. |
-| R3-006 | P0 | READY | Build deterministic safety/feasibility validation and fallback quest library. | Quest schema | Unsafe, impossible, duplicated, badly timed, and restricted quests are rejected; fallback uses same schema. |
+| R3-006 | P0 | DONE | Build deterministic safety/feasibility validation and fallback quest library. | Quest schema | `validation.test.ts` covers unsafe, restricted, accessibility-conflicting, unsupported/unknown-dependent, low-confidence, badly timed, duplicated, recently repeated, zero/one/two usable, deterministic replay, and fallback-exhaustion cases; fallbacks use the canonical candidate schema. |
 | R3-007 | P0 | BLOCKED | Implement progress, result, scoring, and non-monetary reward rules. | Shared quest/participation contracts | Automatic/manual progress and all terminal outcomes tested. |
 | R3-008 | P1 | READY | Produce engine evaluation and failure evidence. | Ongoing | Tests and examples cover provider unavailable, reconnect, cancellations, and varied game genres. |
 

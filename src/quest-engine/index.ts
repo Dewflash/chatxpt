@@ -20,6 +20,24 @@ export type {
   RepetitionDecision,
 } from "./intervention";
 export {
+  DefaultCandidateAssembler,
+  DefaultCandidateValidator,
+  DIVERSITY_SIMILARITY_THRESHOLD,
+  MAXIMUM_INSTRUCTION_WORDS,
+  MAXIMUM_SIGNAL_AGE_MILLISECONDS,
+  MINIMUM_CANDIDATE_CONFIDENCE,
+  PREFERRED_MAXIMUM_DURATION_SECONDS,
+} from "./validation";
+export type {
+  CandidateAssemblyAudit,
+  CandidateAssemblyInput,
+  CandidateAssemblyResult,
+  CandidateValidationCode,
+  CandidateValidationContext,
+  CandidateValidationIssue,
+  CandidateValidationResult,
+} from "./validation";
+export {
   commandEnvelopeSchema,
   questCycleStateSchema,
   questEngineEventDraftSchema,
