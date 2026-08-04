@@ -8,7 +8,7 @@
 
 **Plan reviewed:** docs/build-plans/ROLE-4-BUILD-PLAN.md and docs/build-plans/ROLE-4-5-DELIVERY-MATRIX.md against current main at 61d3e4e
 
-**Review status:** Submitted in [issue #15, comment 5164904061](https://github.com/Dewflash/chatxpt/issues/15#issuecomment-5164904061). Role 2 must record an acceptance or one revision before Role 4 starts source implementation.
+**Review status:** Accepted. The review was submitted in [issue #15, comment 5164904061](https://github.com/Dewflash/chatxpt/issues/15#issuecomment-5164904061); Role 1 acknowledged the handoff; and Role 1 plus Role 2's plan owner approved [PR #30](https://github.com/Dewflash/chatxpt/pull/30) on 4 August 2026 with no scope revision.
 
 ## Owner decisions
 
@@ -82,7 +82,7 @@ No phase, priority, ownership, or scope change is requested. Role 2 should expli
 
 ## Implementation baseline after acceptance
 
-Role 4 begins R4-P02 only after Role 2 records the outcome and Role 1 is notified. Work remains inside src/streamer and src/design-system. Role 4 will not add routes, auth, Supabase calls, Twitch/OBS adapters, AI logic, quest mechanics, lifecycle timers, shared dependencies, or shared test configuration.
+The acceptance gate is satisfied. Role 4 begins R4-P02 on a fresh branch after PR #30 merges. Work remains inside src/streamer and src/design-system. Role 4 will not add routes, auth, Supabase calls, Twitch/OBS adapters, AI logic, quest mechanics, lifecycle timers, shared dependencies, or shared test configuration.
 
 ## Evidence
 
@@ -90,4 +90,4 @@ Role 4 begins R4-P02 only after Role 2 records the outcome and Role 1 is notifie
 - Ran clean/in-sync Git checks, git diff --check, and full npm run check: lint, TypeScript, boundary validation (55 files/137 imports), 11 test files/73 tests, and production build.
 - Evidence is source/document inspection plus fixture/memory verification. Role 4 rendering, Twitch surfaces, live Twitch/OBS, Supabase multi-client, and live AI are not verified.
 
-No Role 4 UI source implementation has started. R4-001 remains in progress until Role 2 accepts or revises the review and Role 1 is notified.
+No Role 4 UI source implementation has started in this pass. R4-001 is complete and R4-002 is ready after PR #30 merges.

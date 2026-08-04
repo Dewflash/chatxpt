@@ -11,11 +11,11 @@ This is the Role 4-owned working record. Codex updates it after the owner answer
 | Field | Current value |
 | --- | --- |
 | Plan | `docs/build-plans/ROLE-4-BUILD-PLAN.md` plus the shared delivery matrix |
-| Current phase | R4-P01 feasibility review |
-| Current TODO | R4-001 (`IN PROGRESS`) |
-| Source editing allowed now | No; finish and accept the feasibility review first |
-| Persistent handoff | [GitHub issue #15](https://github.com/Dewflash/chatxpt/issues/15) |
-| Next implementation branch | Codex selects `role-4/<short-phase-outcome>` after the review is accepted |
+| Current phase | R4-P02 shared visual-system foundation |
+| Current TODO | R4-002 (`READY`) |
+| Source editing allowed now | Yes, on a fresh branch after [PR #30](https://github.com/Dewflash/chatxpt/pull/30) merges; remain inside `src/design-system` and the accepted Role 4 boundary |
+| Persistent handoff | [GitHub issue #15](https://github.com/Dewflash/chatxpt/issues/15) and [PR #30](https://github.com/Dewflash/chatxpt/pull/30) |
+| Next implementation branch | `role-4/design-system-foundation` |
 
 ## Owner decision record
 
@@ -34,7 +34,8 @@ Codex appends one row per completed pass.
 
 | Pass | Branch / PR | Outcome | Evidence actually run | Real / memory / fixture boundary | Remaining blocker / next pass |
 | --- | --- | --- | --- | --- | --- |
-| R4-P01 feasibility submission | `role-4/feasibility-review` / [issue #15 comment](https://github.com/Dewflash/chatxpt/issues/15#issuecomment-5164904061) | Owner decisions settled and consolidated technical review submitted; no UI source implementation started. | `git diff --check`; full `npm run check` | Source/document inspection plus fixture/memory verification only | Role 2 records accept/revise response and Role 1 is notified |
+| R4-P01 feasibility submission | `role-4/feasibility-review` / [issue #15 comment](https://github.com/Dewflash/chatxpt/issues/15#issuecomment-5164904061) | Owner decisions settled and consolidated technical review submitted; no UI source implementation started. | `git diff --check`; full `npm run check` | Source/document inspection plus fixture/memory verification only | Cleared on 2026-08-04 by Role 1 acknowledgement and Role 1/Role 2 approval of [PR #30](https://github.com/Dewflash/chatxpt/pull/30) |
+| R4-P01 acceptance | `role-4/feasibility-review` / [PR #30](https://github.com/Dewflash/chatxpt/pull/30) | Role 2 accepted the plan with no scope revision, Role 1 approved the handoff, R4-001 moved to `DONE`, and R4-002 moved to `READY`. | GitHub review records; documentation `git diff --check`; full repository check before final push | Coordination and documentation evidence only; no Role 4 UI source implementation | Merge PR #30, branch from current `main`, then begin R4-P02 |
 
 ## Codex instruction
 
