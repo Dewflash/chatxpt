@@ -29,7 +29,10 @@ const profile = streamerProfileSchema.parse({
   accessibilityNeeds: [],
 });
 
-function intelligence(signals: IntelligenceSnapshot["gameplay"]["signals"] = []): IntelligenceSnapshot {
+function intelligence(
+  signals: IntelligenceSnapshot["gameplay"]["signals"] = [],
+  audienceSignals: IntelligenceSnapshot["audience"]["signals"] = [],
+): IntelligenceSnapshot {
   const envelope = {
     ...role3FixtureIdleState.envelope,
     messageId: "role-3-validation-intelligence",
@@ -48,8 +51,8 @@ function intelligence(signals: IntelligenceSnapshot["gameplay"]["signals"] = [])
     },
     audience: {
       envelope: { ...envelope, messageId: "role-3-validation-audience" },
-      sampleSize: 0,
-      signals: [],
+      sampleSize: audienceSignals.length,
+      signals: audienceSignals,
     },
   });
 }
@@ -165,6 +168,40 @@ describe("DefaultCandidateValidator", () => {
       },
     );
     expect(withEvidence.accepted).toBe(true);
+  });
+
+  it("accepts a fresh known audience signal as candidate citation evidence", () => {
+    const audienceSignal = {
+      signalId: "known-audience-hype",
+      kind: "audience-hype",
+      observation: {
+        status: "known" as const,
+        value: 0.8,
+        provenance: {
+          source: "test-fixture" as const,
+          method: "role-3-validation-fixture",
+          confidence: 0.9,
+          observedAt: ROLE_3_FIXTURE_TIME,
+          receivedAt: ROLE_3_FIXTURE_TIME,
+          evidenceClass: "fixture" as const,
+        },
+      },
+    };
+    const candidate = changedCandidate(role3FixtureCandidateBatch.candidates[1], {
+      candidateId: "audience-backed-candidate",
+      sourceSignalIds: [audienceSignal.signalId],
+      rationale: "Fresh audience energy supports a commentary challenge.",
+    });
+    const result = new DefaultCandidateValidator().validate(candidate, {
+      intelligence: intelligence([], [audienceSignal]),
+      profile,
+      currentState: role3FixtureIdleState,
+      recentQuests: [],
+      acceptedCandidates: [],
+      now: ROLE_3_FIXTURE_TIME,
+    });
+
+    expect(result.accepted).toBe(true);
   });
 
   it("rejects low confidence, bad duration/difficulty fit, duplicates, and lifecycle conflicts", () => {

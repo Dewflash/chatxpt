@@ -164,6 +164,14 @@ export class DefaultInterventionPolicy {
     ) {
       return reject("invalid-context");
     }
+    if (
+      state.data.envelope.sessionId !== intelligence.data.envelope.sessionId ||
+      state.data.envelope.questCycleId !== intelligence.data.envelope.questCycleId ||
+      state.data.envelope.revision !== intelligence.data.envelope.revision ||
+      state.data.envelope.evidenceClass !== intelligence.data.envelope.evidenceClass
+    ) {
+      return reject("invalid-context");
+    }
     if (state.data.status !== "idle") return reject("cycle-unavailable");
     if (input.emergencyPaused) return reject("emergency-paused");
 

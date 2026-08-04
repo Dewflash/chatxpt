@@ -1,6 +1,9 @@
 /** Role 3 public boundary for pure quest decisions and canonical lifecycle state. */
-export { createDefaultQuestEngine, DefaultQuestEngine } from "./engine";
-export type { QuestTieBreaker, QuestTieBreakInput } from "./engine";
+export {
+  createDefaultQuestEngine,
+  DEFAULT_VOTING_MILLISECONDS,
+  DefaultQuestEngine,
+} from "./engine";
 export {
   checkRecentQuestRepetition,
   decideActiveQuestInterruption,
@@ -23,6 +26,7 @@ export {
   DefaultCandidateAssembler,
   DefaultCandidateValidator,
   DIVERSITY_SIMILARITY_THRESHOLD,
+  MAXIMUM_AUDIENCE_SIGNAL_AGE_MILLISECONDS,
   MAXIMUM_INSTRUCTION_WORDS,
   MAXIMUM_SIGNAL_AGE_MILLISECONDS,
   MINIMUM_CANDIDATE_CONFIDENCE,

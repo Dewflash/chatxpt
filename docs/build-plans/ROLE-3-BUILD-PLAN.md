@@ -165,10 +165,10 @@ Role 3 is complete when:
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D3-12 | Voting duration, minimum participation, and vote-change policy | Open | — |
-| D3-13 | Tie-breaking and zero-vote behaviour | Open | — |
-| D3-14 | Streamer veto window and winning-option replacement/cancellation | Open | — |
-| D3-15 | Activation behaviour when gameplay changes during voting | Open | — |
+| D3-12 | Voting duration, minimum participation, and vote-change policy | Accepted | Use a 30-second authoritative voting window and require at least one accepted vote. The first accepted vote per viewer is final for the MVP; vote changes are disabled because the canonical state has no per-viewer replacement ledger. Role 1 owns identity, acceptance, storage and deduplication. |
+| D3-13 | Tie-breaking and zero-vote behaviour | Accepted | Resolve the highest authoritative tally. Break a top-count tie deterministically from session ID, cycle ID and the sorted tied candidate IDs. Zero accepted votes produces a typed no-activation result rather than selecting a default winner. |
+| D3-14 | Streamer veto window and winning-option replacement/cancellation | Accepted | The streamer may cancel throughout the 30-second voting window. Once the authoritative close command arrives, the winning candidate cannot be substituted; an invalid or cancelled winner produces no activation. Automatic close-to-activation remains disabled until the shared close-vote contract and integration evidence pass. |
+| D3-15 | Activation behaviour when gameplay changes during voting | Accepted | Minor gameplay changes do not interrupt voting. Safety risk, quest impossibility, session end, or emergency pause cancels the vote and prevents activation; Role 3 revalidates the winner at authoritative close. |
 
 ### R3-P08 — Vote resolution rules
 

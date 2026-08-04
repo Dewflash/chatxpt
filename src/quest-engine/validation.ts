@@ -18,6 +18,7 @@ export const MINIMUM_CANDIDATE_CONFIDENCE = 0.5;
 export const PREFERRED_MAXIMUM_DURATION_SECONDS = 180;
 export const MAXIMUM_INSTRUCTION_WORDS = 36;
 export const MAXIMUM_SIGNAL_AGE_MILLISECONDS = 15_000;
+export const MAXIMUM_AUDIENCE_SIGNAL_AGE_MILLISECONDS = 30_000;
 export const DIVERSITY_SIMILARITY_THRESHOLD = 0.55;
 
 export type CandidateValidationCode =
@@ -285,6 +286,30 @@ function knownSignalIdsByKind(
   return result;
 }
 
+function freshKnownEvidenceIds(
+  intelligence: IntelligenceSnapshot,
+  now: number,
+): ReadonlySet<string> {
+  const result = new Set<string>();
+  for (const [signals, maximumAge] of [
+    [intelligence.gameplay.signals, MAXIMUM_SIGNAL_AGE_MILLISECONDS],
+    [intelligence.audience.signals, MAXIMUM_AUDIENCE_SIGNAL_AGE_MILLISECONDS],
+  ] as const) {
+    for (const signal of signals) {
+      if (signal.observation.status !== "known") continue;
+      const age = now - signal.observation.provenance.observedAt;
+      if (
+        age >= 0 &&
+        age <= maximumAge &&
+        signal.observation.provenance.confidence >= MINIMUM_CANDIDATE_CONFIDENCE
+      ) {
+        result.add(signal.signalId);
+      }
+    }
+  }
+  return result;
+}
+
 export class DefaultCandidateValidator {
   validate(candidateInput: unknown, context: CandidateValidationContext): CandidateValidationResult {
     const parsed = questCandidateSchema.safeParse(candidateInput);
@@ -313,15 +338,19 @@ export class DefaultCandidateValidator {
       issues.push(issue("accessibility-conflict", "reject", "Candidate conflicts with a saved accessibility need.", [matchedAccessibilityNeed]));
     }
 
-    const knownSignals = knownSignalIdsByKind(context.intelligence, context.now);
-    const allKnownIds = new Set([...knownSignals.values()].flat());
-    const unsupportedIds = candidate.sourceSignalIds.filter((signalId) => !allKnownIds.has(signalId));
+    const knownGameplaySignals = knownSignalIdsByKind(context.intelligence, context.now);
+    const knownEvidenceIds = freshKnownEvidenceIds(context.intelligence, context.now);
+    const unsupportedIds = candidate.sourceSignalIds.filter(
+      (signalId) => !knownEvidenceIds.has(signalId),
+    );
     if (unsupportedIds.length > 0) {
       issues.push(issue("unsupported-evidence", "reject", "Candidate cites stale, unknown, low-confidence, or unsupported evidence.", unsupportedIds));
     }
     for (const dependency of factDependencies) {
       if (!dependency.pattern.test(text)) continue;
-      const supportingIds = dependency.kinds.flatMap((kind) => [...(knownSignals.get(kind) ?? [])]);
+      const supportingIds = dependency.kinds.flatMap((kind) => [
+        ...(knownGameplaySignals.get(kind) ?? []),
+      ]);
       if (!supportingIds.some((signalId) => candidate.sourceSignalIds.includes(signalId))) {
         issues.push(issue("unknown-dependent", "reject", "Candidate depends on a gameplay fact without matching known evidence.", dependency.kinds));
       }

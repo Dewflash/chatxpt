@@ -124,6 +124,24 @@ function policyInput(snapshot: IntelligenceSnapshot) {
   } as const;
 }
 
+function restampIntelligence(
+  snapshot: IntelligenceSnapshot,
+  patch: Partial<IntelligenceSnapshot["envelope"]>,
+): IntelligenceSnapshot {
+  return intelligenceSnapshotSchema.parse({
+    ...snapshot,
+    envelope: { ...snapshot.envelope, ...patch },
+    gameplay: {
+      ...snapshot.gameplay,
+      envelope: { ...snapshot.gameplay.envelope, ...patch },
+    },
+    audience: {
+      ...snapshot.audience,
+      envelope: { ...snapshot.audience.envelope, ...patch },
+    },
+  });
+}
+
 describe("DefaultInterventionPolicy", () => {
   it("proposes during a fresh, confident, quiet opportunity", () => {
     const snapshot = intelligence(
@@ -195,6 +213,26 @@ describe("DefaultInterventionPolicy", () => {
       emergencyPaused: true,
     });
     expect(result).toMatchObject({ shouldPropose: false, reasons: ["emergency-paused"] });
+  });
+
+  it.each([
+    { name: "another session", patch: { sessionId: "other-session" } },
+    { name: "a stale revision", patch: { revision: 1 } },
+  ])("rejects intelligence from $name", ({ patch }) => {
+    const snapshot = intelligence(
+      [knownSignal("activity", "activity-intensity", 0.1)],
+      [knownSignal("boredom", "audience-boredom", 0.7)],
+    );
+    const result = new DefaultInterventionPolicy().decide(
+      policyInput(restampIntelligence(snapshot, patch)),
+    );
+
+    expect(result).toEqual({
+      shouldPropose: false,
+      score: 0,
+      reasons: ["invalid-context"],
+      evidenceSignalIds: [],
+    });
   });
 
   it("uses a deterministic threshold when the moment is safe but unsuitable", () => {

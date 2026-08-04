@@ -6,7 +6,7 @@ Update only this role's statuses and evidence. Raise shared-contract or UI needs
 
 Execute these outcomes through `docs/build-plans/ROLE-3-BUILD-PLAN.md`; its decision gates belong to L0pch unless explicitly marked joint or escalated.
 
-**Next pass:** coordinate timer [#36](https://github.com/Dewflash/chatxpt/issues/36), intervention composition [#37](https://github.com/Dewflash/chatxpt/issues/37), and emergency state [#38](https://github.com/Dewflash/chatxpt/issues/38) with Role 1; ask Role 1 to compose `DefaultCandidateAssembler` after intervention and before `system.intelligence-ready`, then finish cooldown/expiry coverage against the accepted contracts.
+**Next pass:** consume Role 1's accepted timer [#36](https://github.com/Dewflash/chatxpt/issues/36), intervention composition [#37](https://github.com/Dewflash/chatxpt/issues/37), and emergency state [#38](https://github.com/Dewflash/chatxpt/issues/38) contracts when they land on `main`; coordinate the authoritative vote-close/accepted-tally seam in [#42](https://github.com/Dewflash/chatxpt/issues/42), then implement deterministic vote resolution and activation without winner override.
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |

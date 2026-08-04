@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { candidateBatchSchema, questCycleStateSchema, type QuestEngineResult } from "../core";
-import { DefaultQuestEngine, createDefaultQuestEngine, type QuestTieBreaker } from ".";
+import { DEFAULT_VOTING_MILLISECONDS, DefaultQuestEngine, createDefaultQuestEngine } from ".";
 import {
   ROLE_3_FIXTURE_TIME,
   role3CandidateCases,
@@ -82,7 +82,7 @@ describe("DefaultQuestEngine", () => {
     }
   });
 
-  it("drives the manual proposal, voting, active, and succeeded skeleton", () => {
+  it("drives proposal and voting without exposing unresolved activation authority", () => {
     const engine = new DefaultQuestEngine();
     const proposed = decision(
       engine.decide({
@@ -108,27 +108,71 @@ describe("DefaultQuestEngine", () => {
         now: ROLE_3_FIXTURE_TIME + 2_000,
       }),
     ).nextState;
-    const active = decision(
+    expect(voting.status).toBe("voting");
+    expect(voting.endsAt).toBe(ROLE_3_FIXTURE_TIME + 1_000 + DEFAULT_VOTING_MILLISECONDS);
+    expect(voting.availableStreamerActions).toEqual(["cancel", "skip", "emergency-pause"]);
+    expect(voted.voteTallies[0]).toMatchObject({ candidateId: "role-3-candidate-1", votes: 1 });
+    expect(
       engine.decide({
         currentState: role3StampFixtureState(voted, 3),
         command: role3StreamerCommand("start", { expectedRevision: 3 }),
         candidateBatch: null,
         now: ROLE_3_FIXTURE_TIME + 3_000,
       }),
-    ).nextState;
+    ).toMatchObject({
+      ok: false,
+      error: { code: "forbidden", details: { status: "voting" } },
+    });
+  });
+
+  it("rejects votes at or after the authoritative voting deadline", () => {
+    const voting = questCycleStateSchema.parse({
+      ...role3FixtureIdleState,
+      status: "voting",
+      options: role3FixtureCandidateBatch.candidates,
+      availableStreamerActions: ["cancel", "skip", "emergency-pause"],
+      voteTallies: role3FixtureCandidateBatch.candidates.map(({ candidateId }) => ({
+        candidateId,
+        votes: 0,
+      })),
+      startsAt: ROLE_3_FIXTURE_TIME,
+      endsAt: ROLE_3_FIXTURE_TIME + DEFAULT_VOTING_MILLISECONDS,
+    });
+    const result = new DefaultQuestEngine().decide({
+      currentState: voting,
+      command: role3VoteCommand(),
+      candidateBatch: null,
+      now: voting.endsAt ?? ROLE_3_FIXTURE_TIME,
+    });
+
+    expect(result).toMatchObject({ ok: false, error: { code: "expired" } });
+  });
+
+  it("applies terminal outcomes to an authoritative active-state fixture", () => {
+    const active = questCycleStateSchema.parse({
+      ...role3FixtureIdleState,
+      status: "active",
+      options: role3FixtureCandidateBatch.candidates,
+      activeCandidateId: role3FixtureCandidateBatch.candidates[0].candidateId,
+      availableStreamerActions: ["cancel", "skip", "succeed", "fail", "emergency-pause"],
+      startsAt: ROLE_3_FIXTURE_TIME,
+      endsAt: ROLE_3_FIXTURE_TIME + 30_000,
+      progress: {
+        value: 0,
+        updatedAt: ROLE_3_FIXTURE_TIME,
+        method: "unknown",
+        evidenceSignalIds: [],
+      },
+    });
     const succeeded = decision(
-      engine.decide({
-        currentState: role3StampFixtureState(active, 4),
-        command: role3StreamerCommand("succeed", { expectedRevision: 4 }),
+      new DefaultQuestEngine().decide({
+        currentState: role3StampFixtureState(active, 1),
+        command: role3StreamerCommand("succeed", { expectedRevision: 1 }),
         candidateBatch: null,
         now: ROLE_3_FIXTURE_TIME + 4_000,
       }),
     ).nextState;
 
-    expect(voting.status).toBe("voting");
-    expect(voted.voteTallies[0]).toMatchObject({ candidateId: "role-3-candidate-1", votes: 1 });
-    expect(active).toMatchObject({ status: "active", activeCandidateId: "role-3-candidate-1" });
-    expect(active.endsAt).toBe(ROLE_3_FIXTURE_TIME + 33_000);
     expect(succeeded).toMatchObject({
       status: "succeeded",
       progress: { value: 1, method: "manual" },
@@ -136,38 +180,23 @@ describe("DefaultQuestEngine", () => {
     });
   });
 
-  it("uses an injected deterministic selector when voting is tied", () => {
-    const selectSecond: QuestTieBreaker = {
-      select: ({ candidateIds }) => candidateIds[1],
-    };
-    const engine = new DefaultQuestEngine(selectSecond);
-    const proposed = decision(
-      engine.decide({
-        currentState: role3FixtureIdleState,
-        command: role3IntelligenceCommand(),
-        candidateBatch: role3FixtureCandidateBatch,
-        now: ROLE_3_FIXTURE_TIME,
-      }),
-    ).nextState;
-    const voting = decision(
-      engine.decide({
-        currentState: role3StampFixtureState(proposed, 1),
-        command: role3StreamerCommand("approve", { expectedRevision: 1 }),
-        candidateBatch: null,
-        now: ROLE_3_FIXTURE_TIME,
-      }),
-    ).nextState;
-    const input = {
-      currentState: role3StampFixtureState(voting, 2),
-      command: role3StreamerCommand("start", { expectedRevision: 2 }),
-      candidateBatch: null,
-      now: ROLE_3_FIXTURE_TIME + 5_000,
-    } as const;
+  it("does not bypass cooldown with an intelligence-ready command", () => {
+    const cooldown = questCycleStateSchema.parse({
+      ...role3FixtureIdleState,
+      status: "cooldown",
+      endsAt: ROLE_3_FIXTURE_TIME + 120_000,
+    });
+    const result = new DefaultQuestEngine().decide({
+      currentState: cooldown,
+      command: role3IntelligenceCommand(),
+      candidateBatch: role3FixtureCandidateBatch,
+      now: ROLE_3_FIXTURE_TIME,
+    });
 
-    const first = decision(engine.decide(input));
-    const replay = decision(engine.decide(input));
-    expect(first).toEqual(replay);
-    expect(first.nextState.activeCandidateId).toBe("role-3-candidate-2");
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "forbidden", details: { status: "cooldown" } },
+    });
   });
 
   it("returns typed forbidden results for unavailable lifecycle actions", () => {

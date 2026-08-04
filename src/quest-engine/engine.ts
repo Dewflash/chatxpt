@@ -5,7 +5,6 @@ import {
   questCycleStateSchema,
   type CommandEnvelope,
   type DomainError,
-  type QuestCandidate,
   type QuestCycleState,
   type QuestEngine,
   type QuestEngineDecision,
@@ -15,20 +14,13 @@ import {
   type StreamerQuestAction,
 } from "../core";
 
-export interface QuestTieBreakInput {
-  readonly candidateIds: readonly string[];
-  readonly seed: string;
-}
-
-export interface QuestTieBreaker {
-  select(input: QuestTieBreakInput): string;
-}
+export const DEFAULT_VOTING_MILLISECONDS = 30_000;
 
 const actionsByStatus = {
   idle: [],
   evaluating: [],
   proposed: ["approve", "reject", "skip", "emergency-pause"],
-  voting: ["start", "cancel", "skip", "emergency-pause"],
+  voting: ["cancel", "skip", "emergency-pause"],
   active: ["cancel", "skip", "succeed", "fail", "emergency-pause"],
   succeeded: [],
   failed: [],
@@ -47,27 +39,6 @@ function error(
     ok: false,
     error: domainErrorSchema.parse({ code, message, retryable: false, details }),
   };
-}
-
-function stableHash(value: string): number {
-  let hash = 2_166_136_261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16_777_619);
-  }
-  return hash >>> 0;
-}
-
-class StableQuestTieBreaker implements QuestTieBreaker {
-  select({ candidateIds, seed }: QuestTieBreakInput): string {
-    const candidates = [...candidateIds].sort();
-    if (candidates.length === 0) {
-      throw new Error("Cannot select from an empty candidate set");
-    }
-    return candidates.reduce((selected, candidate) =>
-      stableHash(`${seed}:${candidate}`) < stableHash(`${seed}:${selected}`) ? candidate : selected,
-    );
-  }
 }
 
 function event(eventType: string, attributes: QuestEngineEventDraft["attributes"] = {}) {
@@ -156,7 +127,7 @@ function transitionIntelligenceReady(input: QuestEngineInput): QuestEngineResult
   if (input.command.type !== "system.intelligence-ready" || input.candidateBatch === null) {
     return error("internal", "Intelligence transition received inconsistent input");
   }
-  if (!["idle", "evaluating", "cooldown"].includes(input.currentState.status)) {
+  if (!["idle", "evaluating"].includes(input.currentState.status)) {
     return illegalCommand(input.currentState, input.command);
   }
 
@@ -225,27 +196,7 @@ function terminalTransition(
   );
 }
 
-function tiedWinner(state: QuestCycleState, tieBreaker: QuestTieBreaker): string {
-  const votes = new Map(state.voteTallies.map((tally) => [tally.candidateId, tally.votes]));
-  const highestVote = Math.max(0, ...state.options.map((candidate) => votes.get(candidate.candidateId) ?? 0));
-  const tiedIds = state.options
-    .filter((candidate) => (votes.get(candidate.candidateId) ?? 0) === highestVote)
-    .map((candidate) => candidate.candidateId);
-  return tieBreaker.select({
-    candidateIds: tiedIds,
-    seed: `${state.envelope.sessionId}:${state.envelope.questCycleId ?? "none"}:${state.envelope.revision}`,
-  });
-}
-
-function activeEndTime(now: number, candidate: QuestCandidate): number | null {
-  const endsAt = now + candidate.durationSeconds * 1_000;
-  return Number.isSafeInteger(endsAt) ? endsAt : null;
-}
-
-function transitionStreamerCommand(
-  input: QuestEngineInput,
-  tieBreaker: QuestTieBreaker,
-): QuestEngineResult {
+function transitionStreamerCommand(input: QuestEngineInput): QuestEngineResult {
   if (input.command.type !== "streamer.quest") {
     return error("internal", "Streamer transition received another command type");
   }
@@ -256,6 +207,10 @@ function transitionStreamerCommand(
   }
 
   if (action === "approve" && input.currentState.status === "proposed") {
+    const votingEndsAt = input.now + DEFAULT_VOTING_MILLISECONDS;
+    if (!Number.isSafeInteger(votingEndsAt)) {
+      return error("validation", "Voting end time exceeds supported range");
+    }
     return accept(
       input.currentState,
       {
@@ -266,6 +221,7 @@ function transitionStreamerCommand(
           votes: 0,
         })),
         startsAt: input.now,
+        endsAt: votingEndsAt,
       },
       [event("quest-cycle.voting-started")],
     );
@@ -291,34 +247,6 @@ function transitionStreamerCommand(
     return terminalTransition(input, "failed");
   }
 
-  if (action === "start" && input.currentState.status === "voting") {
-    const candidateId = input.command.candidateId ?? tiedWinner(input.currentState, tieBreaker);
-    const candidate = input.currentState.options.find((option) => option.candidateId === candidateId);
-    if (candidate === undefined) {
-      return error("validation", "Start command selected a candidate outside this cycle");
-    }
-    const endsAt = activeEndTime(input.now, candidate);
-    if (endsAt === null) return error("validation", "Active quest end time exceeds supported range");
-
-    return accept(
-      input.currentState,
-      {
-        status: "active",
-        activeCandidateId: candidate.candidateId,
-        availableStreamerActions: [...actionsByStatus.active],
-        startsAt: input.now,
-        endsAt,
-        progress: {
-          value: 0,
-          updatedAt: input.now,
-          method: "unknown",
-          evidenceSignalIds: [],
-        },
-      },
-      [event("quest-cycle.activated", { candidateId: candidate.candidateId, endsAt })],
-    );
-  }
-
   return illegalCommand(input.currentState, input.command);
 }
 
@@ -327,6 +255,12 @@ function transitionVote(input: QuestEngineInput): QuestEngineResult {
     return error("internal", "Vote transition received another command type");
   }
   if (input.currentState.status !== "voting") return illegalCommand(input.currentState, input.command);
+  if (input.currentState.endsAt === null || input.now >= input.currentState.endsAt) {
+    return error("expired", "The authoritative voting window has closed", {
+      endsAt: input.currentState.endsAt,
+      now: input.now,
+    });
+  }
   const selectedCandidateId = input.command.candidateId;
   if (!input.currentState.options.some(({ candidateId }) => candidateId === selectedCandidateId)) {
     return error("validation", "Vote selected a candidate outside this cycle");
@@ -347,8 +281,6 @@ function transitionVote(input: QuestEngineInput): QuestEngineResult {
 }
 
 export class DefaultQuestEngine implements QuestEngine {
-  constructor(private readonly tieBreaker: QuestTieBreaker = new StableQuestTieBreaker()) {}
-
   decide(input: QuestEngineInput): QuestEngineResult {
     const boundaryError = validateBoundary(input);
     if (boundaryError !== null) return boundaryError;
@@ -359,7 +291,7 @@ export class DefaultQuestEngine implements QuestEngine {
       case "system.intelligence-ready":
         return transitionIntelligenceReady(input);
       case "streamer.quest":
-        return transitionStreamerCommand(input, this.tieBreaker);
+        return transitionStreamerCommand(input);
       case "viewer.vote":
         return transitionVote(input);
       case "viewer.react":
@@ -368,6 +300,6 @@ export class DefaultQuestEngine implements QuestEngine {
   }
 }
 
-export function createDefaultQuestEngine(tieBreaker?: QuestTieBreaker): QuestEngine {
-  return new DefaultQuestEngine(tieBreaker);
+export function createDefaultQuestEngine(): QuestEngine {
+  return new DefaultQuestEngine();
 }
