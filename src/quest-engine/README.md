@@ -10,7 +10,7 @@ Role 1 also owns duplicate-command detection. The engine rejects stale revisions
 
 The accepted Core direction in issue #36 adds an authoritative timer/tick command, but that contract is not yet on `main`. The engine therefore refuses to bypass cooldown through `system.intelligence-ready` and does not invent a private command to advance terminal states.
 
-This is component evidence, not a completed live quest workflow. Candidate validation now passes independently, but live composition still requires Role 1's accepted intervention, timer, emergency and vote-close seams.
+This is component evidence, not a completed live quest workflow. Candidate validation and vote-close resolution now pass independently, but live composition still requires Role 1's accepted intervention, timer, and emergency seams plus end-to-end evidence.
 
 `DefaultCandidateAssembler` is the Phase 3 pre-engine safety boundary. Role 1 should call it after `DefaultInterventionPolicy` permits a cycle and before issuing `system.intelligence-ready`. It accepts zero or more untrusted candidate values, validates them in the recorded safety-first order, replaces rejected or missing values from a seeded game-neutral fallback library, re-validates diversity and history, and returns either exactly three canonical options with an audit trail or typed fallback exhaustion. It never semantically repairs a rejected objective or weakens safety rules.
 
@@ -20,7 +20,7 @@ Fallback selection is deterministic from the caller-supplied session/cycle seed 
 
 An `emergency-pause` command cancels the current cycle and emits `quest-cycle.emergency-cancelled`. Role 1 must persist the application-wide emergency latch and refuse new proposals until it is explicitly cleared. Ordinary resumable pause remains unavailable because the canonical lifecycle has neither a paused state nor a resume action.
 
-Voting opens for 30 seconds using authoritative time and rejects late votes. Public winner selection and `start` authority are intentionally absent: D3-12 through D3-15 are recorded, but Role 3 awaits the neutral vote-close and accepted-tally seam proposed in issue #42. Role 1 owns the one-vote-per-viewer ledger; Role 3 will resolve majority, deterministic ties, zero-vote no-activation and final winner validity after authoritative close.
+Voting opens for 30 seconds using authoritative time and rejects late votes. The merged neutral `system.vote-close` seam supplies Role 1's final accepted tally and current platform-neutral context without prescribing a winner. Role 3 resolves the highest tally, breaks ties from the session ID, cycle ID, and sorted tied IDs, and returns a typed no-activation cancellation for zero votes, a non-live session, or a winner that fails current safety, streamer-boundary, accessibility, or gameplay-fact validation. A valid winner activates immediately with zeroed progress and an absolute duration deadline. Role 1 continues to own voter identity, first-vote acceptance, deduplication, storage, scheduling, revisions, persistence, and broadcast. The current close context has no emergency-latch field, so the accepted emergency command path must cancel the voting cycle before close; Role 3 does not infer an unseen latch.
 
 [`EVALUATION.md`](./EVALUATION.md) records fixture-only failure and portability evidence for provider absence/malformed output, varied game genres, reconnect-relevant state reconstruction, and cancellation semantics. It does not upgrade component tests into live or end-to-end proof.
 

@@ -7,6 +7,7 @@ import {
   streamerProfileSchema,
   type CandidateBatch,
   type ContractEnvelope,
+  type GameplaySnapshot,
   type IntelligenceSnapshot,
   type QuestCandidate,
   type QuestCycleState,
@@ -51,6 +52,12 @@ export interface CandidateValidationContext {
   readonly currentState: QuestCycleState;
   readonly recentQuests: readonly RecentQuestSummary[];
   readonly acceptedCandidates: readonly QuestCandidate[];
+  readonly now: number;
+}
+
+export interface VoteCloseCandidateValidationContext {
+  readonly gameplay: GameplaySnapshot | null;
+  readonly profile: StreamerProfile;
   readonly now: number;
 }
 
@@ -306,12 +313,12 @@ function matchesBoundary(candidateText: string, boundary: string): boolean {
 }
 
 function knownSignalIdsByKind(
-  intelligence: IntelligenceSnapshot,
+  gameplay: GameplaySnapshot,
   now: number,
 ): ReadonlyMap<string, readonly string[]> {
   const result = new Map<string, string[]>();
-  const supported = new Set(intelligence.gameplay.capabilities.supportedSignals);
-  for (const signal of intelligence.gameplay.signals) {
+  const supported = new Set(gameplay.capabilities.supportedSignals);
+  for (const signal of gameplay.signals) {
     if (signal.observation.status !== "known" || !supported.has(signal.kind)) continue;
     const age = now - signal.observation.provenance.observedAt;
     if (
@@ -324,6 +331,96 @@ function knownSignalIdsByKind(
     result.set(signal.kind, [...(result.get(signal.kind) ?? []), signal.signalId]);
   }
   return result;
+}
+
+function safetyAndBoundaryIssues(
+  candidate: QuestCandidate,
+  profile: StreamerProfile,
+): readonly CandidateValidationIssue[] {
+  const issues: CandidateValidationIssue[] = [];
+  const text = `${candidate.title} ${candidate.instruction} ${candidate.rationale}`;
+  const matchedSafetyCategories = safetyRules
+    .filter(({ patterns }) => patterns.some((pattern) => pattern.test(text)))
+    .map(({ category }) => category);
+  if (matchedSafetyCategories.length > 0) {
+    issues.push(
+      issue(
+        "unsafe",
+        "reject",
+        "Candidate violates the legal, non-harmful, non-wagering, or no-physical-dare safety boundary.",
+        matchedSafetyCategories,
+      ),
+    );
+  }
+
+  const restrictions = [...profile.restrictions, ...profile.forbiddenQuestTypes];
+  const matchedRestriction = restrictions.find((boundary) => matchesBoundary(text, boundary));
+  if (matchedRestriction !== undefined) {
+    issues.push(
+      issue(
+        "streamer-restricted",
+        "reject",
+        "Candidate conflicts with a saved streamer restriction.",
+        [matchedRestriction],
+      ),
+    );
+  }
+  const matchedAccessibilityNeed = profile.accessibilityNeeds.find((need) =>
+    matchesBoundary(text, need),
+  );
+  if (matchedAccessibilityNeed !== undefined) {
+    issues.push(
+      issue(
+        "accessibility-conflict",
+        "reject",
+        "Candidate conflicts with a saved accessibility need.",
+        [matchedAccessibilityNeed],
+      ),
+    );
+  }
+  return issues;
+}
+
+export function validateCandidateAtVoteClose(
+  candidateInput: unknown,
+  context: VoteCloseCandidateValidationContext,
+): CandidateValidationResult {
+  const candidate = questCandidateSchema.safeParse(candidateInput);
+  const profile = streamerProfileSchema.safeParse(context.profile);
+  if (!candidate.success || !profile.success || !Number.isSafeInteger(context.now) || context.now < 0) {
+    return {
+      accepted: false,
+      candidate: candidate.success ? candidate.data : null,
+      issues: [issue("malformed", "reject", "Vote-close candidate or validation context is invalid.")],
+    };
+  }
+
+  const issues = [...safetyAndBoundaryIssues(candidate.data, profile.data)];
+  const text = `${candidate.data.title} ${candidate.data.instruction} ${candidate.data.rationale}`;
+  const knownGameplaySignals =
+    context.gameplay === null
+      ? new Map<string, readonly string[]>()
+      : knownSignalIdsByKind(context.gameplay, context.now);
+  for (const dependency of factDependencies) {
+    if (!dependency.pattern.test(text)) continue;
+    const supportingIds = dependency.kinds.flatMap((kind) => [
+      ...(knownGameplaySignals.get(kind) ?? []),
+    ]);
+    if (supportingIds.length === 0) {
+      issues.push(
+        issue(
+          "unknown-dependent",
+          "reject",
+          "Winning candidate is no longer supported by current known gameplay evidence.",
+          dependency.kinds,
+        ),
+      );
+    }
+  }
+
+  return issues.some(({ severity }) => severity === "reject")
+    ? { accepted: false, candidate: candidate.data, issues }
+    : { accepted: true, candidate: candidate.data, issues };
 }
 
 function freshKnownEvidenceIds(
@@ -361,34 +458,12 @@ export class DefaultCandidateValidator {
       };
     }
     const candidate = parsed.data;
-    const issues: CandidateValidationIssue[] = [];
+    const issues: CandidateValidationIssue[] = [
+      ...safetyAndBoundaryIssues(candidate, context.profile),
+    ];
     const text = `${candidate.title} ${candidate.instruction} ${candidate.rationale}`;
 
-    const matchedSafetyCategories = safetyRules
-      .filter(({ patterns }) => patterns.some((pattern) => pattern.test(text)))
-      .map(({ category }) => category);
-    if (matchedSafetyCategories.length > 0) {
-      issues.push(
-        issue(
-          "unsafe",
-          "reject",
-          "Candidate violates the legal, non-harmful, non-wagering, or no-physical-dare safety boundary.",
-          matchedSafetyCategories,
-        ),
-      );
-    }
-
-    const restrictions = [...context.profile.restrictions, ...context.profile.forbiddenQuestTypes];
-    const matchedRestriction = restrictions.find((boundary) => matchesBoundary(text, boundary));
-    if (matchedRestriction !== undefined) {
-      issues.push(issue("streamer-restricted", "reject", "Candidate conflicts with a saved streamer restriction.", [matchedRestriction]));
-    }
-    const matchedAccessibilityNeed = context.profile.accessibilityNeeds.find((need) => matchesBoundary(text, need));
-    if (matchedAccessibilityNeed !== undefined) {
-      issues.push(issue("accessibility-conflict", "reject", "Candidate conflicts with a saved accessibility need.", [matchedAccessibilityNeed]));
-    }
-
-    const knownGameplaySignals = knownSignalIdsByKind(context.intelligence, context.now);
+    const knownGameplaySignals = knownSignalIdsByKind(context.intelligence.gameplay, context.now);
     const knownEvidenceIds = freshKnownEvidenceIds(context.intelligence, context.now);
     const unsupportedIds = candidate.sourceSignalIds.filter(
       (signalId) => !knownEvidenceIds.has(signalId),
