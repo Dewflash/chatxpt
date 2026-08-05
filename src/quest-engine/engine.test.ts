@@ -180,6 +180,40 @@ describe("DefaultQuestEngine", () => {
     });
   });
 
+  it("emits deterministic session reward, hype, history, and cooldown evidence", () => {
+    const active = questCycleStateSchema.parse({
+      ...role3FixtureIdleState,
+      status: "active",
+      options: role3FixtureCandidateBatch.candidates,
+      activeCandidateId: role3FixtureCandidateBatch.candidates[1].candidateId,
+      availableStreamerActions: ["cancel", "skip", "succeed", "fail", "emergency-pause"],
+      startsAt: ROLE_3_FIXTURE_TIME,
+      endsAt: ROLE_3_FIXTURE_TIME + 30_000,
+      progress: null,
+    });
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        currentState: active,
+        command: role3StreamerCommand("succeed"),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 1_000,
+      }),
+    );
+
+    expect(result.events).toEqual([
+      {
+        eventType: "quest-cycle.terminal",
+        attributes: {
+          outcome: "succeeded",
+          rewardPointsAwarded: 200,
+          hypeDelta: 10,
+          historyCandidateId: "role-3-candidate-2",
+          cooldownEndsAt: ROLE_3_FIXTURE_TIME + 121_000,
+        },
+      },
+    ]);
+  });
+
   it("does not bypass cooldown with an intelligence-ready command", () => {
     const cooldown = questCycleStateSchema.parse({
       ...role3FixtureIdleState,

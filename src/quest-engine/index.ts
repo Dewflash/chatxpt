@@ -23,6 +23,19 @@ export type {
   RepetitionDecision,
 } from "./intervention";
 export {
+  AUTOMATIC_PROGRESS_MINIMUM_CONFIDENCE,
+  decideAutomaticProgress,
+  decideManualProgress,
+  decideQuestOutcome,
+} from "./outcomes";
+export type {
+  AutomaticProgressInput,
+  ProgressUpdateDecision,
+  ProgressUpdateRejection,
+  QuestOutcomePolicyDecision,
+  QuestOutcomePolicyInput,
+} from "./outcomes";
+export {
   DefaultCandidateAssembler,
   DefaultCandidateValidator,
   DIVERSITY_SIMILARITY_THRESHOLD,

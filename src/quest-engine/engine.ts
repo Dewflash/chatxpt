@@ -13,6 +13,7 @@ import {
   type QuestEngineResult,
   type StreamerQuestAction,
 } from "../core";
+import { decideManualProgress, decideQuestOutcome } from "./outcomes";
 
 export const DEFAULT_VOTING_MILLISECONDS = 30_000;
 
@@ -156,8 +157,22 @@ function terminalTransition(
 ): QuestEngineResult {
   const activeCandidate = input.currentState.options.find(
     (candidate) => candidate.candidateId === input.currentState.activeCandidateId,
-  );
-  const rewardPointsAwarded = outcome === "succeeded" ? (activeCandidate?.rewardPoints ?? 0) : 0;
+  ) ?? null;
+  const outcomeDecision = decideQuestOutcome({
+    outcome,
+    activeCandidate,
+    terminalAt: input.now,
+  });
+  if (outcomeDecision === null) {
+    return error("internal", "Quest outcome policy rejected an invalid terminal transition");
+  }
+  const completedProgress =
+    outcome === "succeeded"
+      ? decideManualProgress(input.currentState.progress, 1, input.now)
+      : null;
+  if (completedProgress !== null && !completedProgress.accepted) {
+    return error("internal", "Quest completion produced invalid manual progress");
+  }
   const reasonByOutcome = {
     succeeded: "Streamer marked the active quest as succeeded.",
     failed: "Streamer marked the active quest as failed.",
@@ -172,25 +187,23 @@ function terminalTransition(
       availableStreamerActions: [...actionsByStatus[outcome]],
       endsAt: input.now,
       progress:
-        outcome === "succeeded"
-          ? {
-              value: 1,
-              updatedAt: input.now,
-              method: "manual",
-              evidenceSignalIds: [],
-            }
+        completedProgress?.accepted === true
+          ? completedProgress.progress
           : input.currentState.progress,
       result: {
         outcome,
         occurredAt: input.now,
         reason: reasonOverride ?? reasonByOutcome[outcome],
-        rewardPointsAwarded,
+        rewardPointsAwarded: outcomeDecision.rewardPointsAwarded,
       },
     },
     [
       event(eventType, {
         outcome,
-        rewardPointsAwarded,
+        rewardPointsAwarded: outcomeDecision.rewardPointsAwarded,
+        hypeDelta: outcomeDecision.hypeDelta,
+        historyCandidateId: outcomeDecision.historyCandidateId,
+        cooldownEndsAt: outcomeDecision.cooldownEndsAt,
       }),
     ],
   );
