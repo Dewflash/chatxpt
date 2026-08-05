@@ -13,6 +13,7 @@ export {
   SupabaseCandidateBatchRepository,
   SupabaseChatXptDataApi,
   SupabaseDataError,
+  SupabaseHostedSessionLookup,
   SupabaseRoleSnapshotPublisher,
   SupabaseRealtimeAccessGrantStore,
   SupabaseSessionLifecycleStore,
@@ -20,6 +21,14 @@ export {
   createSupabasePersistenceRuntime,
   createSupabaseServerClient,
 } from "./supabase";
+export {
+  HostedBoardAccessService,
+  HostedBoardGrantCodec,
+  type HostedBoardAuthenticatedIdentity,
+  type HostedBoardCredential,
+  type HostedBoardExchangeResult,
+  type HostedBoardGrantIdentity,
+} from "./hosted-board-access";
 export {
   PersistenceConfigurationError,
   createConfiguredPersistenceRuntime,

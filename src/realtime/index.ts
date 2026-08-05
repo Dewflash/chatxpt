@@ -45,6 +45,7 @@ export {
   type ChatXptPersistenceRuntime,
   type CommitSessionLifecycleInput,
   type LifecycleStoreCommitResult,
+  type HostedSessionLookup,
   type RealtimeAccessGrant,
   type RealtimeAccessGrantStore,
   type RoleSnapshotPublisher,

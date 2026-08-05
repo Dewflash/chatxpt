@@ -17,6 +17,7 @@ import {
   type BootstrapSessionInput,
   type CandidateBatchRepository,
   type CommitSessionLifecycleInput,
+  type HostedSessionLookup,
   type LifecycleStoreCommitResult,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
@@ -44,7 +45,12 @@ function active(status: AuthoritativeSessionState["session"]["status"]): boolean
 }
 
 export class MemoryChatXptPersistence
-  implements CandidateBatchRepository, RoleSnapshotPublisher, RealtimeAccessGrantStore, SessionLifecycleStore
+  implements
+    CandidateBatchRepository,
+    HostedSessionLookup,
+    RoleSnapshotPublisher,
+    RealtimeAccessGrantStore,
+    SessionLifecycleStore
 {
   private readonly states = new Map<string, AuthoritativeSessionState>();
   private readonly receipts = new Map<string, AcceptedCommandReceipt>();
@@ -93,6 +99,17 @@ export class MemoryChatXptPersistence
   async load(sessionId: string): Promise<AuthoritativeSessionState | null> {
     const state = this.states.get(sessionId);
     return state === undefined ? null : clone(state);
+  }
+
+  async findByRoomCode(roomCode: string): Promise<AuthoritativeSessionState | null> {
+    const sessionId = this.roomSessions.get(roomCode);
+    if (sessionId === undefined) return null;
+    const state = this.states.get(sessionId);
+    return state === undefined ? null : clone(state);
+  }
+
+  loadSession(sessionId: string): Promise<AuthoritativeSessionState | null> {
+    return this.load(sessionId);
   }
 
   async findOperation(operationId: string): Promise<SessionLifecycleCommitResult | null> {
@@ -338,6 +355,7 @@ export function createMemoryPersistenceRuntime() {
     mode: "memory" as const,
     sessions: backend,
     lifecycle: backend,
+    hostedSessions: backend,
     candidates: backend,
     snapshots: backend,
     accessGrants: backend,
