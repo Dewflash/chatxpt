@@ -221,8 +221,8 @@ Role 1 owns vote authentication, acceptance, storage, and deduplication. Role 3 
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D3-20 | Quest objectives/instructions Role 2's model context must optimise for | Open | — |
-| D3-21 | How provider/algorithmic source affects validation without bypassing rules | Open | — |
+| D3-20 | Quest objectives/instructions Role 2's model context must optimise for | Accepted | Request exactly three meaningfully distinct, game-neutral quests that are understandable at a glance, feasible in the current evidenced moment, measurable within the current match, and calibrated to the streamer's profile, audience state, duration, difficulty, and reward settings. Each candidate must include a concise title, one unambiguous instruction, a duration or completion condition, difficulty, session points, and a producer-only rationale grounded only in known supported signals. Never optimise spectacle over safety, consent, accessibility, teammate welfare, or streamer restrictions, and never invent unknown gameplay facts. |
+| D3-21 | How provider/algorithmic source affects validation without bypassing rules | Accepted | Treat source and provider status as provenance, never as trust or a quality waiver. Provider-generated, algorithmic, and deterministic-fallback candidates all pass the same Role 3 safety, boundary, evidence, feasibility, clarity, timing, diversity, repetition, and lifecycle validation in the same order. A provider refusal, timeout, malformed batch, missing candidate, or rejected candidate yields separately validated deterministic replacements; no source may weaken a hard rejection, bypass exactly-three assembly, or receive semantic repair. |
 
 ### R3-P12 — Quest-domain AI quality contract
 
