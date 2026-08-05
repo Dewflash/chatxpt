@@ -1,5 +1,6 @@
 export * from "./commands";
 export * from "./common";
+export * from "./fallbacks";
 export * from "./ports";
 export * from "./participation";
 export * from "./profile";

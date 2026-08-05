@@ -80,6 +80,11 @@ Credential-free local work uses the same application ports with in-memory state 
 
 All viewer clients use one private participation service. No UI owns authoritative vote, lifecycle, scoring, or reward rules.
 
+Hosted-board entry and Twitch-chat fallback delivery use the server-owned seams
+in `docs/architecture/VIEWER-FALLBACK-SEAMS.md`. Safe share URLs carry only the
+room code; a server exchange issues the short-lived HTTP-only viewer grant.
+Chat messages are reported delivered only after Twitch confirms the send.
+
 ## Gameplay capture and extraction
 
 For the MVP, the streamer configures OBS Virtual Camera to expose the raw game source to ChatXPT Studio. Role 1 owns permission, media, capture-session, and frame-delivery boundaries. Role 2 consumes ephemeral frames and uses lightweight visual algorithms, selective OCR, temporal confirmation, and optional free vision AI.

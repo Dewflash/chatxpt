@@ -107,10 +107,16 @@ export interface SessionLifecycleStore {
   due(at: number): Promise<readonly AuthoritativeSessionState[]>;
 }
 
+export interface HostedSessionLookup {
+  findByRoomCode(roomCode: string): Promise<AuthoritativeSessionState | null>;
+  loadSession(sessionId: string): Promise<AuthoritativeSessionState | null>;
+}
+
 export interface ChatXptPersistenceRuntime {
   readonly mode: "memory" | "supabase";
   readonly sessions: SessionStateRepository;
   readonly lifecycle: SessionLifecycleStore;
+  readonly hostedSessions: HostedSessionLookup;
   readonly candidates: CandidateBatchRepository;
   readonly snapshots: RoleSnapshotPublisher;
   readonly accessGrants: RealtimeAccessGrantStore;

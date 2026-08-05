@@ -48,7 +48,8 @@ function publicRootTarget(targetProjectPath, targetArea) {
   return (
     target === targetArea.root ||
     target === "src/realtime/browser" ||
-    target === "src/realtime/server"
+    target === "src/realtime/server" ||
+    target === "src/integrations/server"
   );
 }
 
@@ -184,6 +185,7 @@ function selfTest() {
     ["src/app/example.tsx", "@/realtime/browser", null],
     ["src/viewer/example.tsx", "@/realtime/browser", "viewer"],
     ["tests/integration/example.test.ts", "@/realtime/server", null],
+    ["tests/integration/example.test.ts", "@/integrations/server", null],
     ["src/viewer/example.tsx", "@/realtime/server", "viewer"],
   ];
   for (const [source, specifier, expectedFragment] of cases) {

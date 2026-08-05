@@ -9,6 +9,7 @@ import {
 } from "../../src/core/testing";
 import {
   SupabaseChatXptDataApi,
+  SupabaseHostedSessionLookup,
   SupabaseRoleSnapshotPublisher,
   SupabaseSessionStateRepository,
 } from "../../src/realtime/server";
@@ -26,6 +27,10 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
     return this.state;
   }
 
+  override async loadStateByRoomCode(): Promise<unknown | null> {
+    return this.state;
+  }
+
   override async persistRoleSnapshots(views: RoleViewModels): Promise<void> {
     this.persisted = structuredClone(views);
   }
@@ -40,6 +45,18 @@ describe("Supabase production adapters", () => {
 
     api.state = { invalid: true };
     await expect(repository.load("fixture-session")).rejects.toThrow();
+  });
+
+  it("validates hosted-board room lookups through the server adapter", async () => {
+    const api = new RecordingDataApi();
+    const lookup = new SupabaseHostedSessionLookup(api);
+
+    expect((await lookup.findByRoomCode("ABCDEFGH"))?.session.sessionId).toBe(
+      "fixture-session",
+    );
+
+    api.state = { invalid: true };
+    await expect(lookup.findByRoomCode("ABCDEFGH")).rejects.toThrow();
   });
 
   it("removes viewer-specific fields before the database trigger can broadcast", async () => {

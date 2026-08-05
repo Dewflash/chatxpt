@@ -28,6 +28,7 @@ import {
   type CandidateBatchRepository,
   type ChatXptPersistenceRuntime,
   type CommitSessionLifecycleInput,
+  type HostedSessionLookup,
   type LifecycleStoreCommitResult,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
@@ -137,6 +138,16 @@ export class SupabaseChatXptDataApi {
       .from("stream_sessions")
       .select("current_state")
       .eq("session_id", sessionId)
+      .maybeSingle();
+    throwIfError(error);
+    return data === null ? null : rowJson(data, "current_state");
+  }
+
+  async loadStateByRoomCode(roomCode: string): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("stream_sessions")
+      .select("current_state")
+      .eq("room_code", roomCode)
       .maybeSingle();
     throwIfError(error);
     return data === null ? null : rowJson(data, "current_state");
@@ -383,6 +394,20 @@ export class SupabaseSessionStateRepository {
   }
 }
 
+export class SupabaseHostedSessionLookup implements HostedSessionLookup {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async findByRoomCode(roomCode: string): Promise<AuthoritativeSessionState | null> {
+    const raw = await this.api.loadStateByRoomCode(roomCode);
+    return raw === null ? null : authoritativeSessionStateSchema.parse(raw);
+  }
+
+  async loadSession(sessionId: string): Promise<AuthoritativeSessionState | null> {
+    const raw = await this.api.loadState(sessionId);
+    return raw === null ? null : authoritativeSessionStateSchema.parse(raw);
+  }
+}
+
 export class SupabaseCandidateBatchRepository implements CandidateBatchRepository {
   constructor(private readonly api: SupabaseChatXptDataApi) {}
 
@@ -571,6 +596,7 @@ export function createSupabasePersistenceRuntime(
     api,
     sessions,
     lifecycle: new SupabaseSessionLifecycleStore(api, sessions),
+    hostedSessions: new SupabaseHostedSessionLookup(api),
     candidates: new SupabaseCandidateBatchRepository(api),
     snapshots,
     accessGrants: new SupabaseRealtimeAccessGrantStore(api),
