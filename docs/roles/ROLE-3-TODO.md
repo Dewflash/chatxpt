@@ -17,7 +17,7 @@ Execute these outcomes through `docs/build-plans/ROLE-3-BUILD-PLAN.md`; its deci
 | R3-005 | P0 | BLOCKED | Define quest-domain AI objectives, generation instructions, and validation use. | Joint recommendation and candidate contract | Exactly three candidates are feasible, distinct, concise, game-neutral, and explainably accepted/rejected. |
 | R3-006 | P0 | DONE | Build deterministic safety/feasibility validation and fallback quest library. | Quest schema | `validation.test.ts` covers concrete harmful, illegal, and offline physical-dare instructions plus restricted, accessibility-conflicting, unsupported/unknown-dependent, low-confidence, badly timed, duplicated, recently repeated, zero/one/two usable, deterministic replay, and fallback-exhaustion cases; fallbacks use the canonical candidate schema. |
 | R3-007 | P0 | BLOCKED | Implement progress, result, scoring, and non-monetary reward rules. | Shared quest/participation contracts | Automatic/manual progress and all terminal outcomes tested. |
-| R3-008 | P1 | READY | Produce engine evaluation and failure evidence. | Ongoing | Tests and examples cover provider unavailable, reconnect, cancellations, and varied game genres. |
+| R3-008 | P1 | DONE | Produce engine evaluation and failure evidence. | Ongoing | `src/quest-engine/evaluation.test.ts` and `EVALUATION.md` cover deterministic provider-unavailable/malformed fallback, reconnect-relevant state reconstruction and stale revisions, ordinary/emergency cancellation, and game-neutral output across tactical shooter, racing, strategy, platformer, and unknown fixture profiles without claiming live evidence. |
 
 ## Decisions Role 3 may make without Role 1
 
