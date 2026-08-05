@@ -21,6 +21,7 @@ import {
   type BootstrapSessionInput,
   type CandidateBatchRepository,
   type CommitSessionLifecycleInput,
+  type DueVoteCycleReader,
   type LifecycleStoreCommitResult,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
@@ -51,6 +52,7 @@ export class MemoryChatXptPersistence
   implements
     AcceptedVoteTallyReader,
     CandidateBatchRepository,
+    DueVoteCycleReader,
     RoleSnapshotPublisher,
     RealtimeAccessGrantStore,
     SessionLifecycleStore
@@ -220,6 +222,21 @@ export class MemoryChatXptPersistence
       acceptedVoteCount: tallies.reduce((sum, tally) => sum + tally.votes, 0),
       tallies,
     });
+  }
+
+  async dueVoteCycles(at: number): Promise<readonly AuthoritativeSessionState[]> {
+    const due: AuthoritativeSessionState[] = [];
+    for (const state of this.states.values()) {
+      if (
+        state.session.status === "live" &&
+        state.questCycle.status === "voting" &&
+        state.questCycle.endsAt !== null &&
+        state.questCycle.endsAt <= at
+      ) {
+        due.push(clone(state));
+      }
+    }
+    return due;
   }
 
   async store(batch: CandidateBatch): Promise<void> {
@@ -427,6 +444,7 @@ export function createMemoryPersistenceRuntime() {
     lifecycle: backend,
     candidates: backend,
     acceptedVotes: backend,
+    voteDeadlines: backend,
     snapshots: backend,
     accessGrants: backend,
   };

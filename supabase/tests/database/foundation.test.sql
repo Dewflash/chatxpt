@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(21);
+select plan(24);
 
 select has_table('public', 'streamer_profiles', 'streamer_profiles exists');
 select has_table('public', 'stream_sessions', 'stream_sessions exists');
@@ -92,6 +92,26 @@ select ok(
     'execute'
   ),
   'service role can execute atomic command commits'
+);
+select ok(
+  (select prosecdef from pg_proc where oid = 'public.due_vote_cycle_states(bigint)'::regprocedure),
+  'due vote-cycle lookup is security definer'
+);
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.due_vote_cycle_states(bigint)',
+    'execute'
+  ),
+  'authenticated clients cannot execute due vote-cycle lookup'
+);
+select ok(
+  has_function_privilege(
+    'service_role',
+    'public.due_vote_cycle_states(bigint)',
+    'execute'
+  ),
+  'service role can execute due vote-cycle lookup'
 );
 
 select * from finish();

@@ -14,6 +14,7 @@ import {
 import {
   SupabaseChatXptDataApi,
   SupabaseDataError,
+  SupabaseDueVoteCycleReader,
   SupabaseAcceptedVoteTallyReader,
   SupabaseRoleSnapshotPublisher,
   SupabaseSessionStateRepository,
@@ -24,6 +25,7 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
   state: unknown | null = persistenceState();
   persisted: RoleViewModels | null = null;
   acceptedVoteRows: readonly unknown[] = [];
+  dueVoteStates: readonly unknown[] = [];
 
   constructor() {
     super({} as SupabaseClient);
@@ -40,6 +42,10 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
   override async loadAcceptedVotes(): Promise<readonly unknown[]> {
     return this.acceptedVoteRows;
   }
+
+  override async loadDueVoteCycles(): Promise<readonly unknown[]> {
+    return this.dueVoteStates;
+  }
 }
 
 class VoteConflictDataApi extends RecordingDataApi {
@@ -54,6 +60,17 @@ class VoteConflictDataApi extends RecordingDataApi {
 }
 
 describe("Supabase production adapters", () => {
+  it("validates every due voting state returned by the scheduler RPC", async () => {
+    const api = new RecordingDataApi();
+    api.dueVoteStates = [persistenceState()];
+    const reader = new SupabaseDueVoteCycleReader(api);
+
+    expect(await reader.dueVoteCycles(2_000)).toHaveLength(1);
+
+    api.dueVoteStates = [{ invalid: true }];
+    await expect(reader.dueVoteCycles(2_000)).rejects.toThrow();
+  });
+
   it("maps the database vote-identity uniqueness guard to a typed conflict", async () => {
     const repository = new SupabaseSessionStateRepository(new VoteConflictDataApi());
 

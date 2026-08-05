@@ -108,12 +108,17 @@ export interface SessionLifecycleStore {
   due(at: number): Promise<readonly AuthoritativeSessionState[]>;
 }
 
+export interface DueVoteCycleReader {
+  dueVoteCycles(at: number): Promise<readonly AuthoritativeSessionState[]>;
+}
+
 export interface ChatXptPersistenceRuntime {
   readonly mode: "memory" | "supabase";
   readonly sessions: SessionStateRepository;
   readonly lifecycle: SessionLifecycleStore;
   readonly candidates: CandidateBatchRepository;
   readonly acceptedVotes: AcceptedVoteTallyReader;
+  readonly voteDeadlines: DueVoteCycleReader;
   readonly snapshots: RoleSnapshotPublisher;
   readonly accessGrants: RealtimeAccessGrantStore;
 }

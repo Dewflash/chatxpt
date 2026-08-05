@@ -11,6 +11,10 @@ const voteLedgerMigration = readFileSync(
   resolve(process.cwd(), "supabase/migrations/202608050001_vote_ledger_identity.sql"),
   "utf8",
 );
+const voteSchedulerMigration = readFileSync(
+  resolve(process.cwd(), "supabase/migrations/202608050002_vote_close_scheduler.sql"),
+  "utf8",
+);
 const environmentExample = readFileSync(resolve(process.cwd(), ".env.example"), "utf8");
 
 describe("Supabase migration security regression", () => {
@@ -49,6 +53,18 @@ describe("Supabase migration security regression", () => {
     expect(voteLedgerMigration).toContain("payload #>> '{voterKey}'");
     expect(voteLedgerMigration).toContain(
       "('twitch-extension', 'hosted-board', 'twitch-chat')",
+    );
+  });
+
+  it("exposes due voting states only through a service-role scheduler RPC", () => {
+    expect(voteSchedulerMigration).toContain("security definer");
+    expect(voteSchedulerMigration).toContain("status = 'live'");
+    expect(voteSchedulerMigration).toContain("'{questCycle,status}' = 'voting'");
+    expect(voteSchedulerMigration).toContain(
+      "revoke all on function public.due_vote_cycle_states(bigint) from public, anon, authenticated",
+    );
+    expect(voteSchedulerMigration).toContain(
+      "grant execute on function public.due_vote_cycle_states(bigint) to service_role",
     );
   });
 

@@ -36,3 +36,20 @@ The Supabase adapter reads the server-only `accepted_participation` audit table,
 and the additive migration enforces the same one-vote rule across Twitch
 Extension, hosted-board, and Twitch-chat sources. Static tests do not claim the
 migration has run against a live Supabase project.
+
+### Deadline sweeps
+
+The server-only `VoteCloseScheduler` reads only live voting cycles whose canonical `endsAt` has
+passed and emits `system.vote-close` through the normal orchestrator. Its
+SHA-256 command ID is derived from session, cycle, and original deadline, so
+concurrent sweepers and retries converge on one idempotency identity. The
+command's `issuedAt` also remains the original deadline while the orchestrator
+supplies the actual close time and enforces the latest session revision.
+The sweep time comes from its injected server clock; a caller cannot submit a
+future timestamp to force an early close.
+
+The Supabase due-cycle RPC is service-role-only; viewers cannot enumerate or
+close sessions directly. This service is the scheduling spine, not a deployment
+trigger: a production gateway wake-up or durable worker still has to invoke
+`closeDue` and must be verified separately. A client may prompt a due check, but
+it never receives system authority or supplies the tally/winner.

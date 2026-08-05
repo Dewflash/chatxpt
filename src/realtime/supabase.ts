@@ -32,6 +32,7 @@ import {
   type CandidateBatchRepository,
   type ChatXptPersistenceRuntime,
   type CommitSessionLifecycleInput,
+  type DueVoteCycleReader,
   type LifecycleStoreCommitResult,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
@@ -229,6 +230,14 @@ export class SupabaseChatXptDataApi {
       .lt("accepted_at", new Date(acceptedBefore).toISOString());
     throwIfError(error);
     return data ?? [];
+  }
+
+  async loadDueVoteCycles(at: number): Promise<readonly unknown[]> {
+    const { data, error } = await this.client.rpc("due_vote_cycle_states", {
+      p_due_at_ms: at,
+    });
+    throwIfError(error);
+    return Array.isArray(data) ? data : [];
   }
 
   async persistRoleSnapshots(views: RoleViewModels): Promise<void> {
@@ -463,6 +472,16 @@ export class SupabaseAcceptedVoteTallyReader implements AcceptedVoteTallyReader 
   }
 }
 
+export class SupabaseDueVoteCycleReader implements DueVoteCycleReader {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async dueVoteCycles(at: number): Promise<readonly AuthoritativeSessionState[]> {
+    return (await this.api.loadDueVoteCycles(at)).map((state) =>
+      authoritativeSessionStateSchema.parse(state),
+    );
+  }
+}
+
 export class SupabaseCandidateBatchRepository implements CandidateBatchRepository {
   constructor(private readonly api: SupabaseChatXptDataApi) {}
 
@@ -646,6 +665,7 @@ export function createSupabasePersistenceRuntime(
   const api = new SupabaseChatXptDataApi(createSupabaseServerClient(environment));
   const sessions = new SupabaseSessionStateRepository(api);
   const acceptedVotes = new SupabaseAcceptedVoteTallyReader(api);
+  const voteDeadlines = new SupabaseDueVoteCycleReader(api);
   const snapshots = new SupabaseRoleSnapshotPublisher(api);
   return {
     mode: "supabase",
@@ -654,6 +674,7 @@ export function createSupabasePersistenceRuntime(
     lifecycle: new SupabaseSessionLifecycleStore(api, sessions),
     candidates: new SupabaseCandidateBatchRepository(api),
     acceptedVotes,
+    voteDeadlines,
     snapshots,
     accessGrants: new SupabaseRealtimeAccessGrantStore(api),
     probe: (checkedAt) => api.probe(checkedAt),

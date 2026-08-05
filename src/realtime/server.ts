@@ -14,6 +14,7 @@ export {
   SupabaseCandidateBatchRepository,
   SupabaseChatXptDataApi,
   SupabaseDataError,
+  SupabaseDueVoteCycleReader,
   SupabaseRoleSnapshotPublisher,
   SupabaseRealtimeAccessGrantStore,
   SupabaseSessionLifecycleStore,
@@ -21,6 +22,16 @@ export {
   createSupabasePersistenceRuntime,
   createSupabaseServerClient,
 } from "./supabase";
+export {
+  SYSTEM_VOTE_CLOSE_ACTOR_ID,
+  Sha256VoteCloseCommandIds,
+  VoteCloseScheduler,
+  type AuthoritativeCommandExecutor,
+  type VoteCloseAttempt,
+  type VoteCloseCommandIdFactory,
+  type VoteCloseCommandIdentityInput,
+  type VoteCloseSweepResult,
+} from "./vote-close-scheduler";
 export {
   PersistenceConfigurationError,
   createConfiguredPersistenceRuntime,
