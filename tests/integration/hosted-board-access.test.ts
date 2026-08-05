@@ -42,7 +42,7 @@ describe("hosted-board discovery and access", () => {
       participationMode: "hosted-board",
     });
     expect(result.view.share.shareUrl).toBe(
-      "https://chatxpt.example/viewer?room=ABCDEFGH",
+      "https://chatxpt.example/quest-board/ABCDEFGH",
     );
     expect(result.view.share.qrPayload).toBe(result.view.share.shareUrl);
     expect(result.view.share.shareUrl).not.toContain(result.credential.value);

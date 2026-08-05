@@ -25,22 +25,28 @@ function pollMessage(messageId = "chat-poll"): ChatFallbackMessage {
       { position: 3, candidateId: "candidate-3", title: "Third quest" },
     ],
     voteClosesAt: contractFixtureEnvelope.occurredAt + 30_000,
-    hostedBoardUrl: "https://chatxpt.example/viewer?room=ABCDEFGH",
+    hostedBoardUrl: "https://chatxpt.example/quest-board/ABCDEFGH",
   });
 }
 
 function acknowledgement(
   messageId: string,
-  outcome: "counted" | "rejected" | "late",
+  outcome: "counted" | "rejected" | "duplicate" | "late",
 ): ChatFallbackMessage {
+  const acceptedChoice = outcome === "counted" || outcome === "duplicate";
   return chatFallbackMessageSchema.parse({
     envelope: { ...contractFixtureEnvelope, messageId },
     kind: "vote-acknowledgement",
     audience: "viewer",
     viewerKey: "viewer-key",
-    text: outcome === "counted" ? "Your vote counted." : "Your vote was not counted.",
+    text:
+      outcome === "counted"
+        ? "Your vote counted."
+        : outcome === "duplicate"
+          ? "You already voted for option 2."
+          : "Your vote was not counted.",
     outcome,
-    choicePosition: outcome === "counted" ? 2 : null,
+    choicePosition: acceptedChoice ? 2 : null,
   });
 }
 
@@ -102,6 +108,27 @@ describe("Twitch chat fallback delivery", () => {
     const secondAck = await delivery.deliver(acknowledgement("ack-two", "late"));
     expect(secondAck).toEqual(firstAck);
     expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it("accepts duplicate vote acknowledgements and keeps one per viewer per cycle", async () => {
+    const send = vi.fn(async () => ({
+      status: "delivered" as const,
+      providerMessageId: "twitch-message-id",
+    }));
+    const delivery = new TwitchChatFallbackDelivery(
+      destination,
+      { send },
+      new MemoryChatDeliveryReceiptStore(),
+      () => 1_786_000_100_000,
+      new SequenceIds(),
+    );
+
+    const firstAck = await delivery.deliver(acknowledgement("ack-duplicate", "duplicate"));
+    const retryAck = await delivery.deliver(acknowledgement("ack-retry", "duplicate"));
+
+    expect(firstAck).toMatchObject({ status: "delivered" });
+    expect(retryAck).toEqual(firstAck);
+    expect(send).toHaveBeenCalledTimes(1);
   });
 
   it("shares one in-flight delivery across concurrent retries", async () => {

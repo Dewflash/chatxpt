@@ -24,9 +24,9 @@ eight-character room code or safe share URL
   -> the client receives only the public access view and share data
 ```
 
-The share URL is `/viewer?room=ABCDEFGH`. Its query may contain exactly that
-single canonical room code: credentials, durable tokens, viewer identities,
-database keys, fragments, and userinfo are rejected. Optional QR uses the exact
+The share URL is `/quest-board/ABCDEFGH`. It contains only the room code in the
+path: credentials, durable tokens, viewer identities, database keys, query
+parameters, fragments, and userinfo are rejected. Optional QR uses the exact
 same URL and is never required for the primary Twitch experience.
 The share origin is trusted server configuration rather than client-controlled
 input, so the exchange cannot be used as an open redirect.
@@ -46,8 +46,8 @@ never query `stream_sessions` or `realtime_access_grants` directly.
 The platform-neutral message contracts cover:
 
 - one poll-open channel message containing exactly three ordered candidates;
-- one final-result channel message;
-- one counted/rejected/late acknowledgement per viewer per quest cycle.
+- one final-result channel message with either a winner or no-winner outcome;
+- one counted/rejected/duplicate/late acknowledgement per viewer per quest cycle.
 
 Role 5 supplies the rendered text within the validated 500-character contract.
 Role 1 resolves the Twitch channel/reply destination and sends through the
@@ -58,10 +58,11 @@ only when Twitch returns both `is_sent: true` and a non-empty `message_id`.
 Twitch drops, 429 rate limits, unavailable destinations, network failures, and
 invalid provider responses retain null delivery fields and a typed error. A
 per-cycle key deduplicates poll/result messages and limits individual viewer
-acknowledgement to one best-effort attempt. Receipt lookup failure blocks the
-send because duplicate status is unknown. If Twitch confirms a send and receipt
-storage then fails, the provider-confirmed result remains truthful and a
-process-local receipt prevents a same-process retry.
+acknowledgement, including duplicate-vote acknowledgement, to one best-effort
+attempt. Receipt lookup failure blocks the send because duplicate status is
+unknown. If Twitch confirms a send and receipt storage then fails, the
+provider-confirmed result remains truthful and a process-local receipt prevents
+a same-process retry.
 
 Official provider references checked on 5 August 2026:
 

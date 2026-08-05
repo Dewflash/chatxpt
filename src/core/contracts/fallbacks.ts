@@ -12,20 +12,20 @@ export const fallbackRoomCodeSchema = z.string().regex(/^[A-HJ-NP-Z2-9]{8}$/);
 
 const safeHostedBoardUrlSchema = z.url().max(2_048).superRefine((value, context) => {
   const url = new URL(value);
-  const roomCodes = url.searchParams.getAll("room");
-  const queryKeys = [...url.searchParams.keys()];
+  const pathParts = url.pathname.split("/").filter(Boolean);
+  const roomCode = pathParts.length === 2 && pathParts[0] === "quest-board" ? pathParts[1] : null;
   if (
     (url.protocol !== "http:" && url.protocol !== "https:") ||
     url.username.length > 0 ||
     url.password.length > 0 ||
     url.hash.length > 0 ||
-    roomCodes.length !== 1 ||
-    !fallbackRoomCodeSchema.safeParse(roomCodes[0]).success ||
-    queryKeys.some((key) => key !== "room")
+    url.search.length > 0 ||
+    roomCode === null ||
+    !fallbackRoomCodeSchema.safeParse(roomCode).success
   ) {
     context.addIssue({
       code: "custom",
-      message: "Hosted-board URLs may contain only one canonical room-code query",
+      message: "Hosted-board URLs must use the canonical /quest-board/[roomCode] path",
     });
   }
 });
@@ -39,7 +39,7 @@ export const hostedBoardShareDataSchema = z
   .strict()
   .superRefine((share, context) => {
     const shareUrl = new URL(share.shareUrl);
-    if (shareUrl.searchParams.get("room") !== share.roomCode) {
+    if (shareUrl.pathname !== `/quest-board/${share.roomCode}`) {
       context.addIssue({
         code: "custom",
         message: "Hosted-board share URLs must contain the canonical room code",
@@ -132,8 +132,9 @@ export const chatFinalResultMessageSchema = z
     ...chatFallbackBase,
     kind: z.literal("final-result"),
     audience: z.literal("channel"),
-    candidateId: identifierSchema,
-    winnerTitle: z.string().trim().min(1).max(80),
+    outcome: z.enum(["winner", "no-winner"]),
+    candidateId: identifierSchema.nullable(),
+    winnerTitle: z.string().trim().min(1).max(80).nullable(),
     acceptedVotes: z.number().int().nonnegative(),
   })
   .strict()
@@ -145,6 +146,21 @@ export const chatFinalResultMessageSchema = z
         path: ["envelope", "questCycleId"],
       });
     }
+    if (message.outcome === "winner") {
+      if (message.candidateId === null || message.winnerTitle === null) {
+        context.addIssue({
+          code: "custom",
+          message: "Winner final-result messages require a winning candidate and title",
+        });
+      }
+      return;
+    }
+    if (message.candidateId !== null || message.winnerTitle !== null) {
+      context.addIssue({
+        code: "custom",
+        message: "No-winner final-result messages cannot include winner fields",
+      });
+    }
   });
 
 export const chatVoteAcknowledgementMessageSchema = z
@@ -153,7 +169,7 @@ export const chatVoteAcknowledgementMessageSchema = z
     kind: z.literal("vote-acknowledgement"),
     audience: z.literal("viewer"),
     viewerKey: identifierSchema,
-    outcome: z.enum(["counted", "rejected", "late"]),
+    outcome: z.enum(["counted", "rejected", "duplicate", "late"]),
     choicePosition: z.number().int().min(1).max(3).nullable(),
   })
   .strict()
@@ -165,10 +181,23 @@ export const chatVoteAcknowledgementMessageSchema = z
         path: ["envelope", "questCycleId"],
       });
     }
-    if (message.outcome === "counted" && message.choicePosition === null) {
+    if (
+      (message.outcome === "counted" || message.outcome === "duplicate") &&
+      message.choicePosition === null
+    ) {
       context.addIssue({
         code: "custom",
-        message: "Counted acknowledgements require the accepted choice position",
+        message: "Counted and duplicate acknowledgements require the accepted choice position",
+        path: ["choicePosition"],
+      });
+    }
+    if (
+      (message.outcome === "rejected" || message.outcome === "late") &&
+      message.choicePosition !== null
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Rejected and late acknowledgements cannot include a choice position",
         path: ["choicePosition"],
       });
     }

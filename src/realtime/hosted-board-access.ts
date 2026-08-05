@@ -153,8 +153,7 @@ function safeShareUrl(origin: string, roomCode: string): string | null {
   try {
     const source = new URL(origin);
     if (source.protocol !== "http:" && source.protocol !== "https:") return null;
-    const target = new URL("/viewer", source.origin);
-    target.searchParams.set("room", roomCode);
+    const target = new URL(`/quest-board/${roomCode}`, source.origin);
     return target.toString();
   } catch {
     return null;

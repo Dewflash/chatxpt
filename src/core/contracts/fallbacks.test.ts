@@ -18,7 +18,7 @@ const poll = {
     { position: 3, candidateId: "candidate-3", title: "Third quest" },
   ] as const,
   voteClosesAt: contractFixtureEnvelope.occurredAt + 30_000,
-  hostedBoardUrl: "https://chatxpt.example/viewer?room=ABCDEFGH",
+  hostedBoardUrl: "https://chatxpt.example/quest-board/ABCDEFGH",
 };
 
 describe("viewer fallback contracts", () => {
@@ -38,7 +38,7 @@ describe("viewer fallback contracts", () => {
     ).toBe(false);
   });
 
-  it("requires counted acknowledgements to identify the accepted choice", () => {
+  it("requires counted and duplicate acknowledgements to identify the accepted choice", () => {
     expect(
       chatFallbackMessageSchema.safeParse({
         envelope: { ...contractFixtureEnvelope, messageId: "fixture-chat-ack" },
@@ -48,6 +48,67 @@ describe("viewer fallback contracts", () => {
         text: "Your vote counted.",
         outcome: "counted",
         choicePosition: null,
+      }).success,
+    ).toBe(false);
+    expect(
+      chatFallbackMessageSchema.safeParse({
+        envelope: { ...contractFixtureEnvelope, messageId: "fixture-chat-duplicate" },
+        kind: "vote-acknowledgement",
+        audience: "viewer",
+        viewerKey: "viewer-key",
+        text: "You already voted for option 2.",
+        outcome: "duplicate",
+        choicePosition: 2,
+      }).success,
+    ).toBe(true);
+    expect(
+      chatFallbackMessageSchema.safeParse({
+        envelope: { ...contractFixtureEnvelope, messageId: "fixture-chat-late" },
+        kind: "vote-acknowledgement",
+        audience: "viewer",
+        viewerKey: "viewer-key",
+        text: "Voting has closed.",
+        outcome: "late",
+        choicePosition: 2,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("represents final results with either a winner or a no-winner outcome", () => {
+    expect(
+      chatFallbackMessageSchema.safeParse({
+        envelope: { ...contractFixtureEnvelope, messageId: "fixture-chat-winner" },
+        kind: "final-result",
+        audience: "channel",
+        text: "Option 2 wins.",
+        outcome: "winner",
+        candidateId: "candidate-2",
+        winnerTitle: "Second quest",
+        acceptedVotes: 3,
+      }).success,
+    ).toBe(true);
+    expect(
+      chatFallbackMessageSchema.safeParse({
+        envelope: { ...contractFixtureEnvelope, messageId: "fixture-chat-no-winner" },
+        kind: "final-result",
+        audience: "channel",
+        text: "No quest activated because nobody voted.",
+        outcome: "no-winner",
+        candidateId: null,
+        winnerTitle: null,
+        acceptedVotes: 0,
+      }).success,
+    ).toBe(true);
+    expect(
+      chatFallbackMessageSchema.safeParse({
+        envelope: { ...contractFixtureEnvelope, messageId: "fixture-chat-bad-no-winner" },
+        kind: "final-result",
+        audience: "channel",
+        text: "No quest activated.",
+        outcome: "no-winner",
+        candidateId: "candidate-2",
+        winnerTitle: "Second quest",
+        acceptedVotes: 0,
       }).success,
     ).toBe(false);
   });
@@ -76,15 +137,15 @@ describe("viewer fallback contracts", () => {
       expiresAt: 1_786_003_600_000,
       share: {
         roomCode: "ABCDEFGH",
-        shareUrl: "https://chatxpt.example/viewer?room=ABCDEFGH",
-        qrPayload: "https://chatxpt.example/viewer?room=ABCDEFGH",
+        shareUrl: "https://chatxpt.example/quest-board/ABCDEFGH",
+        qrPayload: "https://chatxpt.example/quest-board/ABCDEFGH",
       },
     };
     expect(hostedBoardAccessViewSchema.safeParse(access).success).toBe(true);
     expect(
       hostedBoardAccessViewSchema.safeParse({
         ...access,
-        share: { ...access.share, qrPayload: "https://chatxpt.example/viewer?token=secret" },
+        share: { ...access.share, qrPayload: "https://chatxpt.example/quest-board/ABCDEFGH?token=secret" },
       }).success,
     ).toBe(false);
     expect(
