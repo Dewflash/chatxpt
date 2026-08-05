@@ -290,6 +290,11 @@ export class DefaultQuestEngine implements QuestEngine {
     switch (input.command.type) {
       case "system.intelligence-ready":
         return transitionIntelligenceReady(input);
+      case "system.vote-close":
+        return error(
+          "unavailable-capability",
+          "Vote-close winner, tie, and no-vote policy awaits the Role 3 implementation",
+        );
       case "streamer.quest":
         return transitionStreamerCommand(input);
       case "viewer.vote":

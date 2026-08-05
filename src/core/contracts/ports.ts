@@ -1,4 +1,5 @@
 import type { CommandEnvelope } from "./commands";
+import type { AcceptedVoteTallySnapshot } from "./participation";
 import type { ContractEnvelope, DomainError, ServiceHealth } from "./common";
 import type { ParticipationCapabilities, StreamSession } from "./session";
 import type { StreamerProfile } from "./profile";
@@ -56,6 +57,8 @@ export interface QuestEngineInput {
   readonly currentState: QuestCycleState;
   readonly command: CommandEnvelope;
   readonly candidateBatch: CandidateBatch | null;
+  /** Present only for a valid system.vote-close boundary; it never prescribes a winner. */
+  readonly acceptedVoteTally?: AcceptedVoteTallySnapshot | null;
   readonly now: number;
 }
 

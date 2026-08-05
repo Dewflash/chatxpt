@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(20);
+select plan(21);
 
 select has_table('public', 'streamer_profiles', 'streamer_profiles exists');
 select has_table('public', 'stream_sessions', 'stream_sessions exists');
@@ -22,6 +22,12 @@ select has_index(
   'stream_sessions',
   'stream_sessions_one_active_broadcaster',
   'one active session per broadcaster index exists'
+);
+select has_index(
+  'public',
+  'accepted_participation',
+  'accepted_participation_one_vote_per_voter_cycle',
+  'one accepted vote per private viewer identity and cycle index exists'
 );
 select ok(
   not exists (
