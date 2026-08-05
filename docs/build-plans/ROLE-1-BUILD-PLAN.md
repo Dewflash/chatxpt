@@ -323,9 +323,9 @@ Run this loop throughout every phase:
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D1-11 | Contract-change cutoff before feature freeze | Open | — |
+| D1-11 | Contract-change cutoff before feature freeze | Resolved by D-051 | No automatic cutoff or freeze date; only the project owner may explicitly call the freeze. Dated milestones remain delivery targets. |
 | D1-12 | Minimum acceptable real extraction, quest, and participation evidence | Open | — |
-| D1-13 | Final golden real-gameplay scenario and demo narrative | Open | — |
+| D1-13 | Final golden real-gameplay scenario and demo narrative | Deferred by D-048/D-053 | Brawl Stars is the intended scenario subject to real capture proof, but Role 1 does not assemble or optimise the final narrative until the project owner declares the product ready. |
 
 ### R1-P11 — Role 2 to Role 3 integration
 
@@ -371,7 +371,7 @@ Run this loop throughout every phase:
 
 **Acceptance:** The same session/cycle revision and authoritative timestamps appear in Studio, two viewer clients, persistence, and OBS; results, limitations, screenshots/recordings, commands, and failures are recorded; no simulated run is presented as live evidence.
 
-## Phase 5: Freeze and submit
+## Phase 5: Owner-called freeze and submit
 
 ### R1-P14 — Release evidence and submission
 
@@ -379,10 +379,10 @@ Run this loop throughout every phase:
 
 **Work:**
 
-- Enforce feature freeze and accept only demo-critical fixes afterward.
+- Enforce the feature freeze only after the project owner explicitly calls it; dated milestones do not freeze work automatically.
 - Compile changelog fragments.
 - Finalise README, architecture, prompts/agent configuration, third-party disclosures, privacy/limitations, and clean-clone instructions.
-- Assemble the maximum 15-slide PDF and maximum five-minute video.
+- After the project owner declares the product ready, assemble the maximum 15-slide PDF and maximum five-minute video around the accepted rehearsed real workflow and one controlled provider-failure case.
 - Name the Google Drive folder exactly after the team, include the repository link, confirm access, and send the three required deliverables to `outreachsg@garena.com`.
 - Add `garena-ai-build-challenge` to the private repository, prepare the immutable Drive package, and do not modify submitted deliverables afterward.
 
