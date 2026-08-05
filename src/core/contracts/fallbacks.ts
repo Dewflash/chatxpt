@@ -67,6 +67,36 @@ export const hostedBoardAccessViewSchema = z
   })
   .strict();
 
+export const hostedBoardExchangeRequestSchema = z
+  .object({
+    roomCode: fallbackRoomCodeSchema,
+    includeQr: z.boolean().optional(),
+  })
+  .strict();
+
+export const hostedBoardExchangeClientResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true), view: hostedBoardAccessViewSchema }).strict(),
+  z.object({ ok: z.literal(false), error: domainErrorSchema }).strict(),
+]);
+
+export const hostedBoardCurrentAccessViewSchema = z
+  .object({
+    sessionId: identifierSchema,
+    actorKind: z.enum(["viewer", "anonymous"]),
+    expiresAt: timestampSchema,
+  })
+  .strict();
+
+export const hostedBoardCurrentAccessResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true), access: hostedBoardCurrentAccessViewSchema }).strict(),
+  z.object({ ok: z.literal(false), error: domainErrorSchema }).strict(),
+]);
+
+export const hostedBoardLeaveResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true) }).strict(),
+  z.object({ ok: z.literal(false), error: domainErrorSchema }).strict(),
+]);
+
 const chatFallbackBase = {
   envelope: contractEnvelopeSchema,
   text: z.string().trim().min(1).max(500),
@@ -233,6 +263,17 @@ export const chatDeliveryReceiptSchema = z
 
 export type HostedBoardShareData = z.infer<typeof hostedBoardShareDataSchema>;
 export type HostedBoardAccessView = z.infer<typeof hostedBoardAccessViewSchema>;
+export type HostedBoardExchangeRequest = z.infer<typeof hostedBoardExchangeRequestSchema>;
+export type HostedBoardExchangeClientResult = z.infer<
+  typeof hostedBoardExchangeClientResultSchema
+>;
+export type HostedBoardCurrentAccessView = z.infer<
+  typeof hostedBoardCurrentAccessViewSchema
+>;
+export type HostedBoardCurrentAccessResult = z.infer<
+  typeof hostedBoardCurrentAccessResultSchema
+>;
+export type HostedBoardLeaveResult = z.infer<typeof hostedBoardLeaveResultSchema>;
 export type ChatPollOpenMessage = z.infer<typeof chatPollOpenMessageSchema>;
 export type ChatFinalResultMessage = z.infer<typeof chatFinalResultMessageSchema>;
 export type ChatVoteAcknowledgementMessage = z.infer<

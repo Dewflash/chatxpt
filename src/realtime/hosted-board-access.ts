@@ -12,7 +12,7 @@ import {
 import type { HostedSessionLookup, RealtimeAccessGrantStore } from "./types";
 
 const DEFAULT_GRANT_TTL_MS = 60 * 60 * 1_000;
-const COOKIE_NAME = "chatxpt_hosted_viewer";
+export const HOSTED_BOARD_COOKIE_NAME = "chatxpt_hosted_viewer";
 
 const grantPayloadSchema = z
   .object({
@@ -44,7 +44,7 @@ export interface HostedBoardAuthenticatedIdentity {
 }
 
 export interface HostedBoardCredential {
-  readonly cookieName: typeof COOKIE_NAME;
+  readonly cookieName: typeof HOSTED_BOARD_COOKIE_NAME;
   readonly value: string;
   readonly httpOnly: true;
   readonly sameSite: "lax";
@@ -252,7 +252,7 @@ export class HostedBoardAccessService {
           },
         }),
         credential: {
-          cookieName: COOKIE_NAME,
+          cookieName: HOSTED_BOARD_COOKIE_NAME,
           value,
           httpOnly: true,
           sameSite: "lax",
