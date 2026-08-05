@@ -34,6 +34,8 @@ Provider/model adoption is a joint Role 2/Role 3 recommendation and requires Rol
 - D2-04 through D2-06 were answered as one batch on 4 August 2026 and recorded in the Role 2 build plan.
 - `src/extraction/` defines the Role 1 source-adapter boundary plus private observation fusion and snapshot construction; `src/ai/` exports validating canonical intelligence and candidate provider factories.
 - Role 2 producer tests cover known, partial/unsupported, low-confidence, conflicting, stale, unavailable, permission-denied, abort, malformed candidate-count, and duplicate-title behaviour.
+- `role-2/real-fixture-spike` consumes the canonical ephemeral `FrameSource` through capped pixel sampling and frame-difference measurements, releases frames before yielding, and provides selective-region OCR plumbing without settling the open Phase 3 classification/confidence thresholds.
+- Ten focused visual/OCR tests use explicitly synthetic pixels and a fake OCR adapter; they prove fixture-only component behaviour, not real extraction or OCR accuracy.
 - Fixture-only UI-X09 proposals cover intelligence and generation disclosure states without being exported to product consumers or labelled live.
 - Outstanding before `DONE`: Role 1 review/promotion of canonical UI-X09 fixtures, two team-owned or authorised gameplay samples plus separate annotations, sanitised/real chat fixtures, and one real browser-delivered `FrameSource` execution.
 

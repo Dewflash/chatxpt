@@ -122,6 +122,8 @@ Role 2 is complete when:
 
 **Progress (4 August 2026):** The public extraction pipeline interfaces, injected observation-fusion boundary, canonical snapshot builders, validating intelligence/candidate provider factories, and Role 2 producer tests are implemented on `role-2/intelligence-boundary`. Fixture-only UI-X09 proposal payloads cover known, low-confidence, unsupported, stale, capture-denied, provider, algorithmic, and deterministic-fallback presentation states. Role 1 promotion into canonical `@/core/testing`, real owned gameplay/chat fixtures, and real `FrameSource` execution remain pending and are not claimed as live evidence.
 
+**Progress (5 August 2026):** `role-2/real-fixture-spike` adds a bounded browser-canvas sampler, game-neutral pixel-change measurement stream over the canonical `FrameSource`, guaranteed ephemeral-frame release, and selective-region OCR adapter plumbing. Ten focused tests use explicitly synthetic pixel arrays and a fake OCR adapter. R2-P03/P03A remain open for authorised gameplay/chat assets with separate annotations, a real browser-delivered OBS frame, an actual OCR engine experiment, and the joint free-provider/no-credential run; none of those are claimed by this slice.
+
 ### R2-P03A — Early feasibility spikes
 
 **Outcome:** Role 2's highest-risk assumptions are tested before full implementation.
