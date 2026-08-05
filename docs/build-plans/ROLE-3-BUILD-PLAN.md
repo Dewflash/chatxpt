@@ -42,9 +42,9 @@ Role 3 is complete when:
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D3-01 | Internal engine architecture: reducer/state machine, services, and pure-rule boundaries | Open | — |
-| D3-02 | Candidate, command, state, event, and error representation inside Role 3 | Open | — |
-| D3-03 | Determinism strategy for time, randomness, and fallback selection | Open | — |
+| D3-01 | Internal engine architecture: reducer/state machine, services, and pure-rule boundaries | Accepted | Use a stateless `DefaultQuestEngine` over a pure state-machine reducer with small validation and policy functions. Runtime lifecycle state remains authoritative in Role 1. |
+| D3-02 | Candidate, command, state, event, and error representation inside Role 3 | Accepted | Consume and return canonical Core types at the public boundary. Private transition helpers may narrow those types, but Role 3 will not create a parallel domain model. |
+| D3-03 | Determinism strategy for time, randomness, and fallback selection | Accepted | Use authoritative `QuestEngineInput.now` and an injectable deterministic selector. Do not call ambient clocks or random APIs; identical input and selector configuration must produce identical output. |
 
 ### R3-P01 — Owned ports and candidate fixtures
 
@@ -78,10 +78,10 @@ Role 3 is complete when:
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D3-04 | Intervention scoring/rules and required confidence/freshness | Open | — |
-| D3-05 | Timing, cooldown, repetition window, and interruption defaults | Open | — |
-| D3-06 | Proposed/approval/veto/automatic activation behaviour | Open | — |
-| D3-07 | Emergency pause, cancellation, and changing-gameplay behaviour | Open | — |
+| D3-04 | Intervention scoring/rules and required confidence/freshness | Accepted | Apply hard lifecycle/safety gates before a deterministic suitability score. Fact-specific decisions require fresh evidence with adequate confidence; stale, conflicting, unavailable, and unknown-heavy intelligence waits instead of fabricating suitability. |
+| D3-05 | Timing, cooldown, repetition window, and interruption defaults | Accepted | Default to a 120-second cooldown and block substantially similar objectives from the previous five cycles or 30 minutes. Minor gameplay changes do not interrupt an active quest; safety, impossibility, session end, or explicit streamer control can. |
+| D3-06 | Proposed/approval/veto/automatic activation behaviour | Accepted | Manual streamer approval is the MVP default: exactly three proposed options become viewer voting only after approval. Reject cancels the whole batch. Automatic activation stays disabled until safety validation and integration evidence pass. |
+| D3-07 | Emergency pause, cancellation, and changing-gameplay behaviour | Accepted | Cancel and skip remain distinct terminal outcomes. Emergency pause cancels the current cycle and blocks new proposals until explicitly cleared. Ordinary resumable pause remains unavailable until Core represents paused/resume state. |
 
 ### R3-P03 — Intervention policy
 
@@ -109,10 +109,10 @@ Role 3 is complete when:
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D3-08 | Validation order and hard-reject versus warning rules | Open | — |
-| D3-09 | Candidate repair versus replacement policy | Open | — |
-| D3-10 | Difficulty, duration, clarity, diversity, and repetition thresholds | Open | — |
-| D3-11 | Fallback taxonomy, selection, seeding, and history sensitivity | Open | — |
+| D3-08 | Validation order and hard-reject versus warning rules | Accepted | Validate safety, streamer/accessibility boundaries, evidence and feasibility, confidence/duration/clarity, diversity/repetition, then lifecycle timing. Safety, boundary, unsupported/unknown evidence, low confidence, bad duration/clarity, duplication, repetition, and timing conflicts hard-reject; only acceptable-but-low preferred quality warns. |
+| D3-09 | Candidate repair versus replacement policy | Accepted | Do not semantically repair candidate objectives. Every rejection is non-repairable and is replaced by a separately validated deterministic fallback; never weaken a rule or silently rewrite unsafe output. |
+| D3-10 | Difficulty, duration, clarity, diversity, and repetition thresholds | Accepted | Require confidence at least 0.5, overall duration 15-180 seconds with easy 15-90, medium 30-150, and hard 45-180 second bands, at most 36 meaningful instruction words, pairwise token similarity below 0.55, and the accepted five-cycle/30-minute repetition window. Preserve canonical easy/medium/hard values and schema bounds; warn between 0.5 and the preferred 0.65 confidence. |
+| D3-11 | Fallback taxonomy, selection, seeding, and history sensitivity | Accepted | Use a curated game-neutral library spanning low-risk strategy, commentary, teaching, reflection, and focus patterns. Order it by stable hash of Role 1-supplied session/cycle seed, validate against the same profile/evidence/history rules, use no ambient randomness, and return typed exhaustion instead of relaxing safety or repetition. |
 
 ### R3-P05 — Deterministic validation pipeline
 
@@ -165,10 +165,10 @@ Role 3 is complete when:
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D3-12 | Voting duration, minimum participation, and vote-change policy | Open | — |
-| D3-13 | Tie-breaking and zero-vote behaviour | Open | — |
-| D3-14 | Streamer veto window and winning-option replacement/cancellation | Open | — |
-| D3-15 | Activation behaviour when gameplay changes during voting | Open | — |
+| D3-12 | Voting duration, minimum participation, and vote-change policy | Accepted | Use a 30-second authoritative voting window and require at least one accepted vote. The first accepted vote per viewer is final for the MVP; vote changes are disabled because the canonical state has no per-viewer replacement ledger. Role 1 owns identity, acceptance, storage and deduplication. |
+| D3-13 | Tie-breaking and zero-vote behaviour | Accepted | Resolve the highest authoritative tally. Break a top-count tie deterministically from session ID, cycle ID and the sorted tied candidate IDs. Zero accepted votes produces a typed no-activation result rather than selecting a default winner. |
+| D3-14 | Streamer veto window and winning-option replacement/cancellation | Accepted | The streamer may cancel throughout the 30-second voting window. Once the authoritative close command arrives, the winning candidate cannot be substituted; an invalid or cancelled winner produces no activation. Automatic close-to-activation remains disabled until the shared close-vote contract and integration evidence pass. |
+| D3-15 | Activation behaviour when gameplay changes during voting | Accepted | Minor gameplay changes do not interrupt voting. Safety risk, quest impossibility, session end, or emergency pause cancels the vote and prevents activation; Role 3 revalidates the winner at authoritative close. |
 
 ### R3-P08 — Vote resolution rules
 
