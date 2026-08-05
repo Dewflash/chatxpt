@@ -16,13 +16,14 @@ This file tracks cross-project outcomes only. Each contributor updates their own
 | P-008 | P0 | READY | Role 1 | Twitch developer test environment and OBS test scene are ready. | Twitch account with 2FA; P-004 | Registered app/Extension, allowlisted test channel, Local or Hosted Test, browser-source overlay instructions. |
 | P-009 | P0 | BLOCKED | Role 1 | Golden Twitch workflow and integration ladder pass using real captured gameplay and real Twitch activity. | P-004 through P-008 | Same revision reaches orchestrator, Studio, two viewers, persistence, and OBS from setup -> frames -> intelligence -> three quests -> controls -> vote -> overlay -> result/reward, including failure/reconnect/idempotency and no simulated live evidence. |
 | P-010 | P1 | BLOCKED | Role 1 | Submission evidence and disclosures are complete. | P-009 | README, architecture, prompts/agent config, third-party list, screenshots, evaluation results, and limitations. |
-| P-011 | P1 | BLOCKED | Role 1 | Proposal deck and five-minute demo are final. | P-010 | Maximum 15-slide PDF and maximum five-minute video demonstrate complete core experience. |
+| P-011 | P1 | BLOCKED | Role 1 | Proposal deck and five-minute demo are final. | P-010 and explicit project-owner product-readiness declaration | Maximum 15-slide PDF and maximum five-minute video demonstrate complete core experience. No narrative assembly begins before the owner declares the product ready. |
 | P-012 | P0 | BLOCKED | Role 1 | Private submission repository is ready for judging. | Final verification | `garena-ai-build-challenge` added as collaborator; immutable Google Drive submission package prepared. |
 | P-013 | P0 | READY | Role 1 | Problem-solution fit, originality, usability, and expected-impact claims are backed by recorded evidence. | Ongoing product access | Relevant streamer/viewer observations, truthful alternatives comparison, measurable hypotheses, and resulting priorities are available for the deck/demo. |
 | P-014 | P0 | DONE | Role 1 with Roles 2/4/5 handoff | UI plans are beginner-safe and every upstream seam is assigned before source implementation. | PR #27; issues #15-#26 | Guided execution records, adaptive design coaching, corrected P0/P1 queues, persistent feasibility reviews/UI-X issues, and Role 1 integration backlog are merged. Individual feasibility acceptances remain tracked by #15/#16 rather than blocking this foundation outcome. |
 
 ## Schedule gates
 
-- **7 August 2026, 18:00 SGT:** feature freeze.
-- **8 August 2026:** integration, rehearsal, evidence, deck, and recording.
-- **9 August 2026:** final verification and submission.
+- Dated build-plan milestones remain integration targets and do not freeze work automatically.
+- Only the project owner may call the contract/feature freeze.
+- Deck, video, and final demo-narrative assembly begin only after the project owner declares the product ready.
+- **9 August 2026:** final verification and submission deadline.
