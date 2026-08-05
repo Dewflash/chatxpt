@@ -347,8 +347,8 @@ Keep provider payloads, Twitch payloads, component-local UI state, and persisten
 - Role 3 supplies deterministic quest-engine tests, lifecycle coverage, safety enforcement, and verification evidence.
 - Role 4 supplies a working streamer-facing site connected to agreed contracts, plus responsive screenshots or recordings.
 - Role 5 supplies working viewer, fallback, and overlay sites connected to agreed contracts, plus responsive screenshots or recordings.
-- Role 1 owns shared checks, end-to-end integration evidence, README and architecture assembly, third-party disclosures, slide-deck assembly, demo-video assembly, and final submission.
-- Feature freeze is 7 August 2026 at 18:00 SGT. Use 8 August for integration, rehearsal, recording, and submission packaging; complete final verification and submission on 9 August.
+- Role 1 owns shared checks, end-to-end integration evidence, README and architecture assembly, and third-party disclosures. Slide-deck assembly, demo-video assembly, and final narrative work begin only after the project owner explicitly declares the product ready for that phase.
+- There is no automatic contract cutoff or feature-freeze date. Dated plan milestones are delivery targets, not a freeze command; only the project owner may declare the freeze. The submission deadline remains 9 August 2026, so integration and evidence work continue with deadline risk reported honestly until that call.
 - The submission repository must remain private and add `garena-ai-build-challenge` as a collaborator before submission.
 
 ## Current open decisions
