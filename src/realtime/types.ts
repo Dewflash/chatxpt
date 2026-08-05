@@ -1,4 +1,5 @@
 import type {
+  AcceptedVoteTallyReader,
   AuthoritativeSessionState,
   CandidateBatch,
   CandidateBatchReader,
@@ -112,6 +113,7 @@ export interface ChatXptPersistenceRuntime {
   readonly sessions: SessionStateRepository;
   readonly lifecycle: SessionLifecycleStore;
   readonly candidates: CandidateBatchRepository;
+  readonly acceptedVotes: AcceptedVoteTallyReader;
   readonly snapshots: RoleSnapshotPublisher;
   readonly accessGrants: RealtimeAccessGrantStore;
 }

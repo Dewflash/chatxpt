@@ -1,4 +1,5 @@
 import type { CommandEnvelope } from "./commands";
+import type { AcceptedVoteTallySnapshot } from "./participation";
 import type { ContractEnvelope, DomainError, ServiceHealth } from "./common";
 import type { ParticipationCapabilities, StreamSession } from "./session";
 import type { StreamerProfile } from "./profile";
@@ -56,7 +57,22 @@ export interface QuestEngineInput {
   readonly currentState: QuestCycleState;
   readonly command: CommandEnvelope;
   readonly candidateBatch: CandidateBatch | null;
+  /** Present only for a valid system.vote-close boundary; it never prescribes a winner. */
+  readonly acceptedVoteTally?: AcceptedVoteTallySnapshot | null;
+  /**
+   * Present only for a valid system.vote-close boundary. This is the neutral
+   * current context Role 3 may use to revalidate close-time safety and
+   * feasibility; it never contains Twitch, provider, UI, or persistence payloads.
+   */
+  readonly voteCloseValidationContext?: VoteCloseValidationContext | null;
   readonly now: number;
+}
+
+export interface VoteCloseValidationContext {
+  readonly profile: StreamerProfile;
+  readonly session: StreamSession;
+  readonly gameplay: GameplaySnapshot | null;
+  readonly audience: AudienceSnapshot | null;
 }
 
 export interface QuestEngineDecision {

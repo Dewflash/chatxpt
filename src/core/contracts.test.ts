@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CONTRACT_VERSION,
+  acceptedVoteTallySnapshotSchema,
   candidateBatchSchema,
   commandEnvelopeSchema,
   contractEnvelopeSchema,
@@ -161,6 +162,8 @@ describe("identity and command permissions", () => {
         type: "viewer.vote",
         actor: { kind: "anonymous", actorId: null },
         candidateId: "fixture-candidate-1",
+        voterKey: "fixture-voter-key",
+        sourceMode: "hosted-board",
       }).success,
     ).toBe(true);
 
@@ -172,6 +175,50 @@ describe("identity and command permissions", () => {
         action: "skip",
         candidateId: null,
       }).success,
+    ).toBe(false);
+  });
+
+  it("accepts only neutral system vote-close commands and tally snapshots", () => {
+    const closeCommand = {
+      contractVersion: CONTRACT_VERSION,
+      sessionId: "fixture-session",
+      questCycleId: "fixture-cycle",
+      commandId: "fixture-vote-close",
+      correlationId: "fixture-vote-close-correlation",
+      expectedRevision: 4,
+      issuedAt: 10,
+      actor: { kind: "system", actorId: "fixture-orchestrator" },
+      type: "system.vote-close",
+    };
+    expect(commandEnvelopeSchema.safeParse(closeCommand).success).toBe(true);
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...closeCommand,
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+      }).success,
+    ).toBe(false);
+
+    const tally = {
+      sessionId: "fixture-session",
+      questCycleId: "fixture-cycle",
+      revision: 4,
+      closedAt: 10,
+      acceptedVoteCount: 3,
+      tallies: [
+        { candidateId: "fixture-candidate-1", votes: 2 },
+        { candidateId: "fixture-candidate-2", votes: 1 },
+        { candidateId: "fixture-candidate-3", votes: 0 },
+      ],
+    };
+    expect(acceptedVoteTallySnapshotSchema.safeParse(tally).success).toBe(true);
+    expect(
+      acceptedVoteTallySnapshotSchema.safeParse({
+        ...tally,
+        winnerCandidateId: "fixture-candidate-1",
+      }).success,
+    ).toBe(false);
+    expect(
+      acceptedVoteTallySnapshotSchema.safeParse({ ...tally, acceptedVoteCount: 4 }).success,
     ).toBe(false);
   });
 

@@ -4,6 +4,7 @@ import {
   ChatXptOrchestrator,
   commandFingerprint,
   streamerQuestCommandSchema,
+  viewerVoteCommandSchema,
   type OrchestratorDependencies,
   type StatePublisher,
 } from "../../src/core";
@@ -41,9 +42,30 @@ function command(commandId: string, expectedRevision = 0, action = "skip" as con
   });
 }
 
+function voteCommand(
+  commandId: string,
+  expectedRevision: number,
+  sourceMode: "twitch-extension" | "hosted-board" | "twitch-chat",
+) {
+  return viewerVoteCommandSchema.parse({
+    contractVersion: "1.0.0",
+    sessionId: contractFixtureSession.sessionId,
+    questCycleId: contractFixtureQuestCycle.envelope.questCycleId,
+    commandId,
+    correlationId: `correlation-${commandId}`,
+    expectedRevision,
+    issuedAt: FIXTURE_NOW + 1_000,
+    actor: { kind: "viewer", actorId: "fixture-viewer" },
+    type: "viewer.vote",
+    candidateId: contractFixtureCandidateBatch.candidates[0].candidateId,
+    voterKey: "fixture-session-scoped-voter",
+    sourceMode,
+  });
+}
+
 function logicDependencies(): Omit<
   OrchestratorDependencies,
-  "repository" | "candidateBatches" | "publisher"
+  "repository" | "candidateBatches" | "acceptedVotes" | "publisher"
 > {
   return {
     authorizer: new FixtureOnlyAllowAuthorizer(),
@@ -115,6 +137,51 @@ describe("production-shaped memory persistence integration", () => {
     expect(reconnect?.viewerId).toBeNull();
     expect(reconnect?.sessionPoints).toBe(0);
     expect(reconnect?.acceptedCandidateId).toBeNull();
+  });
+
+  it("keeps the first accepted vote final across participation surfaces", async () => {
+    const runtime = await preparedRuntime();
+    const orchestrator = new ChatXptOrchestrator(
+      bindPersistenceRuntime(logicDependencies(), runtime),
+    );
+
+    const first = await orchestrator.execute(voteCommand("first-vote", 0, "twitch-extension"));
+    const repeated = await orchestrator.execute(voteCommand("second-vote", 1, "twitch-chat"));
+
+    expect(first.ok).toBe(true);
+    expect(repeated.ok).toBe(false);
+    if (repeated.ok) return;
+    expect(repeated.error.code).toBe("duplicate");
+    expect((await runtime.sessions.load(contractFixtureSession.sessionId))?.session.revision).toBe(1);
+
+    const tally = await runtime.acceptedVotes.readAcceptedVoteTally({
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: contractFixtureQuestCycle.envelope.questCycleId ?? "missing-cycle",
+      revision: 1,
+      candidateIds: contractFixtureCandidateBatch.candidates.map(({ candidateId }) => candidateId) as [
+        string,
+        string,
+        string,
+      ],
+      acceptedBefore: FIXTURE_NOW + 2_000,
+      closedAt: FIXTURE_NOW + 2_000,
+    });
+    expect(tally.acceptedVoteCount).toBe(1);
+    expect(tally.tallies[0]?.votes).toBe(1);
+
+    const deadlineTally = await runtime.acceptedVotes.readAcceptedVoteTally({
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: contractFixtureQuestCycle.envelope.questCycleId ?? "missing-cycle",
+      revision: 1,
+      candidateIds: contractFixtureCandidateBatch.candidates.map(({ candidateId }) => candidateId) as [
+        string,
+        string,
+        string,
+      ],
+      acceptedBefore: FIXTURE_NOW + 1_000,
+      closedAt: FIXTURE_NOW + 2_000,
+    });
+    expect(deadlineTally.acceptedVoteCount).toBe(0);
   });
 
   it("returns one commit and one stale result for concurrent expected revisions", async () => {

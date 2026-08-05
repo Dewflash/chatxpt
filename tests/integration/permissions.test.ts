@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   streamerQuestCommandSchema,
+  systemVoteCloseCommandSchema,
   viewerReactionCommandSchema,
   viewerVoteCommandSchema,
 } from "../../src/core";
@@ -39,6 +40,8 @@ function grant(
     actorId,
     expiresAt: FIXTURE_NOW + 60_000,
     moderatorForBroadcasterIds: [],
+    voterKey: kind === "viewer" || kind === "anonymous" ? "fixture-voter-key" : null,
+    participationModes: ["twitch-extension", "hosted-board", "twitch-chat"],
     ...overrides,
   };
 }
@@ -52,6 +55,37 @@ function liveState() {
 }
 
 describe("server-authoritative command permissions", () => {
+  it("allows only a verified system identity to close a vote", async () => {
+    const state = liveState();
+    const command = systemVoteCloseCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: state.session.sessionId,
+      questCycleId: state.questCycle.envelope.questCycleId,
+      commandId: "system-vote-close",
+      correlationId: "system-vote-close-correlation",
+      expectedRevision: 0,
+      issuedAt: FIXTURE_NOW,
+      actor: { kind: "system", actorId: "fixture-orchestrator" },
+      type: "system.vote-close",
+    });
+    const authorizer = new ServerCommandAuthorizer(
+      new StaticVerifiedActorResolver(
+        new Map([[command.commandId, grant("system", "fixture-orchestrator")]]),
+      ),
+      () => FIXTURE_NOW,
+    );
+
+    expect(await authorizer.authorize(command, state)).toBeNull();
+    expect(
+      (
+        await new ServerCommandAuthorizer(
+          new StaticVerifiedActorResolver(new Map()),
+          () => FIXTURE_NOW,
+        ).authorize(command, state)
+      )?.code,
+    ).toBe("unauthenticated");
+  });
+
   it("allows only the owning broadcaster full streamer command authority", async () => {
     const command = streamerCommand("broadcaster", "fixture-broadcaster", "owner-command");
     const resolver = new StaticVerifiedActorResolver(
@@ -123,6 +157,8 @@ describe("server-authoritative command permissions", () => {
       actor: { kind: "anonymous", actorId: null },
       type: "viewer.vote",
       candidateId: "fixture-candidate-1",
+      voterKey: "fixture-voter-key",
+      sourceMode: "hosted-board",
     });
     const reaction = viewerReactionCommandSchema.parse({
       contractVersion: "1.0.0",
@@ -146,6 +182,81 @@ describe("server-authoritative command permissions", () => {
 
     expect(await authorizer.authorize(vote, state)).toBeNull();
     expect((await authorizer.authorize(reaction, state))?.code).toBe("unavailable-capability");
+  });
+
+  it("rejects a spoofed vote identity or participation source", async () => {
+    const baseState = liveState();
+    const state = {
+      ...baseState,
+      session: {
+        ...baseState.session,
+        capabilities: { ...baseState.session.capabilities, twitchChatVoting: true },
+      },
+    };
+    const vote = viewerVoteCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: state.session.sessionId,
+      questCycleId: state.questCycle.envelope.questCycleId,
+      commandId: "verified-vote",
+      correlationId: "verified-vote-correlation",
+      expectedRevision: 0,
+      issuedAt: FIXTURE_NOW,
+      actor: { kind: "viewer", actorId: "fixture-viewer" },
+      type: "viewer.vote",
+      candidateId: "fixture-candidate-1",
+      voterKey: "spoofed-voter-key",
+      sourceMode: "twitch-chat",
+    });
+    const authorizer = new ServerCommandAuthorizer(
+      new StaticVerifiedActorResolver(
+        new Map([
+          [
+            vote.commandId,
+            grant("viewer", "fixture-viewer", {
+              voterKey: "verified-voter-key",
+              participationModes: ["twitch-extension"],
+            }),
+          ],
+        ]),
+      ),
+      () => FIXTURE_NOW,
+    );
+
+    expect((await authorizer.authorize(vote, state))?.code).toBe("forbidden");
+    expect(
+      (
+        await authorizer.authorize(
+          { ...vote, voterKey: "verified-voter-key" },
+          state,
+        )
+      )?.code,
+    ).toBe("forbidden");
+  });
+
+  it("rejects a verified vote when its concrete participation path is disabled", async () => {
+    const state = liveState();
+    const vote = viewerVoteCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: state.session.sessionId,
+      questCycleId: state.questCycle.envelope.questCycleId,
+      commandId: "disabled-extension-vote",
+      correlationId: "disabled-extension-vote-correlation",
+      expectedRevision: 0,
+      issuedAt: FIXTURE_NOW,
+      actor: { kind: "viewer", actorId: "fixture-viewer" },
+      type: "viewer.vote",
+      candidateId: "fixture-candidate-1",
+      voterKey: "fixture-voter-key",
+      sourceMode: "twitch-extension",
+    });
+    const authorizer = new ServerCommandAuthorizer(
+      new StaticVerifiedActorResolver(
+        new Map([[vote.commandId, grant("viewer", "fixture-viewer")]]),
+      ),
+      () => FIXTURE_NOW,
+    );
+
+    expect((await authorizer.authorize(vote, state))?.code).toBe("unavailable-capability");
   });
 
   it("rejects every command after access lifecycle ends", async () => {

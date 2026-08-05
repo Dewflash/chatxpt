@@ -58,6 +58,9 @@ export {
 } from "./types";
 export type {
   AcceptedCommandReceipt,
+  AcceptedVoteTallyReadInput,
+  AcceptedVoteTallyReader,
+  AcceptedVoteTallySnapshot,
   AuthoritativeSessionState,
   CommandAuthorizer,
   CommandEnvelope,
