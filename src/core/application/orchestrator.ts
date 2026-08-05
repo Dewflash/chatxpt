@@ -24,6 +24,7 @@ import {
   type RoleViewModels,
   type ViewModelProjectionInput,
   type AcceptedVoteTallySnapshot,
+  type VoteCloseValidationContext,
 } from "../contracts";
 import type { OrchestratorDependencies } from "./ports";
 import { canonicalJsonStringify, commandFingerprint } from "./fingerprint";
@@ -369,6 +370,7 @@ export class ChatXptOrchestrator {
     }
 
     let acceptedVoteTally: AcceptedVoteTallySnapshot | null = null;
+    let voteCloseValidationContext: VoteCloseValidationContext | null = null;
     if (
       command.type === "system.vote-close" &&
       current.questCycle.status === "voting" &&
@@ -409,6 +411,12 @@ export class ChatXptOrchestrator {
         return { ok: false, error: error("validation", "Accepted vote tally does not match the closing cycle") };
       }
       acceptedVoteTally = parsedTally.data;
+      voteCloseValidationContext = {
+        profile: current.profile,
+        session: current.session,
+        gameplay: current.gameplay,
+        audience: current.audience,
+      };
     }
     let untrustedEngineResult: unknown;
     try {
@@ -417,6 +425,7 @@ export class ChatXptOrchestrator {
         command,
         candidateBatch,
         acceptedVoteTally,
+        voteCloseValidationContext,
         now: acceptedAt,
       });
     } catch {

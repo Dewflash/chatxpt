@@ -222,8 +222,10 @@ describe("Role 1 application orchestrator", () => {
       ],
     }));
     let observedTally: unknown = null;
+    let observedCloseContext: unknown = null;
     const engine = new ScriptedFixtureQuestEngine((input) => {
       observedTally = input.acceptedVoteTally;
+      observedCloseContext = input.voteCloseValidationContext;
       return {
         ok: true,
         decision: { nextState: structuredClone(input.currentState), events: [] },
@@ -262,6 +264,12 @@ describe("Role 1 application orchestrator", () => {
     ]);
     expect(observedTally).toMatchObject({ acceptedVoteCount: 3 });
     expect(observedTally).not.toHaveProperty("winnerCandidateId");
+    expect(observedCloseContext).toMatchObject({
+      profile: { profileId: state.profile.profileId },
+      session: { sessionId: state.session.sessionId },
+      gameplay: { envelope: { messageId: state.gameplay?.envelope.messageId } },
+      audience: { envelope: { messageId: state.audience?.envelope.messageId } },
+    });
   });
 
   it("returns the original receipt for an identical command without deciding or publishing twice", async () => {
