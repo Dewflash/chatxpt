@@ -11,8 +11,11 @@ This is the short, current handoff for all five contributors and their ChatGPT/C
 - The judged workflow uses real gameplay captured through OBS Virtual Camera and real Twitch activity. Simulated fixtures are test/diagnostic evidence only; unavailable real signals are reported as unknown rather than fabricated.
 - Role 1's application orchestrator is the sole runtime composition/persistence/broadcast authority. Every role integrates through the versioned public seams and contract tests in `docs/build-plans/INTEGRATION-CONTRACT.md`.
 - Game support is tiered: universal broad visual signals, calibrated HUD facts for configured games, and future official telemetry. Capabilities/unknown are explicit.
+- Brawl Stars is the intended real-gameplay demonstration scenario if the current OBS capture spike proves it reliable; otherwise Role 1 immediately selects a team-owned PC action game without changing the game-neutral product. The minimum extraction proof is universal action/quiet/transition intelligence plus at least one reliable calibrated fact for the selected game.
 - Roles 2 and 3 jointly recommend the AI provider/model. Role 2 owns extraction, behavioural intelligence, provider adapters, and model-ready context. Role 3 owns quest-engine behaviour, quest-domain AI instructions, validation, lifecycle, activation, and safety enforcement.
-- The submission deadline is 9 August 2026. Feature freeze is 7 August at 18:00 SGT; 8 August is reserved for integration, evidence, rehearsal, and recording.
+- Twitch Extension Local/Hosted Test remains the target primary viewer proof. If it is not end to end by 6 August 2026 at 12:00 SGT, the real Twitch demonstration uses the hosted board and Twitch-chat voting fallbacks without misrepresenting Extension readiness.
+- Viewer participation rate is the principal impact metric; quest completion, setup time, response latency, and fallback/reconnect success are supporting measures.
+- The submission deadline is 9 August 2026. There is no automatic feature freeze: only the project owner may call it. Final deck/video/demo-narrative assembly is deferred until the project owner declares the product ready, while implementation, integration, and evidence collection continue.
 
 ## Authority and owners
 
@@ -44,6 +47,7 @@ Update a row before starting shared-contract or golden-demo work. Detailed task 
 | Application orchestrator foundation | `Dewflash` | PR #8 | Idempotent expected-revision command path with atomic fixture persistence before validated view broadcast | Done |
 | Role dependency guard and legacy inventory | `Dewflash` | PR #9 | Enforce public-only cross-role imports and map legacy seams without deciding migration outcomes | Done |
 | Foundation checkpoint audit | `Dewflash` | PR #10 | Compile changelog, verify merged main, and publish truthful role-by-role pickup state | Done |
+| Evidence manifest and real-test resources | `Dewflash` | `role-1/evidence-manifest` | Machine-checked evidence classes, immutable run records, privacy-safe artifact references, and assigned Twitch/viewer/OBS/browser/recording resources | Needs review |
 | Supabase persistence/realtime foundation | `Dewflash` | [PR #12](https://github.com/Dewflash/chatxpt/pull/12) | Revisioned server-only persistence, session lifecycle, permissions, sanitised snapshots, local fallback, and recovery tests; shared cloud activation remains separate evidence | Done |
 | Guided UI-plan safety corrections | `Dewflash` using the D-015 integration override | [PR #27](https://github.com/Dewflash/chatxpt/pull/27); issues #15-#26 | Beginner-safe execution, adaptive design coaching, corrected priorities, personal-viewer/fallback gaps, and persistent owner handoffs without UI source changes | Done |
 | Role 4/5 MVP build plans | `joelyrk` | [PR #14](https://github.com/Dewflash/chatxpt/pull/14); feasibility [#15](https://github.com/Dewflash/chatxpt/issues/15)/[#16](https://github.com/Dewflash/chatxpt/issues/16) | Separate beginner-guided plans for the streamer and viewer owners; one feasibility response and Role 2 comparison remain required | Needs review |

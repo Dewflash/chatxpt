@@ -189,4 +189,14 @@ describe("quest outcome policy", () => {
       }),
     ).toMatchObject({ historyCandidateId: null, rewardPointsAwarded: 0, hypeDelta: 0 });
   });
+
+  it("rejects failed outcomes without an active candidate because no attempt completed", () => {
+    expect(
+      decideQuestOutcome({
+        outcome: "failed",
+        activeCandidate: null,
+        terminalAt: ROLE_3_FIXTURE_TIME,
+      }),
+    ).toBeNull();
+  });
 });

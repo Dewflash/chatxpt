@@ -82,7 +82,7 @@ Internal decisions do not require Role 1 approval unless they cross those bounda
 | 2: Core | Supabase/Vercel and real capture interfaces | Real-frame extraction and audience intelligence | Lifecycle, intervention, validation, and fallback | Each role demonstrates its subsystem independently |
 | 3: Behaviour | Twitch/OBS integration | Free AI/algorithmic candidates and evaluation | Voting, activation, progress, results, and rewards | Role 2 output drives Role 3 end to end |
 | 4: Product | Integrate Roles 4/5 and realtime clients | Fix intelligence failures from real runs | Fix engine failures from real runs | Golden workflow works across two viewers and OBS |
-| 5: Freeze | Evidence, deployment, deck, video, submission | Evaluation evidence and declared limitations | Lifecycle/safety evidence and declared limitations | No unverified feature claims remain |
+| 5: Owner-called freeze | Evidence, deployment, and—after an explicit product-readiness declaration—deck, video, and submission | Evaluation evidence and declared limitations | Lifecycle/safety evidence and declared limitations | No unverified feature claims remain |
 
 ## Five-day delivery calendar
 
@@ -95,8 +95,8 @@ Dates are Singapore time. These are integration deadlines, not permission for on
 | 5 Aug, 18:00 | Supabase/Vercel and capture boundaries exist; Role 2 demonstrates real-frame extraction; Role 3 demonstrates lifecycle, validation, and fallback independently. |
 | 6 Aug, 18:00 | Real Role 2 outputs drive Role 3; Twitch/OBS integration and voting/activation/progress paths are connected. |
 | 7 Aug, 12:00 | Roles 4/5 are integrated; one-streamer/two-viewer golden workflow and failure matrix are testable. |
-| 7 Aug, 18:00 | Feature freeze. Only demo-critical fixes, evidence, disclosure, and submission work continue. |
-| 8 Aug | Full integration, real evidence capture, rehearsal, deck, and video. |
+| 7 Aug, 18:00 | Target for a complete P0 integration and evidence checkpoint. This is not an automatic freeze; only the project owner may call one. |
+| 8 Aug | Continue full integration and real evidence capture. Rehearsal, deck, video, and final narrative work begin only after the project owner declares the product ready. |
 | 9 Aug | Clean-clone check, deployed-link check, repository access, immutable package, and submission confirmation. |
 
 If a deadline slips, the role owner immediately reports the failed exit signal, evidence, smallest recovery scope, and decisions needed. Role 1 reprioritises; nobody silently lowers the real-data or safety standard.

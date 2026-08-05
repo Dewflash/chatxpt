@@ -138,7 +138,12 @@ export function decideQuestOutcome(
   input: QuestOutcomePolicyInput,
 ): QuestOutcomePolicyDecision | null {
   if (!Number.isSafeInteger(input.terminalAt) || input.terminalAt < 0) return null;
-  if (input.outcome === "succeeded" && input.activeCandidate === null) return null;
+  if (
+    (input.outcome === "succeeded" || input.outcome === "failed") &&
+    input.activeCandidate === null
+  ) {
+    return null;
+  }
 
   const cooldownEndsAt = defaultCooldownEndsAt(input.terminalAt);
   if (cooldownEndsAt === null) return null;

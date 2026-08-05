@@ -1,4 +1,8 @@
 /** Role 2 public boundary for gameplay and audience extraction. */
+export type {
+  AudienceExtractionPipeline,
+  GameplayExtractionPipeline,
+} from "./ports";
 export {
   audienceEventSchema,
   audienceSnapshotSchema,
