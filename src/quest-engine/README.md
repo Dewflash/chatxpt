@@ -21,3 +21,7 @@ Fallback selection is deterministic from the caller-supplied session/cycle seed 
 An `emergency-pause` command cancels the current cycle and emits `quest-cycle.emergency-cancelled`. Role 1 must persist the application-wide emergency latch and refuse new proposals until it is explicitly cleared. Ordinary resumable pause remains unavailable because the canonical lifecycle has neither a paused state nor a resume action.
 
 Voting opens for 30 seconds using authoritative time and rejects late votes. Public winner selection and `start` authority are intentionally absent: D3-12 through D3-15 are recorded, but Role 3 awaits the neutral vote-close and accepted-tally seam proposed in issue #42. Role 1 owns the one-vote-per-viewer ledger; Role 3 will resolve majority, deterministic ties, zero-vote no-activation and final winner validity after authoritative close.
+
+[`EVALUATION.md`](./EVALUATION.md) records fixture-only failure and portability evidence for provider absence/malformed output, varied game genres, reconnect-relevant state reconstruction, and cancellation semantics. It does not upgrade component tests into live or end-to-end proof.
+
+`PROVIDER_QUALITY_RUBRIC.md` is Role 3's evaluation-only proposal for the joint Role 2/3 provider comparison. `provider-quality.ts` makes its hard gates, weighted threshold, and critical minimums deterministic. Neither file calls, selects, or integrates a provider; the D23 joint decision gates remain open until Role 2 supplies real operational trials and both roles send one recommendation to Role 1.
