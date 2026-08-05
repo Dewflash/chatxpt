@@ -1,5 +1,10 @@
 /** Role 2 public boundary for analysed intelligence and quest-candidate production. */
 export {
+  createValidatingCandidateProvider,
+  createValidatingIntelligenceProvider,
+} from "./providers";
+export type { CandidateGenerationStrategy } from "./providers";
+export {
   candidateBatchSchema,
   candidateGenerationSchema,
   intelligenceSnapshotSchema,
