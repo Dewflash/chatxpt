@@ -195,6 +195,8 @@ export function role3VoteCommand(overrides: Partial<VoteCommand> = {}): VoteComm
     ...baseCommand,
     type: "viewer.vote",
     candidateId: role3FixtureCandidateBatch.candidates[0].candidateId,
+    voterKey: "role-3-fixture-voter-key",
+    sourceMode: "twitch-extension",
     actor: { kind: "viewer", actorId: "role-3-fixture-viewer" },
     ...overrides,
   }) as VoteCommand;

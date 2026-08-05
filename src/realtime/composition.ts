@@ -3,7 +3,7 @@ import type { ChatXptPersistenceRuntime } from "./types";
 
 export type OrchestratorLogicDependencies = Omit<
   OrchestratorDependencies,
-  "repository" | "candidateBatches" | "publisher"
+  "repository" | "candidateBatches" | "acceptedVotes" | "publisher"
 >;
 
 /** Binds the sole Role 1 orchestrator to one coherent persistence runtime. */
@@ -15,6 +15,7 @@ export function bindPersistenceRuntime(
     ...dependencies,
     repository: persistence.sessions,
     candidateBatches: persistence.candidates,
+    acceptedVotes: persistence.acceptedVotes,
     publisher: persistence.snapshots,
   };
 }

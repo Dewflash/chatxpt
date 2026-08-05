@@ -7,6 +7,10 @@ const migration = readFileSync(
   resolve(process.cwd(), "supabase/migrations/202608030001_chatxpt_foundation.sql"),
   "utf8",
 );
+const voteLedgerMigration = readFileSync(
+  resolve(process.cwd(), "supabase/migrations/202608050001_vote_ledger_identity.sql"),
+  "utf8",
+);
 const environmentExample = readFileSync(resolve(process.cwd(), ".env.example"), "utf8");
 
 describe("Supabase migration security regression", () => {
@@ -36,6 +40,16 @@ describe("Supabase migration security regression", () => {
     expect(migration).toContain("pg_catalog.pg_advisory_xact_lock");
     expect(migration).toContain("interval '2 hours'");
     expect(migration).toContain("interval '10 minutes'");
+  });
+
+  it("enforces one private accepted vote per viewer and cycle across all MVP surfaces", () => {
+    expect(voteLedgerMigration).toContain(
+      "accepted_participation_one_vote_per_voter_cycle",
+    );
+    expect(voteLedgerMigration).toContain("payload #>> '{voterKey}'");
+    expect(voteLedgerMigration).toContain(
+      "('twitch-extension', 'hosted-board', 'twitch-chat')",
+    );
   });
 
   it("denies direct client table writes and restricts server RPC execution", () => {
