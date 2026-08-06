@@ -6,7 +6,7 @@ Update only this role's statuses and evidence. Raise shared-contract needs throu
 
 Execute these outcomes through `docs/build-plans/ROLE-2-BUILD-PLAN.md`; its decision gates belong to Joelyrk unless explicitly marked joint or escalated.
 
-**Next pass:** land the credential-free algorithmic candidate strategy accepted under D2-18, then continue the real OBS/OCR evidence pass when Role 1's capture and Tesseract dependencies merge.
+**Next pass:** execute `role-2/real-input-evidence` against Role 1's merged browser `FrameSource`: two authorised gameplay samples with separate annotations, quiet/action/transition measurements, one selective-OCR run, latency/resource observations, sanitised real-chat fixtures, and honest unknown behaviour. D2-07 through D2-11 are approved; replace diagnostic calibration with the resulting live-labelled policy only after the evidence bundle passes its real-input gate.
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
@@ -18,7 +18,7 @@ Execute these outcomes through `docs/build-plans/ROLE-2-BUILD-PLAN.md`; its deci
 | R2-005 | P0 | BLOCKED | Implement chosen provider adapter and model-ready context. | Joint recommendation accepted by Role 1 | Server-only provider path returns validated structured output; no vendor payload leaks into core. |
 | R2-006 | P0 | BLOCKED | Produce exactly three candidate quests plus metadata for Role 3. | R2-003 and R2-005 | Candidate output conforms to contract and includes confidence, reason, provider/fallback, and traceable inputs. |
 | R2-007 | P0 | IN PROGRESS | Build credential-free and malformed/provider-failure behaviour. | Current mock engine | Tests demonstrate deterministic fallback and clear provider status. |
-| R2-008 | P1 | READY | Create representative AI/extraction evaluation cases and evidence. | Ongoing | Multiple game genres, audience moods, unsafe/noisy cases, latency results, and documented limitations. |
+| R2-008 | P1 | IN PROGRESS | Create representative AI/extraction evaluation cases and evidence. | Ongoing | Multiple game genres, audience moods, unsafe/noisy cases, latency results, and documented limitations. |
 
 ## Decisions Role 2 may make without Role 1
 
@@ -61,3 +61,10 @@ Provider/model adoption is a joint Role 2/Role 3 recommendation and requires Rol
 - D2-12 through D2-15 were approved as one batch on 8 August 2026 and recorded in the Role 2 build plan.
 - `codex/role-2-audience-snapshot-pipeline` adds a 30-second rolling window with explicit sample size, freshness, expiry, confidence, in-memory raw-chat processing, per-viewer spam controls, repeated requests across multiple qualifying events, conservative unknown handling, unsafe-intent suppression, and strict evidence-class partitioning.
 - Required regressions cover sparse, spammy, repeated-request, sarcastic/conflicting, unsafe, and multilingual or unrecognised inputs. No real Twitch-chat execution is claimed yet.
+
+## Current real-input evidence pass
+
+- `role-2/real-input-evidence` adds a Role 2 report boundary that accepts canonical OBS measurements, keeps human annotations separate, aggregates quiet/action/transition and p50/p95 processing metrics, records sanitised OCR and honest unknown observations, and never persists raw frames.
+- The bundle assessment requires two distinct authorised samples, all three labels, one selective-OCR observation, latency coverage, an unknown case, and a privacy-reviewed sanitised audience fixture. Diagnostic inputs are explicitly refused as real evidence.
+- D2-07 through D2-11 were approved together on 6 August 2026. Diagnostic code now derives non-overlapping quiet/action/transition thresholds, requires confidence 0.75, returns conflict/stale/low-confidence states honestly, rate-limits three-frame OCR bursts, preprocesses named crops locally, and confirms OCR only after two matching high-confidence readings out of three.
+- Focused tests currently use diagnostic-shaped fixture data only. A browser-delivered live `FrameSource`, the clean Tesseract dependency replacement in [PR #126](https://github.com/Dewflash/chatxpt/pull/126), authorised gameplay/chat inputs, resource observations, privacy review, artifact, and evidence-manifest entry remain required.
