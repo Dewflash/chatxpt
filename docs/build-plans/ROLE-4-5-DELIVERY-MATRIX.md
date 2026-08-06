@@ -4,9 +4,11 @@
 
 **Implementers:** Role 4 (`JYL1m`) and Role 5 (`drdexe`)
 
-**Status:** Awaiting one consolidated feasibility review from each implementing owner
+**Status:** Accepted after Role 4 and Role 5 consolidated feasibility reviews; no scope revision was required
 
 **Approved Role 2 decisions:** D2-01, D2-02, D2-03, and D2-03A on 3 August 2026
+
+**Acceptance record:** Role 4's review was accepted through issue #15 and PR #30 on 4 August 2026. Role 2 [accepted Role 5's review and settled UX baseline](https://github.com/Dewflash/chatxpt/issues/16#issuecomment-5189664413) on 5 August 2026. All reported upstream gaps remain assigned to UI-X01 through UI-X10 with fixture, disabled, or unavailable interim paths; neither UI role gains backend or lifecycle authority.
 
 This matrix is authoritative for the dependencies shared by `ROLE-4-BUILD-PLAN.md` and `ROLE-5-BUILD-PLAN.md`. The two plans remain standalone implementation guides. This file prevents their route, fixture, contract, and deadline assumptions from drifting.
 
@@ -30,7 +32,7 @@ All deadlines use Singapore time and inherit the integration exits in `docs/buil
 | 5 Aug, 18:00 | Studio setup, profile/preferences, readiness, and health work against accepted seams | Twitch viewer voting and active-quest flow work against accepted seams | Each UI subsystem is demonstrable independently without invented authority |
 | 6 Aug, 18:00 | Studio live controls and Twitch Config/Live Config are connected | Hosted board, chat instructions, and OBS overlay are connected | Real Role 2/3 state can traverse the Role 1 harness into both UI roles |
 | 7 Aug, 12:00 | Setup-to-live-control path is integrated | Extension/fallback/overlay vote-to-result path is integrated | One streamer, two viewers, and OBS display the same session/cycle revision |
-| 7 Aug, 18:00 | P0 evidence complete; only approved P1 work that cannot destabilise P0 may remain | P0 evidence complete; only approved P1 work that cannot destabilise P0 may remain | Feature freeze; later changes are demo-critical fixes or evidence only |
+| 7 Aug, 18:00 | P0 evidence checkpoint; only approved P1 work that cannot destabilise P0 may remain | P0 evidence checkpoint; only approved P1 work that cannot destabilise P0 may remain | Target for complete P0 integration and evidence; only the project owner may call a freeze |
 | 8 Aug | Support Role 1 rehearsal/evidence fixes | Support Role 1 rehearsal/evidence fixes | Golden workflow, failure matrix, recording, and disclosure |
 
 ## Shared dependency and handoff table

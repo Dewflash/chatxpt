@@ -6,12 +6,12 @@ Update only this role's statuses and evidence. Raise shared-contract needs throu
 
 Execute these outcomes through `docs/build-plans/ROLE-2-BUILD-PLAN.md`; its decision gates belong to Joelyrk unless explicitly marked joint or escalated.
 
-**Next pass:** answer the Phase 1 gate once and deliver R2-P01/R2-P02 plus R2-P02A (separate but synchronised Role 4/5 plans and dependency matrix). Then begin R2-P03 ports/real owned fixtures and R2-P03A risk spikes without waiting for full Twitch, OBS, or Role 3 implementation.
+**Next pass:** finish R2-P03's real owned gameplay/chat fixtures and R2-P03A's real-frame, selective-OCR, and free-provider risk evidence. Then answer D2-07 through D2-11 as one Phase 3 batch and begin the bounded R2-P04/R2-P05 real-extraction spine without waiting for complete Twitch, UI, or Role 3 implementation.
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
 | R2-001 | P0 | IN PROGRESS | Inspect the prototype and implement Role 2's public port/fixture boundary against provisional contracts. | Role 1 provisional contracts | Public entry points and producer/consumer tests name inputs, outputs, provenance, capabilities, fixtures, and no cross-role internal imports. |
-| R2-009 | P0 | IN PROGRESS | Decide and deliver separate but synchronised current-MVP build plans for Roles 4 and 5 under D-016. | Current prototype; D-016; integration contract | Plans share deadlines/dependency matrix and define view models, commands, fixture states, route mounts, public entries, P0/P1/exclusions, acceptance evidence, and early design-system handoff; each owner provides one feasibility review and Role 1 is notified. |
+| R2-009 | P0 | DONE | Decide and deliver separate but synchronised current-MVP build plans for Roles 4 and 5 under D-016. | Current prototype; D-016; integration contract | Plans share deadlines/dependency matrix and define view models, commands, fixture states, route mounts, public entries, P0/P1/exclusions, acceptance evidence, and early design-system handoff; each owner provided one feasibility review, Role 2 accepted both without a scope revision, and Role 1 was notified through issues #15/#16. |
 | R2-002 | P0 | BLOCKED | Implement tiered real-frame extraction from Role 1's OBS Virtual Camera interface. | Shared extraction contract and real frame source | Universal activity signals work across multiple owned action-game examples; calibrated adapters emit specific HUD facts only when supported; confidence/capabilities/unknown and resource measurements are evidenced. |
 | R2-003 | P0 | BLOCKED | Implement audience/gameplay snapshot and behavioural intelligence. | R2-002; audience contract | Timestamped/confidence-scored output for energy, sentiment, intent, humour, risk, boredom, hype, and repeated requests. |
 | R2-004 | P0 | READY | Define provider evaluation criteria with Role 3. | Accepted D-014 | Joint comparison covers OpenRouter and alternatives, latency, cost, privacy, reliability, structured output, quest quality, and fallback. |
@@ -40,5 +40,6 @@ Provider/model adoption is a joint Role 2/Role 3 recommendation and requires Rol
 ## Current R2-009 evidence
 
 - D2-01 through D2-03A were answered as one batch on 3 August 2026.
-- Drafts exist at `docs/build-plans/ROLE-4-BUILD-PLAN.md`, `docs/build-plans/ROLE-5-BUILD-PLAN.md`, and `docs/build-plans/ROLE-4-5-DELIVERY-MATRIX.md`.
-- Outstanding before `DONE`: Role 4 feasibility review in [issue #15](https://github.com/Dewflash/chatxpt/issues/15), Role 5 feasibility review in [issue #16](https://github.com/Dewflash/chatxpt/issues/16), one Role 2 revision/comparison, and Role 1 notification. UI-X dependencies are tracked in issues #17-#26.
+- The accepted baseline is recorded in `docs/build-plans/ROLE-4-BUILD-PLAN.md`, `docs/build-plans/ROLE-5-BUILD-PLAN.md`, and `docs/build-plans/ROLE-4-5-DELIVERY-MATRIX.md`.
+- Role 4's review in [issue #15](https://github.com/Dewflash/chatxpt/issues/15) and PR #30 required no scope revision. Role 5's F5-01 through F5-04 review and settled D5-01 through D5-04 baseline were [accepted in issue #16](https://github.com/Dewflash/chatxpt/issues/16#issuecomment-5189664413) without a scope revision.
+- Every missing upstream seam remains assigned through issues #17-#26 with an accepted fixture, disabled, or unavailable interim path; neither UI role may invent backend, lifecycle, vote, timer, reward, permission, or persistence authority.
