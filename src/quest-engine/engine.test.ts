@@ -1,7 +1,24 @@
 import { describe, expect, it } from "vitest";
 
-import { candidateBatchSchema, questCycleStateSchema, type QuestEngineResult } from "../core";
-import { DEFAULT_VOTING_MILLISECONDS, DefaultQuestEngine, createDefaultQuestEngine } from ".";
+import {
+  audienceSnapshotSchema,
+  candidateBatchSchema,
+  gameplaySnapshotSchema,
+  questCycleStateSchema,
+  streamSessionSchema,
+  streamerProfileSchema,
+  systemQuestProgressCommandSchema,
+  type GameplaySnapshot,
+  type QuestEngineResult,
+  type QuestProgress,
+} from "../core";
+import {
+  AUTOMATIC_PROGRESS_MINIMUM_CONFIDENCE,
+  DEFAULT_VOTING_MILLISECONDS,
+  DefaultQuestEngine,
+  MAXIMUM_SIGNAL_AGE_MILLISECONDS,
+  createDefaultQuestEngine,
+} from ".";
 import {
   ROLE_3_FIXTURE_TIME,
   role3CandidateCases,
@@ -17,6 +34,121 @@ function decision(result: QuestEngineResult) {
   if (!result.ok) throw new Error(`Expected decision, received ${result.error.code}`);
   return result.decision;
 }
+
+const progressProfile = streamerProfileSchema.parse({
+  profileId: "role-3-progress-profile",
+  streamerId: "role-3-progress-broadcaster",
+  revision: 0,
+  displayName: "Role 3 Progress Fixture",
+  gameId: null,
+  gameName: null,
+  experience: {},
+  restrictions: [],
+  preferredQuestTypes: [],
+  forbiddenQuestTypes: [],
+  accessibilityNeeds: [],
+});
+
+const progressSession = streamSessionSchema.parse({
+  sessionId: role3FixtureIdleState.envelope.sessionId,
+  broadcasterId: progressProfile.streamerId,
+  platform: "twitch",
+  status: "live",
+  revision: 0,
+  createdAt: ROLE_3_FIXTURE_TIME - 60_000,
+  startedAt: ROLE_3_FIXTURE_TIME - 30_000,
+  endedAt: null,
+  capabilities: {
+    twitchExtension: true,
+    hostedViewerBoard: true,
+    twitchChatVoting: true,
+    twitchIdentity: true,
+    anonymousParticipation: true,
+    reactions: true,
+  },
+});
+
+function activeProgressState(progress: QuestProgress | null = null) {
+  return questCycleStateSchema.parse({
+    ...role3FixtureIdleState,
+    status: "active",
+    options: role3FixtureCandidateBatch.candidates,
+    activeCandidateId: role3FixtureCandidateBatch.candidates[0].candidateId,
+    availableStreamerActions: ["cancel", "skip", "succeed", "fail", "emergency-pause"],
+    startsAt: ROLE_3_FIXTURE_TIME,
+    endsAt: ROLE_3_FIXTURE_TIME + 60_000,
+    progress,
+    completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+  });
+}
+
+function progressCommand(overrides: Partial<ReturnType<typeof systemQuestProgressCommandSchema.parse>> = {}) {
+  return systemQuestProgressCommandSchema.parse({
+    contractVersion: "1.0.0",
+    sessionId: role3FixtureIdleState.envelope.sessionId,
+    questCycleId: role3FixtureIdleState.envelope.questCycleId,
+    commandId: "role-3-progress-command",
+    correlationId: "role-3-progress-correlation",
+    expectedRevision: 0,
+    issuedAt: ROLE_3_FIXTURE_TIME + 1_000,
+    actor: { kind: "system", actorId: "role-3-progress-system" },
+    type: "system.quest-progress",
+    requestedValue: 0.5,
+    evidenceSignalIds: ["role-3-progress-signal"],
+    ...overrides,
+  });
+}
+
+function progressGameplay(
+  patch: {
+    readonly status?: "known" | "unknown";
+    readonly kind?: string;
+    readonly confidence?: number;
+    readonly observedAt?: number;
+    readonly supportedSignals?: readonly string[];
+  } = {},
+): GameplaySnapshot {
+  const status = patch.status ?? "known";
+  const provenance = {
+    source: "test-fixture" as const,
+    method: "fixture-progress-signal",
+    confidence: patch.confidence ?? AUTOMATIC_PROGRESS_MINIMUM_CONFIDENCE,
+    observedAt: patch.observedAt ?? ROLE_3_FIXTURE_TIME,
+    receivedAt: ROLE_3_FIXTURE_TIME,
+    evidenceClass: "fixture" as const,
+  };
+  return gameplaySnapshotSchema.parse({
+    envelope: {
+      ...role3FixtureIdleState.envelope,
+      messageId: "role-3-progress-gameplay",
+    },
+    capabilities: {
+      tier: "calibrated-hud",
+      gameId: "role-3-progress-game",
+      adapterId: "role-3-progress-adapter",
+      supportedSignals: patch.supportedSignals ?? ["objective-progress"],
+    },
+    signals: [
+      {
+        signalId: "role-3-progress-signal",
+        kind: patch.kind ?? "objective-progress",
+        observation:
+          status === "known"
+            ? { status, value: 0.5, provenance }
+            : { status, reason: "not-observed", provenance },
+      },
+    ],
+  });
+}
+
+const emptyProgressAudience = audienceSnapshotSchema.parse({
+  envelope: {
+    ...role3FixtureIdleState.envelope,
+    messageId: "role-3-progress-audience",
+  },
+  sampleSize: 0,
+  signals: [],
+});
 
 describe("DefaultQuestEngine", () => {
   it("is constructible through the Role 3 public entrypoint", () => {
@@ -212,6 +344,114 @@ describe("DefaultQuestEngine", () => {
         },
       },
     ]);
+  });
+
+  it("accepts gameplay-backed automatic progress when audience state is unavailable", () => {
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        currentState: activeProgressState(),
+        command: progressCommand(),
+        candidateBatch: null,
+        questProgressValidationContext: {
+          profile: progressProfile,
+          session: progressSession,
+          gameplay: progressGameplay(),
+          audience: null,
+          completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+        },
+        now: ROLE_3_FIXTURE_TIME + 1_000,
+      }),
+    );
+
+    expect(result.nextState.progress).toEqual({
+      value: 0.5,
+      updatedAt: ROLE_3_FIXTURE_TIME + 1_000,
+      method: "automatic",
+      evidenceSignalIds: ["role-3-progress-signal"],
+    });
+    expect(result.events).toEqual([
+      {
+        eventType: "quest-cycle.progress-updated",
+        attributes: { method: "automatic", value: 0.5 },
+      },
+    ]);
+  });
+
+  it.each([
+    ["missing-evidence", { gameplay: null }],
+    ["unknown-evidence", { gameplay: progressGameplay({ status: "unknown" }) }],
+    ["unsupported-evidence", { gameplay: progressGameplay({ supportedSignals: [] }) }],
+    [
+      "disallowed-evidence",
+      {
+        gameplay: progressGameplay({
+          kind: "disallowed-signal",
+          supportedSignals: ["disallowed-signal"],
+        }),
+      },
+    ],
+    [
+      "low-confidence-evidence",
+      {
+        gameplay: progressGameplay({
+          confidence: AUTOMATIC_PROGRESS_MINIMUM_CONFIDENCE - 0.01,
+        }),
+      },
+    ],
+    [
+      "stale-evidence",
+      {
+        gameplay: progressGameplay({
+          observedAt: ROLE_3_FIXTURE_TIME - MAXIMUM_SIGNAL_AGE_MILLISECONDS - 1,
+        }),
+      },
+    ],
+  ] as const)("rejects automatic engine progress with %s", (reason, patch) => {
+    const result = new DefaultQuestEngine().decide({
+      currentState: activeProgressState(),
+      command: progressCommand(),
+      candidateBatch: null,
+      questProgressValidationContext: {
+        profile: progressProfile,
+        session: progressSession,
+        gameplay: patch.gameplay,
+        audience: emptyProgressAudience,
+        completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+      },
+      now: ROLE_3_FIXTURE_TIME + 1_000,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "validation", details: { reason } },
+    });
+  });
+
+  it("keeps automatic progress monotonic at the engine transition boundary", () => {
+    const currentProgress = {
+      value: 0.75,
+      updatedAt: ROLE_3_FIXTURE_TIME,
+      method: "automatic" as const,
+      evidenceSignalIds: ["role-3-previous-progress-signal"],
+    };
+    const result = new DefaultQuestEngine().decide({
+      currentState: activeProgressState(currentProgress),
+      command: progressCommand({ requestedValue: 0.5 }),
+      candidateBatch: null,
+      questProgressValidationContext: {
+        profile: progressProfile,
+        session: progressSession,
+        gameplay: progressGameplay(),
+        audience: null,
+        completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+      },
+      now: ROLE_3_FIXTURE_TIME + 1_000,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "validation", details: { reason: "progress-regression" } },
+    });
   });
 
   it("does not bypass cooldown with an intelligence-ready command", () => {
