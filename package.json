@@ -19,6 +19,7 @@
     "test:persistence": "vitest run tests/integration/environment.test.ts tests/integration/permissions.test.ts tests/integration/session-lifecycle.test.ts tests/integration/persistence.test.ts tests/integration/realtime-subscriber.test.ts tests/integration/supabase-adapters.test.ts tests/integration/supabase-migration.test.ts",
     "test:ui": "vitest run tests/integration/diagnostic-ui-harness.test.tsx",
     "test:evidence": "node --test scripts/check-evidence-manifest.test.mjs",
+    "test:client-secrets": "node --test scripts/check-client-secrets.test.mjs",
     "verify:ui-harness": "node scripts/verify-ui-harness.mjs",
     "test:watch": "vitest",
     "supabase:start": "supabase start",
@@ -27,7 +28,8 @@
     "supabase:test": "supabase test db",
     "check:boundaries": "node scripts/check-role-boundaries.mjs",
     "check:evidence": "node scripts/check-evidence-manifest.mjs",
-    "check": "npm run lint && npm run typecheck && npm run check:boundaries && npm run check:evidence && npm run test:evidence && npm test && npm run build"
+    "check:client-secrets": "node scripts/check-client-secrets.mjs",
+    "check": "npm run lint && npm run typecheck && npm run check:boundaries && npm run check:evidence && npm run test:evidence && npm run test:client-secrets && npm test && npm run build && npm run check:client-secrets"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.111.0",

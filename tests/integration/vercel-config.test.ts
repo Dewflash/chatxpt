@@ -7,7 +7,7 @@ const repositoryRoot = process.cwd();
 const secretNamePattern =
   /(SUPABASE_(SECRET_KEY|SERVICE_ROLE_KEY)|TWITCH_(CLIENT_SECRET|EXTENSION_SECRET)|CHATXPT_OBS_OVERLAY_SETUP_KEY|OPENAI_API_KEY)/;
 const fixtureSecretValuePattern =
-  /(sb_secret_|service-role|client-secret|extension-secret|overlay-secret|sk-[A-Za-z0-9])/i;
+  /(sb_secret_|fixture-client-secret|fixture-extension-secret|fixture-overlay-secret|sk-[A-Za-z0-9])/i;
 
 function readText(path: string) {
   return readFileSync(resolve(repositoryRoot, path), "utf8");
