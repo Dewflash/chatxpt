@@ -54,6 +54,15 @@ still show external services as unavailable; that means the credential-free
 fallback is active, not that live Twitch, OBS, Vercel, or Supabase evidence has
 been executed.
 
+The Next.js app-level headers include a first-party CSP for deployment previews:
+WASM/blob workers are allowed for the accepted selective-OCR dependency, network
+connections are scoped to same-origin plus Supabase HTTPS/WSS, Twitch frame
+ancestors are allowed for Extension embedding, and camera permission remains
+same-origin for OBS Virtual Camera setup. Inline scripts remain allowed until
+Role 1 adds nonce/hash plumbing for the Next.js runtime. These headers are
+configuration readiness only; Role 1 still must verify them against the deployed
+preview and Role 2's real OCR run before citing live evidence.
+
 ## Authoritative vote ledger
 
 All three MVP participation paths converge on the same private ledger. A vote
