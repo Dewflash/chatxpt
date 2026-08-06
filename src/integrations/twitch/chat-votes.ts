@@ -59,6 +59,22 @@ export type TwitchChatVoteSubmissionResult =
       readonly selectedIndex: 0 | 1 | 2;
       readonly command: ViewerVoteCommand;
       readonly result: OrchestratorResult;
+      readonly acceptedCandidateId: string | null;
+    };
+
+export type TwitchChatVoteAcknowledgementIntent =
+  | {
+      readonly status: "counted" | "duplicate";
+      readonly candidateId: string;
+    }
+  | {
+      readonly status: "rejected" | "late";
+      readonly candidateId: null;
+    }
+  | {
+      readonly status: "none";
+      readonly candidateId: null;
+      readonly reason: Extract<TwitchChatVoteNormalisationResult, { status: "ignored" }>["reason"];
     };
 
 interface StoredVerifiedVoteActor {
@@ -147,6 +163,7 @@ export function normaliseTwitchChatVote(
 
 export class TwitchChatVerifiedVoteActorStore {
   private readonly actorsByCommandId = new Map<string, StoredVerifiedVoteActor>();
+  private readonly acceptedCandidateIdByVoter = new Map<string, string>();
 
   remember(result: TwitchChatVoteNormalisationResult): boolean {
     if (result.status !== "accepted") return false;
@@ -164,6 +181,18 @@ export class TwitchChatVerifiedVoteActorStore {
     }
     return stored.verifiedActor;
   }
+
+  rememberAcceptedVote(command: ViewerVoteCommand): void {
+    this.acceptedCandidateIdByVoter.set(this.voterKey(command), command.candidateId);
+  }
+
+  acceptedCandidateId(command: ViewerVoteCommand): string | null {
+    return this.acceptedCandidateIdByVoter.get(this.voterKey(command)) ?? null;
+  }
+
+  private voterKey(command: ViewerVoteCommand): string {
+    return [command.sessionId, command.questCycleId, command.voterKey].join(":");
+  }
 }
 
 export async function submitTwitchChatVote(
@@ -175,10 +204,50 @@ export async function submitTwitchChatVote(
 
   dependencies.actorStore.remember(normalised);
   const result = await dependencies.executor.execute(normalised.command);
+  if (result.ok && result.receipt.command.type === "viewer.vote") {
+    dependencies.actorStore.rememberAcceptedVote(result.receipt.command);
+  }
   return {
     status: "submitted",
     selectedIndex: normalised.selectedIndex,
     command: normalised.command,
     result,
+    acceptedCandidateId: result.ok && result.receipt.command.type === "viewer.vote"
+      ? result.receipt.command.candidateId
+      : dependencies.actorStore.acceptedCandidateId(normalised.command),
+  };
+}
+
+export function twitchChatVoteAcknowledgementIntent(
+  submission: TwitchChatVoteSubmissionResult,
+): TwitchChatVoteAcknowledgementIntent {
+  if (submission.status === "ignored") {
+    return { status: "none", candidateId: null, reason: submission.reason };
+  }
+
+  if (submission.result.ok) {
+    const command = submission.result.receipt.command;
+    const candidateId = command.type === "viewer.vote"
+      ? command.candidateId
+      : submission.acceptedCandidateId ?? submission.command.candidateId;
+    return {
+      status: submission.result.outcome === "committed" ? "counted" : "duplicate",
+      candidateId,
+    };
+  }
+
+  if (submission.result.error.code === "duplicate" && submission.acceptedCandidateId !== null) {
+    return {
+      status: "duplicate",
+      candidateId: submission.acceptedCandidateId,
+    };
+  }
+
+  return {
+    status: submission.result.error.code === "stale-revision" ||
+      submission.result.error.code === "expired"
+      ? "late"
+      : "rejected",
+    candidateId: null,
   };
 }

@@ -5,6 +5,7 @@ import {
   normaliseTwitchChatVote,
   submitTwitchChatVote,
   twitchChatActorId,
+  twitchChatVoteAcknowledgementIntent,
   twitchChatVoterKey,
 } from "../../src/integrations";
 import {
@@ -196,6 +197,10 @@ describe("Twitch chat vote normalisation", () => {
     expect(submitted.status).toBe("submitted");
     if (submitted.status !== "submitted") return;
     expect(submitted.selectedIndex).toBe(2);
+    expect(twitchChatVoteAcknowledgementIntent(submitted)).toEqual({
+      status: "counted",
+      candidateId: candidateIds[2],
+    });
     const committed = submitted.result;
     expect(committed.ok).toBe(true);
     if (!committed.ok) return;
@@ -248,6 +253,11 @@ describe("Twitch chat vote normalisation", () => {
     );
 
     expect(submitted).toEqual({ status: "ignored", reason: "not-a-vote" });
+    expect(twitchChatVoteAcknowledgementIntent(submitted)).toEqual({
+      status: "none",
+      candidateId: null,
+      reason: "not-a-vote",
+    });
     expect(executeCount).toBe(0);
   });
 
@@ -278,6 +288,84 @@ describe("Twitch chat vote normalisation", () => {
     expect(submitted.result).toMatchObject({
       ok: false,
       error: { code: "stale-revision" },
+    });
+    expect(twitchChatVoteAcknowledgementIntent(submitted)).toEqual({
+      status: "late",
+      candidateId: null,
+    });
+  });
+
+  it("maps duplicate and rejected submissions into bounded acknowledgement intent", async () => {
+    const actorStore = new TwitchChatVerifiedVoteActorStore();
+    const runtime = await preparedRuntime();
+    const current = await runtime.sessions.load(contractFixtureSession.sessionId);
+    if (current === null) throw new Error("Expected fixture session to be live");
+    const orchestrator = new ChatXptOrchestrator(
+      bindPersistenceRuntime(logicDependencies(actorStore), runtime),
+    );
+
+    const first = await submitTwitchChatVote(
+      { actorStore, executor: orchestrator },
+      {
+        sessionId: contractFixtureSession.sessionId,
+        questCycleId,
+        expectedRevision: current.session.revision,
+        candidateIds,
+        twitchMessageId: "twitch-message-duplicate-first",
+        twitchChannelId: "twitch-channel-1",
+        twitchUserId: "same-twitch-user",
+        text: "1",
+        receivedAt: FIXTURE_NOW + 1_000,
+      },
+    );
+    expect(first.status).toBe("submitted");
+    if (first.status !== "submitted" || !first.result.ok) return;
+
+    const duplicateVote = await submitTwitchChatVote(
+      { actorStore, executor: orchestrator },
+      {
+        sessionId: contractFixtureSession.sessionId,
+        questCycleId,
+        expectedRevision: first.result.receipt.state.session.revision,
+        candidateIds,
+        twitchMessageId: "twitch-message-duplicate-second",
+        twitchChannelId: "twitch-channel-1",
+        twitchUserId: "same-twitch-user",
+        text: "2",
+        receivedAt: FIXTURE_NOW + 1_500,
+      },
+    );
+    expect(duplicateVote.status).toBe("submitted");
+    if (duplicateVote.status !== "submitted") return;
+    expect(duplicateVote.result).toMatchObject({
+      ok: false,
+      error: { code: "duplicate" },
+    });
+    expect(twitchChatVoteAcknowledgementIntent(duplicateVote)).toEqual({
+      status: "duplicate",
+      candidateId: candidateIds[0],
+    });
+
+    const duplicateDelivery = await submitTwitchChatVote(
+      { actorStore, executor: orchestrator },
+      {
+        sessionId: contractFixtureSession.sessionId,
+        questCycleId,
+        expectedRevision: current.session.revision,
+        candidateIds,
+        twitchMessageId: "twitch-message-duplicate-first",
+        twitchChannelId: "twitch-channel-1",
+        twitchUserId: "same-twitch-user",
+        text: "1",
+        receivedAt: FIXTURE_NOW + 1_000,
+      },
+    );
+    expect(duplicateDelivery.status).toBe("submitted");
+    if (duplicateDelivery.status !== "submitted") return;
+    expect(duplicateDelivery.result).toMatchObject({ ok: true, outcome: "duplicate" });
+    expect(twitchChatVoteAcknowledgementIntent(duplicateDelivery)).toEqual({
+      status: "duplicate",
+      candidateId: candidateIds[0],
     });
   });
 
