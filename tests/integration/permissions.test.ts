@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  commandEnvelopeSchema,
   streamerQuestCommandSchema,
+  streamerProfileSettingsCommandSchema,
   streamerQuestProgressCommandSchema,
   systemQuestProgressCommandSchema,
   systemQuestTickCommandSchema,
@@ -156,6 +158,37 @@ describe("server-authoritative command permissions", () => {
       () => FIXTURE_NOW,
     ).authorize(impostor, persistenceState());
     expect(denied?.code).toBe("forbidden");
+  });
+
+  it("allows only the owning broadcaster to update profile settings", async () => {
+    const state = liveState();
+    const command = streamerProfileSettingsCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: state.session.sessionId,
+      questCycleId: null,
+      commandId: "profile-settings",
+      correlationId: "profile-settings-correlation",
+      expectedRevision: state.session.revision,
+      issuedAt: FIXTURE_NOW,
+      actor: { kind: "broadcaster", actorId: state.session.broadcasterId },
+      type: "streamer.profile-settings",
+      experiencePatch: { intensity: 0.7 },
+    });
+    const authorizer = new ServerCommandAuthorizer(
+      new StaticVerifiedActorResolver(
+        new Map([[command.commandId, grant("broadcaster", state.session.broadcasterId)]]),
+      ),
+      () => FIXTURE_NOW,
+    );
+    expect(await authorizer.authorize(command, state)).toBeNull();
+
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...command,
+        commandId: "moderator-profile-settings",
+        actor: { kind: "moderator", actorId: "fixture-moderator" },
+      }).success,
+    ).toBe(false);
   });
 
   it("limits moderators to an explicitly granted broadcaster", async () => {

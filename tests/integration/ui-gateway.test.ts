@@ -115,6 +115,35 @@ describe("Role 1 diagnostic UI gateway", () => {
     expect(result.views?.viewer.questCycle.voteTallies[0]?.votes).toBe(1);
   });
 
+  it("executes a broadcaster profile settings command through the gateway", async () => {
+    const gateway = getDiagnosticUiGateway();
+    const snapshot = await gateway.readSnapshot({
+      sessionId: diagnosticUiGatewaySessionId,
+      role: "streamer",
+      principalId: diagnosticUiGatewayPrincipals.streamer,
+    });
+    if (!snapshot.ok) throw new Error(snapshot.error.message);
+
+    const result = await gateway.executeCommand({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: diagnosticUiGatewaySessionId,
+      questCycleId: null,
+      commandId: "ui-gateway-profile-settings",
+      correlationId: "ui-gateway-profile-settings-correlation",
+      expectedRevision: snapshot.snapshot.envelope.revision,
+      issuedAt: 1_786_200_001_000,
+      actor: { kind: "broadcaster", actorId: diagnosticUiGatewayBroadcasterId },
+      type: "streamer.profile-settings",
+      experiencePatch: { intensity: 0.8 },
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.revision).toBe(snapshot.snapshot.envelope.revision + 1);
+    expect(result.receipt.eventTypes).toEqual(["profile.settings-updated"]);
+    expect(result.views?.streamer.profile.experience.intensity).toBe(0.8);
+  });
+
   it("keeps reconnect snapshots sanitised after a private viewer command", async () => {
     const gateway = getDiagnosticUiGateway();
     const initial = await gateway.readSnapshot({

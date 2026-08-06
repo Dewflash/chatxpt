@@ -14,6 +14,7 @@ import {
   serviceHealthSchema,
   signalObservationSchema,
   streamSessionSchema,
+  streamerProfileSettingsCommandSchema,
   streamerProfileSchema,
   streamerViewModelSchema,
   viewerViewModelSchema,
@@ -309,6 +310,44 @@ describe("identity and command permissions", () => {
     ).toBe(true);
   });
 
+  it("accepts broadcaster profile settings commands and rejects moderator profile edits", () => {
+    const base = {
+      contractVersion: CONTRACT_VERSION,
+      sessionId: "fixture-session",
+      questCycleId: null,
+      commandId: "fixture-profile-settings",
+      correlationId: "fixture-profile-settings-correlation",
+      expectedRevision: 4,
+      issuedAt: 10,
+      type: "streamer.profile-settings",
+      experiencePatch: { intensity: 0.8 },
+      voting: { voteVisibility: "hidden-until-close" },
+      rewards: { rewardDisplay: "session-points" },
+    };
+
+    expect(
+      streamerProfileSettingsCommandSchema.safeParse({
+        ...base,
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+      }).success,
+    ).toBe(true);
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...base,
+        actor: { kind: "moderator", actorId: "fixture-moderator" },
+      }).success,
+    ).toBe(false);
+    expect(
+      streamerProfileSettingsCommandSchema.safeParse({
+        ...base,
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+        experiencePatch: {},
+        voting: undefined,
+        rewards: undefined,
+      }).success,
+    ).toBe(false);
+  });
+
   it("accepts an anonymous fixture vote and rejects a broadcaster vote", () => {
     const vote = {
       envelope: contractFixtureEnvelope,
@@ -332,11 +371,40 @@ describe("identity and command permissions", () => {
 describe("streamer profile boundary", () => {
   it("accepts the neutral profile fixture and rejects partial game identity", () => {
     expect(streamerProfileSchema.parse(contractFixtureProfile).gameId).toBeNull();
+    expect(streamerProfileSchema.parse(contractFixtureProfile).voting).toMatchObject({
+      voteDurationSeconds: 30,
+      voteChangesAllowed: false,
+    });
+    expect(streamerProfileSchema.parse(contractFixtureProfile).rewards).toMatchObject({
+      persistentEconomy: false,
+      monetaryRewards: false,
+    });
     expect(
       streamerProfileSchema.safeParse({
         ...contractFixtureProfile,
         gameId: "fixture-game",
         gameName: null,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects profile preferences that change accepted vote or reward mechanics", () => {
+    expect(
+      streamerProfileSchema.safeParse({
+        ...contractFixtureProfile,
+        voting: {
+          ...contractFixtureProfile.voting,
+          voteDurationSeconds: 45,
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      streamerProfileSchema.safeParse({
+        ...contractFixtureProfile,
+        rewards: {
+          ...contractFixtureProfile.rewards,
+          persistentEconomy: true,
+        },
       }).success,
     ).toBe(false);
   });

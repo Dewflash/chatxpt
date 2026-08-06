@@ -70,6 +70,13 @@ describe("diagnostic UI harness client", () => {
     expect(screen.getByRole("heading", { name: "Intelligence Examples" })).toBeInTheDocument();
     expect(screen.getByText(/r4\.intelligence\.capture-denied\.v1/)).toBeInTheDocument();
     expect(screen.getByText(/r4\.generation\.algorithmic\.v1/)).toBeInTheDocument();
+    expect(screen.getByText("0.50")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Live Config" }));
+    await userEvent.click(screen.getByRole("button", { name: "Raise intensity" }));
+
+    expect(await screen.findByText("Fixture revision 4")).toBeInTheDocument();
+    expect(await screen.findByText("0.80")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Viewer Board" }));
     expect(screen.getByRole("heading", { name: "Choose A Quest" })).toBeInTheDocument();
@@ -78,7 +85,7 @@ describe("diagnostic UI harness client", () => {
     await userEvent.click(within(firstChoice).getByRole("button", { name: "0 votes" }));
 
     expect(await screen.findByRole("heading", { name: "Vote Accepted" })).toBeInTheDocument();
-    expect(await screen.findByText("Fixture revision 4")).toBeInTheDocument();
+    expect(await screen.findByText("Fixture revision 5")).toBeInTheDocument();
     expect(within(firstChoice).getByRole("button", { name: "1 votes" })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Overlay" }));

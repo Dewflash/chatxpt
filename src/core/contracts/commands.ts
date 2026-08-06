@@ -9,6 +9,10 @@ import {
 } from "./common";
 import { streamerQuestActionSchema } from "./quests";
 import { participationSourceModeSchema } from "./participation";
+import {
+  streamerRewardPreferencesSchema,
+  streamerVotingPreferencesSchema,
+} from "./profile";
 
 const commandEnvelopeFields = {
   contractVersion: contractVersionSchema,
@@ -99,6 +103,37 @@ export const streamerEmergencyClearCommandSchema = z
   })
   .strict();
 
+export const streamerProfileSettingsCommandSchema = z
+  .object({
+    ...commandEnvelopeFields,
+    questCycleId: z.null(),
+    type: z.literal("streamer.profile-settings"),
+    experiencePatch: z.record(z.string().trim().min(1).max(80), z.number().min(0).max(1)).default({}),
+    voting: streamerVotingPreferencesSchema.partial().strict().optional(),
+    rewards: streamerRewardPreferencesSchema.partial().strict().optional(),
+  })
+  .strict()
+  .superRefine((command, context) => {
+    if (
+      Object.keys(command.experiencePatch).length === 0 &&
+      command.voting === undefined &&
+      command.rewards === undefined
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Profile settings commands must include at least one setting change",
+        path: ["experiencePatch"],
+      });
+    }
+    if (Object.keys(command.experiencePatch).length > 16) {
+      context.addIssue({
+        code: "custom",
+        message: "Profile settings commands may patch at most 16 experience settings",
+        path: ["experiencePatch"],
+      });
+    }
+  });
+
 export const commandEnvelopeSchema = z
   .discriminatedUnion("type", [
     streamerQuestCommandSchema,
@@ -110,6 +145,7 @@ export const commandEnvelopeSchema = z
     streamerQuestProgressCommandSchema,
     systemQuestProgressCommandSchema,
     streamerEmergencyClearCommandSchema,
+    streamerProfileSettingsCommandSchema,
   ])
   .superRefine((command, context) => {
     const allowedActorKinds: Record<typeof command.type, Array<typeof command.actor.kind>> = {
@@ -122,6 +158,7 @@ export const commandEnvelopeSchema = z
       "streamer.quest-progress": ["broadcaster", "moderator"],
       "system.quest-progress": ["system"],
       "streamer.emergency-clear": ["broadcaster", "moderator"],
+      "streamer.profile-settings": ["broadcaster"],
     };
 
     if (!allowedActorKinds[command.type].includes(command.actor.kind)) {
@@ -142,3 +179,4 @@ export type SystemQuestTickCommand = z.infer<typeof systemQuestTickCommandSchema
 export type StreamerQuestProgressCommand = z.infer<typeof streamerQuestProgressCommandSchema>;
 export type SystemQuestProgressCommand = z.infer<typeof systemQuestProgressCommandSchema>;
 export type StreamerEmergencyClearCommand = z.infer<typeof streamerEmergencyClearCommandSchema>;
+export type StreamerProfileSettingsCommand = z.infer<typeof streamerProfileSettingsCommandSchema>;

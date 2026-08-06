@@ -15,7 +15,11 @@ import { audienceSnapshotSchema, gameplaySnapshotSchema } from "../../src/extrac
 import { audienceEventSchema, gameplayFrameObservationSchema } from "../../src/integrations";
 import { questCycleStateSchema } from "../../src/quest-engine";
 import { overlayViewModelSchema, viewerViewModelSchema } from "../../src/realtime";
-import { streamerQuestCommandSchema, streamerViewModelSchema } from "../../src/streamer";
+import {
+  streamerProfileSettingsCommandSchema,
+  streamerQuestCommandSchema,
+  streamerViewModelSchema,
+} from "../../src/streamer";
 import {
   overlayViewModelSchema as viewerOverlaySchema,
   viewerReactionCommandSchema,
@@ -44,6 +48,7 @@ describe("role-owned public entrypoints", () => {
   it("lets Role 4 consume the canonical streamer view", () => {
     expect(streamerViewModelSchema.safeParse(contractFixtureStreamerView).success).toBe(true);
     expect(typeof streamerQuestCommandSchema.safeParse).toBe("function");
+    expect(typeof streamerProfileSettingsCommandSchema.safeParse).toBe("function");
   });
 
   it("lets Role 5 consume the canonical viewer and overlay views", () => {

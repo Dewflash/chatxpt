@@ -80,6 +80,7 @@ interface CommandResponse {
     readonly eventTypes: readonly string[];
   };
   readonly views?: {
+    readonly streamer?: StreamerViewModel;
     readonly viewer?: ViewerViewModel;
   } | null;
   readonly error?: HarnessError;
@@ -132,6 +133,7 @@ export function DiagnosticUiHarnessClient({
   const [error, setError] = useState<HarnessError | null>(null);
   const [acceptedChoice, setAcceptedChoice] = useState<string | null>(null);
   const [pendingCandidateId, setPendingCandidateId] = useState<string | null>(null);
+  const [pendingSettings, setPendingSettings] = useState(false);
   const commandSequence = useRef(0);
   const voterKey = `ui-harness-browser-${useId().replaceAll(":", "id")}`;
 
@@ -221,6 +223,44 @@ export function DiagnosticUiHarnessClient({
     }
   }
 
+  async function adjustIntensity(nextIntensity: number) {
+    const expectedRevision = snapshots.streamer?.envelope.revision;
+    if (expectedRevision === undefined) return;
+    commandSequence.current += 1;
+    setPendingSettings(true);
+    setError(null);
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          command: {
+            contractVersion,
+            sessionId,
+            questCycleId: null,
+            commandId: `ui-harness-profile-settings-${commandSequence.current}`,
+            correlationId: `ui-harness-profile-settings-correlation-${commandSequence.current}`,
+            expectedRevision,
+            issuedAt: (snapshots.streamer?.envelope.occurredAt ?? 1_786_200_000_000) + commandSequence.current,
+            actor: { kind: "broadcaster", actorId: snapshots.streamer?.session.broadcasterId ?? "unknown" },
+            type: "streamer.profile-settings",
+            experiencePatch: { intensity: nextIntensity },
+          },
+        }),
+      });
+      const body = await readJson<CommandResponse>(response);
+      if (!body.ok) {
+        throw body.error ?? { code: "internal", message: "Profile settings command failed" };
+      }
+      setStatus(`Intensity updated at revision ${body.revision ?? expectedRevision + 1}`);
+      await refresh();
+    } catch (caught) {
+      setError(caught as HarnessError);
+    } finally {
+      setPendingSettings(false);
+    }
+  }
+
   const streamer = snapshots.streamer;
   const viewer = snapshots.viewer;
   const overlay = snapshots.overlay;
@@ -282,6 +322,10 @@ export function DiagnosticUiHarnessClient({
               <dt>Votes</dt>
               <dd>{totalVotes}</dd>
             </div>
+            <div>
+              <dt>Intensity</dt>
+              <dd>{streamer?.profile.experience.intensity.toFixed(2) ?? "--"}</dd>
+            </div>
           </dl>
         </aside>
 
@@ -336,6 +380,13 @@ export function DiagnosticUiHarnessClient({
             <p className="diagnostic-kicker">Live Config</p>
             <h2>{viewer === null ? "Loading" : `${formatStatus(viewer.questCycle.status)} Controls`}</h2>
             <div className="diagnostic-action-row">
+              <button
+                disabled={pendingSettings || streamer === null}
+                onClick={() => void adjustIntensity(0.8)}
+                type="button"
+              >
+                Raise intensity
+              </button>
               {streamer?.questCycle.availableStreamerActions.map((action) => (
                 <button disabled key={action} type="button">
                   {formatStatus(action)}

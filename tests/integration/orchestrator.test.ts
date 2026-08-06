@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ChatXptOrchestrator,
   streamerEmergencyClearCommandSchema,
+  streamerProfileSettingsCommandSchema,
   streamerQuestCommandSchema,
   streamerQuestProgressCommandSchema,
   systemIntelligenceCommandSchema,
@@ -318,6 +319,50 @@ describe("Role 1 application orchestrator", () => {
     expect(engine.calls).toBe(0);
     expect(result.receipt.state.emergencyPaused).toBe(false);
     expect(result.receipt.events[0]?.event.eventType).toBe("session.emergency-cleared");
+  });
+
+  it("applies broadcaster profile settings without invoking Role 3", async () => {
+    const repository = new FixtureSessionStateRepository([initialState()]);
+    const engine = successfulEngine();
+    const publisher = new RecordingFixturePublisher();
+    const orchestrator = new ChatXptOrchestrator(dependencies(repository, publisher, engine));
+    const settings = streamerProfileSettingsCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: null,
+      commandId: "fixture-profile-settings",
+      correlationId: "fixture-profile-settings-correlation",
+      expectedRevision: 0,
+      issuedAt: ACCEPTED_AT,
+      actor: { kind: "broadcaster", actorId: contractFixtureSession.broadcasterId },
+      type: "streamer.profile-settings",
+      experiencePatch: { intensity: 0.8 },
+      voting: { voteVisibility: "hidden-until-close" },
+      rewards: { rewardDisplay: "session-points" },
+    });
+
+    const result = await orchestrator.execute(settings);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(engine.calls).toBe(0);
+    expect(result.receipt.state.session.revision).toBe(1);
+    expect(result.receipt.state.profile.revision).toBe(1);
+    expect(result.receipt.state.profile.experience.intensity).toBe(0.8);
+    expect(result.receipt.state.profile.voting).toMatchObject({
+      voteVisibility: "hidden-until-close",
+      voteDurationSeconds: 30,
+      voteChangesAllowed: false,
+    });
+    expect(result.receipt.state.profile.rewards).toMatchObject({
+      rewardDisplay: "session-points",
+      persistentEconomy: false,
+      monetaryRewards: false,
+    });
+    expect(result.receipt.state.questCycle.envelope.revision).toBe(1);
+    expect(result.receipt.events[0]?.event.eventType).toBe("profile.settings-updated");
+    expect(result.views?.streamer.profile.experience.intensity).toBe(0.8);
+    expect(publisher.published[0]?.streamer.profile.voting.voteVisibility).toBe("hidden-until-close");
   });
 
   it("blocks new intervention candidate publication while the emergency latch is active", async () => {
