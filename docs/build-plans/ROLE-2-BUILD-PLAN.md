@@ -128,6 +128,8 @@ Role 2 is complete when:
 
 **Progress (4 August 2026):** The public extraction pipeline interfaces, injected observation-fusion boundary, canonical snapshot builders, validating intelligence/candidate provider factories, and Role 2 producer tests are implemented on `role-2/intelligence-boundary`. Fixture-only UI-X09 proposal payloads cover known, low-confidence, unsupported, stale, capture-denied, provider, algorithmic, and deterministic-fallback presentation states. Role 1 promotion into canonical `@/core/testing`, real owned gameplay/chat fixtures, and real `FrameSource` execution remain pending and are not claimed as live evidence.
 
+**Progress (5 August 2026):** `role-2/real-fixture-spike` adds a bounded browser-canvas sampler, game-neutral pixel-change measurement stream over the canonical `FrameSource`, guaranteed ephemeral-frame release, and selective-region OCR adapter plumbing. Ten focused tests use explicitly synthetic pixel arrays and a fake OCR adapter. R2-P03/P03A remain open for authorised gameplay/chat assets with separate annotations, a real browser-delivered OBS frame, an actual OCR engine experiment, and the joint free-provider/no-credential run; none of those are claimed by this slice.
+
 ### R2-P03A — Early feasibility spikes
 
 **Outcome:** Role 2's highest-risk assumptions are tested before full implementation.
@@ -273,6 +275,8 @@ Raw chat is processed in memory by default. If Joelyrk's D2-15 choice requires t
 **Evaluation:** Integration effort, free availability, latency, privacy, structured output, reliability, quest quality, game fit, and fallback behaviour.
 
 **Acceptance:** No client secret; runtime validation; clear provider status; no paid calls; recommendation recorded with Role 3 and sent to Role 1.
+
+**Progress (6 August 2026):** `role-2/provider-fallback-evaluation` adds a provider-neutral, injected trial/fallback strategy plus privacy-safe operational observations and summary metrics. Fixture tests cover valid provider output, malformed/partial/overfull/incorrectly-labelled output, timeout, refusal, rate limiting, unavailability, generic failure, cancellation, and invalid algorithmic recovery. No external provider call, provider/model selection, concrete algorithmic policy, or joint recommendation is claimed; D23-01 through D23-03 and D2-16 through D2-18 remain open.
 
 ### R2-P11 — Context and candidate generation
 

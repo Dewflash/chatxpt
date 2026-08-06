@@ -5,6 +5,21 @@ export {
 } from "./providers";
 export type { CandidateGenerationStrategy } from "./providers";
 export {
+  createProviderFallbackGenerationStrategy,
+  ProviderGenerationError,
+  providerAttemptStatuses,
+  summariseProviderAttempts,
+} from "./provider-fallback";
+export type {
+  AlgorithmicFallbackOutcome,
+  ProviderAttemptObservation,
+  ProviderAttemptStatus,
+  ProviderEvaluationSummary,
+  ProviderFailureReason,
+  ProviderFallbackGenerationOptions,
+  ProviderTimeoutScheduler,
+} from "./provider-fallback";
+export {
   candidateBatchSchema,
   candidateGenerationSchema,
   intelligenceSnapshotSchema,
