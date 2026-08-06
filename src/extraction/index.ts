@@ -16,13 +16,48 @@ export type {
   VisualFrameMeasurement,
   VisualMeasurementOptions,
 } from "./visual-measurements";
-export { extractPixelRegion, runSelectiveOcrExperiment } from "./selective-ocr";
+export {
+  confirmTemporalOcr,
+  extractPixelRegion,
+  preprocessOcrRegion,
+  runSelectiveOcrExperiment,
+} from "./selective-ocr";
 export type {
+  OcrPreprocessOptions,
   OcrReading,
   PixelRegion,
   SelectiveOcrAdapter,
   SelectiveOcrMeasurement,
+  TemporalOcrConfirmation,
 } from "./selective-ocr";
+export {
+  assessExtractionEvidenceBundle,
+  createExtractionEvidenceRun,
+  summariseNumericMetrics,
+} from "./real-input-evidence";
+export type {
+  ExtractionEvidenceBundleAssessment,
+  ExtractionEvidenceClass,
+  ExtractionEvidenceRun,
+  ExtractionEvidenceRunInput,
+  GameplayEvidenceAnnotation,
+  GameplayEvidenceLabel,
+  LabelMeasurementSummary,
+  NumericMetricSummary,
+  SanitisedAudienceFixtureEvidence,
+  SelectiveOcrEvidenceObservation,
+  UnknownEvidenceObservation,
+} from "./real-input-evidence";
+export {
+  classifyVisualActivity,
+  decideOcrBurst,
+  deriveVisualActivityPolicy,
+} from "./visual-classification";
+export type {
+  OcrBurstDecision,
+  VisualActivityClassification,
+  VisualActivityPolicy,
+} from "./visual-classification";
 export {
   audienceEventSchema,
   audienceSnapshotSchema,

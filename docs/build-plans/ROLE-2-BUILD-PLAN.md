@@ -142,17 +142,21 @@ Role 2 is complete when:
 
 **Acceptance:** Executed results, latency/resource observations, failure modes, dependency requests, and immediate recovery recommendations reach Role 1 during the first integration wave.
 
+**Progress (6 August 2026):** `role-2/real-input-evidence` adds a threshold-agnostic evidence-report boundary over canonical OBS measurements. It preserves separate human annotations, summarises quiet/action/transition and p50/p95 processing metrics, records sanitised OCR/unknown metadata, checks two-sample and sanitised-audience coverage, and refuses to promote diagnostic inputs to real evidence. This is tooling and fixture-only verification: Role 1's browser capture branch, an approved OCR engine, authorised gameplay/chat inputs, executed browser/resource observations, privacy review, artifacts, and the manifest entry remain pending.
+
 ## Phase 3: Real-frame gameplay extraction
 
 ### Joelyrk decision gate
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D2-07 | Frame sampling cadence and adaptive-trigger strategy | Open | — |
-| D2-08 | Universal visual feature set versus calibrated HUD-adapter feature set used in P0 | Open | — |
-| D2-09 | OCR engine, preprocessing, region-selection, and temporal confirmation strategy | Open | — |
-| D2-10 | Confidence fusion, stale-data expiry, contradiction handling, and `unknown` thresholds | Open | — |
-| D2-11 | Whether a free vision model materially improves P0 beyond algorithms/OCR | Open | — |
+| D2-07 | Frame sampling cadence and adaptive-trigger strategy | Resolved by Joelyrk | Consume Role 1's current two-frame-per-second `FrameSource`, run bounded universal measurements on each delivered frame with at most one analysis in flight, and start rate-limited three-frame selective-OCR bursts only after meaningful activity/transition changes. Role 2 does not require a capture-control contract change for P0. |
+| D2-08 | Universal visual feature set versus calibrated HUD-adapter feature set used in P0 | Resolved by Joelyrk | P0 universal signals are quiet, action, and transition derived from frame-difference intensity plus temporal stability. The Brawl Stars calibrated adapter may expose one named timer/outcome or other HUD fact only after the real OCR/template trial proves it reliable; every unsupported or ambiguous specific fact remains `unknown`. |
+| D2-09 | OCR engine, preprocessing, region-selection, and temporal confirmation strategy | Resolved by Joelyrk | Request Tesseract.js from Role 1 as the leading free local/browser OCR dependency through [issue #70](https://github.com/Dewflash/chatxpt/issues/70), with no installation until approved. OCR runs only on named calibrated crops after local grayscale/contrast/upscale preprocessing, never on every full frame, and requires two matching readings in a three-reading window at confidence 0.75 or higher. PaddleOCR-compatible or native binaries remain fallback experiments only if the browser path fails. |
+| D2-10 | Confidence fusion, stale-data expiry, contradiction handling, and `unknown` thresholds | Resolved by Joelyrk | Derive visual thresholds from two separately annotated authorised samples instead of guessing fixed pixel cutoffs. Use quiet p95 versus action p50 and transition p50 only when quiet/action distributions separate; otherwise collect more evidence. Require confidence 0.75, treat candidates within 0.10 as conflicting/`unknown`, and expire visual observations after three seconds. Diagnostic calibration may not be applied to or presented as live evidence. |
+| D2-11 | Whether a free vision model materially improves P0 beyond algorithms/OCR | Resolved by Joelyrk | Exclude free vision AI from P0 by default. Reconsider only after algorithms/OCR have real baseline evidence and a genuinely free, privacy-acceptable trial materially improves annotated accuracy without unacceptable latency or reliability; missing vision AI never blocks the credential-free path. |
+
+**Decision batch accepted (6 August 2026):** Joelyrk approved D2-07 through D2-11 together. `role-2/real-input-evidence` implements threshold derivation, conservative classification, stale/conflict/unknown handling, bounded OCR-burst decisions, local OCR preprocessing, and two-of-three temporal confirmation against diagnostic fixtures. Real thresholds and calibrated facts remain unclaimed until the authorised live runs are available.
 
 ### R2-P04 — Frame consumer and adaptive sampler
 
