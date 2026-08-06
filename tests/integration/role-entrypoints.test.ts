@@ -7,6 +7,8 @@ import {
   contractFixtureOverlayView,
   contractFixtureQuestCycle,
   contractFixtureStreamerView,
+  contractFixtureUiX06QuestStateCatalog,
+  contractFixtureUiX06RoleViewCatalog,
   contractFixtureViewerView,
 } from "../../src/core/testing";
 import { candidateBatchSchema, intelligenceSnapshotSchema } from "../../src/ai";
@@ -54,6 +56,9 @@ describe("role-owned public entrypoints", () => {
   it("lets Role 5 consume the canonical viewer and overlay views", () => {
     expect(viewerSurfaceSchema.safeParse(contractFixtureViewerView).success).toBe(true);
     expect(viewerOverlaySchema.safeParse(contractFixtureOverlayView).success).toBe(true);
+    expect(viewerSurfaceSchema.safeParse(contractFixtureUiX06RoleViewCatalog["r5.vote.tie.v1"].viewer).success).toBe(true);
+    expect(viewerOverlaySchema.safeParse(contractFixtureUiX06RoleViewCatalog["r5.quest.succeeded-reward.v1"].overlay).success).toBe(true);
+    expect(contractFixtureUiX06QuestStateCatalog["r5.quest.active-automatic-progress.v1"].progress?.method).toBe("automatic");
     expect(typeof viewerVoteCommandSchema.safeParse).toBe("function");
     expect(typeof viewerReactionCommandSchema.safeParse).toBe("function");
   });

@@ -31,6 +31,15 @@ interface HarnessSnapshots {
 }
 
 interface UiX09FixtureCatalog {
+  readonly questStates: Record<
+    string,
+    {
+      readonly status: string;
+      readonly progress: { readonly method: string; readonly value: number } | null;
+      readonly result: { readonly outcome: string; readonly rewardPointsAwarded: number } | null;
+    }
+  >;
+  readonly roleViews: Record<string, unknown>;
   readonly intelligence: Record<
     string,
     {
@@ -268,6 +277,7 @@ export function DiagnosticUiHarnessClient({
   const totalVotes = viewer?.questCycle.voteTallies.reduce((sum, tally) => sum + tally.votes, 0) ?? 0;
   const intelligenceExamples = fixtureCatalog === null ? [] : Object.entries(fixtureCatalog.intelligence);
   const generationExamples = fixtureCatalog === null ? [] : Object.entries(fixtureCatalog.generation);
+  const questExamples = fixtureCatalog === null ? [] : Object.entries(fixtureCatalog.questStates);
 
   return (
     <main className="diagnostic-shell">
@@ -367,6 +377,20 @@ export function DiagnosticUiHarnessClient({
                   return (
                     <span key={fixtureId}>
                       {fixtureId}: {generation?.method ?? "unknown"} / {fixture.providerHealth.status}
+                    </span>
+                  );
+                })}
+              </div>
+            </section>
+            <section className="diagnostic-fixture-catalog" aria-label="Quest state fixture examples">
+              <h3>Quest Examples</h3>
+              <div>
+                {questExamples.map(([fixtureId, fixture]) => {
+                  const progress = fixture.progress === null ? "" : ` / ${fixture.progress.method} ${Math.round(fixture.progress.value * 100)}%`;
+                  const result = fixture.result === null ? "" : ` / ${fixture.result.outcome} ${fixture.result.rewardPointsAwarded} pts`;
+                  return (
+                    <span key={fixtureId}>
+                      {fixtureId}: {formatStatus(fixture.status)}{progress}{result}
                     </span>
                   );
                 })}

@@ -70,6 +70,9 @@ describe("diagnostic UI harness client", () => {
     expect(screen.getByRole("heading", { name: "Intelligence Examples" })).toBeInTheDocument();
     expect(screen.getByText(/r4\.intelligence\.capture-denied\.v1/)).toBeInTheDocument();
     expect(screen.getByText(/r4\.generation\.algorithmic\.v1/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Quest Examples" })).toBeInTheDocument();
+    expect(screen.getByText(/r5\.vote\.tie\.v1/)).toBeInTheDocument();
+    expect(screen.getByText(/r5\.quest\.succeeded-reward\.v1/)).toBeInTheDocument();
     expect(screen.getByText("0.50")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Live Config" }));

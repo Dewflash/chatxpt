@@ -83,6 +83,16 @@ describe("Role 1 diagnostic UI gateway", () => {
         "r4.generation.fallback.v1",
       ]),
     );
+    expect(Object.keys(result.fixtureCatalog.questStates)).toEqual(
+      expect.arrayContaining([
+        "r5.vote.zero-vote.v1",
+        "r5.vote.tie.v1",
+        "r5.quest.active-automatic-progress.v1",
+        "r5.quest.succeeded-reward.v1",
+        "r4.quest.cooldown.v1",
+      ]),
+    );
+    expect(result.fixtureCatalog.roleViews["r5.quest.succeeded-reward.v1"].viewer.sessionPoints).toBe(100);
   });
 
   it("executes a canonical viewer command and returns the current revision plus private receipt view", async () => {
@@ -207,6 +217,11 @@ describe("Role 1 diagnostic UI gateway", () => {
     expect(readBody.ok).toBe(true);
     expect(readBody.snapshot.profile.streamerId).toBe(diagnosticUiGatewayBroadcasterId);
     expect(readBody.fixtureCatalog.generation["r4.generation.ai-provider.v1"].providerHealth.status).toBe("ready");
+    expect(readBody.fixtureCatalog.questStates["r5.vote.tie.v1"].voteTallies.map((tally: { votes: number }) => tally.votes)).toEqual([
+      2,
+      2,
+      1,
+    ]);
 
     const commandResponse = await diagnosticUiGatewayPOST(
       new Request("http://localhost/api/diagnostics/ui-gateway", {

@@ -14,6 +14,8 @@ import {
   viewerViewModelSchema,
   type ContractEnvelope,
   type QuestCandidate,
+  type QuestCycleState,
+  type RoleViewModels,
   type SignalProvenance,
 } from "../contracts";
 
@@ -424,6 +426,249 @@ export const contractFixtureQuestCycle = questCycleStateSchema.parse({
   progress: null,
   result: null,
 });
+
+function uiX06QuestEnvelope(messageId: string, revision: number): ContractEnvelope {
+  return contractEnvelopeSchema.parse({
+    ...contractFixtureEnvelope,
+    messageId,
+    revision,
+    source: "quest-engine",
+  });
+}
+
+function uiX06QuestState(
+  id: string,
+  status: QuestCycleState["status"],
+  patch: Partial<Omit<QuestCycleState, "envelope" | "status">> = {},
+): QuestCycleState {
+  return questCycleStateSchema.parse({
+    envelope: uiX06QuestEnvelope(id, 6),
+    status,
+    options: [],
+    activeCandidateId: null,
+    availableStreamerActions: [],
+    voteTallies: [],
+    startsAt: null,
+    endsAt: null,
+    progress: null,
+    completionRule: null,
+    result: null,
+    ...patch,
+  });
+}
+
+const uiX06Options = contractFixtureCandidateBatch.candidates;
+const uiX06VoteTallies = [
+  { candidateId: uiX06Options[0].candidateId, votes: 2 },
+  { candidateId: uiX06Options[1].candidateId, votes: 1 },
+  { candidateId: uiX06Options[2].candidateId, votes: 0 },
+] as const;
+
+function uiX06Tallies(): Array<{ candidateId: string; votes: number }> {
+  return uiX06VoteTallies.map((tally) => ({ ...tally }));
+}
+
+export const contractFixtureUiX06QuestStateCatalog = {
+  "r5.quest.idle.v1": uiX06QuestState("r5-quest-idle-v1", "idle"),
+  "r4.quest.proposed.v1": uiX06QuestState("r4-quest-proposed-v1", "proposed", {
+    options: uiX06Options,
+    availableStreamerActions: ["approve", "reject", "skip", "emergency-pause"],
+  }),
+  "r5.vote.zero-vote.v1": uiX06QuestState("r5-vote-zero-vote-v1", "voting", {
+    options: uiX06Options,
+    availableStreamerActions: ["cancel", "skip", "emergency-pause"],
+    voteTallies: uiX06Options.map(({ candidateId }) => ({ candidateId, votes: 0 })),
+    startsAt: FIXTURE_TIME,
+    endsAt: FIXTURE_TIME + 30_000,
+  }),
+  "r5.vote.tie.v1": uiX06QuestState("r5-vote-tie-v1", "voting", {
+    options: uiX06Options,
+    availableStreamerActions: ["cancel", "skip", "emergency-pause"],
+    voteTallies: [
+      { candidateId: uiX06Options[0].candidateId, votes: 2 },
+      { candidateId: uiX06Options[1].candidateId, votes: 2 },
+      { candidateId: uiX06Options[2].candidateId, votes: 1 },
+    ],
+    startsAt: FIXTURE_TIME,
+    endsAt: FIXTURE_TIME + 30_000,
+  }),
+  "r5.quest.active-manual-progress.v1": uiX06QuestState("r5-quest-active-manual-progress-v1", "active", {
+    options: uiX06Options,
+    activeCandidateId: uiX06Options[0].candidateId,
+    availableStreamerActions: ["cancel", "skip", "succeed", "fail", "emergency-pause"],
+    voteTallies: uiX06Tallies(),
+    startsAt: FIXTURE_TIME,
+    endsAt: FIXTURE_TIME + 30_000,
+    progress: {
+      value: 0.5,
+      updatedAt: FIXTURE_TIME + 10_000,
+      method: "manual",
+      evidenceSignalIds: [],
+    },
+    completionRule: { mode: "manual", allowedSignalKinds: [] },
+  }),
+  "r5.quest.active-automatic-progress.v1": uiX06QuestState("r5-quest-active-automatic-progress-v1", "active", {
+    options: uiX06Options,
+    activeCandidateId: uiX06Options[0].candidateId,
+    availableStreamerActions: ["cancel", "skip", "succeed", "fail", "emergency-pause"],
+    voteTallies: uiX06Tallies(),
+    startsAt: FIXTURE_TIME,
+    endsAt: FIXTURE_TIME + 30_000,
+    progress: {
+      value: 0.75,
+      updatedAt: FIXTURE_TIME + 15_000,
+      method: "automatic",
+      evidenceSignalIds: ["fixture-activity"],
+    },
+    completionRule: { mode: "signal", allowedSignalKinds: ["activity-intensity"] },
+  }),
+  "r5.quest.succeeded-reward.v1": uiX06QuestState("r5-quest-succeeded-reward-v1", "succeeded", {
+    options: uiX06Options,
+    activeCandidateId: uiX06Options[0].candidateId,
+    voteTallies: uiX06Tallies(),
+    progress: {
+      value: 1,
+      updatedAt: FIXTURE_TIME + 20_000,
+      method: "manual",
+      evidenceSignalIds: [],
+    },
+    result: {
+      outcome: "succeeded",
+      occurredAt: FIXTURE_TIME + 20_000,
+      reason: "Fixture quest succeeded.",
+      rewardPointsAwarded: uiX06Options[0].rewardPoints,
+    },
+  }),
+  "r5.quest.failed.v1": uiX06QuestState("r5-quest-failed-v1", "failed", {
+    options: uiX06Options,
+    activeCandidateId: uiX06Options[0].candidateId,
+    voteTallies: uiX06Tallies(),
+    progress: {
+      value: 0.4,
+      updatedAt: FIXTURE_TIME + 20_000,
+      method: "manual",
+      evidenceSignalIds: [],
+    },
+    result: {
+      outcome: "failed",
+      occurredAt: FIXTURE_TIME + 20_000,
+      reason: "Fixture quest failed.",
+      rewardPointsAwarded: 0,
+    },
+  }),
+  "r5.quest.cancelled.v1": uiX06QuestState("r5-quest-cancelled-v1", "cancelled", {
+    options: uiX06Options,
+    voteTallies: uiX06Tallies(),
+    result: {
+      outcome: "cancelled",
+      occurredAt: FIXTURE_TIME + 12_000,
+      reason: "Fixture streamer cancellation.",
+      rewardPointsAwarded: 0,
+    },
+  }),
+  "r5.quest.skipped.v1": uiX06QuestState("r5-quest-skipped-v1", "skipped", {
+    options: uiX06Options,
+    voteTallies: uiX06Tallies(),
+    result: {
+      outcome: "skipped",
+      occurredAt: FIXTURE_TIME + 12_000,
+      reason: "Fixture streamer skip.",
+      rewardPointsAwarded: 0,
+    },
+  }),
+  "r5.quest.expired.v1": uiX06QuestState("r5-quest-expired-v1", "expired", {
+    options: uiX06Options,
+    voteTallies: uiX06Tallies(),
+    result: {
+      outcome: "expired",
+      occurredAt: FIXTURE_TIME + 30_000,
+      reason: "Fixture authoritative timer expired.",
+      rewardPointsAwarded: 0,
+    },
+  }),
+  "r4.quest.cooldown.v1": uiX06QuestState("r4-quest-cooldown-v1", "cooldown", {
+    startsAt: FIXTURE_TIME + 20_000,
+    endsAt: FIXTURE_TIME + 140_000,
+  }),
+} as const;
+
+function uiX06Session(revision: number) {
+  return streamSessionSchema.parse({
+    ...contractFixtureSession,
+    status: "live",
+    revision,
+    startedAt: FIXTURE_TIME - 60_000,
+    capabilities: {
+      twitchExtension: true,
+      hostedViewerBoard: true,
+      twitchChatVoting: true,
+      twitchIdentity: true,
+      anonymousParticipation: true,
+      reactions: true,
+    },
+  });
+}
+
+function uiX06Views(questCycle: QuestCycleState): RoleViewModels {
+  const session = uiX06Session(questCycle.envelope.revision);
+  const envelope = contractEnvelopeSchema.parse({
+    ...contractFixtureEnvelope,
+    messageId: `${questCycle.envelope.messageId}-view`,
+    revision: questCycle.envelope.revision,
+    source: "orchestrator",
+  });
+  const connection = serviceHealthSchema.parse({
+    service: "fixture-realtime",
+    status: "ready",
+    checkedAt: FIXTURE_TIME,
+    retryable: false,
+  });
+  return {
+    streamer: streamerViewModelSchema.parse({
+      envelope,
+      session,
+      profile: contractFixtureProfile,
+      services: [connection],
+      gameplay: contractFixtureGameplaySnapshot,
+      audience: contractFixtureAudienceSnapshot,
+      questCycle,
+      emergencyPaused: false,
+    }),
+    viewer: viewerViewModelSchema.parse({
+      envelope,
+      session,
+      capabilities: session.capabilities,
+      participationMode: "twitch-extension",
+      canVote: questCycle.status === "voting",
+      canReact: session.capabilities.reactions,
+      viewerId: "fixture-viewer",
+      sessionPoints: questCycle.result?.outcome === "succeeded" ? questCycle.result.rewardPointsAwarded : 0,
+      communityHype:
+        questCycle.result?.outcome === "succeeded" ? 10 : questCycle.result?.outcome === "failed" ? 2 : 0,
+      acceptedCandidateId: questCycle.status === "voting" ? uiX06Options[0].candidateId : null,
+      questCycle,
+      connection,
+    }),
+    overlay: overlayViewModelSchema.parse({
+      envelope,
+      session,
+      readOnly: true,
+      communityHype:
+        questCycle.result?.outcome === "succeeded" ? 10 : questCycle.result?.outcome === "failed" ? 2 : 0,
+      questCycle,
+      connection,
+    }),
+  };
+}
+
+export const contractFixtureUiX06RoleViewCatalog = Object.fromEntries(
+  Object.entries(contractFixtureUiX06QuestStateCatalog).map(([fixtureId, questCycle]) => [
+    fixtureId,
+    uiX06Views(questCycle),
+  ]),
+) as {
+  readonly [FixtureId in keyof typeof contractFixtureUiX06QuestStateCatalog]: RoleViewModels;
+};
 
 const contractFixtureConnection = {
   service: "fixture-realtime",
