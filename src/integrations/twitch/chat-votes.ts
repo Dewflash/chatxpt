@@ -4,6 +4,7 @@ import {
   commandFingerprint,
   viewerVoteCommandSchema,
   type CommandEnvelope,
+  type OrchestratorResult,
   type ParticipationSourceMode,
   type ViewerVoteCommand,
 } from "../../core";
@@ -40,6 +41,24 @@ export type TwitchChatVoteNormalisationResult =
   | {
       readonly status: "ignored";
       readonly reason: "not-a-vote" | "missing-user-id" | "invalid-input";
+    };
+
+export interface TwitchChatVoteExecutor {
+  execute(command: ViewerVoteCommand): Promise<OrchestratorResult> | OrchestratorResult;
+}
+
+export interface TwitchChatVoteSubmissionDependencies {
+  readonly actorStore: TwitchChatVerifiedVoteActorStore;
+  readonly executor: TwitchChatVoteExecutor;
+}
+
+export type TwitchChatVoteSubmissionResult =
+  | Extract<TwitchChatVoteNormalisationResult, { status: "ignored" }>
+  | {
+      readonly status: "submitted";
+      readonly selectedIndex: 0 | 1 | 2;
+      readonly command: ViewerVoteCommand;
+      readonly result: OrchestratorResult;
     };
 
 interface StoredVerifiedVoteActor {
@@ -145,4 +164,21 @@ export class TwitchChatVerifiedVoteActorStore {
     }
     return stored.verifiedActor;
   }
+}
+
+export async function submitTwitchChatVote(
+  dependencies: TwitchChatVoteSubmissionDependencies,
+  input: TwitchChatVoteMessage,
+): Promise<TwitchChatVoteSubmissionResult> {
+  const normalised = normaliseTwitchChatVote(input);
+  if (normalised.status === "ignored") return normalised;
+
+  dependencies.actorStore.remember(normalised);
+  const result = await dependencies.executor.execute(normalised.command);
+  return {
+    status: "submitted",
+    selectedIndex: normalised.selectedIndex,
+    command: normalised.command,
+    result,
+  };
 }

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   TwitchChatVerifiedVoteActorStore,
   normaliseTwitchChatVote,
+  submitTwitchChatVote,
   twitchChatActorId,
   twitchChatVoterKey,
 } from "../../src/integrations";
@@ -177,21 +178,25 @@ describe("Twitch chat vote normalisation", () => {
     const orchestrator = new ChatXptOrchestrator(
       bindPersistenceRuntime(logicDependencies(actorStore), runtime),
     );
-    const normalised = normaliseTwitchChatVote({
-      sessionId: contractFixtureSession.sessionId,
-      questCycleId,
-      expectedRevision: current.session.revision,
-      candidateIds,
-      twitchMessageId: "twitch-message-commit",
-      twitchChannelId: "twitch-channel-1",
-      twitchUserId: "twitch-user-commit",
-      text: "3",
-      receivedAt: FIXTURE_NOW + 1_000,
-    });
-    expect(actorStore.remember(normalised)).toBe(true);
-    if (normalised.status !== "accepted") return;
+    const submitted = await submitTwitchChatVote(
+      { actorStore, executor: orchestrator },
+      {
+        sessionId: contractFixtureSession.sessionId,
+        questCycleId,
+        expectedRevision: current.session.revision,
+        candidateIds,
+        twitchMessageId: "twitch-message-commit",
+        twitchChannelId: "twitch-channel-1",
+        twitchUserId: "twitch-user-commit",
+        text: "3",
+        receivedAt: FIXTURE_NOW + 1_000,
+      },
+    );
 
-    const committed = await orchestrator.execute(normalised.command);
+    expect(submitted.status).toBe("submitted");
+    if (submitted.status !== "submitted") return;
+    expect(submitted.selectedIndex).toBe(2);
+    const committed = submitted.result;
     expect(committed.ok).toBe(true);
     if (!committed.ok) return;
     expect(committed.outcome).toBe("committed");
@@ -212,6 +217,67 @@ describe("Twitch chat vote normalisation", () => {
     expect(tally.tallies[2]).toMatchObject({
       candidateId: candidateIds[2],
       votes: 1,
+    });
+  });
+
+  it("does not execute ignored chat messages", async () => {
+    const actorStore = new TwitchChatVerifiedVoteActorStore();
+    let executeCount = 0;
+
+    const submitted = await submitTwitchChatVote(
+      {
+        actorStore,
+        executor: {
+          execute() {
+            executeCount += 1;
+            throw new Error("Ignored chat must not execute");
+          },
+        },
+      },
+      {
+        sessionId: contractFixtureSession.sessionId,
+        questCycleId,
+        expectedRevision: 0,
+        candidateIds,
+        twitchMessageId: "twitch-message-not-a-vote",
+        twitchChannelId: "twitch-channel-1",
+        twitchUserId: "twitch-user-123",
+        text: "vote 2 maybe?",
+        receivedAt: FIXTURE_NOW,
+      },
+    );
+
+    expect(submitted).toEqual({ status: "ignored", reason: "not-a-vote" });
+    expect(executeCount).toBe(0);
+  });
+
+  it("surfaces orchestrator rejections without converting them into accepted chat votes", async () => {
+    const actorStore = new TwitchChatVerifiedVoteActorStore();
+    const runtime = await preparedRuntime();
+    const orchestrator = new ChatXptOrchestrator(
+      bindPersistenceRuntime(logicDependencies(actorStore), runtime),
+    );
+
+    const submitted = await submitTwitchChatVote(
+      { actorStore, executor: orchestrator },
+      {
+        sessionId: contractFixtureSession.sessionId,
+        questCycleId,
+        expectedRevision: 0,
+        candidateIds,
+        twitchMessageId: "twitch-message-stale",
+        twitchChannelId: "twitch-channel-1",
+        twitchUserId: "twitch-user-stale",
+        text: "1",
+        receivedAt: FIXTURE_NOW + 1_000,
+      },
+    );
+
+    expect(submitted.status).toBe("submitted");
+    if (submitted.status !== "submitted") return;
+    expect(submitted.result).toMatchObject({
+      ok: false,
+      error: { code: "stale-revision" },
     });
   });
 

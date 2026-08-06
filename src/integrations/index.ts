@@ -28,11 +28,15 @@ export {
 export {
   TwitchChatVerifiedVoteActorStore,
   normaliseTwitchChatVote,
+  submitTwitchChatVote,
   twitchChatActorId,
   twitchChatVoterKey,
+  type TwitchChatVoteExecutor,
   type TwitchChatVerifiedVoteActor,
   type TwitchChatVoteMessage,
   type TwitchChatVoteNormalisationResult,
+  type TwitchChatVoteSubmissionDependencies,
+  type TwitchChatVoteSubmissionResult,
 } from "./twitch/chat-votes";
 export {
   buildObsOverlaySnapshotUrl,
