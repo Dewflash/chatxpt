@@ -274,6 +274,8 @@ Raw chat is processed in memory by default. If Joelyrk's D2-15 choice requires t
 
 **Acceptance:** No client secret; runtime validation; clear provider status; no paid calls; recommendation recorded with Role 3 and sent to Role 1.
 
+**Progress (6 August 2026):** `role-2/provider-fallback-evaluation` adds a provider-neutral, injected trial/fallback strategy plus privacy-safe operational observations and summary metrics. Fixture tests cover valid provider output, malformed/partial/overfull/incorrectly-labelled output, timeout, refusal, rate limiting, unavailability, generic failure, cancellation, and invalid algorithmic recovery. No external provider call, provider/model selection, concrete algorithmic policy, or joint recommendation is claimed; D23-01 through D23-03 and D2-16 through D2-18 remain open.
+
 ### R2-P11 — Context and candidate generation
 
 **Outcome:** Real intelligence produces exactly three distinct structured candidates.
