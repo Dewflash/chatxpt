@@ -15,6 +15,7 @@ import {
   SupabaseChatXptDataApi,
   SupabaseDataError,
   SupabaseAcceptedVoteTallyReader,
+  SupabaseDueVoteCycleReader,
   SupabaseRoleSnapshotPublisher,
   SupabaseSessionStateRepository,
 } from "../../src/realtime/server";
@@ -24,6 +25,7 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
   state: unknown | null = persistenceState();
   persisted: RoleViewModels | null = null;
   acceptedVoteRows: readonly unknown[] = [];
+  dueVoteStates: readonly unknown[] = [];
 
   constructor() {
     super({} as SupabaseClient);
@@ -39,6 +41,10 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
 
   override async loadAcceptedVotes(): Promise<readonly unknown[]> {
     return this.acceptedVoteRows;
+  }
+
+  override async loadDueVoteCycleStates(): Promise<readonly unknown[]> {
+    return this.dueVoteStates;
   }
 }
 
@@ -100,6 +106,17 @@ describe("Supabase production adapters", () => {
 
     api.state = { invalid: true };
     await expect(repository.load("fixture-session")).rejects.toThrow();
+  });
+
+  it("validates due vote-cycle states loaded from the database", async () => {
+    const api = new RecordingDataApi();
+    api.dueVoteStates = [persistenceState()];
+    const reader = new SupabaseDueVoteCycleReader(api);
+
+    expect((await reader.dueVoteCycles(2_000))[0]?.session.sessionId).toBe("fixture-session");
+
+    api.dueVoteStates = [{ invalid: true }];
+    await expect(reader.dueVoteCycles(2_000)).rejects.toThrow();
   });
 
   it("removes viewer-specific fields before the database trigger can broadcast", async () => {

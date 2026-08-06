@@ -3,7 +3,12 @@ import type { AcceptedVoteTallySnapshot } from "./participation";
 import type { ContractEnvelope, DomainError, ServiceHealth } from "./common";
 import type { ParticipationCapabilities, StreamSession } from "./session";
 import type { StreamerProfile } from "./profile";
-import type { CandidateBatch, QuestCycleState, QuestEngineEventDraft } from "./quests";
+import type {
+  CandidateBatch,
+  QuestCompletionRule,
+  QuestCycleState,
+  QuestEngineEventDraft,
+} from "./quests";
 import type {
   AudienceEvent,
   AudienceSnapshot,
@@ -65,6 +70,12 @@ export interface QuestEngineInput {
    * feasibility; it never contains Twitch, provider, UI, or persistence payloads.
    */
   readonly voteCloseValidationContext?: VoteCloseValidationContext | null;
+  /**
+   * Present only for quest progress commands. It supplies neutral current
+   * evidence and the active quest's completion rule; commands still cannot
+   * prescribe success, failure, rewards, or lifecycle state.
+   */
+  readonly questProgressValidationContext?: QuestProgressValidationContext | null;
   readonly now: number;
 }
 
@@ -73,6 +84,14 @@ export interface VoteCloseValidationContext {
   readonly session: StreamSession;
   readonly gameplay: GameplaySnapshot | null;
   readonly audience: AudienceSnapshot | null;
+}
+
+export interface QuestProgressValidationContext {
+  readonly profile: StreamerProfile;
+  readonly session: StreamSession;
+  readonly gameplay: GameplaySnapshot | null;
+  readonly audience: AudienceSnapshot | null;
+  readonly completionRule: QuestCompletionRule | null;
 }
 
 export interface QuestEngineDecision {
@@ -102,6 +121,7 @@ export interface ViewModelProjectionInput {
   readonly gameplay: GameplaySnapshot | null;
   readonly audience: AudienceSnapshot | null;
   readonly questCycle: QuestCycleState;
+  readonly emergencyPaused: boolean;
   readonly participationMode: "twitch-extension" | "hosted-board" | "twitch-chat" | "unavailable";
   readonly capabilities: ParticipationCapabilities;
   readonly viewerId: string | null;

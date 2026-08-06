@@ -24,6 +24,7 @@ import {
   type RoleViewModels,
   type ViewModelProjectionInput,
   type AcceptedVoteTallySnapshot,
+  type QuestProgressValidationContext,
   type VoteCloseValidationContext,
 } from "../contracts";
 import type { OrchestratorDependencies } from "./ports";
@@ -68,6 +69,7 @@ function stateInvariantError(state: AuthoritativeSessionState): DomainError | nu
     (state.gameplay !== null && !gameplaySnapshotSchema.safeParse(state.gameplay).success) ||
     (state.audience !== null && !audienceSnapshotSchema.safeParse(state.audience).success) ||
     state.services.some((service) => !serviceHealthSchema.safeParse(service).success) ||
+    typeof state.emergencyPaused !== "boolean" ||
     !Number.isSafeInteger(state.communityHype) ||
     state.communityHype < 0
   ) {
@@ -156,6 +158,12 @@ function authoritativeDecision(
     ...current,
     session: { ...current.session, revision },
     questCycle,
+    emergencyPaused:
+      command.type === "streamer.quest" && command.action === "emergency-pause"
+        ? true
+        : command.type === "streamer.emergency-clear"
+          ? false
+          : current.emergencyPaused,
   };
   const events = [];
   for (const event of parsedEvents.data) {
@@ -202,6 +210,7 @@ function projectionInput(
     gameplay: state.gameplay,
     audience: state.audience,
     questCycle: state.questCycle,
+    emergencyPaused: state.emergencyPaused,
     participationMode: context.participationMode,
     capabilities: state.session.capabilities,
     viewerId: context.viewerId,
@@ -331,6 +340,13 @@ export class ChatXptOrchestrator {
       return { ok: false, error: error("stale-revision", "Command expected a stale session revision") };
     }
 
+    if (command.type === "system.intelligence-ready" && current.emergencyPaused) {
+      return {
+        ok: false,
+        error: error("forbidden", "Emergency pause is active; clear it before proposing new quests"),
+      };
+    }
+
     let candidateBatch = null;
     if (command.type === "system.intelligence-ready") {
       try {
@@ -418,18 +434,39 @@ export class ChatXptOrchestrator {
         audience: current.audience,
       };
     }
+    let questProgressValidationContext: QuestProgressValidationContext | null = null;
+    if (command.type === "streamer.quest-progress" || command.type === "system.quest-progress") {
+      questProgressValidationContext = {
+        profile: current.profile,
+        session: current.session,
+        gameplay: current.gameplay,
+        audience: current.audience,
+        completionRule: current.questCycle.completionRule,
+      };
+    }
     let untrustedEngineResult: unknown;
-    try {
-      untrustedEngineResult = await this.dependencies.engine.decide({
-        currentState: current.questCycle,
-        command,
-        candidateBatch,
-        acceptedVoteTally,
-        voteCloseValidationContext,
-        now: acceptedAt,
-      });
-    } catch {
-      return { ok: false, error: error("internal", "Quest engine failed unexpectedly", true) };
+    if (command.type === "streamer.emergency-clear") {
+      untrustedEngineResult = {
+        ok: true,
+        decision: {
+          nextState: current.questCycle,
+          events: [{ eventType: "session.emergency-cleared", attributes: {} }],
+        },
+      } satisfies QuestEngineResult;
+    } else {
+      try {
+        untrustedEngineResult = await this.dependencies.engine.decide({
+          currentState: current.questCycle,
+          command,
+          candidateBatch,
+          acceptedVoteTally,
+          voteCloseValidationContext,
+          questProgressValidationContext,
+          now: acceptedAt,
+        });
+      } catch {
+        return { ok: false, error: error("internal", "Quest engine failed unexpectedly", true) };
+      }
     }
     if (
       typeof untrustedEngineResult !== "object" ||

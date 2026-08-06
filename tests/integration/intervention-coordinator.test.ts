@@ -1,0 +1,176 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  Role1InterventionCoordinator,
+  intelligenceSnapshotSchema,
+  systemIntelligenceCommandSchema,
+  type CandidateBatch,
+  type CandidateInput,
+  type CandidateProvider,
+  type InterventionDecision,
+  type InterventionPolicy,
+} from "../../src/core";
+import {
+  contractFixtureAudienceSnapshot,
+  contractFixtureCandidateBatch,
+  contractFixtureEnvelope,
+  contractFixtureGameplaySnapshot,
+  contractFixtureProfile,
+  contractFixtureQuestCycle,
+  contractFixtureSession,
+} from "../../src/core/testing";
+import { persistenceState } from "./persistence-fixtures";
+
+const NOW = contractFixtureEnvelope.occurredAt + 1_000;
+
+function intelligence() {
+  return intelligenceSnapshotSchema.parse({
+    envelope: contractFixtureEnvelope,
+    gameplay: contractFixtureGameplaySnapshot,
+    audience: contractFixtureAudienceSnapshot,
+  });
+}
+
+class StaticPolicy implements InterventionPolicy {
+  readonly calls: unknown[] = [];
+
+  constructor(private readonly decision: InterventionDecision) {}
+
+  decide(input: Parameters<InterventionPolicy["decide"]>[0]): InterventionDecision {
+    this.calls.push(structuredClone(input));
+    return this.decision;
+  }
+}
+
+class RecordingCandidateProvider implements CandidateProvider {
+  calls: CandidateInput[] = [];
+
+  async generate(input: CandidateInput): Promise<CandidateBatch> {
+    this.calls.push(structuredClone(input));
+    return structuredClone(contractFixtureCandidateBatch);
+  }
+}
+
+describe("Role 1 intervention coordinator", () => {
+  it("does not call Role 2 candidate generation when Role 3 intervention policy denies", async () => {
+    const policy = new StaticPolicy({
+      shouldPropose: false,
+      score: 0,
+      reasons: ["emergency-paused"],
+      evidenceSignalIds: [],
+    });
+    const provider = new RecordingCandidateProvider();
+    const stored: CandidateBatch[] = [];
+    const executed: unknown[] = [];
+    const state = { ...persistenceState(), emergencyPaused: true };
+    const coordinator = new Role1InterventionCoordinator(
+      policy,
+      provider,
+      { store: async (batch) => void stored.push(batch) },
+      {
+        execute: async (command) => {
+          executed.push(command);
+          return {
+            ok: false,
+            error: { code: "validation", message: "should not execute", retryable: false },
+          };
+        },
+      },
+      () => NOW,
+    );
+
+    const result = await coordinator.run({
+      state,
+      intelligence: intelligence(),
+      recentQuests: [{ title: "Old quest", occurredAt: NOW - 10_000 }],
+      candidateInputEnvelope: contractFixtureEnvelope,
+      commandId: "fixture-intelligence-command",
+      correlationId: "fixture-intelligence-correlation",
+      systemActorId: "fixture-orchestrator",
+      issuedAt: NOW,
+    });
+
+    expect(result).toMatchObject({ ok: true, outcome: "denied" });
+    expect(policy.calls).toHaveLength(1);
+    expect(policy.calls[0]).toMatchObject({
+      emergencyPaused: true,
+      profile: { profileId: state.profile.profileId },
+      recentQuests: [{ title: "Old quest" }],
+    });
+    expect(provider.calls).toHaveLength(0);
+    expect(stored).toHaveLength(0);
+    expect(executed).toHaveLength(0);
+  });
+
+  it("generates, stores, and submits an intelligence-ready command only after intervention is allowed", async () => {
+    const state = persistenceState();
+    const policy = new StaticPolicy({
+      shouldPropose: true,
+      score: 0.8,
+      reasons: ["eligible"],
+      evidenceSignalIds: ["fixture-signal"],
+    });
+    const provider = new RecordingCandidateProvider();
+    const stored: CandidateBatch[] = [];
+    const executed: unknown[] = [];
+    const coordinator = new Role1InterventionCoordinator(
+      policy,
+      provider,
+      { store: async (batch) => void stored.push(batch) },
+      {
+        execute: async (command) => {
+          executed.push(command);
+          return {
+            ok: true,
+            outcome: "committed",
+            receipt: {
+              command: systemIntelligenceCommandSchema.parse(command),
+              commandFingerprint: "fixture",
+              state: {
+                session: contractFixtureSession,
+                profile: contractFixtureProfile,
+                services: [],
+                gameplay: contractFixtureGameplaySnapshot,
+                audience: contractFixtureAudienceSnapshot,
+                questCycle: contractFixtureQuestCycle,
+                emergencyPaused: false,
+                communityHype: 0,
+              },
+              events: [],
+              acceptedAt: NOW,
+            },
+            views: null,
+            delivery: "not-republished",
+          };
+        },
+      },
+      () => NOW,
+    );
+
+    const result = await coordinator.run({
+      state,
+      intelligence: intelligence(),
+      recentQuests: [{ title: "Old quest", occurredAt: NOW - 10_000 }],
+      candidateInputEnvelope: contractFixtureEnvelope,
+      commandId: "fixture-intelligence-command",
+      correlationId: "fixture-intelligence-correlation",
+      systemActorId: "fixture-orchestrator",
+      issuedAt: NOW,
+    });
+
+    expect(result).toMatchObject({ ok: true, outcome: "submitted" });
+    expect(provider.calls).toHaveLength(1);
+    expect(provider.calls[0]).toMatchObject({
+      profile: { profileId: state.profile.profileId },
+      recentQuestTitles: ["Old quest"],
+    });
+    expect(stored).toEqual([contractFixtureCandidateBatch]);
+    const command = systemIntelligenceCommandSchema.parse(executed[0]);
+    expect(command).toMatchObject({
+      commandId: "fixture-intelligence-command",
+      expectedRevision: 0,
+      candidateBatchId: contractFixtureCandidateBatch.envelope.messageId,
+      actor: { kind: "system", actorId: "fixture-orchestrator" },
+    });
+  });
+});

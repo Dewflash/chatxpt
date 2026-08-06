@@ -108,6 +108,10 @@ export interface SessionLifecycleStore {
   due(at: number): Promise<readonly AuthoritativeSessionState[]>;
 }
 
+export interface DueVoteCycleReader {
+  dueVoteCycles(at: number): Promise<readonly AuthoritativeSessionState[]>;
+}
+
 export interface ChatXptPersistenceRuntime {
   readonly mode: "memory" | "supabase";
   readonly sessions: SessionStateRepository;
@@ -116,6 +120,7 @@ export interface ChatXptPersistenceRuntime {
   readonly acceptedVotes: AcceptedVoteTallyReader;
   readonly snapshots: RoleSnapshotPublisher;
   readonly accessGrants: RealtimeAccessGrantStore;
+  readonly dueVotes: DueVoteCycleReader;
 }
 
 export class PersistenceConflictError extends Error {

@@ -32,6 +32,7 @@ import {
   type CandidateBatchRepository,
   type ChatXptPersistenceRuntime,
   type CommitSessionLifecycleInput,
+  type DueVoteCycleReader,
   type LifecycleStoreCommitResult,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
@@ -369,6 +370,14 @@ export class SupabaseChatXptDataApi {
     );
   }
 
+  async loadDueVoteCycleStates(at: number): Promise<readonly unknown[]> {
+    const { data, error } = await this.client.rpc("due_vote_cycle_states", {
+      p_due_at_ms: at,
+    });
+    throwIfError(error);
+    return data ?? [];
+  }
+
   async probe(checkedAt = Date.now()): Promise<ServiceHealth> {
     const { error } = await this.client
       .from("stream_sessions")
@@ -460,6 +469,16 @@ export class SupabaseAcceptedVoteTallyReader implements AcceptedVoteTallyReader 
       acceptedVoteCount: tallies.reduce((sum, tally) => sum + tally.votes, 0),
       tallies,
     });
+  }
+}
+
+export class SupabaseDueVoteCycleReader implements DueVoteCycleReader {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async dueVoteCycles(at: number): Promise<readonly AuthoritativeSessionState[]> {
+    return (await this.api.loadDueVoteCycleStates(at)).map((state) =>
+      authoritativeSessionStateSchema.parse(state),
+    );
   }
 }
 
@@ -647,6 +666,7 @@ export function createSupabasePersistenceRuntime(
   const sessions = new SupabaseSessionStateRepository(api);
   const acceptedVotes = new SupabaseAcceptedVoteTallyReader(api);
   const snapshots = new SupabaseRoleSnapshotPublisher(api);
+  const dueVotes = new SupabaseDueVoteCycleReader(api);
   return {
     mode: "supabase",
     api,
@@ -656,6 +676,7 @@ export function createSupabasePersistenceRuntime(
     acceptedVotes,
     snapshots,
     accessGrants: new SupabaseRealtimeAccessGrantStore(api),
+    dueVotes,
     probe: (checkedAt) => api.probe(checkedAt),
   };
 }
