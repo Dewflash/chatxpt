@@ -90,7 +90,9 @@ describe("Supabase migration security regression", () => {
   it("keeps secret configuration server-only in the committed environment template", () => {
     expect(environmentExample).toContain("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=");
     expect(environmentExample).toContain("SUPABASE_SECRET_KEY=");
+    expect(environmentExample).toContain("CHATXPT_OBS_OVERLAY_SETUP_KEY=");
     expect(environmentExample).not.toContain("NEXT_PUBLIC_SUPABASE_SECRET_KEY");
     expect(environmentExample).not.toContain("NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY");
+    expect(environmentExample).not.toContain("NEXT_PUBLIC_CHATXPT_OBS_OVERLAY_SETUP_KEY");
   });
 });

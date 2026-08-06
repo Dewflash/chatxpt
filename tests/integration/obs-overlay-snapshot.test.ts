@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { obsOverlaySnapshotGET } from "../../src/app";
+import { obsOverlayGrantPOST, obsOverlaySnapshotGET } from "../../src/app";
 import {
   MAX_OBS_OVERLAY_READ_GRANT_MILLISECONDS,
   buildObsOverlaySnapshotUrl,
@@ -17,6 +17,15 @@ import {
 import { FIXTURE_NOW, persistenceState } from "./persistence-fixtures";
 
 const READ_KEY = "obs-browser-source-read-key";
+const ORIGINAL_OVERLAY_SETUP_KEY = process.env.CHATXPT_OBS_OVERLAY_SETUP_KEY;
+
+afterEach(() => {
+  if (ORIGINAL_OVERLAY_SETUP_KEY === undefined) {
+    delete process.env.CHATXPT_OBS_OVERLAY_SETUP_KEY;
+  } else {
+    process.env.CHATXPT_OBS_OVERLAY_SETUP_KEY = ORIGINAL_OVERLAY_SETUP_KEY;
+  }
+});
 
 async function preparedRuntime() {
   const runtime = createMemoryPersistenceRuntime();
@@ -234,5 +243,74 @@ describe("OBS browser overlay snapshot seam", () => {
         evidenceClass: "unknown",
       },
     });
+  });
+
+  it("protects the production grant route with a server-only setup key", async () => {
+    delete process.env.CHATXPT_OBS_OVERLAY_SETUP_KEY;
+    const unconfigured = await obsOverlayGrantPOST(
+      new Request("http://localhost/api/overlay/grant", {
+        method: "POST",
+        body: JSON.stringify({ sessionId: contractFixtureSession.sessionId }),
+      }),
+    );
+    const unconfiguredBody = await unconfigured.json();
+
+    process.env.CHATXPT_OBS_OVERLAY_SETUP_KEY = "fixture-overlay-setup-secret";
+    const forbidden = await obsOverlayGrantPOST(
+      new Request("http://localhost/api/overlay/grant", {
+        method: "POST",
+        headers: { "x-chatxpt-overlay-setup-key": "wrong-secret" },
+        body: JSON.stringify({ sessionId: contractFixtureSession.sessionId }),
+      }),
+    );
+    const forbiddenBody = await forbidden.json();
+
+    expect(unconfigured.status).toBe(503);
+    expect(unconfiguredBody).toMatchObject({
+      ok: false,
+      error: { code: "dependency-unavailable", retryable: false },
+    });
+    expect(forbidden.status).toBe(403);
+    expect(forbiddenBody).toMatchObject({
+      ok: false,
+      error: { code: "forbidden", retryable: false },
+    });
+  });
+
+  it("fails closed for malformed or missing-session production grant requests", async () => {
+    process.env.CHATXPT_OBS_OVERLAY_SETUP_KEY = "fixture-overlay-setup-secret";
+    const headers = { "x-chatxpt-overlay-setup-key": "fixture-overlay-setup-secret" };
+    const malformed = await obsOverlayGrantPOST(
+      new Request("http://localhost/api/overlay/grant", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ sessionId: contractFixtureSession.sessionId, expiresInMs: -1 }),
+      }),
+    );
+    const malformedBody = await malformed.json();
+    const missingSession = await obsOverlayGrantPOST(
+      new Request("http://localhost/api/overlay/grant", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ sessionId: "missing-session", expiresInMs: 60_000 }),
+      }),
+    );
+    const missingSessionBody = await missingSession.json();
+
+    expect(malformed.status).toBe(400);
+    expect(malformedBody).toMatchObject({
+      ok: false,
+      error: { code: "validation", retryable: false },
+    });
+    expect(missingSession.status).toBe(503);
+    expect(missingSessionBody).toMatchObject({
+      ok: false,
+      error: { code: "dependency-unavailable", retryable: true },
+      source: {
+        persistenceMode: "memory",
+        evidenceClass: "unknown",
+      },
+    });
+    expect(missingSessionBody).not.toHaveProperty("snapshotUrl");
   });
 });
