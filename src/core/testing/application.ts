@@ -1,9 +1,11 @@
 import {
+  acceptedVoteTallySnapshotSchema,
   domainErrorSchema,
   overlayViewModelSchema,
   streamerViewModelSchema,
   viewerViewModelSchema,
   type CandidateBatch,
+  type AcceptedVoteTallySnapshot,
   type CommandEnvelope,
   type QuestEngine,
   type QuestEngineInput,
@@ -13,6 +15,8 @@ import {
   type ViewModelProjector,
 } from "../contracts";
 import type {
+  AcceptedVoteTallyReadInput,
+  AcceptedVoteTallyReader,
   CandidateBatchReader,
   CommandAuthorizer,
   CommitAuthoritativeStateInput,
@@ -126,6 +130,31 @@ export class StaticFixtureCandidateBatchReader implements CandidateBatchReader {
   }
 }
 
+export class ScriptedFixtureAcceptedVoteTallyReader implements AcceptedVoteTallyReader {
+  readonly calls: AcceptedVoteTallyReadInput[] = [];
+
+  constructor(
+    private readonly script: (
+      input: AcceptedVoteTallyReadInput,
+    ) => AcceptedVoteTallySnapshot = (input) =>
+      acceptedVoteTallySnapshotSchema.parse({
+        sessionId: input.sessionId,
+        questCycleId: input.questCycleId,
+        revision: input.revision,
+        closedAt: input.closedAt,
+        acceptedVoteCount: 0,
+        tallies: input.candidateIds.map((candidateId) => ({ candidateId, votes: 0 })),
+      }),
+  ) {}
+
+  async readAcceptedVoteTally(
+    input: AcceptedVoteTallyReadInput,
+  ): Promise<AcceptedVoteTallySnapshot> {
+    this.calls.push(clone(input));
+    return clone(this.script(input));
+  }
+}
+
 export class FixedFixtureClock implements ServerClock {
   constructor(private readonly timestamp: number) {}
 
@@ -168,6 +197,7 @@ export class CanonicalFixtureViewProjector implements ViewModelProjector {
         gameplay: input.gameplay,
         audience: input.audience,
         questCycle: input.questCycle,
+        emergencyPaused: input.emergencyPaused,
       }),
       viewer: viewerViewModelSchema.parse({
         envelope: input.envelope,

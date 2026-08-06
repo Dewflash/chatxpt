@@ -18,6 +18,7 @@ export interface AuthoritativeSessionState {
   readonly gameplay: GameplaySnapshot | null;
   readonly audience: AudienceSnapshot | null;
   readonly questCycle: QuestCycleState;
+  readonly emergencyPaused: boolean;
   readonly communityHype: number;
 }
 
@@ -40,7 +41,8 @@ export interface AcceptedCommandReceipt {
 export type CommitAuthoritativeStateResult =
   | { readonly status: "committed"; readonly receipt: AcceptedCommandReceipt }
   | { readonly status: "duplicate"; readonly receipt: AcceptedCommandReceipt }
-  | { readonly status: "stale"; readonly currentRevision: number };
+  | { readonly status: "stale"; readonly currentRevision: number }
+  | { readonly status: "participation-conflict"; readonly reason: "vote-already-accepted" };
 
 export type OrchestratorDelivery = "published" | "pending-recovery" | "not-republished";
 

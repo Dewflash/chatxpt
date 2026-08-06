@@ -1,4 +1,5 @@
 import type {
+  AcceptedVoteTallySnapshot,
   CandidateBatch,
   CommandEnvelope,
   DomainError,
@@ -23,6 +24,20 @@ export interface CommandAuthorizer {
 export interface CandidateBatchReader {
   /** candidateBatchId is the canonical candidate-batch envelope messageId. */
   read(candidateBatchId: string, sessionId: string): Promise<CandidateBatch | null>;
+}
+
+export interface AcceptedVoteTallyReadInput {
+  readonly sessionId: string;
+  readonly questCycleId: string;
+  readonly revision: number;
+  readonly candidateIds: readonly [string, string, string];
+  /** Votes accepted at or after this timestamp are excluded. */
+  readonly acceptedBefore: number;
+  readonly closedAt: number;
+}
+
+export interface AcceptedVoteTallyReader {
+  readAcceptedVoteTally(input: AcceptedVoteTallyReadInput): Promise<AcceptedVoteTallySnapshot>;
 }
 
 export interface CommitAuthoritativeStateInput {
@@ -67,6 +82,7 @@ export interface MessageIdFactory {
 export interface OrchestratorDependencies {
   readonly authorizer: CommandAuthorizer;
   readonly candidateBatches: CandidateBatchReader;
+  readonly acceptedVotes: AcceptedVoteTallyReader;
   readonly repository: SessionStateRepository;
   readonly engine: QuestEngine;
   readonly projectionContext: ProjectionContextResolver;

@@ -3,6 +3,7 @@ import {
   type CommandAuthorizer,
   type CommandEnvelope,
   type DomainError,
+  type ParticipationSourceMode,
   type AuthoritativeSessionState,
 } from "../core";
 
@@ -11,6 +12,9 @@ export interface VerifiedCommandActor {
   readonly actorId: string | null;
   readonly expiresAt: number | null;
   readonly moderatorForBroadcasterIds: readonly string[];
+  /** Opaque, session-scoped participation identity resolved from trusted auth. */
+  readonly voterKey: string | null;
+  readonly participationModes: readonly ParticipationSourceMode[];
 }
 
 export interface VerifiedCommandActorResolver {
@@ -57,16 +61,21 @@ export class ServerCommandAuthorizer implements CommandAuthorizer {
     }
 
     if (verified.kind === "moderator") {
-      return command.type === "streamer.quest" &&
+      return (command.type === "streamer.quest" ||
+        command.type === "streamer.quest-progress" ||
+        command.type === "streamer.emergency-clear") &&
         verified.moderatorForBroadcasterIds.includes(state.session.broadcasterId)
         ? null
         : denial("forbidden", "Moderator is not authorised for this stream-time control");
     }
 
     if (verified.kind === "system") {
-      return command.type === "system.intelligence-ready"
+      return command.type === "system.intelligence-ready" ||
+        command.type === "system.vote-close" ||
+        command.type === "system.quest-tick" ||
+        command.type === "system.quest-progress"
         ? null
-        : denial("forbidden", "System intelligence may only submit candidate-ready commands");
+        : denial("forbidden", "System identity may only submit trusted lifecycle commands");
     }
 
     if (state.session.status !== "live") {
@@ -88,6 +97,26 @@ export class ServerCommandAuthorizer implements CommandAuthorizer {
       !state.session.capabilities.twitchChatVoting
     ) {
       return denial("unavailable-capability", "No voting participation path is available");
+    }
+    if (
+      command.type === "viewer.vote" &&
+      ((command.sourceMode === "twitch-extension" && !state.session.capabilities.twitchExtension) ||
+        (command.sourceMode === "hosted-board" && !state.session.capabilities.hostedViewerBoard) ||
+        (command.sourceMode === "twitch-chat" && !state.session.capabilities.twitchChatVoting))
+    ) {
+      return denial("unavailable-capability", "The selected participation path is unavailable");
+    }
+    if (
+      command.type === "viewer.vote" &&
+      (verified.voterKey === null || verified.voterKey !== command.voterKey)
+    ) {
+      return denial("forbidden", "Vote identity does not match the verified participation grant");
+    }
+    if (
+      command.type === "viewer.vote" &&
+      !verified.participationModes.includes(command.sourceMode)
+    ) {
+      return denial("forbidden", "Vote source is not allowed by the verified participation grant");
     }
     return null;
   }

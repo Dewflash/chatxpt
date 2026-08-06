@@ -1,9 +1,15 @@
 import {
+  acceptedVoteTallySnapshotSchema,
   acceptedCommandReceiptSchema,
   authoritativeSessionStateSchema,
   canonicalJsonStringify,
   candidateBatchSchema,
+  hostedBoardAccessResultSchema,
+  viewerParticipationReceiptReadResultSchema,
   type AcceptedCommandReceipt,
+  type AcceptedVoteTallyReadInput,
+  type AcceptedVoteTallyReader,
+  type AcceptedVoteTallySnapshot,
   type AuthoritativeSessionState,
   type CandidateBatch,
   type CommitAuthoritativeStateInput,
@@ -17,6 +23,9 @@ import {
   type BootstrapSessionInput,
   type CandidateBatchRepository,
   type CommitSessionLifecycleInput,
+  type DueVoteCycleReader,
+  type HostedBoardAccessInput,
+  type HostedBoardAccessResolver,
   type LifecycleStoreCommitResult,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
@@ -26,8 +35,11 @@ import {
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,
+  type ViewerParticipationReceiptReadInput,
+  type ViewerParticipationReceiptReader,
 } from "./types";
 import { sanitizeRoleViewsForBroadcast } from "./sanitization";
+import { derivePrivateViewerVoterKey } from "./private-viewer";
 
 interface MemoryLifecycleMetadata {
   lastActivityAt: number;
@@ -44,7 +56,15 @@ function active(status: AuthoritativeSessionState["session"]["status"]): boolean
 }
 
 export class MemoryChatXptPersistence
-  implements CandidateBatchRepository, RoleSnapshotPublisher, RealtimeAccessGrantStore, SessionLifecycleStore
+  implements
+    AcceptedVoteTallyReader,
+    CandidateBatchRepository,
+    DueVoteCycleReader,
+    HostedBoardAccessResolver,
+    RoleSnapshotPublisher,
+    RealtimeAccessGrantStore,
+    SessionLifecycleStore,
+    ViewerParticipationReceiptReader
 {
   private readonly states = new Map<string, AuthoritativeSessionState>();
   private readonly receipts = new Map<string, AcceptedCommandReceipt>();
@@ -55,6 +75,17 @@ export class MemoryChatXptPersistence
   private readonly lifecycle = new Map<string, MemoryLifecycleMetadata>();
   private readonly lifecycleOperations = new Map<string, SessionLifecycleCommitResult>();
   private readonly accessGrants = new Map<string, RealtimeAccessGrant>();
+  private readonly voteLedger = new Map<
+    string,
+    {
+      sessionId: string;
+      questCycleId: string;
+      voterKey: string;
+      candidateId: string;
+      acceptedAt: number;
+      sourceMode: "twitch-extension" | "hosted-board" | "twitch-chat";
+    }
+  >();
 
   async bootstrap(input: BootstrapSessionInput): Promise<void> {
     const state = authoritativeSessionStateSchema.parse(input.state);
@@ -116,6 +147,18 @@ export class MemoryChatXptPersistence
       return { status: "stale", currentRevision: current?.session.revision ?? 0 };
     }
     if (
+      input.command.type === "viewer.vote" &&
+      this.voteLedger.has(
+        this.voteKey(
+          input.command.sessionId,
+          input.command.questCycleId,
+          input.command.voterKey,
+        ),
+      )
+    ) {
+      return { status: "participation-conflict", reason: "vote-already-accepted" };
+    }
+    if (
       input.nextState.session.sessionId !== input.command.sessionId ||
       input.nextState.session.revision !== input.expectedRevision + 1 ||
       input.nextState.questCycle.envelope.revision !== input.expectedRevision + 1
@@ -132,11 +175,214 @@ export class MemoryChatXptPersistence
     });
     this.replaceState(receipt.state);
     this.receipts.set(input.command.commandId, clone(receipt));
+    if (input.command.type === "viewer.vote") {
+      this.voteLedger.set(
+        this.voteKey(
+          input.command.sessionId,
+          input.command.questCycleId,
+          input.command.voterKey,
+        ),
+        {
+          sessionId: input.command.sessionId,
+          questCycleId: input.command.questCycleId,
+          voterKey: input.command.voterKey,
+          candidateId: input.command.candidateId,
+          acceptedAt: input.acceptedAt,
+          sourceMode: input.command.sourceMode,
+        },
+      );
+    }
     const updatedLifecycle = this.lifecycle.get(input.command.sessionId);
     if (updatedLifecycle !== undefined) {
       updatedLifecycle.lastActivityAt = input.acceptedAt;
     }
     return { status: "committed", receipt: clone(receipt) };
+  }
+
+  async readAcceptedVoteTally(
+    input: AcceptedVoteTallyReadInput,
+  ): Promise<AcceptedVoteTallySnapshot> {
+    const counts = new Map(input.candidateIds.map((candidateId) => [candidateId, 0]));
+    for (const vote of this.voteLedger.values()) {
+      if (
+        vote.sessionId !== input.sessionId ||
+        vote.questCycleId !== input.questCycleId ||
+        vote.acceptedAt >= input.acceptedBefore
+      ) {
+        continue;
+      }
+      const current = counts.get(vote.candidateId);
+      if (current === undefined) {
+        throw new Error("Accepted vote references a candidate outside the closing cycle");
+      }
+      counts.set(vote.candidateId, current + 1);
+    }
+    const tallies = input.candidateIds.map((candidateId) => ({
+      candidateId,
+      votes: counts.get(candidateId) ?? 0,
+    })) as [
+      { candidateId: string; votes: number },
+      { candidateId: string; votes: number },
+      { candidateId: string; votes: number },
+    ];
+    return acceptedVoteTallySnapshotSchema.parse({
+      sessionId: input.sessionId,
+      questCycleId: input.questCycleId,
+      revision: input.revision,
+      closedAt: input.closedAt,
+      acceptedVoteCount: tallies.reduce((sum, tally) => sum + tally.votes, 0),
+      tallies,
+    });
+  }
+
+  async readViewerParticipationReceipt(
+    input: ViewerParticipationReceiptReadInput,
+  ) {
+    const grant = this.accessGrants.get(
+      this.grantKey(input.principalId, input.sessionId, "viewer"),
+    );
+    if (grant === undefined || grant.revokedAt !== null) {
+      return viewerParticipationReceiptReadResultSchema.parse({
+        status: "forbidden",
+        error: {
+          code: "forbidden",
+          message: "Viewer receipt access is not authorised for this session",
+          retryable: false,
+        },
+      });
+    }
+    if (grant.expiresAt <= input.at) {
+      return viewerParticipationReceiptReadResultSchema.parse({
+        status: "expired",
+        error: {
+          code: "expired",
+          message: "Viewer receipt access expired; reconnect through an allowed viewer path",
+          retryable: true,
+        },
+      });
+    }
+
+    const state = this.states.get(input.sessionId);
+    if (
+      state === undefined ||
+      state.questCycle.envelope.questCycleId !== input.questCycleId
+    ) {
+      return viewerParticipationReceiptReadResultSchema.parse({
+        status: "not-found",
+        receipt: null,
+      });
+    }
+
+    const voterKey = derivePrivateViewerVoterKey(input);
+    const vote = this.voteLedger.get(
+      this.voteKey(input.sessionId, input.questCycleId, voterKey),
+    );
+    const sessionPoints = this.sessionPointsFor(input.sessionId, voterKey);
+    return viewerParticipationReceiptReadResultSchema.parse({
+      status: "available",
+      receipt: {
+        envelope: {
+          contractVersion: "1.0.0",
+          sessionId: input.sessionId,
+          questCycleId: input.questCycleId,
+          messageId: "viewer-receipt",
+          correlationId: input.principalId,
+          revision: state.session.revision,
+          occurredAt: vote?.acceptedAt ?? input.at,
+          receivedAt: input.at,
+          source: "orchestrator",
+          evidenceClass: state.questCycle.envelope.evidenceClass,
+        },
+        principalId: input.principalId,
+        voterKey,
+        identityKind: input.identityKind,
+        sourceMode: vote?.sourceMode ?? null,
+        acceptedCandidateId: vote?.candidateId ?? null,
+        acceptedAt: vote?.acceptedAt ?? null,
+        sessionPoints,
+        reconnectExpiresAt: grant.expiresAt,
+      },
+    });
+  }
+
+  async resolveHostedBoardAccess(input: HostedBoardAccessInput) {
+    const roomCode = input.roomCode.trim().toUpperCase();
+    if (!/^[A-HJ-NP-Z2-9]{8}$/.test(roomCode)) {
+      return hostedBoardAccessResultSchema.parse({
+        status: "invalid-room",
+        error: {
+          code: "validation",
+          message: "Hosted Quest Board room code is invalid",
+          retryable: false,
+        },
+      });
+    }
+
+    const sessionId = this.roomSessions.get(roomCode);
+    const state = sessionId === undefined ? undefined : this.states.get(sessionId);
+    if (sessionId === undefined || state === undefined) {
+      return hostedBoardAccessResultSchema.parse({
+        status: "invalid-room",
+        error: {
+          code: "validation",
+          message: "Hosted Quest Board room was not found",
+          retryable: false,
+        },
+      });
+    }
+    if (!active(state.session.status)) {
+      return hostedBoardAccessResultSchema.parse({
+        status: "expired-session",
+        error: {
+          code: "expired",
+          message: "Hosted Quest Board room is no longer active",
+          retryable: false,
+        },
+      });
+    }
+    if (!state.session.capabilities.hostedViewerBoard) {
+      return hostedBoardAccessResultSchema.parse({
+        status: "unavailable",
+        error: {
+          code: "unavailable-capability",
+          message: "Hosted Quest Board fallback is unavailable for this session",
+          retryable: true,
+        },
+      });
+    }
+    if (input.grantExpiresAt <= input.at) {
+      return hostedBoardAccessResultSchema.parse({
+        status: "unavailable",
+        error: {
+          code: "expired",
+          message: "Hosted Quest Board grant expiry must be in the future",
+          retryable: true,
+        },
+      });
+    }
+
+    await this.grant({
+      principalId: input.principalId,
+      sessionId,
+      viewRole: "viewer",
+      expiresAt: input.grantExpiresAt,
+    });
+
+    const directUrl = new URL(`/quest-board/${roomCode}?sessionId=${sessionId}`, input.baseUrl);
+    const shareUrl = new URL(`/quest-board/${roomCode}`, input.baseUrl);
+    return hostedBoardAccessResultSchema.parse({
+      status: "available",
+      access: {
+        sessionId,
+        roomCode,
+        principalId: input.principalId,
+        directUrl: directUrl.toString(),
+        shareUrl: shareUrl.toString(),
+        shareText: `Join ChatXPT room ${roomCode} to vote on this stream's sidequest.`,
+        qrPayload: input.includeQrPayload === true ? shareUrl.toString() : null,
+        grantExpiresAt: input.grantExpiresAt,
+      },
+    });
   }
 
   async store(batch: CandidateBatch): Promise<void> {
@@ -313,6 +559,25 @@ export class MemoryChatXptPersistence
     return due;
   }
 
+  async dueVoteCycles(at: number): Promise<readonly AuthoritativeSessionState[]> {
+    const due: AuthoritativeSessionState[] = [];
+    for (const state of this.states.values()) {
+      if (
+        state.session.status === "live" &&
+        state.questCycle.status === "voting" &&
+        state.questCycle.endsAt !== null &&
+        state.questCycle.endsAt <= at
+      ) {
+        due.push(clone(state));
+      }
+    }
+    return due.sort(
+      (left, right) =>
+        (left.questCycle.endsAt ?? 0) - (right.questCycle.endsAt ?? 0) ||
+        left.session.sessionId.localeCompare(right.session.sessionId),
+    );
+  }
+
   private replaceState(nextState: AuthoritativeSessionState): void {
     const previous = this.states.get(nextState.session.sessionId);
     this.states.set(nextState.session.sessionId, clone(nextState));
@@ -330,6 +595,42 @@ export class MemoryChatXptPersistence
   private grantKey(principalId: string, sessionId: string, role: SnapshotRole): string {
     return `${principalId}:${sessionId}:${role}`;
   }
+
+  private voteKey(sessionId: string, questCycleId: string, voterKey: string): string {
+    return JSON.stringify([sessionId, questCycleId, voterKey]);
+  }
+
+  private sessionPointsFor(sessionId: string, voterKey: string): number {
+    const cycleResults = new Map<
+      string,
+      { activeCandidateId: string | null; points: number; outcome: string }
+    >();
+    for (const receipt of this.receipts.values()) {
+      const state = receipt.state;
+      if (state.session.sessionId !== sessionId) continue;
+      const questCycleId = state.questCycle.envelope.questCycleId;
+      const result = state.questCycle.result;
+      if (questCycleId === null || result === null) continue;
+      cycleResults.set(questCycleId, {
+        activeCandidateId: state.questCycle.activeCandidateId,
+        points: result.rewardPointsAwarded,
+        outcome: result.outcome,
+      });
+    }
+
+    let total = 0;
+    for (const vote of this.voteLedger.values()) {
+      if (vote.sessionId !== sessionId || vote.voterKey !== voterKey) continue;
+      const result = cycleResults.get(vote.questCycleId);
+      if (
+        result?.outcome === "succeeded" &&
+        result.activeCandidateId === vote.candidateId
+      ) {
+        total += result.points;
+      }
+    }
+    return total;
+  }
 }
 
 export function createMemoryPersistenceRuntime() {
@@ -339,7 +640,11 @@ export function createMemoryPersistenceRuntime() {
     sessions: backend,
     lifecycle: backend,
     candidates: backend,
+    acceptedVotes: backend,
+    viewerReceipts: backend,
+    hostedBoardAccess: backend,
     snapshots: backend,
     accessGrants: backend,
+    dueVotes: backend,
   };
 }

@@ -2,6 +2,7 @@ import {
   candidateBatchSchema,
   commandEnvelopeSchema,
   domainErrorSchema,
+  intelligenceSnapshotSchema,
   questCycleStateSchema,
   type CommandEnvelope,
   type DomainError,
@@ -13,6 +14,7 @@ import {
   type QuestEngineResult,
   type StreamerQuestAction,
 } from "../core";
+import { decideAutomaticProgress, decideManualProgress, decideQuestOutcome } from "./outcomes";
 
 export const DEFAULT_VOTING_MILLISECONDS = 30_000;
 
@@ -123,6 +125,80 @@ function validateCandidateBatch(input: QuestEngineInput): QuestEngineResult | nu
   return null;
 }
 
+function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
+  if (input.command.type !== "streamer.quest-progress" && input.command.type !== "system.quest-progress") {
+    return error("internal", "Progress transition received another command type");
+  }
+  if (input.currentState.status !== "active") return illegalCommand(input.currentState, input.command);
+
+  const progressDecision =
+    input.command.type === "streamer.quest-progress"
+      ? decideManualProgress(input.currentState.progress, input.command.requestedValue, input.now)
+      : (() => {
+          const context = input.questProgressValidationContext;
+          const completionRule = context?.completionRule ?? null;
+          if (
+            context === null ||
+            context === undefined ||
+            context.gameplay === null ||
+            completionRule?.mode !== "signal"
+          ) {
+            return {
+              accepted: false as const,
+              reason: "missing-evidence" as const,
+            };
+          }
+          const intelligence = intelligenceSnapshotSchema.safeParse({
+            envelope: {
+              ...input.currentState.envelope,
+              messageId: `${input.command.commandId}-progress-context`,
+              source: "orchestrator",
+            },
+            gameplay: context.gameplay,
+            audience: context.audience ?? {
+              envelope: {
+                ...input.currentState.envelope,
+                messageId: `${input.command.commandId}-progress-audience-unavailable`,
+                source: "orchestrator",
+              },
+              sampleSize: 0,
+              signals: [],
+            },
+          });
+          if (!intelligence.success) {
+            return {
+              accepted: false as const,
+              reason: "unknown-evidence" as const,
+            };
+          }
+          return decideAutomaticProgress({
+            currentProgress: input.currentState.progress,
+            requestedValue: input.command.requestedValue,
+            evidenceSignalIds: input.command.evidenceSignalIds,
+            allowedSignalKinds: completionRule.allowedSignalKinds,
+            intelligence: intelligence.data,
+            now: input.now,
+          });
+        })();
+
+  if (!progressDecision.accepted) {
+    return error("validation", "Quest progress update was rejected", {
+      reason: progressDecision.reason,
+    });
+  }
+
+  return accept(
+    input.currentState,
+    { progress: progressDecision.progress },
+    [
+      event("quest-cycle.progress-updated", {
+        method: progressDecision.progress.method,
+        value: progressDecision.progress.value,
+      }),
+    ],
+  );
+}
+
 function transitionIntelligenceReady(input: QuestEngineInput): QuestEngineResult {
   if (input.command.type !== "system.intelligence-ready" || input.candidateBatch === null) {
     return error("internal", "Intelligence transition received inconsistent input");
@@ -142,6 +218,7 @@ function transitionIntelligenceReady(input: QuestEngineInput): QuestEngineResult
       startsAt: null,
       endsAt: null,
       progress: null,
+      completionRule: null,
       result: null,
     },
     [event("quest-cycle.proposed", { candidateCount: input.candidateBatch.candidates.length })],
@@ -156,8 +233,22 @@ function terminalTransition(
 ): QuestEngineResult {
   const activeCandidate = input.currentState.options.find(
     (candidate) => candidate.candidateId === input.currentState.activeCandidateId,
-  );
-  const rewardPointsAwarded = outcome === "succeeded" ? (activeCandidate?.rewardPoints ?? 0) : 0;
+  ) ?? null;
+  const outcomeDecision = decideQuestOutcome({
+    outcome,
+    activeCandidate,
+    terminalAt: input.now,
+  });
+  if (outcomeDecision === null) {
+    return error("internal", "Quest outcome policy rejected an invalid terminal transition");
+  }
+  const completedProgress =
+    outcome === "succeeded"
+      ? decideManualProgress(input.currentState.progress, 1, input.now)
+      : null;
+  if (completedProgress !== null && !completedProgress.accepted) {
+    return error("internal", "Quest completion produced invalid manual progress");
+  }
   const reasonByOutcome = {
     succeeded: "Streamer marked the active quest as succeeded.",
     failed: "Streamer marked the active quest as failed.",
@@ -172,25 +263,24 @@ function terminalTransition(
       availableStreamerActions: [...actionsByStatus[outcome]],
       endsAt: input.now,
       progress:
-        outcome === "succeeded"
-          ? {
-              value: 1,
-              updatedAt: input.now,
-              method: "manual",
-              evidenceSignalIds: [],
-            }
+        completedProgress?.accepted === true
+          ? completedProgress.progress
           : input.currentState.progress,
+      completionRule: null,
       result: {
         outcome,
         occurredAt: input.now,
         reason: reasonOverride ?? reasonByOutcome[outcome],
-        rewardPointsAwarded,
+        rewardPointsAwarded: outcomeDecision.rewardPointsAwarded,
       },
     },
     [
       event(eventType, {
         outcome,
-        rewardPointsAwarded,
+        rewardPointsAwarded: outcomeDecision.rewardPointsAwarded,
+        hypeDelta: outcomeDecision.hypeDelta,
+        historyCandidateId: outcomeDecision.historyCandidateId,
+        cooldownEndsAt: outcomeDecision.cooldownEndsAt,
       }),
     ],
   );
@@ -290,12 +380,27 @@ export class DefaultQuestEngine implements QuestEngine {
     switch (input.command.type) {
       case "system.intelligence-ready":
         return transitionIntelligenceReady(input);
+      case "system.vote-close":
+        return error(
+          "unavailable-capability",
+          "Vote-close winner, tie, and no-vote policy awaits the Role 3 implementation",
+        );
+      case "system.quest-tick":
+        return error(
+          "unavailable-capability",
+          "Quest tick expiry and cooldown policy awaits the Role 3 implementation",
+        );
+      case "streamer.quest-progress":
+      case "system.quest-progress":
+        return transitionQuestProgress(input);
       case "streamer.quest":
         return transitionStreamerCommand(input);
       case "viewer.vote":
         return transitionVote(input);
       case "viewer.react":
         return error("unavailable-capability", "Viewer reactions do not change Phase 1 quest state");
+      case "streamer.emergency-clear":
+        return error("unavailable-capability", "Emergency clear is handled by the Role 1 latch");
     }
   }
 }

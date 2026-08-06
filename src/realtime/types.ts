@@ -1,10 +1,14 @@
 import type {
+  AcceptedVoteTallyReader,
   AuthoritativeSessionState,
   CandidateBatch,
   CandidateBatchReader,
+  HostedBoardAccessResult,
+  PrivateViewerIdentityKind,
   RoleViewModels,
   SessionStateRepository,
   StatePublisher,
+  ViewerParticipationReceiptReadResult,
 } from "../core";
 
 export type SnapshotRole = keyof RoleViewModels;
@@ -107,13 +111,48 @@ export interface SessionLifecycleStore {
   due(at: number): Promise<readonly AuthoritativeSessionState[]>;
 }
 
+export interface DueVoteCycleReader {
+  dueVoteCycles(at: number): Promise<readonly AuthoritativeSessionState[]>;
+}
+
+export interface ViewerParticipationReceiptReadInput {
+  readonly principalId: string;
+  readonly sessionId: string;
+  readonly questCycleId: string;
+  readonly identityKind: PrivateViewerIdentityKind;
+  readonly at: number;
+}
+
+export interface ViewerParticipationReceiptReader {
+  readViewerParticipationReceipt(
+    input: ViewerParticipationReceiptReadInput,
+  ): Promise<ViewerParticipationReceiptReadResult>;
+}
+
+export interface HostedBoardAccessInput {
+  readonly roomCode: string;
+  readonly principalId: string;
+  readonly baseUrl: string;
+  readonly at: number;
+  readonly grantExpiresAt: number;
+  readonly includeQrPayload?: boolean;
+}
+
+export interface HostedBoardAccessResolver {
+  resolveHostedBoardAccess(input: HostedBoardAccessInput): Promise<HostedBoardAccessResult>;
+}
+
 export interface ChatXptPersistenceRuntime {
   readonly mode: "memory" | "supabase";
   readonly sessions: SessionStateRepository;
   readonly lifecycle: SessionLifecycleStore;
   readonly candidates: CandidateBatchRepository;
+  readonly acceptedVotes: AcceptedVoteTallyReader;
+  readonly viewerReceipts: ViewerParticipationReceiptReader;
+  readonly hostedBoardAccess: HostedBoardAccessResolver;
   readonly snapshots: RoleSnapshotPublisher;
   readonly accessGrants: RealtimeAccessGrantStore;
+  readonly dueVotes: DueVoteCycleReader;
 }
 
 export class PersistenceConflictError extends Error {

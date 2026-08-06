@@ -4,15 +4,21 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 import {
+  acceptedVoteTallySnapshotSchema,
   acceptedCommandReceiptSchema,
   authoritativeSessionStateSchema,
   canonicalJsonStringify,
   candidateBatchSchema,
+  hostedBoardAccessResultSchema,
   overlayViewModelSchema,
   serviceHealthSchema,
   streamerViewModelSchema,
+  viewerParticipationReceiptReadResultSchema,
   viewerViewModelSchema,
   type AcceptedCommandReceipt,
+  type AcceptedVoteTallyReadInput,
+  type AcceptedVoteTallyReader,
+  type AcceptedVoteTallySnapshot,
   type AuthoritativeSessionState,
   type CandidateBatch,
   type CommitAuthoritativeStateInput,
@@ -28,6 +34,9 @@ import {
   type CandidateBatchRepository,
   type ChatXptPersistenceRuntime,
   type CommitSessionLifecycleInput,
+  type DueVoteCycleReader,
+  type HostedBoardAccessInput,
+  type HostedBoardAccessResolver,
   type LifecycleStoreCommitResult,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
@@ -37,8 +46,11 @@ import {
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,
+  type ViewerParticipationReceiptReadInput,
+  type ViewerParticipationReceiptReader,
 } from "./types";
 import { sanitizeRoleViewsForBroadcast } from "./sanitization";
+import { derivePrivateViewerVoterKey } from "./private-viewer";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -46,7 +58,31 @@ const commitResultSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("committed"), receipt: acceptedCommandReceiptSchema }).strict(),
   z.object({ status: z.literal("duplicate"), receipt: acceptedCommandReceiptSchema }).strict(),
   z.object({ status: z.literal("stale"), currentRevision: z.number().int().nonnegative() }).strict(),
+  z
+    .object({
+      status: z.literal("participation-conflict"),
+      reason: z.literal("vote-already-accepted"),
+    })
+    .strict(),
 ]);
+
+const acceptedVoteRowSchema = z.object({ candidate_id: z.string().min(1).max(128) }).passthrough();
+
+const privateAcceptedVoteRowSchema = z
+  .object({
+    candidate_id: z.string().min(1).max(128),
+    accepted_at: z.iso.datetime({ offset: true }),
+    payload: z
+      .object({
+        sourceMode: z.enum(["twitch-extension", "hosted-board", "twitch-chat"]),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+const privateAcceptedVoteWithCycleRowSchema = privateAcceptedVoteRowSchema.extend({
+  quest_cycle_id: z.string().min(1).max(128).nullable(),
+});
 
 const lifecycleCommitResultSchema = z.discriminatedUnion("status", [
   z
@@ -129,6 +165,10 @@ function rowJson(row: unknown, key: string): unknown {
   return (row as JsonRecord)[key];
 }
 
+function sessionActive(status: AuthoritativeSessionState["session"]["status"]): boolean {
+  return status === "preparing" || status === "live";
+}
+
 export class SupabaseChatXptDataApi {
   constructor(private readonly client: SupabaseClient) {}
 
@@ -203,6 +243,73 @@ export class SupabaseChatXptDataApi {
     return data === null ? null : rowJson(data, "payload");
   }
 
+  async loadAcceptedVotes(
+    sessionId: string,
+    questCycleId: string,
+    acceptedBefore: number,
+  ): Promise<readonly unknown[]> {
+    const { data, error } = await this.client
+      .from("accepted_participation")
+      .select("candidate_id")
+      .eq("session_id", sessionId)
+      .eq("quest_cycle_id", questCycleId)
+      .eq("participation_type", "vote")
+      .lt("accepted_at", new Date(acceptedBefore).toISOString());
+    throwIfError(error);
+    return data ?? [];
+  }
+
+  async loadPrivateAcceptedVote(
+    sessionId: string,
+    questCycleId: string,
+    voterKey: string,
+  ): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("accepted_participation")
+      .select("candidate_id, accepted_at, payload")
+      .eq("session_id", sessionId)
+      .eq("quest_cycle_id", questCycleId)
+      .eq("participation_type", "vote")
+      .eq("payload->>voterKey", voterKey)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
+  }
+
+  async loadPrivateAcceptedVotesForSession(
+    sessionId: string,
+    voterKey: string,
+  ): Promise<readonly unknown[]> {
+    const { data, error } = await this.client
+      .from("accepted_participation")
+      .select("quest_cycle_id, candidate_id, accepted_at, payload")
+      .eq("session_id", sessionId)
+      .eq("participation_type", "vote")
+      .eq("payload->>voterKey", voterKey);
+    throwIfError(error);
+    return data ?? [];
+  }
+
+  async loadReceiptStatesForSession(sessionId: string): Promise<readonly unknown[]> {
+    const { data, error } = await this.client
+      .from("command_receipts")
+      .select("receipt")
+      .eq("session_id", sessionId)
+      .order("committed_revision", { ascending: true });
+    throwIfError(error);
+    return (data ?? []).map((row) => rowJson(row, "receipt"));
+  }
+
+  async loadHostedSessionByRoomCode(roomCode: string): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("stream_sessions")
+      .select("current_state")
+      .eq("room_code", roomCode)
+      .maybeSingle();
+    throwIfError(error);
+    return data === null ? null : rowJson(data, "current_state");
+  }
+
   async persistRoleSnapshots(views: RoleViewModels): Promise<void> {
     const { error } = await this.client.rpc("persist_role_snapshots", {
       p_session_id: views.streamer.envelope.sessionId,
@@ -222,6 +329,22 @@ export class SupabaseChatXptDataApi {
       .maybeSingle();
     throwIfError(error);
     return data === null ? null : rowJson(data, "snapshot");
+  }
+
+  async loadRealtimeAccessGrant(
+    principalId: string,
+    sessionId: string,
+    viewRole: SnapshotRole,
+  ): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("realtime_access_grants")
+      .select("principal_id, session_id, view_role, expires_at, revoked_at")
+      .eq("principal_id", principalId)
+      .eq("session_id", sessionId)
+      .eq("view_role", viewRole)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
   }
 
   async grantRealtimeAccess(
@@ -341,6 +464,14 @@ export class SupabaseChatXptDataApi {
     );
   }
 
+  async loadDueVoteCycleStates(at: number): Promise<readonly unknown[]> {
+    const { data, error } = await this.client.rpc("due_vote_cycle_states", {
+      p_due_at_ms: at,
+    });
+    throwIfError(error);
+    return data ?? [];
+  }
+
   async probe(checkedAt = Date.now()): Promise<ServiceHealth> {
     const { error } = await this.client
       .from("stream_sessions")
@@ -379,7 +510,69 @@ export class SupabaseSessionStateRepository {
   }
 
   async commit(input: CommitAuthoritativeStateInput): Promise<CommitAuthoritativeStateResult> {
-    return commitResultSchema.parse(await this.api.commitState(input));
+    try {
+      return commitResultSchema.parse(await this.api.commitState(input));
+    } catch (caught) {
+      if (caught instanceof SupabaseDataError && caught.code === "23505") {
+        const evidence = `${caught.message} ${caught.details ?? ""}`;
+        if (evidence.includes("accepted_participation_one_vote_per_voter_cycle")) {
+          return { status: "participation-conflict", reason: "vote-already-accepted" };
+        }
+      }
+      throw caught;
+    }
+  }
+}
+
+export class SupabaseAcceptedVoteTallyReader implements AcceptedVoteTallyReader {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async readAcceptedVoteTally(
+    input: AcceptedVoteTallyReadInput,
+  ): Promise<AcceptedVoteTallySnapshot> {
+    const counts = new Map(input.candidateIds.map((candidateId) => [candidateId, 0]));
+    const rows = z
+      .array(acceptedVoteRowSchema)
+      .parse(
+        await this.api.loadAcceptedVotes(
+          input.sessionId,
+          input.questCycleId,
+          input.acceptedBefore,
+        ),
+      );
+    for (const row of rows) {
+      const current = counts.get(row.candidate_id);
+      if (current === undefined) {
+        throw new Error("Accepted vote references a candidate outside the closing cycle");
+      }
+      counts.set(row.candidate_id, current + 1);
+    }
+    const tallies = input.candidateIds.map((candidateId) => ({
+      candidateId,
+      votes: counts.get(candidateId) ?? 0,
+    })) as [
+      { candidateId: string; votes: number },
+      { candidateId: string; votes: number },
+      { candidateId: string; votes: number },
+    ];
+    return acceptedVoteTallySnapshotSchema.parse({
+      sessionId: input.sessionId,
+      questCycleId: input.questCycleId,
+      revision: input.revision,
+      closedAt: input.closedAt,
+      acceptedVoteCount: tallies.reduce((sum, tally) => sum + tally.votes, 0),
+      tallies,
+    });
+  }
+}
+
+export class SupabaseDueVoteCycleReader implements DueVoteCycleReader {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async dueVoteCycles(at: number): Promise<readonly AuthoritativeSessionState[]> {
+    return (await this.api.loadDueVoteCycleStates(at)).map((state) =>
+      authoritativeSessionStateSchema.parse(state),
+    );
   }
 }
 
@@ -479,6 +672,230 @@ export class SupabaseRealtimeAccessGrantStore implements RealtimeAccessGrantStor
   }
 }
 
+export class SupabaseViewerParticipationReceiptReader
+  implements ViewerParticipationReceiptReader
+{
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async readViewerParticipationReceipt(
+    input: ViewerParticipationReceiptReadInput,
+  ) {
+    const rawGrant = await this.api.loadRealtimeAccessGrant(
+      input.principalId,
+      input.sessionId,
+      "viewer",
+    );
+    if (rawGrant === null) {
+      return viewerParticipationReceiptReadResultSchema.parse({
+        status: "forbidden",
+        error: {
+          code: "forbidden",
+          message: "Viewer receipt access is not authorised for this session",
+          retryable: false,
+        },
+      });
+    }
+    const grant = realtimeAccessGrantRowSchema.parse(rawGrant);
+    const expiresAt = Date.parse(grant.expires_at);
+    if (grant.revoked_at !== null) {
+      return viewerParticipationReceiptReadResultSchema.parse({
+        status: "forbidden",
+        error: {
+          code: "forbidden",
+          message: "Viewer receipt access was revoked for this session",
+          retryable: false,
+        },
+      });
+    }
+    if (expiresAt <= input.at) {
+      return viewerParticipationReceiptReadResultSchema.parse({
+        status: "expired",
+        error: {
+          code: "expired",
+          message: "Viewer receipt access expired; reconnect through an allowed viewer path",
+          retryable: true,
+        },
+      });
+    }
+
+    const state = await new SupabaseSessionStateRepository(this.api).load(input.sessionId);
+    if (
+      state === null ||
+      state.questCycle.envelope.questCycleId !== input.questCycleId
+    ) {
+      return viewerParticipationReceiptReadResultSchema.parse({
+        status: "not-found",
+        receipt: null,
+      });
+    }
+
+    const voterKey = derivePrivateViewerVoterKey(input);
+    const voteRow = privateAcceptedVoteRowSchema
+      .nullable()
+      .parse(
+        await this.api.loadPrivateAcceptedVote(
+          input.sessionId,
+          input.questCycleId,
+          voterKey,
+        ),
+      );
+    const sessionPoints = await this.sessionPointsFor(input.sessionId, voterKey);
+
+    return viewerParticipationReceiptReadResultSchema.parse({
+      status: "available",
+      receipt: {
+        envelope: {
+          contractVersion: "1.0.0",
+          sessionId: input.sessionId,
+          questCycleId: input.questCycleId,
+          messageId: "viewer-receipt",
+          correlationId: input.principalId,
+          revision: state.session.revision,
+          occurredAt: voteRow === null ? input.at : Date.parse(voteRow.accepted_at),
+          receivedAt: input.at,
+          source: "orchestrator",
+          evidenceClass: state.questCycle.envelope.evidenceClass,
+        },
+        principalId: input.principalId,
+        voterKey,
+        identityKind: input.identityKind,
+        sourceMode: voteRow?.payload.sourceMode ?? null,
+        acceptedCandidateId: voteRow?.candidate_id ?? null,
+        acceptedAt: voteRow === null ? null : Date.parse(voteRow.accepted_at),
+        sessionPoints,
+        reconnectExpiresAt: expiresAt,
+      },
+    });
+  }
+
+  private async sessionPointsFor(sessionId: string, voterKey: string): Promise<number> {
+    const [votes, receipts] = await Promise.all([
+      this.api.loadPrivateAcceptedVotesForSession(sessionId, voterKey),
+      this.api.loadReceiptStatesForSession(sessionId),
+    ]);
+    const parsedVotes = z.array(privateAcceptedVoteWithCycleRowSchema).parse(votes);
+    const cycleResults = new Map<
+      string,
+      { activeCandidateId: string | null; points: number; outcome: string }
+    >();
+    for (const rawReceipt of receipts) {
+      const receipt = acceptedCommandReceiptSchema.parse(rawReceipt);
+      if (receipt.state.session.sessionId !== sessionId) continue;
+      const questCycleId = receipt.state.questCycle.envelope.questCycleId;
+      const result = receipt.state.questCycle.result;
+      if (questCycleId === null || result === null) continue;
+      cycleResults.set(questCycleId, {
+        activeCandidateId: receipt.state.questCycle.activeCandidateId,
+        points: result.rewardPointsAwarded,
+        outcome: result.outcome,
+      });
+    }
+
+    return parsedVotes.reduce((total, vote) => {
+      if (vote.quest_cycle_id === null) return total;
+      const result = cycleResults.get(vote.quest_cycle_id);
+      if (
+        result?.outcome === "succeeded" &&
+        result.activeCandidateId === vote.candidate_id
+      ) {
+        return total + result.points;
+      }
+      return total;
+    }, 0);
+  }
+}
+
+export class SupabaseHostedBoardAccessResolver implements HostedBoardAccessResolver {
+  constructor(
+    private readonly api: SupabaseChatXptDataApi,
+    private readonly grants: RealtimeAccessGrantStore,
+  ) {}
+
+  async resolveHostedBoardAccess(input: HostedBoardAccessInput) {
+    const roomCode = input.roomCode.trim().toUpperCase();
+    if (!/^[A-HJ-NP-Z2-9]{8}$/.test(roomCode)) {
+      return hostedBoardAccessResultSchema.parse({
+        status: "invalid-room",
+        error: {
+          code: "validation",
+          message: "Hosted Quest Board room code is invalid",
+          retryable: false,
+        },
+      });
+    }
+
+    const state = authoritativeSessionStateSchema
+      .nullable()
+      .parse(await this.api.loadHostedSessionByRoomCode(roomCode));
+    if (state === null) {
+      return hostedBoardAccessResultSchema.parse({
+        status: "invalid-room",
+        error: {
+          code: "validation",
+          message: "Hosted Quest Board room was not found",
+          retryable: false,
+        },
+      });
+    }
+    if (!sessionActive(state.session.status)) {
+      return hostedBoardAccessResultSchema.parse({
+        status: "expired-session",
+        error: {
+          code: "expired",
+          message: "Hosted Quest Board room is no longer active",
+          retryable: false,
+        },
+      });
+    }
+    if (!state.session.capabilities.hostedViewerBoard) {
+      return hostedBoardAccessResultSchema.parse({
+        status: "unavailable",
+        error: {
+          code: "unavailable-capability",
+          message: "Hosted Quest Board fallback is unavailable for this session",
+          retryable: true,
+        },
+      });
+    }
+    if (input.grantExpiresAt <= input.at) {
+      return hostedBoardAccessResultSchema.parse({
+        status: "unavailable",
+        error: {
+          code: "expired",
+          message: "Hosted Quest Board grant expiry must be in the future",
+          retryable: true,
+        },
+      });
+    }
+
+    await this.grants.grant({
+      principalId: input.principalId,
+      sessionId: state.session.sessionId,
+      viewRole: "viewer",
+      expiresAt: input.grantExpiresAt,
+    });
+
+    const directUrl = new URL(
+      `/quest-board/${roomCode}?sessionId=${state.session.sessionId}`,
+      input.baseUrl,
+    );
+    const shareUrl = new URL(`/quest-board/${roomCode}`, input.baseUrl);
+    return hostedBoardAccessResultSchema.parse({
+      status: "available",
+      access: {
+        sessionId: state.session.sessionId,
+        roomCode,
+        principalId: input.principalId,
+        directUrl: directUrl.toString(),
+        shareUrl: shareUrl.toString(),
+        shareText: `Join ChatXPT room ${roomCode} to vote on this stream's sidequest.`,
+        qrPayload: input.includeQrPayload === true ? shareUrl.toString() : null,
+        grantExpiresAt: input.grantExpiresAt,
+      },
+    });
+  }
+}
+
 function conflictFrom(error: SupabaseDataError): PersistenceConflictError | null {
   if (error.code !== "23505") return null;
   const evidence = `${error.message} ${error.details ?? ""}`;
@@ -565,15 +982,22 @@ export function createSupabasePersistenceRuntime(
 } {
   const api = new SupabaseChatXptDataApi(createSupabaseServerClient(environment));
   const sessions = new SupabaseSessionStateRepository(api);
+  const acceptedVotes = new SupabaseAcceptedVoteTallyReader(api);
   const snapshots = new SupabaseRoleSnapshotPublisher(api);
+  const dueVotes = new SupabaseDueVoteCycleReader(api);
+  const accessGrants = new SupabaseRealtimeAccessGrantStore(api);
   return {
     mode: "supabase",
     api,
     sessions,
     lifecycle: new SupabaseSessionLifecycleStore(api, sessions),
     candidates: new SupabaseCandidateBatchRepository(api),
+    acceptedVotes,
+    viewerReceipts: new SupabaseViewerParticipationReceiptReader(api),
+    hostedBoardAccess: new SupabaseHostedBoardAccessResolver(api, accessGrants),
     snapshots,
-    accessGrants: new SupabaseRealtimeAccessGrantStore(api),
+    accessGrants,
+    dueVotes,
     probe: (checkedAt) => api.probe(checkedAt),
   };
 }

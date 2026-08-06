@@ -1,5 +1,6 @@
 import {
   CONTRACT_VERSION,
+  acceptedVoteTallySnapshotSchema,
   candidateBatchSchema,
   commandEnvelopeSchema,
   domainErrorSchema,
@@ -22,6 +23,9 @@ import {
   type QuestEngineDecision,
   type RoleViewModels,
   type ViewModelProjectionInput,
+  type AcceptedVoteTallySnapshot,
+  type QuestProgressValidationContext,
+  type VoteCloseValidationContext,
 } from "../contracts";
 import type { OrchestratorDependencies } from "./ports";
 import { canonicalJsonStringify, commandFingerprint } from "./fingerprint";
@@ -65,6 +69,7 @@ function stateInvariantError(state: AuthoritativeSessionState): DomainError | nu
     (state.gameplay !== null && !gameplaySnapshotSchema.safeParse(state.gameplay).success) ||
     (state.audience !== null && !audienceSnapshotSchema.safeParse(state.audience).success) ||
     state.services.some((service) => !serviceHealthSchema.safeParse(service).success) ||
+    typeof state.emergencyPaused !== "boolean" ||
     !Number.isSafeInteger(state.communityHype) ||
     state.communityHype < 0
   ) {
@@ -153,6 +158,12 @@ function authoritativeDecision(
     ...current,
     session: { ...current.session, revision },
     questCycle,
+    emergencyPaused:
+      command.type === "streamer.quest" && command.action === "emergency-pause"
+        ? true
+        : command.type === "streamer.emergency-clear"
+          ? false
+          : current.emergencyPaused,
   };
   const events = [];
   for (const event of parsedEvents.data) {
@@ -199,6 +210,7 @@ function projectionInput(
     gameplay: state.gameplay,
     audience: state.audience,
     questCycle: state.questCycle,
+    emergencyPaused: state.emergencyPaused,
     participationMode: context.participationMode,
     capabilities: state.session.capabilities,
     viewerId: context.viewerId,
@@ -328,6 +340,13 @@ export class ChatXptOrchestrator {
       return { ok: false, error: error("stale-revision", "Command expected a stale session revision") };
     }
 
+    if (command.type === "system.intelligence-ready" && current.emergencyPaused) {
+      return {
+        ok: false,
+        error: error("forbidden", "Emergency pause is active; clear it before proposing new quests"),
+      };
+    }
+
     let candidateBatch = null;
     if (command.type === "system.intelligence-ready") {
       try {
@@ -365,16 +384,89 @@ export class ChatXptOrchestrator {
     if (!timestampSchema.safeParse(acceptedAt).success) {
       return { ok: false, error: error("internal", "Server clock returned an invalid timestamp") };
     }
+
+    let acceptedVoteTally: AcceptedVoteTallySnapshot | null = null;
+    let voteCloseValidationContext: VoteCloseValidationContext | null = null;
+    if (
+      command.type === "system.vote-close" &&
+      current.questCycle.status === "voting" &&
+      current.questCycle.endsAt !== null &&
+      current.questCycle.options.length === 3
+    ) {
+      const candidateIds = current.questCycle.options.map((candidate) => candidate.candidateId) as [
+        string,
+        string,
+        string,
+      ];
+      let untrustedTally: unknown;
+      try {
+        untrustedTally = await this.dependencies.acceptedVotes.readAcceptedVoteTally({
+          sessionId: command.sessionId,
+          questCycleId: command.questCycleId,
+          revision: command.expectedRevision,
+          candidateIds,
+          acceptedBefore: current.questCycle.endsAt,
+          closedAt: acceptedAt,
+        });
+      } catch {
+        return {
+          ok: false,
+          error: error("dependency-unavailable", "Accepted vote tally is unavailable", true),
+        };
+      }
+      const parsedTally = acceptedVoteTallySnapshotSchema.safeParse(untrustedTally);
+      if (
+        !parsedTally.success ||
+        parsedTally.data.sessionId !== command.sessionId ||
+        parsedTally.data.questCycleId !== command.questCycleId ||
+        parsedTally.data.revision !== command.expectedRevision ||
+        parsedTally.data.closedAt !== acceptedAt ||
+        canonicalJsonStringify(parsedTally.data.tallies.map((tally) => tally.candidateId)) !==
+          canonicalJsonStringify(candidateIds)
+      ) {
+        return { ok: false, error: error("validation", "Accepted vote tally does not match the closing cycle") };
+      }
+      acceptedVoteTally = parsedTally.data;
+      voteCloseValidationContext = {
+        profile: current.profile,
+        session: current.session,
+        gameplay: current.gameplay,
+        audience: current.audience,
+      };
+    }
+    let questProgressValidationContext: QuestProgressValidationContext | null = null;
+    if (command.type === "streamer.quest-progress" || command.type === "system.quest-progress") {
+      questProgressValidationContext = {
+        profile: current.profile,
+        session: current.session,
+        gameplay: current.gameplay,
+        audience: current.audience,
+        completionRule: current.questCycle.completionRule,
+      };
+    }
     let untrustedEngineResult: unknown;
-    try {
-      untrustedEngineResult = await this.dependencies.engine.decide({
-        currentState: current.questCycle,
-        command,
-        candidateBatch,
-        now: acceptedAt,
-      });
-    } catch {
-      return { ok: false, error: error("internal", "Quest engine failed unexpectedly", true) };
+    if (command.type === "streamer.emergency-clear") {
+      untrustedEngineResult = {
+        ok: true,
+        decision: {
+          nextState: current.questCycle,
+          events: [{ eventType: "session.emergency-cleared", attributes: {} }],
+        },
+      } satisfies QuestEngineResult;
+    } else {
+      try {
+        untrustedEngineResult = await this.dependencies.engine.decide({
+          currentState: current.questCycle,
+          command,
+          candidateBatch,
+          acceptedVoteTally,
+          voteCloseValidationContext,
+          questProgressValidationContext,
+          now: acceptedAt,
+        });
+      } catch {
+        return { ok: false, error: error("internal", "Quest engine failed unexpectedly", true) };
+      }
     }
     if (
       typeof untrustedEngineResult !== "object" ||
@@ -428,7 +520,9 @@ export class ChatXptOrchestrator {
       typeof untrustedCommitResult !== "object" ||
       untrustedCommitResult === null ||
       !("status" in untrustedCommitResult) ||
-      !["committed", "duplicate", "stale"].includes(String(untrustedCommitResult.status))
+      !["committed", "duplicate", "stale", "participation-conflict"].includes(
+        String(untrustedCommitResult.status),
+      )
     ) {
       return { ok: false, error: error("internal", "State repository returned an invalid commit result") };
     }
@@ -437,6 +531,9 @@ export class ChatXptOrchestrator {
     >;
     if (commitResult.status === "stale") {
       return { ok: false, error: error("stale-revision", "A concurrent command changed the session") };
+    }
+    if (commitResult.status === "participation-conflict") {
+      return { ok: false, error: error("duplicate", "This viewer already has an accepted vote in the cycle") };
     }
     if (commitResult.status === "duplicate") {
       const duplicateError = receiptInvariantError(commitResult.receipt);
