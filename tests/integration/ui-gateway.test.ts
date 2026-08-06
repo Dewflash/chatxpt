@@ -7,6 +7,7 @@ import {
 } from "../../src/core";
 import {
   diagnosticUiGatewayBroadcasterId,
+  diagnosticUiGatewayDELETE,
   diagnosticUiGatewayGET,
   diagnosticUiGatewayPOST,
   diagnosticUiGatewayPrincipals,
@@ -164,5 +165,33 @@ describe("Role 1 diagnostic UI gateway", () => {
         liveInputsUsed: false,
       },
     });
+  });
+
+  it("resets the fixture route for repeatable browser verification", async () => {
+    const gateway = getDiagnosticUiGateway();
+    const initial = await gateway.readSnapshot({
+      sessionId: diagnosticUiGatewaySessionId,
+      role: "viewer",
+      principalId: diagnosticUiGatewayPrincipals.viewer,
+    });
+    if (!initial.ok) throw new Error(initial.error.message);
+    await gateway.executeCommand(fixtureVote("ui-gateway-before-reset", initial.snapshot.envelope.revision));
+
+    const reset = await diagnosticUiGatewayDELETE();
+    const body = await reset.json();
+
+    expect(reset.status).toBe(200);
+    expect(body).toMatchObject({ ok: true, reset: true });
+
+    const after = await getDiagnosticUiGateway().readSnapshot({
+      sessionId: diagnosticUiGatewaySessionId,
+      role: "viewer",
+      principalId: diagnosticUiGatewayPrincipals.viewer,
+    });
+    expect(after.ok).toBe(true);
+    if (after.ok) {
+      expect(after.snapshot.envelope.revision).toBe(3);
+      expect(after.snapshot.questCycle.voteTallies[0]?.votes).toBe(0);
+    }
   });
 });

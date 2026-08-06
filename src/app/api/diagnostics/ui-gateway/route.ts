@@ -4,6 +4,7 @@ import {
   DIAGNOSTIC_UI_GATEWAY_REALITY,
   getDiagnosticUiGateway,
   diagnosticUiGatewaySessionId,
+  resetDiagnosticUiGateway,
 } from "./gateway";
 import type { DomainError } from "../../../../core";
 
@@ -84,4 +85,16 @@ export async function POST(request: Request) {
   const command = typeof body === "object" && body !== null && "command" in body ? body.command : body;
   const result = await getDiagnosticUiGateway().executeCommand(command);
   return NextResponse.json(result, { status: result.ok ? 200 : statusFor(result.error) });
+}
+
+export async function DELETE() {
+  if (!diagnosticsEnabled()) return disabledResponse();
+
+  resetDiagnosticUiGateway();
+  return NextResponse.json({
+    ok: true,
+    reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+    sessionId: diagnosticUiGatewaySessionId,
+    reset: true,
+  });
 }
