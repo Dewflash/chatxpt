@@ -25,3 +25,10 @@ export {
   type TwitchChatRateLimitDecision,
   type TwitchChatRateLimiter,
 } from "./twitch/chat-delivery";
+export {
+  buildObsOverlaySnapshotUrl,
+  readObsOverlaySnapshot,
+  type ObsOverlaySnapshotReadDependencies,
+  type ObsOverlaySnapshotReadInput,
+  type ObsOverlaySnapshotReadResult,
+} from "./obs/overlay-snapshot";

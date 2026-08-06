@@ -8,6 +8,7 @@ export {
 export { GET as diagnosticUiGatewayChatFallbackGET, POST as diagnosticUiGatewayChatFallbackPOST } from "./api/diagnostics/ui-gateway/chat-fallback/route";
 export { GET as diagnosticUiGatewayHostedBoardGET } from "./api/diagnostics/ui-gateway/hosted-board/route";
 export { GET as diagnosticUiGatewayViewerReceiptGET } from "./api/diagnostics/ui-gateway/viewer-receipt/route";
+export { GET as obsOverlaySnapshotGET } from "./api/overlay/snapshot/route";
 export {
   diagnosticUiGatewayBroadcasterId,
   diagnosticUiGatewayPrincipals,
