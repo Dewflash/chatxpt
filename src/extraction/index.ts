@@ -4,6 +4,26 @@ export type {
   GameplayExtractionPipeline,
 } from "./ports";
 export {
+  createBrowserCanvasPixelSampler,
+  measurePixelChange,
+  streamVisualFrameMeasurements,
+} from "./visual-measurements";
+export type {
+  FramePixelSampler,
+  PixelChangeMeasurement,
+  PixelSampleSize,
+  SampledPixelFrame,
+  VisualFrameMeasurement,
+  VisualMeasurementOptions,
+} from "./visual-measurements";
+export { extractPixelRegion, runSelectiveOcrExperiment } from "./selective-ocr";
+export type {
+  OcrReading,
+  PixelRegion,
+  SelectiveOcrAdapter,
+  SelectiveOcrMeasurement,
+} from "./selective-ocr";
+export {
   audienceEventSchema,
   audienceSnapshotSchema,
   gameplayCapabilitiesSchema,
