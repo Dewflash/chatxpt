@@ -9,9 +9,11 @@ import {
   authoritativeSessionStateSchema,
   canonicalJsonStringify,
   candidateBatchSchema,
+  hostedBoardAccessResultSchema,
   overlayViewModelSchema,
   serviceHealthSchema,
   streamerViewModelSchema,
+  viewerParticipationReceiptReadResultSchema,
   viewerViewModelSchema,
   type AcceptedCommandReceipt,
   type AcceptedVoteTallyReadInput,
@@ -33,6 +35,8 @@ import {
   type ChatXptPersistenceRuntime,
   type CommitSessionLifecycleInput,
   type DueVoteCycleReader,
+  type HostedBoardAccessInput,
+  type HostedBoardAccessResolver,
   type LifecycleStoreCommitResult,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
@@ -42,6 +46,8 @@ import {
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,
+  type ViewerParticipationReceiptReadInput,
+  type ViewerParticipationReceiptReader,
 } from "./types";
 import { sanitizeRoleViewsForBroadcast } from "./sanitization";
 
@@ -60,6 +66,18 @@ const commitResultSchema = z.discriminatedUnion("status", [
 ]);
 
 const acceptedVoteRowSchema = z.object({ candidate_id: z.string().min(1).max(128) }).passthrough();
+
+const privateAcceptedVoteRowSchema = z
+  .object({
+    candidate_id: z.string().min(1).max(128),
+    accepted_at: z.iso.datetime({ offset: true }),
+    payload: z
+      .object({
+        sourceMode: z.enum(["twitch-extension", "hosted-board", "twitch-chat"]),
+      })
+      .passthrough(),
+  })
+  .passthrough();
 
 const lifecycleCommitResultSchema = z.discriminatedUnion("status", [
   z
@@ -140,6 +158,10 @@ function throwIfError(error: unknown): void {
 function rowJson(row: unknown, key: string): unknown {
   if (typeof row !== "object" || row === null || !(key in row)) return null;
   return (row as JsonRecord)[key];
+}
+
+function sessionActive(status: AuthoritativeSessionState["session"]["status"]): boolean {
+  return status === "preparing" || status === "live";
 }
 
 export class SupabaseChatXptDataApi {
@@ -232,6 +254,33 @@ export class SupabaseChatXptDataApi {
     return data ?? [];
   }
 
+  async loadPrivateAcceptedVote(
+    sessionId: string,
+    questCycleId: string,
+    voterKey: string,
+  ): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("accepted_participation")
+      .select("candidate_id, accepted_at, payload")
+      .eq("session_id", sessionId)
+      .eq("quest_cycle_id", questCycleId)
+      .eq("participation_type", "vote")
+      .eq("payload->>voterKey", voterKey)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
+  }
+
+  async loadHostedSessionByRoomCode(roomCode: string): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("stream_sessions")
+      .select("current_state")
+      .eq("room_code", roomCode)
+      .maybeSingle();
+    throwIfError(error);
+    return data === null ? null : rowJson(data, "current_state");
+  }
+
   async persistRoleSnapshots(views: RoleViewModels): Promise<void> {
     const { error } = await this.client.rpc("persist_role_snapshots", {
       p_session_id: views.streamer.envelope.sessionId,
@@ -251,6 +300,22 @@ export class SupabaseChatXptDataApi {
       .maybeSingle();
     throwIfError(error);
     return data === null ? null : rowJson(data, "snapshot");
+  }
+
+  async loadRealtimeAccessGrant(
+    principalId: string,
+    sessionId: string,
+    viewRole: SnapshotRole,
+  ): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("realtime_access_grants")
+      .select("principal_id, session_id, view_role, expires_at, revoked_at")
+      .eq("principal_id", principalId)
+      .eq("session_id", sessionId)
+      .eq("view_role", viewRole)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
   }
 
   async grantRealtimeAccess(
@@ -578,6 +643,196 @@ export class SupabaseRealtimeAccessGrantStore implements RealtimeAccessGrantStor
   }
 }
 
+export class SupabaseViewerParticipationReceiptReader
+  implements ViewerParticipationReceiptReader
+{
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async readViewerParticipationReceipt(
+    input: ViewerParticipationReceiptReadInput,
+  ) {
+    const rawGrant = await this.api.loadRealtimeAccessGrant(
+      input.principalId,
+      input.sessionId,
+      "viewer",
+    );
+    if (rawGrant === null) {
+      return viewerParticipationReceiptReadResultSchema.parse({
+        status: "forbidden",
+        error: {
+          code: "forbidden",
+          message: "Viewer receipt access is not authorised for this session",
+          retryable: false,
+        },
+      });
+    }
+    const grant = realtimeAccessGrantRowSchema.parse(rawGrant);
+    const expiresAt = Date.parse(grant.expires_at);
+    if (grant.revoked_at !== null) {
+      return viewerParticipationReceiptReadResultSchema.parse({
+        status: "forbidden",
+        error: {
+          code: "forbidden",
+          message: "Viewer receipt access was revoked for this session",
+          retryable: false,
+        },
+      });
+    }
+    if (expiresAt <= input.at) {
+      return viewerParticipationReceiptReadResultSchema.parse({
+        status: "expired",
+        error: {
+          code: "expired",
+          message: "Viewer receipt access expired; reconnect through an allowed viewer path",
+          retryable: true,
+        },
+      });
+    }
+
+    const state = await new SupabaseSessionStateRepository(this.api).load(input.sessionId);
+    if (
+      state === null ||
+      state.questCycle.envelope.questCycleId !== input.questCycleId
+    ) {
+      return viewerParticipationReceiptReadResultSchema.parse({
+        status: "not-found",
+        receipt: null,
+      });
+    }
+
+    const voteRow = privateAcceptedVoteRowSchema
+      .nullable()
+      .parse(
+        await this.api.loadPrivateAcceptedVote(
+          input.sessionId,
+          input.questCycleId,
+          input.voterKey,
+        ),
+      );
+    const completedWinner =
+      voteRow !== null &&
+      state.questCycle.result?.outcome === "succeeded" &&
+      state.questCycle.activeCandidateId === voteRow.candidate_id;
+
+    return viewerParticipationReceiptReadResultSchema.parse({
+      status: "available",
+      receipt: {
+        envelope: {
+          contractVersion: "1.0.0",
+          sessionId: input.sessionId,
+          questCycleId: input.questCycleId,
+          messageId: "viewer-receipt",
+          correlationId: input.principalId,
+          revision: state.session.revision,
+          occurredAt: voteRow === null ? input.at : Date.parse(voteRow.accepted_at),
+          receivedAt: input.at,
+          source: "orchestrator",
+          evidenceClass: state.questCycle.envelope.evidenceClass,
+        },
+        principalId: input.principalId,
+        voterKey: input.voterKey,
+        identityKind: input.identityKind,
+        sourceMode: voteRow?.payload.sourceMode ?? null,
+        acceptedCandidateId: voteRow?.candidate_id ?? null,
+        acceptedAt: voteRow === null ? null : Date.parse(voteRow.accepted_at),
+        sessionPoints: completedWinner ? (state.questCycle.result?.rewardPointsAwarded ?? 0) : 0,
+        reconnectExpiresAt: expiresAt,
+      },
+    });
+  }
+}
+
+export class SupabaseHostedBoardAccessResolver implements HostedBoardAccessResolver {
+  constructor(
+    private readonly api: SupabaseChatXptDataApi,
+    private readonly grants: RealtimeAccessGrantStore,
+  ) {}
+
+  async resolveHostedBoardAccess(input: HostedBoardAccessInput) {
+    const roomCode = input.roomCode.trim().toUpperCase();
+    if (!/^[A-HJ-NP-Z2-9]{8}$/.test(roomCode)) {
+      return hostedBoardAccessResultSchema.parse({
+        status: "invalid-room",
+        error: {
+          code: "validation",
+          message: "Hosted Quest Board room code is invalid",
+          retryable: false,
+        },
+      });
+    }
+
+    const state = authoritativeSessionStateSchema
+      .nullable()
+      .parse(await this.api.loadHostedSessionByRoomCode(roomCode));
+    if (state === null) {
+      return hostedBoardAccessResultSchema.parse({
+        status: "invalid-room",
+        error: {
+          code: "validation",
+          message: "Hosted Quest Board room was not found",
+          retryable: false,
+        },
+      });
+    }
+    if (!sessionActive(state.session.status)) {
+      return hostedBoardAccessResultSchema.parse({
+        status: "expired-session",
+        error: {
+          code: "expired",
+          message: "Hosted Quest Board room is no longer active",
+          retryable: false,
+        },
+      });
+    }
+    if (!state.session.capabilities.hostedViewerBoard) {
+      return hostedBoardAccessResultSchema.parse({
+        status: "unavailable",
+        error: {
+          code: "unavailable-capability",
+          message: "Hosted Quest Board fallback is unavailable for this session",
+          retryable: true,
+        },
+      });
+    }
+    if (input.grantExpiresAt <= input.at) {
+      return hostedBoardAccessResultSchema.parse({
+        status: "unavailable",
+        error: {
+          code: "expired",
+          message: "Hosted Quest Board grant expiry must be in the future",
+          retryable: true,
+        },
+      });
+    }
+
+    await this.grants.grant({
+      principalId: input.principalId,
+      sessionId: state.session.sessionId,
+      viewRole: "viewer",
+      expiresAt: input.grantExpiresAt,
+    });
+
+    const directUrl = new URL(
+      `/quest-board/${roomCode}?sessionId=${state.session.sessionId}`,
+      input.baseUrl,
+    );
+    const shareUrl = new URL(`/quest-board/${roomCode}`, input.baseUrl);
+    return hostedBoardAccessResultSchema.parse({
+      status: "available",
+      access: {
+        sessionId: state.session.sessionId,
+        roomCode,
+        principalId: input.principalId,
+        directUrl: directUrl.toString(),
+        shareUrl: shareUrl.toString(),
+        shareText: `Join ChatXPT room ${roomCode} to vote on this stream's sidequest.`,
+        qrPayload: input.includeQrPayload === true ? shareUrl.toString() : null,
+        grantExpiresAt: input.grantExpiresAt,
+      },
+    });
+  }
+}
+
 function conflictFrom(error: SupabaseDataError): PersistenceConflictError | null {
   if (error.code !== "23505") return null;
   const evidence = `${error.message} ${error.details ?? ""}`;
@@ -667,6 +922,7 @@ export function createSupabasePersistenceRuntime(
   const acceptedVotes = new SupabaseAcceptedVoteTallyReader(api);
   const snapshots = new SupabaseRoleSnapshotPublisher(api);
   const dueVotes = new SupabaseDueVoteCycleReader(api);
+  const accessGrants = new SupabaseRealtimeAccessGrantStore(api);
   return {
     mode: "supabase",
     api,
@@ -674,8 +930,10 @@ export function createSupabasePersistenceRuntime(
     lifecycle: new SupabaseSessionLifecycleStore(api, sessions),
     candidates: new SupabaseCandidateBatchRepository(api),
     acceptedVotes,
+    viewerReceipts: new SupabaseViewerParticipationReceiptReader(api),
+    hostedBoardAccess: new SupabaseHostedBoardAccessResolver(api, accessGrants),
     snapshots,
-    accessGrants: new SupabaseRealtimeAccessGrantStore(api),
+    accessGrants,
     dueVotes,
     probe: (checkedAt) => api.probe(checkedAt),
   };

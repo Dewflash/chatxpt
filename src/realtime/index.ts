@@ -10,6 +10,15 @@ export {
 } from "../core";
 
 export {
+  buildTwitchChatFinalResultText,
+  buildTwitchChatPollOpenText,
+  buildTwitchChatVoteAcknowledgement,
+  recordTwitchChatFallbackDelivery,
+  type TwitchChatFallbackDeliveryInput,
+  type TwitchChatVoteAcknowledgementInput,
+  type TwitchChatVoteProcessingStatus,
+} from "./chat-fallback";
+export {
   MemoryChatXptPersistence,
   createMemoryPersistenceRuntime,
 } from "./memory";
@@ -45,6 +54,8 @@ export {
   type ChatXptPersistenceRuntime,
   type CommitSessionLifecycleInput,
   type DueVoteCycleReader,
+  type HostedBoardAccessInput,
+  type HostedBoardAccessResolver,
   type LifecycleStoreCommitResult,
   type RealtimeAccessGrant,
   type RealtimeAccessGrantStore,
@@ -56,6 +67,8 @@ export {
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,
+  type ViewerParticipationReceiptReadInput,
+  type ViewerParticipationReceiptReader,
 } from "./types";
 export type {
   AcceptedCommandReceipt,
@@ -67,16 +80,26 @@ export type {
   CommandEnvelope,
   CommitAuthoritativeStateInput,
   DomainError,
+  HostedBoardAccess,
+  HostedBoardAccessResult,
   MessageIdFactory,
   OverlayViewModel,
   OrchestratorDependencies,
   OrchestratorResult,
+  PrivateViewerIdentityKind,
   ProjectionContextResolver,
   ServiceHealth,
   ServerClock,
   SessionStateRepository,
   StatePublisher,
   StreamerViewModel,
+  TwitchChatFallbackAnnouncementKind,
+  TwitchChatFallbackDelivery,
+  TwitchChatFallbackDeliveryStatus,
+  TwitchChatVoteAcknowledgement,
+  TwitchChatVoteAcknowledgementStatus,
+  ViewerParticipationReceipt,
+  ViewerParticipationReceiptReadResult,
   ViewerViewModel,
 } from "../core";
 
