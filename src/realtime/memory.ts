@@ -15,6 +15,7 @@ import {
   type CommitAuthoritativeStateInput,
   type CommitAuthoritativeStateResult,
   type RoleViewModels,
+  type SessionHistorySnapshot,
 } from "../core";
 import {
   PREPARING_SESSION_EXPIRY_MS,
@@ -32,6 +33,8 @@ import {
   type RealtimeAccessGrantStore,
   type SessionLifecycleCommitResult,
   type SessionLifecycleStore,
+  type SessionHistoryReadInput,
+  type SessionHistoryReader,
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,
@@ -40,6 +43,7 @@ import {
 } from "./types";
 import { sanitizeRoleViewsForBroadcast } from "./sanitization";
 import { derivePrivateViewerVoterKey } from "./private-viewer";
+import { buildSessionHistoryFromReceipts } from "./session-history";
 
 interface MemoryLifecycleMetadata {
   lastActivityAt: number;
@@ -64,6 +68,7 @@ export class MemoryChatXptPersistence
     RoleSnapshotPublisher,
     RealtimeAccessGrantStore,
     SessionLifecycleStore,
+    SessionHistoryReader,
     ViewerParticipationReceiptReader
 {
   private readonly states = new Map<string, AuthoritativeSessionState>();
@@ -302,6 +307,17 @@ export class MemoryChatXptPersistence
         sessionPoints,
         reconnectExpiresAt: grant.expiresAt,
       },
+    });
+  }
+
+  async readSessionHistory(input: SessionHistoryReadInput): Promise<SessionHistorySnapshot> {
+    return buildSessionHistoryFromReceipts({
+      broadcasterId: input.broadcasterId,
+      receipts: [...this.receipts.values()],
+      generatedAt: input.at,
+      limit: input.limit,
+      source: "orchestrator",
+      evidenceClass: "diagnostic",
     });
   }
 
@@ -643,6 +659,7 @@ export function createMemoryPersistenceRuntime() {
     acceptedVotes: backend,
     viewerReceipts: backend,
     hostedBoardAccess: backend,
+    sessionHistory: backend,
     snapshots: backend,
     accessGrants: backend,
     dueVotes: backend,

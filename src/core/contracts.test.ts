@@ -11,6 +11,7 @@ import {
   intelligenceSnapshotSchema,
   overlayViewModelSchema,
   questCycleStateSchema,
+  sessionHistorySnapshotSchema,
   serviceHealthSchema,
   signalObservationSchema,
   streamSessionSchema,
@@ -30,6 +31,7 @@ import {
   contractFixtureQuestCycle,
   contractFixtureSession,
   contractFixtureStreamerView,
+  contractFixtureUiX04SessionHistory,
   contractFixtureUiX06QuestStateCatalog,
   contractFixtureUiX06RoleViewCatalog,
   contractFixtureUiX09GenerationCatalog,
@@ -224,6 +226,26 @@ describe("candidate and lifecycle boundaries", () => {
       outcome: "succeeded",
       rewardPointsAwarded: 100,
     });
+  });
+
+  it("publishes a privacy-safe UI-X04 session-history example for Studio consumers", () => {
+    const history = sessionHistorySnapshotSchema.parse(contractFixtureUiX04SessionHistory);
+
+    expect(history.evidenceClass).toBe("fixture");
+    expect(history.summary).toMatchObject({
+      totalQuestCycles: 2,
+      succeeded: 1,
+      skipped: 1,
+      totalAcceptedVotes: 3,
+      totalRewardPointsAwarded: 100,
+    });
+    expect(history.privacy).toMatchObject({
+      rawChatHistoryRetained: false,
+      viewerIdentifiersIncluded: false,
+      privateVoteReceiptsIncluded: false,
+    });
+    expect(history.entries[0]).not.toHaveProperty("viewerId");
+    expect(history.entries[0]).not.toHaveProperty("rawChat");
   });
 });
 

@@ -17,6 +17,7 @@ import {
   diagnosticUiGatewayPrincipals,
   diagnosticUiGatewayQuestCycleId,
   diagnosticUiGatewayRoomCode,
+  diagnosticUiGatewaySessionHistoryGET,
   diagnosticUiGatewaySessionId,
   diagnosticUiGatewayViewerReceiptGET,
   getDiagnosticUiGateway,
@@ -93,6 +94,10 @@ describe("Role 1 diagnostic UI gateway", () => {
       ]),
     );
     expect(result.fixtureCatalog.roleViews["r5.quest.succeeded-reward.v1"].viewer.sessionPoints).toBe(100);
+    expect(result.fixtureCatalog.sessionHistory.privacy).toMatchObject({
+      rawChatHistoryRetained: false,
+      viewerIdentifiersIncluded: false,
+    });
   });
 
   it("executes a canonical viewer command and returns the current revision plus private receipt view", async () => {
@@ -329,6 +334,38 @@ describe("Role 1 diagnostic UI gateway", () => {
         qrPayload: `http://localhost/quest-board/${diagnosticUiGatewayRoomCode}`,
       },
     });
+  });
+
+  it("exposes a retention-safe optional session history read model", async () => {
+    const response = await diagnosticUiGatewaySessionHistoryGET(
+      new Request(
+        `http://localhost/api/diagnostics/ui-gateway/session-history?broadcasterId=${diagnosticUiGatewayBroadcasterId}&limit=5`,
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      ok: true,
+      history: {
+        broadcasterId: diagnosticUiGatewayBroadcasterId,
+        limit: 5,
+        privacy: {
+          rawChatHistoryRetained: false,
+          viewerIdentifiersIncluded: false,
+          privateVoteReceiptsIncluded: false,
+        },
+      },
+      fixtureHistory: {
+        summary: {
+          totalQuestCycles: 2,
+          totalRewardPointsAwarded: 100,
+        },
+      },
+    });
+    expect(body.history.entries).toEqual([]);
+    expect(body.fixtureHistory.entries[0]).not.toHaveProperty("viewerId");
+    expect(body.fixtureHistory.entries[0]).not.toHaveProperty("rawChat");
   });
 
   it("exposes Twitch-chat fallback copy and prevents acknowledgement overclaims", async () => {

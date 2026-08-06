@@ -69,6 +69,8 @@ export {
   type SessionLifecycleAction,
   type SessionLifecycleCommitResult,
   type SessionLifecycleStore,
+  type SessionHistoryReadInput,
+  type SessionHistoryReader,
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,

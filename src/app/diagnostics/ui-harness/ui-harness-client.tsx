@@ -31,6 +31,27 @@ interface HarnessSnapshots {
 }
 
 interface UiX09FixtureCatalog {
+  readonly sessionHistory: {
+    readonly summary: {
+      readonly totalQuestCycles: number;
+      readonly succeeded: number;
+      readonly skipped: number;
+      readonly totalAcceptedVotes: number;
+      readonly totalRewardPointsAwarded: number;
+    };
+    readonly privacy: {
+      readonly rawChatHistoryRetained: false;
+      readonly viewerIdentifiersIncluded: false;
+      readonly retentionNote: string;
+    };
+    readonly entries: readonly {
+      readonly questCycleId: string;
+      readonly title: string | null;
+      readonly outcome: string;
+      readonly acceptedVoteCount: number;
+      readonly rewardPointsAwarded: number;
+    }[];
+  };
   readonly questStates: Record<
     string,
     {
@@ -278,6 +299,7 @@ export function DiagnosticUiHarnessClient({
   const intelligenceExamples = fixtureCatalog === null ? [] : Object.entries(fixtureCatalog.intelligence);
   const generationExamples = fixtureCatalog === null ? [] : Object.entries(fixtureCatalog.generation);
   const questExamples = fixtureCatalog === null ? [] : Object.entries(fixtureCatalog.questStates);
+  const history = fixtureCatalog?.sessionHistory ?? null;
 
   return (
     <main className="diagnostic-shell">
@@ -380,6 +402,28 @@ export function DiagnosticUiHarnessClient({
                     </span>
                   );
                 })}
+              </div>
+            </section>
+            <section className="diagnostic-fixture-catalog" aria-label="Session history fixture example">
+              <h3>Session History</h3>
+              <div>
+                {history === null ? (
+                  <span>History unavailable</span>
+                ) : (
+                  <>
+                    <span>
+                      {history.summary.totalQuestCycles} quests / {history.summary.succeeded} succeeded / {history.summary.totalAcceptedVotes} votes / {history.summary.totalRewardPointsAwarded} pts
+                    </span>
+                    <span>
+                      Raw chat retained: {history.privacy.rawChatHistoryRetained ? "yes" : "no"} / viewer IDs: {history.privacy.viewerIdentifiersIncluded ? "included" : "hidden"}
+                    </span>
+                    {history.entries.map((entry) => (
+                      <span key={entry.questCycleId}>
+                        {entry.title ?? entry.questCycleId}: {formatStatus(entry.outcome)} / {entry.acceptedVoteCount} votes / {entry.rewardPointsAwarded} pts
+                      </span>
+                    ))}
+                  </>
+                )}
               </div>
             </section>
             <section className="diagnostic-fixture-catalog" aria-label="Quest state fixture examples">

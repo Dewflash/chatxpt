@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ChatXptOrchestrator,
   commandFingerprint,
+  authoritativeSessionStateSchema,
   streamerQuestCommandSchema,
   viewerVoteCommandSchema,
   type OrchestratorDependencies,
@@ -231,6 +232,86 @@ describe("production-shaped memory persistence integration", () => {
       ),
     };
     await expect(runtime.candidates.store(reused)).rejects.toThrow("Candidate batch ID was reused");
+  });
+
+  it("derives privacy-safe session history from terminal authoritative receipts", async () => {
+    const runtime = await preparedRuntime();
+    const acceptedAt = FIXTURE_NOW + 30_000;
+    const terminal = authoritativeSessionStateSchema.parse({
+      ...persistenceState(),
+      session: {
+        ...persistenceState().session,
+        revision: 1,
+      },
+      questCycle: {
+        ...structuredClone(contractFixtureQuestCycle),
+        envelope: {
+          ...structuredClone(contractFixtureQuestCycle.envelope),
+          revision: 1,
+        },
+        status: "succeeded",
+        options: contractFixtureCandidateBatch.candidates,
+        activeCandidateId: contractFixtureCandidateBatch.candidates[0].candidateId,
+        voteTallies: [
+          { candidateId: contractFixtureCandidateBatch.candidates[0].candidateId, votes: 2 },
+          { candidateId: contractFixtureCandidateBatch.candidates[1].candidateId, votes: 1 },
+          { candidateId: contractFixtureCandidateBatch.candidates[2].candidateId, votes: 0 },
+        ],
+        startsAt: FIXTURE_NOW,
+        endsAt: acceptedAt,
+        progress: {
+          value: 1,
+          updatedAt: acceptedAt,
+          method: "manual",
+          evidenceSignalIds: [],
+        },
+        completionRule: { mode: "manual", allowedSignalKinds: [] },
+        result: {
+          outcome: "succeeded",
+          occurredAt: acceptedAt,
+          reason: "Fixture terminal history result.",
+          rewardPointsAwarded: 100,
+        },
+      },
+    });
+    await runtime.sessions.commit({
+      command: command("history-success"),
+      commandFingerprint: commandFingerprint(command("history-success")),
+      expectedRevision: 0,
+      nextState: terminal,
+      events: [],
+      acceptedAt,
+    });
+
+    const history = await runtime.sessionHistory.readSessionHistory({
+      broadcasterId: contractFixtureSession.broadcasterId,
+      at: acceptedAt + 1,
+      limit: 10,
+    });
+
+    expect(history).toMatchObject({
+      broadcasterId: contractFixtureSession.broadcasterId,
+      evidenceClass: "diagnostic",
+      summary: {
+        totalQuestCycles: 1,
+        succeeded: 1,
+        totalAcceptedVotes: 3,
+        totalRewardPointsAwarded: 100,
+      },
+      privacy: {
+        rawChatHistoryRetained: false,
+        viewerIdentifiersIncluded: false,
+        privateVoteReceiptsIncluded: false,
+      },
+    });
+    expect(history.entries[0]).toMatchObject({
+      title: "Hold Your Ground",
+      outcome: "succeeded",
+      acceptedVoteCount: 3,
+      rewardPointsAwarded: 100,
+    });
+    expect(history.entries[0]).not.toHaveProperty("viewerId");
+    expect(history.entries[0]).not.toHaveProperty("rawChat");
   });
 
   it("scopes realtime read grants by principal, session, role, expiry, and revocation", async () => {

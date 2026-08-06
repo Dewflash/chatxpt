@@ -18,6 +18,7 @@ export {
   SupabaseRoleSnapshotPublisher,
   SupabaseRealtimeAccessGrantStore,
   SupabaseSessionLifecycleStore,
+  SupabaseSessionHistoryReader,
   SupabaseSessionStateRepository,
   createSupabasePersistenceRuntime,
   createSupabaseServerClient,

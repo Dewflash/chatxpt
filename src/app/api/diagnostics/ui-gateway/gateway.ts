@@ -12,6 +12,7 @@ import {
   streamerProfileSchema,
   streamerQuestCommandSchema,
   systemIntelligenceCommandSchema,
+  contractFixtureUiX04SessionHistory,
   contractFixtureUiX06QuestStateCatalog,
   contractFixtureUiX06RoleViewCatalog,
   contractFixtureUiX09GenerationCatalog,
@@ -75,6 +76,7 @@ export const diagnosticUiGatewayQuestCycleId = QUEST_CYCLE_ID;
 export const diagnosticUiGatewayBroadcasterId = BROADCASTER_ID;
 export const diagnosticUiGatewayRoomCode = ROOM_CODE;
 export const diagnosticUiGatewayFixtureCatalog = {
+  sessionHistory: contractFixtureUiX04SessionHistory,
   questStates: contractFixtureUiX06QuestStateCatalog,
   roleViews: contractFixtureUiX06RoleViewCatalog,
   intelligence: contractFixtureUiX09IntelligenceCatalog,
@@ -108,6 +110,13 @@ const hostedBoardAccessInputSchema = z
     principalId: z.string().trim().min(1).max(128),
     baseUrl: z.url(),
     includeQrPayload: z.boolean().optional(),
+  })
+  .strict();
+
+const sessionHistoryInputSchema = z
+  .object({
+    broadcasterId: z.string().trim().min(1).max(128),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
   })
   .strict();
 
@@ -596,6 +605,35 @@ export class DiagnosticUiGateway {
       ok: false,
       reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
       error: result.error,
+    };
+  }
+
+  async readSessionHistory(input: unknown): Promise<DiagnosticUiGatewayRouteResult> {
+    const parsed = sessionHistoryInputSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        ok: false,
+        reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+        error: error("validation", "Session history request is invalid"),
+      };
+    }
+    await this.ensureReady();
+    if (parsed.data.broadcasterId !== BROADCASTER_ID) {
+      return {
+        ok: false,
+        reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+        error: error("forbidden", "Diagnostic history is scoped to the fixture broadcaster"),
+      };
+    }
+    const history = await this.persistence.readSessionHistory({
+      ...parsed.data,
+      at: this.clock.now(),
+    });
+    return {
+      ok: true,
+      reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+      history,
+      fixtureHistory: contractFixtureUiX04SessionHistory,
     };
   }
 

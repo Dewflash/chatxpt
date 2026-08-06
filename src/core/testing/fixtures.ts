@@ -7,6 +7,7 @@ import {
   intelligenceSnapshotSchema,
   overlayViewModelSchema,
   questCycleStateSchema,
+  sessionHistorySnapshotSchema,
   serviceHealthSchema,
   streamSessionSchema,
   streamerViewModelSchema,
@@ -16,6 +17,7 @@ import {
   type QuestCandidate,
   type QuestCycleState,
   type RoleViewModels,
+  type SessionHistorySnapshot,
   type SignalProvenance,
 } from "../contracts";
 
@@ -669,6 +671,67 @@ export const contractFixtureUiX06RoleViewCatalog = Object.fromEntries(
 ) as {
   readonly [FixtureId in keyof typeof contractFixtureUiX06QuestStateCatalog]: RoleViewModels;
 };
+
+export const contractFixtureUiX04SessionHistory = sessionHistorySnapshotSchema.parse({
+  contractVersion: CONTRACT_VERSION,
+  broadcasterId: contractFixtureSession.broadcasterId,
+  generatedAt: FIXTURE_TIME + 30_000,
+  source: "test-fixture",
+  evidenceClass: "fixture",
+  limit: 25,
+  entries: [
+    {
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: "fixture-cycle-success",
+      sessionRevision: 12,
+      title: "Hold Your Ground",
+      activeCandidateId: uiX06Options[0].candidateId,
+      outcome: "succeeded",
+      reason: "Fixture quest succeeded.",
+      startedAt: FIXTURE_TIME,
+      endedAt: FIXTURE_TIME + 20_000,
+      durationSeconds: 20,
+      acceptedVoteCount: 3,
+      voteTallies: uiX06Tallies(),
+      rewardPointsAwarded: uiX06Options[0].rewardPoints,
+      evidenceClass: "fixture",
+    },
+    {
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: "fixture-cycle-skipped",
+      sessionRevision: 8,
+      title: null,
+      activeCandidateId: null,
+      outcome: "skipped",
+      reason: "Fixture streamer skip.",
+      startedAt: null,
+      endedAt: FIXTURE_TIME - 120_000,
+      durationSeconds: null,
+      acceptedVoteCount: 0,
+      voteTallies: [],
+      rewardPointsAwarded: 0,
+      evidenceClass: "fixture",
+    },
+  ],
+  summary: {
+    totalQuestCycles: 2,
+    succeeded: 1,
+    failed: 0,
+    cancelled: 0,
+    skipped: 1,
+    expired: 0,
+    totalAcceptedVotes: 3,
+    totalRewardPointsAwarded: 100,
+    averageCompletionSeconds: 20,
+  },
+  privacy: {
+    rawChatHistoryRetained: false,
+    viewerIdentifiersIncluded: false,
+    privateVoteReceiptsIncluded: false,
+    retentionNote:
+      "Session history stores terminal quest outcomes and aggregate engagement only; raw chat and viewer identifiers are not retained in this read model.",
+  },
+}) satisfies SessionHistorySnapshot;
 
 const contractFixtureConnection = {
   service: "fixture-realtime",

@@ -2,12 +2,20 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 
 import {
+  CONTRACT_VERSION,
+  acceptedCommandReceiptSchema,
+  authoritativeSessionStateSchema,
+  commandFingerprint,
+  streamerQuestCommandSchema,
   viewerViewModelSchema,
   type CommitAuthoritativeStateInput,
   type RoleViewModels,
 } from "../../src/core";
 import {
+  contractFixtureCandidateBatch,
+  contractFixtureQuestCycle,
   contractFixtureOverlayView,
+  contractFixtureSession,
   contractFixtureStreamerView,
   contractFixtureViewerView,
 } from "../../src/core/testing";
@@ -17,15 +25,18 @@ import {
   SupabaseAcceptedVoteTallyReader,
   SupabaseDueVoteCycleReader,
   SupabaseRoleSnapshotPublisher,
+  SupabaseSessionHistoryReader,
   SupabaseSessionStateRepository,
 } from "../../src/realtime/server";
-import { persistenceState } from "./persistence-fixtures";
+import { FIXTURE_NOW, persistenceState } from "./persistence-fixtures";
 
 class RecordingDataApi extends SupabaseChatXptDataApi {
   state: unknown | null = persistenceState();
   persisted: RoleViewModels | null = null;
   acceptedVoteRows: readonly unknown[] = [];
   dueVoteStates: readonly unknown[] = [];
+  sessionIdsByBroadcaster: readonly string[] = [];
+  receiptStatesBySession = new Map<string, readonly unknown[]>();
 
   constructor() {
     super({} as SupabaseClient);
@@ -45,6 +56,14 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
 
   override async loadDueVoteCycleStates(): Promise<readonly unknown[]> {
     return this.dueVoteStates;
+  }
+
+  override async loadSessionIdsForBroadcaster(): Promise<readonly string[]> {
+    return this.sessionIdsByBroadcaster;
+  }
+
+  override async loadReceiptStatesForSession(sessionId: string): Promise<readonly unknown[]> {
+    return this.receiptStatesBySession.get(sessionId) ?? [];
   }
 }
 
@@ -106,6 +125,87 @@ describe("Supabase production adapters", () => {
 
     api.state = { invalid: true };
     await expect(repository.load("fixture-session")).rejects.toThrow();
+  });
+
+  it("derives session history from broadcaster receipt states without private viewer fields", async () => {
+    const api = new RecordingDataApi();
+    api.sessionIdsByBroadcaster = [contractFixtureSession.sessionId];
+    const command = streamerQuestCommandSchema.parse({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: contractFixtureQuestCycle.envelope.questCycleId,
+      commandId: "supabase-history-command",
+      correlationId: "supabase-history-correlation",
+      expectedRevision: 0,
+      issuedAt: FIXTURE_NOW + 10_000,
+      actor: { kind: "broadcaster", actorId: contractFixtureSession.broadcasterId },
+      type: "streamer.quest",
+      action: "succeed",
+      candidateId: null,
+    });
+    const base = persistenceState();
+    const terminal = authoritativeSessionStateSchema.parse({
+      ...base,
+      session: {
+        ...base.session,
+        revision: 1,
+      },
+      questCycle: {
+        ...structuredClone(contractFixtureQuestCycle),
+        envelope: {
+          ...structuredClone(contractFixtureQuestCycle.envelope),
+          revision: 1,
+        },
+        status: "succeeded",
+        options: contractFixtureCandidateBatch.candidates,
+        activeCandidateId: contractFixtureCandidateBatch.candidates[0].candidateId,
+        voteTallies: [
+          { candidateId: contractFixtureCandidateBatch.candidates[0].candidateId, votes: 4 },
+          { candidateId: contractFixtureCandidateBatch.candidates[1].candidateId, votes: 1 },
+          { candidateId: contractFixtureCandidateBatch.candidates[2].candidateId, votes: 0 },
+        ],
+        startsAt: FIXTURE_NOW,
+        endsAt: FIXTURE_NOW + 20_000,
+        progress: {
+          value: 1,
+          updatedAt: FIXTURE_NOW + 20_000,
+          method: "manual",
+          evidenceSignalIds: [],
+        },
+        completionRule: { mode: "manual", allowedSignalKinds: [] },
+        result: {
+          outcome: "succeeded",
+          occurredAt: FIXTURE_NOW + 20_000,
+          reason: "Supabase fixture history result.",
+          rewardPointsAwarded: 100,
+        },
+      },
+    });
+    api.receiptStatesBySession.set(contractFixtureSession.sessionId, [
+      acceptedCommandReceiptSchema.parse({
+        command,
+        commandFingerprint: commandFingerprint(command),
+        state: terminal,
+        events: [],
+        acceptedAt: FIXTURE_NOW + 20_000,
+      }),
+    ]);
+
+    const history = await new SupabaseSessionHistoryReader(api).readSessionHistory({
+      broadcasterId: contractFixtureSession.broadcasterId,
+      at: FIXTURE_NOW + 25_000,
+      limit: 5,
+    });
+
+    expect(history.summary).toMatchObject({
+      totalQuestCycles: 1,
+      succeeded: 1,
+      totalAcceptedVotes: 5,
+      totalRewardPointsAwarded: 100,
+    });
+    expect(history.privacy.rawChatHistoryRetained).toBe(false);
+    expect(history.entries[0]).not.toHaveProperty("viewerId");
+    expect(history.entries[0]).not.toHaveProperty("rawChat");
   });
 
   it("validates due vote-cycle states loaded from the database", async () => {

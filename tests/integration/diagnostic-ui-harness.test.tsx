@@ -70,6 +70,9 @@ describe("diagnostic UI harness client", () => {
     expect(screen.getByRole("heading", { name: "Intelligence Examples" })).toBeInTheDocument();
     expect(screen.getByText(/r4\.intelligence\.capture-denied\.v1/)).toBeInTheDocument();
     expect(screen.getByText(/r4\.generation\.algorithmic\.v1/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Session History" })).toBeInTheDocument();
+    expect(screen.getByText(/2 quests \/ 1 succeeded \/ 3 votes \/ 100 pts/)).toBeInTheDocument();
+    expect(screen.getByText(/Raw chat retained: no \/ viewer IDs: hidden/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Quest Examples" })).toBeInTheDocument();
     expect(screen.getByText(/r5\.vote\.tie\.v1/)).toBeInTheDocument();
     expect(screen.getByText(/r5\.quest\.succeeded-reward\.v1/)).toBeInTheDocument();

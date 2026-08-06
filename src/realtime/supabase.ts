@@ -24,6 +24,7 @@ import {
   type CommitAuthoritativeStateInput,
   type CommitAuthoritativeStateResult,
   type RoleViewModels,
+  type SessionHistorySnapshot,
   type ServiceHealth,
 } from "../core";
 import type { SupabasePersistenceEnvironment } from "./environment";
@@ -43,6 +44,8 @@ import {
   type RealtimeAccessGrantStore,
   type SessionLifecycleCommitResult,
   type SessionLifecycleStore,
+  type SessionHistoryReadInput,
+  type SessionHistoryReader,
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,
@@ -51,6 +54,7 @@ import {
 } from "./types";
 import { sanitizeRoleViewsForBroadcast } from "./sanitization";
 import { derivePrivateViewerVoterKey } from "./private-viewer";
+import { buildSessionHistoryFromReceipts } from "./session-history";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -298,6 +302,22 @@ export class SupabaseChatXptDataApi {
       .order("committed_revision", { ascending: true });
     throwIfError(error);
     return (data ?? []).map((row) => rowJson(row, "receipt"));
+  }
+
+  async loadSessionIdsForBroadcaster(
+    broadcasterId: string,
+    limit: number,
+  ): Promise<readonly string[]> {
+    const { data, error } = await this.client
+      .from("stream_sessions")
+      .select("session_id")
+      .eq("broadcaster_id", broadcasterId)
+      .order("updated_at", { ascending: false })
+      .limit(limit);
+    throwIfError(error);
+    return (data ?? [])
+      .map((row) => rowJson(row, "session_id"))
+      .filter((sessionId): sessionId is string => typeof sessionId === "string");
   }
 
   async loadHostedSessionByRoomCode(roomCode: string): Promise<unknown | null> {
@@ -805,6 +825,37 @@ export class SupabaseViewerParticipationReceiptReader
   }
 }
 
+export class SupabaseSessionHistoryReader implements SessionHistoryReader {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async readSessionHistory(input: SessionHistoryReadInput): Promise<SessionHistorySnapshot> {
+    const sessionIds = await this.api.loadSessionIdsForBroadcaster(
+      input.broadcasterId,
+      input.limit ?? 25,
+    );
+    const receipts = (
+      await Promise.all(
+        sessionIds.map((sessionId) => this.api.loadReceiptStatesForSession(sessionId)),
+      )
+    )
+      .flat()
+      .map((rawReceipt) => acceptedCommandReceiptSchema.parse(rawReceipt));
+
+    return buildSessionHistoryFromReceipts({
+      broadcasterId: input.broadcasterId,
+      receipts,
+      generatedAt: input.at,
+      limit: input.limit,
+      source: "orchestrator",
+      evidenceClass: receipts.some(
+        (receipt) => receipt.state.questCycle.envelope.evidenceClass === "live",
+      )
+        ? "live"
+        : "diagnostic",
+    });
+  }
+}
+
 export class SupabaseHostedBoardAccessResolver implements HostedBoardAccessResolver {
   constructor(
     private readonly api: SupabaseChatXptDataApi,
@@ -995,6 +1046,7 @@ export function createSupabasePersistenceRuntime(
     acceptedVotes,
     viewerReceipts: new SupabaseViewerParticipationReceiptReader(api),
     hostedBoardAccess: new SupabaseHostedBoardAccessResolver(api, accessGrants),
+    sessionHistory: new SupabaseSessionHistoryReader(api),
     snapshots,
     accessGrants,
     dueVotes,

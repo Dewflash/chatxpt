@@ -6,6 +6,7 @@ import type {
   HostedBoardAccessResult,
   PrivateViewerIdentityKind,
   RoleViewModels,
+  SessionHistorySnapshot,
   SessionStateRepository,
   StatePublisher,
   ViewerParticipationReceiptReadResult,
@@ -142,6 +143,16 @@ export interface HostedBoardAccessResolver {
   resolveHostedBoardAccess(input: HostedBoardAccessInput): Promise<HostedBoardAccessResult>;
 }
 
+export interface SessionHistoryReadInput {
+  readonly broadcasterId: string;
+  readonly limit?: number;
+  readonly at: number;
+}
+
+export interface SessionHistoryReader {
+  readSessionHistory(input: SessionHistoryReadInput): Promise<SessionHistorySnapshot>;
+}
+
 export interface ChatXptPersistenceRuntime {
   readonly mode: "memory" | "supabase";
   readonly sessions: SessionStateRepository;
@@ -150,6 +161,7 @@ export interface ChatXptPersistenceRuntime {
   readonly acceptedVotes: AcceptedVoteTallyReader;
   readonly viewerReceipts: ViewerParticipationReceiptReader;
   readonly hostedBoardAccess: HostedBoardAccessResolver;
+  readonly sessionHistory: SessionHistoryReader;
   readonly snapshots: RoleSnapshotPublisher;
   readonly accessGrants: RealtimeAccessGrantStore;
   readonly dueVotes: DueVoteCycleReader;
