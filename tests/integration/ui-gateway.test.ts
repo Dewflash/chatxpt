@@ -202,6 +202,9 @@ describe("Role 1 diagnostic UI gateway", () => {
         eventTypes: ["streamer.setup.diagnostic-acknowledged"],
       },
       serviceCommand: {
+        ok: true,
+        commandId: "ui-gateway-setup-command",
+        currentRevision: snapshot.snapshot.envelope.revision,
         status: "diagnostic-only",
         readiness: {
           blockerCodes: ["obs-capture-permission-denied"],
@@ -223,7 +226,16 @@ describe("Role 1 diagnostic UI gateway", () => {
     });
     expect(session.ok).toBe(true);
     if (session.ok) {
-      expect(session.serviceCommand?.readiness.ready).toBe(true);
+      expect(session.serviceCommand?.ok).toBe(true);
+      expect(session.serviceCommand).toMatchObject({
+        ok: true,
+        commandId: "ui-gateway-session-command",
+        currentRevision: snapshot.snapshot.envelope.revision,
+        status: "diagnostic-only",
+      });
+      if (session.serviceCommand?.ok) {
+        expect(session.serviceCommand.readiness.ready).toBe(true);
+      }
     }
   });
 

@@ -27,6 +27,7 @@ import {
   type RoleViewModels,
   type StreamerReadinessView,
   type StreamerServiceCommand,
+  type StreamerServiceCommandResult,
   type TwitchChatFallbackAnnouncementKind,
   type TwitchChatFallbackDeliveryStatus,
   type TwitchChatVoteAcknowledgementStatus,
@@ -178,10 +179,7 @@ export type DiagnosticUiGatewayCommandResult =
         readonly eventTypes: readonly string[];
       };
       readonly views: RoleViewModels | null;
-      readonly serviceCommand?: {
-        readonly status: "diagnostic-only";
-        readonly readiness: StreamerReadinessView;
-      };
+      readonly serviceCommand?: StreamerServiceCommandResult;
     }
   | {
       readonly ok: false;
@@ -620,6 +618,9 @@ export class DiagnosticUiGateway {
       },
       views: null,
       serviceCommand: {
+        ok: true,
+        commandId: command.commandId,
+        currentRevision: state.session.revision,
         status: "diagnostic-only",
         readiness,
       },

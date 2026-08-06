@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { CONTRACT_VERSION, streamerSetupCommandSchema, viewerVoteCommandSchema } from "../core";
+import {
+  CONTRACT_VERSION,
+  contractFixtureUiX01ReadinessCatalog,
+  streamerSetupCommandSchema,
+  viewerVoteCommandSchema,
+} from "../core";
 import { FetchUiGatewayClient } from "./browser";
 
 function voteCommand(commandId = "fixture-command") {
@@ -136,8 +141,11 @@ describe("FetchUiGatewayClient", () => {
         },
         views: null,
         serviceCommand: {
+          ok: true,
+          commandId: "fixture-setup-command",
+          currentRevision: 1,
           status: "diagnostic-only",
-          readiness: { ready: false },
+          readiness: contractFixtureUiX01ReadinessCatalog["r4.setup.permission-denied.v1"],
         },
       }),
     );
@@ -150,6 +158,17 @@ describe("FetchUiGatewayClient", () => {
       commandId: "fixture-setup-command",
       currentRevision: 1,
       delivery: "not-republished",
+      serviceCommand: {
+        ok: true,
+        commandId: "fixture-setup-command",
+        currentRevision: 1,
+        status: "diagnostic-only",
+        readiness: {
+          ready: false,
+          blockerCodes: ["obs-capture-permission-denied"],
+          recommendedAction: "request-capture-permission",
+        },
+      },
     });
     const init = (request.mock.calls[0] as unknown as Parameters<typeof fetch>)[1];
     expect(JSON.parse(String(init?.body))).toMatchObject({

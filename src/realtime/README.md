@@ -29,6 +29,10 @@ Setup and session service commands are diagnostic-only in the local gateway
 until Role 1 wires real Twitch/OBS/session operations. They return the current
 authoritative revision and a readiness fixture so UI consumers can render
 success, stale, forbidden, and blocked states without becoming the authority.
+`FetchUiGatewayClient.dispatch()` preserves that typed `serviceCommand` result
+when present, letting browser UI code update setup readiness from the same
+acknowledged command response while keeping real service execution behind Role
+1.
 
 Authoritative writes always flow through the Role 1 orchestrator or lifecycle
 service. The Supabase publisher persists role-sanitised snapshots through a

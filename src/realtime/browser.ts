@@ -1,10 +1,12 @@
 import {
   commandEnvelopeSchema,
   domainErrorSchema,
+  streamerServiceCommandResultSchema,
   streamerServiceCommandSchema,
   type CommandEnvelope,
   type DomainError,
   type RoleViewModels,
+  type StreamerServiceCommandResult,
   type StreamerServiceCommand,
 } from "../core";
 
@@ -54,6 +56,7 @@ export type UiGatewayCommandResult =
         readonly eventTypes: readonly string[];
       };
       readonly views: RoleViewModels | null;
+      readonly serviceCommand?: StreamerServiceCommandResult;
     }
   | {
       readonly ok: false;
@@ -123,6 +126,11 @@ function parseError(value: unknown, fallback: DomainError): DomainError {
   if (!isObject(value)) return fallback;
   const parsed = domainErrorSchema.safeParse(value.error);
   return parsed.success ? parsed.data : fallback;
+}
+
+function parseServiceCommandResult(value: unknown): StreamerServiceCommandResult | undefined {
+  const parsed = streamerServiceCommandResultSchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
 }
 
 export class FetchUiGatewayClient implements UiGatewayClient {
@@ -282,6 +290,7 @@ export class FetchUiGatewayClient implements UiGatewayClient {
           : "published",
       receipt,
       views: isObject(body.views) ? body.views as unknown as RoleViewModels : null,
+      serviceCommand: parseServiceCommandResult(body.serviceCommand),
     };
   }
 
