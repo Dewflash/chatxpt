@@ -8,11 +8,16 @@ import {
 import {
   diagnosticUiGatewayBroadcasterId,
   diagnosticUiGatewayDELETE,
+  diagnosticUiGatewayChatFallbackGET,
+  diagnosticUiGatewayChatFallbackPOST,
   diagnosticUiGatewayGET,
+  diagnosticUiGatewayHostedBoardGET,
   diagnosticUiGatewayPOST,
   diagnosticUiGatewayPrincipals,
   diagnosticUiGatewayQuestCycleId,
+  diagnosticUiGatewayRoomCode,
   diagnosticUiGatewaySessionId,
+  diagnosticUiGatewayViewerReceiptGET,
   getDiagnosticUiGateway,
   resetDiagnosticUiGateway,
 } from "../../src/app";
@@ -193,5 +198,102 @@ describe("Role 1 diagnostic UI gateway", () => {
       expect(after.snapshot.envelope.revision).toBe(3);
       expect(after.snapshot.questCycle.voteTallies[0]?.votes).toBe(0);
     }
+  });
+
+  it("exposes private viewer receipt recovery through a thin diagnostic route", async () => {
+    const readResponse = await diagnosticUiGatewayGET(
+      new Request(
+        `http://localhost/api/diagnostics/ui-gateway?role=viewer&principalId=${diagnosticUiGatewayPrincipals.viewer}`,
+      ),
+    );
+    const readBody = await readResponse.json();
+    if (!readBody.ok) throw new Error(readBody.error.message);
+
+    const voteResponse = await diagnosticUiGatewayPOST(
+      new Request("http://localhost/api/diagnostics/ui-gateway", {
+        method: "POST",
+        body: JSON.stringify({
+          command: fixtureVote("ui-gateway-receipt-route-vote", readBody.snapshot.envelope.revision),
+        }),
+      }),
+    );
+    expect(voteResponse.status).toBe(200);
+
+    const receiptResponse = await diagnosticUiGatewayViewerReceiptGET(
+      new Request(
+        `http://localhost/api/diagnostics/ui-gateway/viewer-receipt?principalId=${diagnosticUiGatewayPrincipals.viewer}&voterKey=ui-gateway-voter-one`,
+      ),
+    );
+    const receiptBody = await receiptResponse.json();
+
+    expect(receiptResponse.status).toBe(200);
+    expect(receiptBody).toMatchObject({
+      ok: true,
+      receiptStatus: "available",
+      receipt: {
+        acceptedCandidateId: "ui-gateway-candidate-1",
+        sourceMode: "hosted-board",
+        principalId: diagnosticUiGatewayPrincipals.viewer,
+      },
+    });
+  });
+
+  it("exposes hosted-board discovery and share data through a thin diagnostic route", async () => {
+    const response = await diagnosticUiGatewayHostedBoardGET(
+      new Request(
+        `http://localhost/api/diagnostics/ui-gateway/hosted-board?roomCode=${diagnosticUiGatewayRoomCode}&includeQrPayload=true`,
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      ok: true,
+      accessStatus: "available",
+      access: {
+        roomCode: diagnosticUiGatewayRoomCode,
+        sessionId: diagnosticUiGatewaySessionId,
+        shareUrl: `http://localhost/quest-board/${diagnosticUiGatewayRoomCode}`,
+        qrPayload: `http://localhost/quest-board/${diagnosticUiGatewayRoomCode}`,
+      },
+    });
+  });
+
+  it("exposes Twitch-chat fallback copy and prevents acknowledgement overclaims", async () => {
+    const deliveryResponse = await diagnosticUiGatewayChatFallbackGET(
+      new Request("http://localhost/api/diagnostics/ui-gateway/chat-fallback"),
+    );
+    const deliveryBody = await deliveryResponse.json();
+
+    expect(deliveryResponse.status).toBe(200);
+    expect(deliveryBody.delivery).toMatchObject({
+      kind: "poll-open",
+      status: "not-attempted",
+      deliveredAt: null,
+    });
+    expect(deliveryBody.delivery.messageText).toContain("Reply 1, 2, or 3");
+
+    const acknowledgementResponse = await diagnosticUiGatewayChatFallbackPOST(
+      new Request("http://localhost/api/diagnostics/ui-gateway/chat-fallback", {
+        method: "POST",
+        body: JSON.stringify({
+          processingStatus: "counted",
+          candidateId: "ui-gateway-candidate-1",
+          deliveryStatus: "failed",
+          deliveredAt: null,
+        }),
+      }),
+    );
+    const acknowledgementBody = await acknowledgementResponse.json();
+
+    expect(acknowledgementResponse.status).toBe(200);
+    expect(acknowledgementBody).toMatchObject({
+      ok: true,
+      acknowledgement: {
+        status: "not-delivered",
+        candidateId: null,
+        deliveredAt: null,
+      },
+    });
   });
 });

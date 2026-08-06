@@ -16,13 +16,21 @@ import {
   type ContractEnvelope,
   type DomainError,
   type OrchestratorResult,
+  type QuestCandidate,
   type RoleViewModels,
+  type TwitchChatFallbackAnnouncementKind,
+  type TwitchChatFallbackDeliveryStatus,
+  type TwitchChatVoteAcknowledgementStatus,
   type ViewModelProjectionInput,
   type ViewModelProjector,
 } from "../../../../core";
 import { DefaultQuestEngine } from "../../../../quest-engine";
 import {
+  buildTwitchChatFinalResultText,
+  buildTwitchChatPollOpenText,
+  buildTwitchChatVoteAcknowledgement,
   MemoryChatXptPersistence,
+  recordTwitchChatFallbackDelivery,
   ServerCommandAuthorizer,
   SessionLifecycleService,
   type VerifiedCommandActor,
@@ -37,6 +45,7 @@ const SYSTEM_ACTOR_ID = "ui-gateway-fixture-system";
 const VIEWER_PRINCIPAL_ID = "ui-gateway-fixture-viewer";
 const STREAMER_PRINCIPAL_ID = "ui-gateway-fixture-streamer";
 const OVERLAY_PRINCIPAL_ID = "ui-gateway-fixture-overlay";
+const ROOM_CODE = "ABCDEFGH";
 const GRANT_EXPIRES_AT = FIXTURE_TIME + 60 * 60 * 1_000;
 
 export const DIAGNOSTIC_UI_GATEWAY_REALITY = {
@@ -59,6 +68,7 @@ export const diagnosticUiGatewayPrincipals = {
 export const diagnosticUiGatewaySessionId = SESSION_ID;
 export const diagnosticUiGatewayQuestCycleId = QUEST_CYCLE_ID;
 export const diagnosticUiGatewayBroadcasterId = BROADCASTER_ID;
+export const diagnosticUiGatewayRoomCode = ROOM_CODE;
 
 type SnapshotRole = keyof RoleViewModels;
 
@@ -71,6 +81,46 @@ const snapshotReadInputSchema = z
   .strict();
 
 export type DiagnosticSnapshotReadInput = z.infer<typeof snapshotReadInputSchema>;
+
+const viewerReceiptInputSchema = z
+  .object({
+    sessionId: z.string().trim().min(1).max(128),
+    questCycleId: z.string().trim().min(1).max(128),
+    principalId: z.string().trim().min(1).max(128),
+    voterKey: z.string().trim().min(1).max(128),
+    identityKind: z.enum(["authenticated", "anonymous-token"]),
+  })
+  .strict();
+
+const hostedBoardAccessInputSchema = z
+  .object({
+    roomCode: z.string().trim().min(1).max(32),
+    principalId: z.string().trim().min(1).max(128),
+    baseUrl: z.url(),
+    includeQrPayload: z.boolean().optional(),
+  })
+  .strict();
+
+const chatFallbackInputSchema = z
+  .object({
+    kind: z.enum(["poll-open", "final-result"]).default("poll-open"),
+    outcome: z.enum(["activated", "cancelled", "no-votes", "expired"]).optional(),
+    winnerTitle: z.string().trim().min(1).max(80).nullable().optional(),
+    deliveryStatus: z
+      .enum(["not-attempted", "delivered", "rate-limited", "failed", "unavailable"])
+      .default("not-attempted"),
+    deliveredAt: z.number().int().nonnegative().nullable().default(null),
+  })
+  .strict();
+
+const chatAcknowledgementInputSchema = z
+  .object({
+    processingStatus: z.enum(["counted", "duplicate", "rejected", "late"]),
+    candidateId: z.string().trim().min(1).max(128).nullable(),
+    deliveryStatus: z.enum(["delivered", "rate-limited", "failed", "unavailable"]),
+    deliveredAt: z.number().int().nonnegative().nullable(),
+  })
+  .strict();
 
 export type DiagnosticUiGatewayReadResult =
   | {
@@ -103,6 +153,18 @@ export type DiagnosticUiGatewayCommandResult =
         readonly eventTypes: readonly string[];
       };
       readonly views: RoleViewModels | null;
+    }
+  | {
+      readonly ok: false;
+      readonly reality: typeof DIAGNOSTIC_UI_GATEWAY_REALITY;
+      readonly error: DomainError;
+    };
+
+export type DiagnosticUiGatewayRouteResult =
+  | {
+      readonly ok: true;
+      readonly reality: typeof DIAGNOSTIC_UI_GATEWAY_REALITY;
+      readonly [key: string]: unknown;
     }
   | {
       readonly ok: false;
@@ -219,6 +281,29 @@ class DiagnosticViewProjector implements ViewModelProjector {
 
 function error(code: DomainError["code"], message: string, retryable = false): DomainError {
   return domainErrorSchema.parse({ code, message, retryable });
+}
+
+export function diagnosticUiGatewayStatusFor(error: DomainError): number {
+  switch (error.code) {
+    case "validation":
+      return 400;
+    case "unauthenticated":
+      return 401;
+    case "forbidden":
+      return 403;
+    case "duplicate":
+    case "stale-revision":
+      return 409;
+    case "expired":
+      return 410;
+    case "dependency-unavailable":
+    case "unavailable-capability":
+      return 503;
+    case "rate-limited":
+      return 429;
+    case "internal":
+      return 500;
+  }
 }
 
 function envelope(messageId: string, revision: number): ContractEnvelope {
@@ -443,6 +528,146 @@ export class DiagnosticUiGateway {
     };
   }
 
+  async readViewerReceipt(input: unknown): Promise<DiagnosticUiGatewayRouteResult> {
+    const parsed = viewerReceiptInputSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        ok: false,
+        reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+        error: error("validation", "Private viewer receipt request is invalid"),
+      };
+    }
+    await this.ensureReady();
+    const result = await this.persistence.readViewerParticipationReceipt({
+      ...parsed.data,
+      at: this.clock.now(),
+    });
+    if (result.status === "available" || result.status === "not-found") {
+      return {
+        ok: true,
+        reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+        receiptStatus: result.status,
+        receipt: result.receipt,
+      };
+    }
+    return {
+      ok: false,
+      reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+      error: result.error,
+    };
+  }
+
+  async resolveHostedBoardAccess(input: unknown): Promise<DiagnosticUiGatewayRouteResult> {
+    const parsed = hostedBoardAccessInputSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        ok: false,
+        reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+        error: error("validation", "Hosted Quest Board access request is invalid"),
+      };
+    }
+    await this.ensureReady();
+    const result = await this.persistence.resolveHostedBoardAccess({
+      ...parsed.data,
+      at: this.clock.now(),
+      grantExpiresAt: GRANT_EXPIRES_AT,
+    });
+    if (result.status === "available") {
+      return {
+        ok: true,
+        reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+        accessStatus: result.status,
+        access: result.access,
+      };
+    }
+    return {
+      ok: false,
+      reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+      error: result.error,
+    };
+  }
+
+  async readChatFallback(input: unknown): Promise<DiagnosticUiGatewayRouteResult> {
+    const parsed = chatFallbackInputSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        ok: false,
+        reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+        error: error("validation", "Twitch-chat fallback request is invalid"),
+      };
+    }
+    await this.ensureReady();
+    const state = await this.persistence.load(SESSION_ID);
+    if (state === null) {
+      return {
+        ok: false,
+        reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+        error: error("dependency-unavailable", "Diagnostic session is unavailable", true),
+      };
+    }
+    if (state.questCycle.options.length !== 3) {
+      return {
+        ok: false,
+        reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+        error: error("unavailable-capability", "Twitch-chat fallback requires three visible vote options", true),
+      };
+    }
+    const options = state.questCycle.options as unknown as readonly [
+      QuestCandidate,
+      QuestCandidate,
+      QuestCandidate,
+    ];
+    const messageText =
+      parsed.data.kind === "poll-open"
+        ? buildTwitchChatPollOpenText(options)
+        : buildTwitchChatFinalResultText({
+            outcome: parsed.data.outcome ?? "cancelled",
+            winnerTitle: parsed.data.winnerTitle ?? null,
+          });
+    const delivery = recordTwitchChatFallbackDelivery({
+      kind: parsed.data.kind as TwitchChatFallbackAnnouncementKind,
+      status: parsed.data.deliveryStatus as TwitchChatFallbackDeliveryStatus,
+      messageText,
+      deliveredAt: parsed.data.deliveredAt,
+      retryable: ["failed", "rate-limited", "unavailable"].includes(parsed.data.deliveryStatus),
+    });
+    return {
+      ok: true,
+      reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+      delivery,
+    };
+  }
+
+  async buildChatAcknowledgement(input: unknown): Promise<DiagnosticUiGatewayRouteResult> {
+    const parsed = chatAcknowledgementInputSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        ok: false,
+        reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+        error: error("validation", "Twitch-chat acknowledgement request is invalid"),
+      };
+    }
+    const delivery = recordTwitchChatFallbackDelivery({
+      kind: "poll-open",
+      status: parsed.data.deliveryStatus,
+      messageText: "ChatXPT acknowledgement delivery probe.",
+      deliveredAt: parsed.data.deliveredAt,
+      retryable: ["failed", "rate-limited", "unavailable"].includes(parsed.data.deliveryStatus),
+    });
+    return {
+      ok: true,
+      reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+      acknowledgement: buildTwitchChatVoteAcknowledgement({
+        delivery,
+        processingStatus: parsed.data.processingStatus as Extract<
+          TwitchChatVoteAcknowledgementStatus,
+          "counted" | "duplicate" | "rejected" | "late"
+        >,
+        candidateId: parsed.data.candidateId,
+      }),
+    };
+  }
+
   private ensureReady(): Promise<void> {
     this.ready ??= this.bootstrap();
     return this.ready;
@@ -451,7 +676,7 @@ export class DiagnosticUiGateway {
   private async bootstrap(): Promise<void> {
     const lifecycle = new SessionLifecycleService(
       this.persistence,
-      { next: () => "ABCDEFGH" },
+      { next: () => ROOM_CODE },
       { next: (action) => `ui-gateway-${action}` },
     );
     const created = await lifecycle.create(initialState(), FIXTURE_TIME);

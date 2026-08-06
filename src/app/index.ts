@@ -5,10 +5,14 @@ export {
   GET as diagnosticUiGatewayGET,
   POST as diagnosticUiGatewayPOST,
 } from "./api/diagnostics/ui-gateway/route";
+export { GET as diagnosticUiGatewayChatFallbackGET, POST as diagnosticUiGatewayChatFallbackPOST } from "./api/diagnostics/ui-gateway/chat-fallback/route";
+export { GET as diagnosticUiGatewayHostedBoardGET } from "./api/diagnostics/ui-gateway/hosted-board/route";
+export { GET as diagnosticUiGatewayViewerReceiptGET } from "./api/diagnostics/ui-gateway/viewer-receipt/route";
 export {
   diagnosticUiGatewayBroadcasterId,
   diagnosticUiGatewayPrincipals,
   diagnosticUiGatewayQuestCycleId,
+  diagnosticUiGatewayRoomCode,
   diagnosticUiGatewaySessionId,
   getDiagnosticUiGateway,
   resetDiagnosticUiGateway,
