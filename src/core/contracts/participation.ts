@@ -153,6 +153,24 @@ export const twitchChatFallbackDeliverySchema = z
     }
   });
 
+export const twitchChatAcknowledgementDeliverySchema = z
+  .object({
+    status: twitchChatFallbackDeliveryStatusSchema,
+    messageText: z.string().trim().min(1).max(240),
+    deliveredAt: timestampSchema.nullable(),
+    retryable: z.boolean(),
+  })
+  .strict()
+  .superRefine((delivery, context) => {
+    if ((delivery.status === "delivered") !== (delivery.deliveredAt !== null)) {
+      context.addIssue({
+        code: "custom",
+        message: "Only delivered Twitch-chat acknowledgements may carry deliveredAt",
+        path: ["deliveredAt"],
+      });
+    }
+  });
+
 export const twitchChatVoteAcknowledgementStatusSchema = z.enum([
   "counted",
   "duplicate",
@@ -171,10 +189,23 @@ export const twitchChatVoteAcknowledgementSchema = z
   })
   .strict()
   .superRefine((acknowledgement, context) => {
-    if (acknowledgement.status === "counted" && acknowledgement.candidateId === null) {
+    if (
+      ["counted", "duplicate"].includes(acknowledgement.status) &&
+      acknowledgement.candidateId === null
+    ) {
       context.addIssue({
         code: "custom",
-        message: "A counted chat acknowledgement must name the accepted candidate",
+        message: "Counted and duplicate chat acknowledgements must name the accepted candidate",
+        path: ["candidateId"],
+      });
+    }
+    if (
+      ["rejected", "late", "not-delivered", "unavailable"].includes(acknowledgement.status) &&
+      acknowledgement.candidateId !== null
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Only counted or duplicate chat acknowledgements may name a candidate",
         path: ["candidateId"],
       });
     }
@@ -207,6 +238,9 @@ export type TwitchChatFallbackDeliveryStatus = z.infer<
   typeof twitchChatFallbackDeliveryStatusSchema
 >;
 export type TwitchChatFallbackDelivery = z.infer<typeof twitchChatFallbackDeliverySchema>;
+export type TwitchChatAcknowledgementDelivery = z.infer<
+  typeof twitchChatAcknowledgementDeliverySchema
+>;
 export type TwitchChatVoteAcknowledgementStatus = z.infer<
   typeof twitchChatVoteAcknowledgementStatusSchema
 >;

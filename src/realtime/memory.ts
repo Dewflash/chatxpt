@@ -39,6 +39,7 @@ import {
   type ViewerParticipationReceiptReader,
 } from "./types";
 import { sanitizeRoleViewsForBroadcast } from "./sanitization";
+import { derivePrivateViewerVoterKey } from "./private-viewer";
 
 interface MemoryLifecycleMetadata {
   lastActivityAt: number;
@@ -272,13 +273,11 @@ export class MemoryChatXptPersistence
       });
     }
 
+    const voterKey = derivePrivateViewerVoterKey(input);
     const vote = this.voteLedger.get(
-      this.voteKey(input.sessionId, input.questCycleId, input.voterKey),
+      this.voteKey(input.sessionId, input.questCycleId, voterKey),
     );
-    const completedWinner =
-      vote !== undefined &&
-      state.questCycle.result?.outcome === "succeeded" &&
-      state.questCycle.activeCandidateId === vote.candidateId;
+    const sessionPoints = this.sessionPointsFor(input.sessionId, voterKey);
     return viewerParticipationReceiptReadResultSchema.parse({
       status: "available",
       receipt: {
@@ -295,12 +294,12 @@ export class MemoryChatXptPersistence
           evidenceClass: state.questCycle.envelope.evidenceClass,
         },
         principalId: input.principalId,
-        voterKey: input.voterKey,
+        voterKey,
         identityKind: input.identityKind,
         sourceMode: vote?.sourceMode ?? null,
         acceptedCandidateId: vote?.candidateId ?? null,
         acceptedAt: vote?.acceptedAt ?? null,
-        sessionPoints: completedWinner ? (state.questCycle.result?.rewardPointsAwarded ?? 0) : 0,
+        sessionPoints,
         reconnectExpiresAt: grant.expiresAt,
       },
     });
@@ -599,6 +598,38 @@ export class MemoryChatXptPersistence
 
   private voteKey(sessionId: string, questCycleId: string, voterKey: string): string {
     return JSON.stringify([sessionId, questCycleId, voterKey]);
+  }
+
+  private sessionPointsFor(sessionId: string, voterKey: string): number {
+    const cycleResults = new Map<
+      string,
+      { activeCandidateId: string | null; points: number; outcome: string }
+    >();
+    for (const receipt of this.receipts.values()) {
+      const state = receipt.state;
+      if (state.session.sessionId !== sessionId) continue;
+      const questCycleId = state.questCycle.envelope.questCycleId;
+      const result = state.questCycle.result;
+      if (questCycleId === null || result === null) continue;
+      cycleResults.set(questCycleId, {
+        activeCandidateId: state.questCycle.activeCandidateId,
+        points: result.rewardPointsAwarded,
+        outcome: result.outcome,
+      });
+    }
+
+    let total = 0;
+    for (const vote of this.voteLedger.values()) {
+      if (vote.sessionId !== sessionId || vote.voterKey !== voterKey) continue;
+      const result = cycleResults.get(vote.questCycleId);
+      if (
+        result?.outcome === "succeeded" &&
+        result.activeCandidateId === vote.candidateId
+      ) {
+        total += result.points;
+      }
+    }
+    return total;
   }
 }
 

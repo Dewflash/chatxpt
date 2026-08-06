@@ -21,6 +21,7 @@ import {
   getDiagnosticUiGateway,
   resetDiagnosticUiGateway,
 } from "../../src/app";
+import { derivePrivateViewerVoterKey } from "../../src/realtime";
 
 function fixtureVote(commandId: string, expectedRevision: number) {
   return viewerVoteCommandSchema.parse({
@@ -34,7 +35,10 @@ function fixtureVote(commandId: string, expectedRevision: number) {
     actor: { kind: "anonymous", actorId: null },
     type: "viewer.vote",
     candidateId: "ui-gateway-candidate-1",
-    voterKey: "ui-gateway-voter-one",
+    voterKey: derivePrivateViewerVoterKey({
+      principalId: diagnosticUiGatewayPrincipals.viewer,
+      identityKind: "anonymous-token",
+    }),
     sourceMode: "hosted-board",
   });
 }
@@ -84,7 +88,12 @@ describe("Role 1 diagnostic UI gateway", () => {
       eventTypes: ["quest-cycle.vote-recorded"],
     });
     expect(result.views?.viewer.acceptedCandidateId).toBe("ui-gateway-candidate-1");
-    expect(result.views?.viewer.viewerId).toBe("ui-gateway-voter-one");
+    expect(result.views?.viewer.viewerId).toBe(
+      derivePrivateViewerVoterKey({
+        principalId: diagnosticUiGatewayPrincipals.viewer,
+        identityKind: "anonymous-token",
+      }),
+    );
     expect(result.views?.viewer.questCycle.voteTallies[0]?.votes).toBe(1);
   });
 
@@ -221,7 +230,7 @@ describe("Role 1 diagnostic UI gateway", () => {
 
     const receiptResponse = await diagnosticUiGatewayViewerReceiptGET(
       new Request(
-        `http://localhost/api/diagnostics/ui-gateway/viewer-receipt?principalId=${diagnosticUiGatewayPrincipals.viewer}&voterKey=ui-gateway-voter-one`,
+        `http://localhost/api/diagnostics/ui-gateway/viewer-receipt?principalId=${diagnosticUiGatewayPrincipals.viewer}`,
       ),
     );
     const receiptBody = await receiptResponse.json();

@@ -13,11 +13,16 @@ export {
   buildTwitchChatFinalResultText,
   buildTwitchChatPollOpenText,
   buildTwitchChatVoteAcknowledgement,
+  recordTwitchChatAcknowledgementDelivery,
   recordTwitchChatFallbackDelivery,
   type TwitchChatFallbackDeliveryInput,
   type TwitchChatVoteAcknowledgementInput,
   type TwitchChatVoteProcessingStatus,
 } from "./chat-fallback";
+export {
+  derivePrivateViewerVoterKey,
+  type PrivateViewerIdentityInput,
+} from "./private-viewer";
 export {
   MemoryChatXptPersistence,
   createMemoryPersistenceRuntime,
@@ -94,6 +99,7 @@ export type {
   StatePublisher,
   StreamerViewModel,
   TwitchChatFallbackAnnouncementKind,
+  TwitchChatAcknowledgementDelivery,
   TwitchChatFallbackDelivery,
   TwitchChatFallbackDeliveryStatus,
   TwitchChatVoteAcknowledgement,

@@ -30,6 +30,7 @@ import {
   buildTwitchChatPollOpenText,
   buildTwitchChatVoteAcknowledgement,
   MemoryChatXptPersistence,
+  recordTwitchChatAcknowledgementDelivery,
   recordTwitchChatFallbackDelivery,
   ServerCommandAuthorizer,
   SessionLifecycleService,
@@ -87,7 +88,6 @@ const viewerReceiptInputSchema = z
     sessionId: z.string().trim().min(1).max(128),
     questCycleId: z.string().trim().min(1).max(128),
     principalId: z.string().trim().min(1).max(128),
-    voterKey: z.string().trim().min(1).max(128),
     identityKind: z.enum(["authenticated", "anonymous-token"]),
   })
   .strict();
@@ -647,8 +647,7 @@ export class DiagnosticUiGateway {
         error: error("validation", "Twitch-chat acknowledgement request is invalid"),
       };
     }
-    const delivery = recordTwitchChatFallbackDelivery({
-      kind: "poll-open",
+    const delivery = recordTwitchChatAcknowledgementDelivery({
       status: parsed.data.deliveryStatus,
       messageText: "ChatXPT acknowledgement delivery probe.",
       deliveredAt: parsed.data.deliveredAt,

@@ -119,7 +119,6 @@ export interface ViewerParticipationReceiptReadInput {
   readonly principalId: string;
   readonly sessionId: string;
   readonly questCycleId: string;
-  readonly voterKey: string;
   readonly identityKind: PrivateViewerIdentityKind;
   readonly at: number;
 }

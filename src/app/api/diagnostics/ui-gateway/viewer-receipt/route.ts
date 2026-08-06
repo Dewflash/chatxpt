@@ -34,7 +34,6 @@ export async function GET(request: Request) {
     sessionId: url.searchParams.get("sessionId") ?? diagnosticUiGatewaySessionId,
     questCycleId: url.searchParams.get("questCycleId") ?? diagnosticUiGatewayQuestCycleId,
     principalId: url.searchParams.get("principalId"),
-    voterKey: url.searchParams.get("voterKey"),
     identityKind: url.searchParams.get("identityKind") ?? "anonymous-token",
   });
   return NextResponse.json(

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   ChatXptOrchestrator,
+  commandFingerprint,
+  streamerQuestCommandSchema,
   viewerVoteCommandSchema,
   type OrchestratorDependencies,
   type QuestCandidate,
@@ -22,7 +24,8 @@ import {
   buildTwitchChatPollOpenText,
   buildTwitchChatVoteAcknowledgement,
   createMemoryPersistenceRuntime,
-  recordTwitchChatFallbackDelivery,
+  derivePrivateViewerVoterKey,
+  recordTwitchChatAcknowledgementDelivery,
 } from "../../src/realtime";
 import { FIXTURE_NOW, persistenceState } from "./persistence-fixtures";
 
@@ -75,6 +78,7 @@ async function preparedRuntime() {
 function voteCommand(input: {
   readonly commandId: string;
   readonly expectedRevision: number;
+  readonly questCycleId?: string;
   readonly candidateIndex: 0 | 1 | 2;
   readonly voterKey: string;
   readonly actorId: string;
@@ -83,7 +87,7 @@ function voteCommand(input: {
   return viewerVoteCommandSchema.parse({
     contractVersion: "1.0.0",
     sessionId: contractFixtureSession.sessionId,
-    questCycleId: contractFixtureQuestCycle.envelope.questCycleId,
+    questCycleId: input.questCycleId ?? contractFixtureQuestCycle.envelope.questCycleId,
     commandId: input.commandId,
     correlationId: `correlation-${input.commandId}`,
     expectedRevision: input.expectedRevision,
@@ -94,6 +98,80 @@ function voteCommand(input: {
     voterKey: input.voterKey,
     sourceMode: input.sourceMode,
   });
+}
+
+function successfulStateAfterVote(input: {
+  readonly state: ReturnType<typeof persistenceState>;
+  readonly questCycleId: string;
+  readonly activeCandidateId: string;
+  readonly rewardPointsAwarded: number;
+}) {
+  return {
+    ...structuredClone(input.state),
+    session: {
+      ...input.state.session,
+      revision: input.state.session.revision + 1,
+    },
+    questCycle: {
+      ...structuredClone(input.state.questCycle),
+      envelope: {
+        ...input.state.questCycle.envelope,
+        questCycleId: input.questCycleId,
+        revision: input.state.session.revision + 1,
+        messageId: `result-${input.questCycleId}`,
+      },
+      status: "succeeded" as const,
+      options: contractFixtureCandidateBatch.candidates,
+      activeCandidateId: input.activeCandidateId,
+      result: {
+        outcome: "succeeded" as const,
+        occurredAt: FIXTURE_NOW + 1_500,
+        reason: "Fixture successful completion.",
+        rewardPointsAwarded: input.rewardPointsAwarded,
+      },
+    },
+  };
+}
+
+async function commitSuccessfulResult(input: {
+  readonly runtime: Awaited<ReturnType<typeof preparedRuntime>>;
+  readonly current: ReturnType<typeof persistenceState>;
+  readonly commandId: string;
+  readonly questCycleId: string;
+  readonly activeCandidateId: string;
+  readonly rewardPointsAwarded: number;
+}) {
+  const command = streamerQuestCommandSchema.parse({
+    contractVersion: "1.0.0",
+    sessionId: contractFixtureSession.sessionId,
+    questCycleId: input.questCycleId,
+    commandId: input.commandId,
+    correlationId: `correlation-${input.commandId}`,
+    expectedRevision: input.current.session.revision,
+    issuedAt: FIXTURE_NOW + 1_500,
+    actor: { kind: "broadcaster", actorId: contractFixtureSession.broadcasterId },
+    type: "streamer.quest",
+    action: "succeed",
+    candidateId: input.activeCandidateId,
+  });
+  const nextState = successfulStateAfterVote({
+    state: input.current,
+    questCycleId: input.questCycleId,
+    activeCandidateId: input.activeCandidateId,
+    rewardPointsAwarded: input.rewardPointsAwarded,
+  });
+  const result = await input.runtime.sessions.commit({
+    command,
+    commandFingerprint: commandFingerprint(command),
+    expectedRevision: input.current.session.revision,
+    nextState,
+    events: [],
+    acceptedAt: FIXTURE_NOW + 1_500,
+  });
+  if (result.status !== "committed") {
+    throw new Error(`Could not commit result: ${result.status}`);
+  }
+  return result.receipt.state;
 }
 
 describe("private viewer recovery and fallback delivery seams", () => {
@@ -114,13 +192,22 @@ describe("private viewer recovery and fallback delivery seams", () => {
       viewRole: "viewer",
       expiresAt: FIXTURE_NOW + 60_000,
     });
+    await runtime.accessGrants.grant({
+      principalId: "viewer-three-principal",
+      sessionId: contractFixtureSession.sessionId,
+      viewRole: "viewer",
+      expiresAt: FIXTURE_NOW + 60_000,
+    });
 
     const first = await orchestrator.execute(
       voteCommand({
         commandId: "viewer-one-vote",
         expectedRevision: 0,
         candidateIndex: 0,
-        voterKey: "viewer-one-voter-key",
+        voterKey: derivePrivateViewerVoterKey({
+          principalId: "viewer-one-principal",
+          identityKind: "authenticated",
+        }),
         actorId: "viewer-one",
         sourceMode: "twitch-extension",
       }),
@@ -130,7 +217,10 @@ describe("private viewer recovery and fallback delivery seams", () => {
         commandId: "viewer-two-vote",
         expectedRevision: 1,
         candidateIndex: 1,
-        voterKey: "viewer-two-voter-key",
+        voterKey: derivePrivateViewerVoterKey({
+          principalId: "viewer-two-principal",
+          identityKind: "authenticated",
+        }),
         actorId: "viewer-two",
         sourceMode: "hosted-board",
       }),
@@ -164,7 +254,6 @@ describe("private viewer recovery and fallback delivery seams", () => {
       principalId: "viewer-one-principal",
       sessionId: contractFixtureSession.sessionId,
       questCycleId: contractFixtureQuestCycle.envelope.questCycleId ?? "missing-cycle",
-      voterKey: "viewer-one-voter-key",
       identityKind: "authenticated",
       at: FIXTURE_NOW + 2_000,
     });
@@ -172,14 +261,25 @@ describe("private viewer recovery and fallback delivery seams", () => {
       principalId: "viewer-two-principal",
       sessionId: contractFixtureSession.sessionId,
       questCycleId: contractFixtureQuestCycle.envelope.questCycleId ?? "missing-cycle",
-      voterKey: "viewer-two-voter-key",
+      identityKind: "authenticated",
+      at: FIXTURE_NOW + 2_000,
+    });
+    const crossPrincipalReceipt = await runtime.viewerReceipts.readViewerParticipationReceipt({
+      principalId: "viewer-three-principal",
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: contractFixtureQuestCycle.envelope.questCycleId ?? "missing-cycle",
       identityKind: "authenticated",
       at: FIXTURE_NOW + 2_000,
     });
 
     expect(viewerOneReceipt.status).toBe("available");
     expect(viewerTwoReceipt.status).toBe("available");
-    if (viewerOneReceipt.status !== "available" || viewerTwoReceipt.status !== "available") return;
+    expect(crossPrincipalReceipt.status).toBe("available");
+    if (
+      viewerOneReceipt.status !== "available" ||
+      viewerTwoReceipt.status !== "available" ||
+      crossPrincipalReceipt.status !== "available"
+    ) return;
     expect(viewerOneReceipt.receipt.acceptedCandidateId).toBe(
       contractFixtureCandidateBatch.candidates[0].candidateId,
     );
@@ -188,6 +288,8 @@ describe("private viewer recovery and fallback delivery seams", () => {
       contractFixtureCandidateBatch.candidates[1].candidateId,
     );
     expect(viewerTwoReceipt.receipt.sourceMode).toBe("hosted-board");
+    expect(crossPrincipalReceipt.receipt.acceptedCandidateId).toBeNull();
+    expect(crossPrincipalReceipt.receipt.sourceMode).toBeNull();
   });
 
   it("keeps duplicate cross-surface votes attached to the first accepted choice", async () => {
@@ -207,7 +309,10 @@ describe("private viewer recovery and fallback delivery seams", () => {
         commandId: "same-viewer-first",
         expectedRevision: 0,
         candidateIndex: 0,
-        voterKey: "same-viewer-voter-key",
+        voterKey: derivePrivateViewerVoterKey({
+          principalId: "same-viewer-principal",
+          identityKind: "authenticated",
+        }),
         actorId: "same-viewer",
         sourceMode: "twitch-extension",
       }),
@@ -217,7 +322,10 @@ describe("private viewer recovery and fallback delivery seams", () => {
         commandId: "same-viewer-chat-duplicate",
         expectedRevision: 1,
         candidateIndex: 2,
-        voterKey: "same-viewer-voter-key",
+        voterKey: derivePrivateViewerVoterKey({
+          principalId: "same-viewer-principal",
+          identityKind: "authenticated",
+        }),
         actorId: "same-viewer",
         sourceMode: "twitch-chat",
       }),
@@ -232,7 +340,6 @@ describe("private viewer recovery and fallback delivery seams", () => {
       principalId: "same-viewer-principal",
       sessionId: contractFixtureSession.sessionId,
       questCycleId: contractFixtureQuestCycle.envelope.questCycleId ?? "missing-cycle",
-      voterKey: "same-viewer-voter-key",
       identityKind: "authenticated",
       at: FIXTURE_NOW + 2_000,
     });
@@ -243,6 +350,143 @@ describe("private viewer recovery and fallback delivery seams", () => {
       contractFixtureCandidateBatch.candidates[0].candidateId,
     );
     expect(receipt.receipt.sourceMode).toBe("twitch-extension");
+  });
+
+  it("restores accumulated session-scoped points across completed cycles", async () => {
+    const runtime = await preparedRuntime();
+    const voterKey = derivePrivateViewerVoterKey({
+      principalId: "points-viewer-principal",
+      identityKind: "authenticated",
+    });
+    await runtime.accessGrants.grant({
+      principalId: "points-viewer-principal",
+      sessionId: contractFixtureSession.sessionId,
+      viewRole: "viewer",
+      expiresAt: FIXTURE_NOW + 60_000,
+    });
+
+    const firstVote = voteCommand({
+      commandId: "points-viewer-first-vote",
+      expectedRevision: 0,
+      candidateIndex: 0,
+      voterKey,
+      actorId: "points-viewer",
+      sourceMode: "hosted-board",
+    });
+    const firstAfterVote = await runtime.sessions.commit({
+      command: firstVote,
+      commandFingerprint: commandFingerprint(firstVote),
+      expectedRevision: 0,
+      nextState: { ...persistenceState(), session: { ...persistenceState().session, revision: 1 }, questCycle: { ...persistenceState().questCycle, envelope: { ...persistenceState().questCycle.envelope, revision: 1 } } },
+      events: [],
+      acceptedAt: FIXTURE_NOW + 1_000,
+    });
+    if (firstAfterVote.status !== "committed") throw new Error("Could not commit first vote");
+    const firstResult = await commitSuccessfulResult({
+      runtime,
+      current: firstAfterVote.receipt.state,
+      commandId: "points-viewer-first-result",
+      questCycleId: contractFixtureQuestCycle.envelope.questCycleId ?? "missing-cycle",
+      activeCandidateId: contractFixtureCandidateBatch.candidates[0].candidateId,
+      rewardPointsAwarded: 100,
+    });
+
+    const secondCycleId = "fixture-cycle-two";
+    const secondVotingState = {
+      ...structuredClone(firstResult),
+      session: { ...firstResult.session, revision: firstResult.session.revision + 1 },
+      questCycle: {
+        ...structuredClone(firstResult.questCycle),
+        envelope: {
+          ...firstResult.questCycle.envelope,
+          questCycleId: secondCycleId,
+          revision: firstResult.session.revision + 1,
+          messageId: "cycle-two",
+        },
+        status: "voting" as const,
+        options: contractFixtureCandidateBatch.candidates,
+        activeCandidateId: null,
+        result: null,
+      },
+    };
+    const secondSetupCommand = streamerQuestCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: secondCycleId,
+      commandId: "points-viewer-second-cycle",
+      correlationId: "correlation-points-viewer-second-cycle",
+      expectedRevision: firstResult.session.revision,
+      issuedAt: FIXTURE_NOW + 2_000,
+      actor: { kind: "broadcaster", actorId: contractFixtureSession.broadcasterId },
+      type: "streamer.quest",
+      action: "approve",
+      candidateId: null,
+    });
+    const secondSetup = await runtime.sessions.commit({
+      command: secondSetupCommand,
+      commandFingerprint: commandFingerprint(secondSetupCommand),
+      expectedRevision: firstResult.session.revision,
+      nextState: secondVotingState,
+      events: [],
+      acceptedAt: FIXTURE_NOW + 2_000,
+    });
+    if (secondSetup.status !== "committed") throw new Error("Could not commit second cycle");
+
+    const secondVote = voteCommand({
+      commandId: "points-viewer-second-vote",
+      expectedRevision: secondSetup.receipt.state.session.revision,
+      questCycleId: secondCycleId,
+      candidateIndex: 1,
+      voterKey,
+      actorId: "points-viewer",
+      sourceMode: "twitch-chat",
+    });
+    const secondVoteState = {
+      ...structuredClone(secondSetup.receipt.state),
+      session: {
+        ...secondSetup.receipt.state.session,
+        revision: secondSetup.receipt.state.session.revision + 1,
+      },
+      questCycle: {
+        ...structuredClone(secondSetup.receipt.state.questCycle),
+        envelope: {
+          ...secondSetup.receipt.state.questCycle.envelope,
+          revision: secondSetup.receipt.state.session.revision + 1,
+        },
+      },
+    };
+    const secondAfterVote = await runtime.sessions.commit({
+      command: secondVote,
+      commandFingerprint: commandFingerprint(secondVote),
+      expectedRevision: secondSetup.receipt.state.session.revision,
+      nextState: secondVoteState,
+      events: [],
+      acceptedAt: FIXTURE_NOW + 2_500,
+    });
+    if (secondAfterVote.status !== "committed") throw new Error("Could not commit second vote");
+    await commitSuccessfulResult({
+      runtime,
+      current: secondAfterVote.receipt.state,
+      commandId: "points-viewer-second-result",
+      questCycleId: secondCycleId,
+      activeCandidateId: contractFixtureCandidateBatch.candidates[1].candidateId,
+      rewardPointsAwarded: 75,
+    });
+
+    const receipt = await runtime.viewerReceipts.readViewerParticipationReceipt({
+      principalId: "points-viewer-principal",
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: secondCycleId,
+      identityKind: "authenticated",
+      at: FIXTURE_NOW + 3_000,
+    });
+
+    expect(receipt.status).toBe("available");
+    if (receipt.status !== "available") return;
+    expect(receipt.receipt.acceptedCandidateId).toBe(
+      contractFixtureCandidateBatch.candidates[1].candidateId,
+    );
+    expect(receipt.receipt.sessionPoints).toBe(175);
   });
 
   it("resolves hosted-board room access and grants viewer reconnect reads", async () => {
@@ -292,10 +536,9 @@ describe("private viewer recovery and fallback delivery seams", () => {
     const pollText = buildTwitchChatPollOpenText(candidates);
     expect(pollText).toContain("Reply 1, 2, or 3");
 
-    const failedDelivery = recordTwitchChatFallbackDelivery({
-      kind: "poll-open",
+    const failedDelivery = recordTwitchChatAcknowledgementDelivery({
       status: "failed",
-      messageText: pollText,
+      messageText: "Could not acknowledge that vote.",
       deliveredAt: null,
       retryable: true,
     });
@@ -310,10 +553,9 @@ describe("private viewer recovery and fallback delivery seams", () => {
       deliveredAt: null,
     });
 
-    const delivered = recordTwitchChatFallbackDelivery({
-      kind: "poll-open",
+    const delivered = recordTwitchChatAcknowledgementDelivery({
       status: "delivered",
-      messageText: pollText,
+      messageText: "ChatXPT counted your vote.",
       deliveredAt: FIXTURE_NOW + 1_000,
       retryable: false,
     });
@@ -324,6 +566,17 @@ describe("private viewer recovery and fallback delivery seams", () => {
     });
     expect(counted).toMatchObject({
       status: "counted",
+      candidateId: contractFixtureCandidateBatch.candidates[0].candidateId,
+      deliveredAt: FIXTURE_NOW + 1_000,
+    });
+
+    const duplicate = buildTwitchChatVoteAcknowledgement({
+      delivery: delivered,
+      processingStatus: "duplicate",
+      candidateId: contractFixtureCandidateBatch.candidates[0].candidateId,
+    });
+    expect(duplicate).toMatchObject({
+      status: "duplicate",
       candidateId: contractFixtureCandidateBatch.candidates[0].candidateId,
       deliveredAt: FIXTURE_NOW + 1_000,
     });

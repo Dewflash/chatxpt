@@ -1,7 +1,9 @@
 import {
+  twitchChatAcknowledgementDeliverySchema,
   twitchChatFallbackDeliverySchema,
   twitchChatVoteAcknowledgementSchema,
   type QuestCandidate,
+  type TwitchChatAcknowledgementDelivery,
   type TwitchChatFallbackAnnouncementKind,
   type TwitchChatFallbackDelivery,
   type TwitchChatFallbackDeliveryStatus,
@@ -23,7 +25,7 @@ export interface TwitchChatFallbackDeliveryInput {
 }
 
 export interface TwitchChatVoteAcknowledgementInput {
-  readonly delivery: TwitchChatFallbackDelivery;
+  readonly delivery: TwitchChatAcknowledgementDelivery;
   readonly processingStatus: TwitchChatVoteProcessingStatus;
   readonly candidateId: string | null;
 }
@@ -58,6 +60,15 @@ export function recordTwitchChatFallbackDelivery(
   return twitchChatFallbackDeliverySchema.parse(input);
 }
 
+export function recordTwitchChatAcknowledgementDelivery(input: {
+  readonly messageText: string;
+  readonly status: TwitchChatFallbackDeliveryStatus;
+  readonly deliveredAt: number | null;
+  readonly retryable: boolean;
+}): TwitchChatAcknowledgementDelivery {
+  return twitchChatAcknowledgementDeliverySchema.parse(input);
+}
+
 export function buildTwitchChatVoteAcknowledgement(
   input: TwitchChatVoteAcknowledgementInput,
 ): TwitchChatVoteAcknowledgement {
@@ -78,7 +89,10 @@ export function buildTwitchChatVoteAcknowledgement(
   };
   return twitchChatVoteAcknowledgementSchema.parse({
     status: input.processingStatus,
-    candidateId: input.processingStatus === "counted" ? input.candidateId : null,
+    candidateId:
+      input.processingStatus === "counted" || input.processingStatus === "duplicate"
+        ? input.candidateId
+        : null,
     messageText: messages[input.processingStatus],
     deliveredAt: input.delivery.deliveredAt,
   });

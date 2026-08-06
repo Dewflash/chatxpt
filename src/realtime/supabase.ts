@@ -50,6 +50,7 @@ import {
   type ViewerParticipationReceiptReader,
 } from "./types";
 import { sanitizeRoleViewsForBroadcast } from "./sanitization";
+import { derivePrivateViewerVoterKey } from "./private-viewer";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -78,6 +79,10 @@ const privateAcceptedVoteRowSchema = z
       .passthrough(),
   })
   .passthrough();
+
+const privateAcceptedVoteWithCycleRowSchema = privateAcceptedVoteRowSchema.extend({
+  quest_cycle_id: z.string().min(1).max(128).nullable(),
+});
 
 const lifecycleCommitResultSchema = z.discriminatedUnion("status", [
   z
@@ -269,6 +274,30 @@ export class SupabaseChatXptDataApi {
       .maybeSingle();
     throwIfError(error);
     return data;
+  }
+
+  async loadPrivateAcceptedVotesForSession(
+    sessionId: string,
+    voterKey: string,
+  ): Promise<readonly unknown[]> {
+    const { data, error } = await this.client
+      .from("accepted_participation")
+      .select("quest_cycle_id, candidate_id, accepted_at, payload")
+      .eq("session_id", sessionId)
+      .eq("participation_type", "vote")
+      .eq("payload->>voterKey", voterKey);
+    throwIfError(error);
+    return data ?? [];
+  }
+
+  async loadReceiptStatesForSession(sessionId: string): Promise<readonly unknown[]> {
+    const { data, error } = await this.client
+      .from("command_receipts")
+      .select("receipt")
+      .eq("session_id", sessionId)
+      .order("committed_revision", { ascending: true });
+    throwIfError(error);
+    return (data ?? []).map((row) => rowJson(row, "receipt"));
   }
 
   async loadHostedSessionByRoomCode(roomCode: string): Promise<unknown | null> {
@@ -700,19 +729,17 @@ export class SupabaseViewerParticipationReceiptReader
       });
     }
 
+    const voterKey = derivePrivateViewerVoterKey(input);
     const voteRow = privateAcceptedVoteRowSchema
       .nullable()
       .parse(
         await this.api.loadPrivateAcceptedVote(
           input.sessionId,
           input.questCycleId,
-          input.voterKey,
+          voterKey,
         ),
       );
-    const completedWinner =
-      voteRow !== null &&
-      state.questCycle.result?.outcome === "succeeded" &&
-      state.questCycle.activeCandidateId === voteRow.candidate_id;
+    const sessionPoints = await this.sessionPointsFor(input.sessionId, voterKey);
 
     return viewerParticipationReceiptReadResultSchema.parse({
       status: "available",
@@ -730,15 +757,51 @@ export class SupabaseViewerParticipationReceiptReader
           evidenceClass: state.questCycle.envelope.evidenceClass,
         },
         principalId: input.principalId,
-        voterKey: input.voterKey,
+        voterKey,
         identityKind: input.identityKind,
         sourceMode: voteRow?.payload.sourceMode ?? null,
         acceptedCandidateId: voteRow?.candidate_id ?? null,
         acceptedAt: voteRow === null ? null : Date.parse(voteRow.accepted_at),
-        sessionPoints: completedWinner ? (state.questCycle.result?.rewardPointsAwarded ?? 0) : 0,
+        sessionPoints,
         reconnectExpiresAt: expiresAt,
       },
     });
+  }
+
+  private async sessionPointsFor(sessionId: string, voterKey: string): Promise<number> {
+    const [votes, receipts] = await Promise.all([
+      this.api.loadPrivateAcceptedVotesForSession(sessionId, voterKey),
+      this.api.loadReceiptStatesForSession(sessionId),
+    ]);
+    const parsedVotes = z.array(privateAcceptedVoteWithCycleRowSchema).parse(votes);
+    const cycleResults = new Map<
+      string,
+      { activeCandidateId: string | null; points: number; outcome: string }
+    >();
+    for (const rawReceipt of receipts) {
+      const receipt = acceptedCommandReceiptSchema.parse(rawReceipt);
+      if (receipt.state.session.sessionId !== sessionId) continue;
+      const questCycleId = receipt.state.questCycle.envelope.questCycleId;
+      const result = receipt.state.questCycle.result;
+      if (questCycleId === null || result === null) continue;
+      cycleResults.set(questCycleId, {
+        activeCandidateId: receipt.state.questCycle.activeCandidateId,
+        points: result.rewardPointsAwarded,
+        outcome: result.outcome,
+      });
+    }
+
+    return parsedVotes.reduce((total, vote) => {
+      if (vote.quest_cycle_id === null) return total;
+      const result = cycleResults.get(vote.quest_cycle_id);
+      if (
+        result?.outcome === "succeeded" &&
+        result.activeCandidateId === vote.candidate_id
+      ) {
+        return total + result.points;
+      }
+      return total;
+    }, 0);
   }
 }
 
