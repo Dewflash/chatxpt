@@ -597,6 +597,76 @@ describe("DefaultQuestEngine", () => {
     });
   });
 
+  it("does not activate a winner that fails the full close-time candidate gates", () => {
+    const options = role3FixtureCandidateBatch.candidates.map((candidate, index) =>
+      index === 0
+        ? {
+            ...candidate,
+            title: "Impossible Marathon",
+            instruction: "Complete a perfect objective chain for the next 900 seconds.",
+            durationSeconds: 900,
+            difficulty: "easy" as const,
+            confidence: 0.1,
+            sourceSignalIds: ["missing-signal"],
+            rationale: "A low-confidence unsupported fixture that should fail full validation.",
+          }
+        : candidate,
+    );
+    const result = decision(
+      new DefaultQuestEngine().decide(
+        voteCloseInput([5, 1, 0], { currentState: votingFixture(options) }),
+      ),
+    );
+
+    expect(result.nextState.status).toBe("cancelled");
+    const validationCodes = String(result.events[0]?.attributes.validationCodes);
+    expect(validationCodes).toContain("unsupported-evidence");
+    expect(validationCodes).toContain("low-confidence");
+    expect(validationCodes).toContain("duration-out-of-range");
+    expect(validationCodes).toContain("difficulty-mismatch");
+  });
+
+  it("accepts session-scoped close-time snapshots with null quest cycle IDs", () => {
+    const input = voteCloseInput([2, 1, 0]);
+    const gameplay = gameplaySnapshotSchema.parse({
+      envelope: {
+        ...role3FixtureIdleState.envelope,
+        messageId: "role-3-session-gameplay",
+        questCycleId: null,
+      },
+      capabilities: {
+        tier: "universal-visual",
+        gameId: null,
+        adapterId: null,
+        supportedSignals: ["activity-intensity"],
+      },
+      signals: [],
+    });
+    const audience = audienceSnapshotSchema.parse({
+      envelope: {
+        ...role3FixtureIdleState.envelope,
+        messageId: "role-3-session-audience",
+        questCycleId: null,
+      },
+      sampleSize: 2,
+      signals: [],
+    });
+
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        ...input,
+        voteCloseValidationContext: {
+          ...input.voteCloseValidationContext!,
+          gameplay,
+          audience,
+        },
+      }),
+    );
+
+    expect(result.nextState.status).toBe("active");
+    expect(result.nextState.activeCandidateId).toBe("role-3-candidate-1");
+  });
+
   it("does not activate after the session ends, while a missing audience remains non-blocking", () => {
     const endedInput = voteCloseInput([2, 1, 0]);
     const ended = decision(

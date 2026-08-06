@@ -61,8 +61,9 @@ export interface CandidateValidationContext {
 export interface VoteCloseCandidateValidationContext {
   readonly audience: AudienceSnapshot | null;
   readonly gameplay: GameplaySnapshot | null;
-  readonly otherCandidates: readonly QuestCandidate[];
   readonly profile: StreamerProfile;
+  readonly currentState: QuestCycleState;
+  readonly recentQuests: readonly RecentQuestSummary[];
   readonly now: number;
 }
 
@@ -392,17 +393,11 @@ export function validateCandidateAtVoteClose(
 ): CandidateValidationResult {
   const candidate = questCandidateSchema.safeParse(candidateInput);
   const profile = streamerProfileSchema.safeParse(context.profile);
-  const gameplay =
-    context.gameplay === null ? null : gameplaySnapshotSchema.safeParse(context.gameplay);
-  const audience =
-    context.audience === null ? null : audienceSnapshotSchema.safeParse(context.audience);
-  const otherCandidates = context.otherCandidates.map((option) => questCandidateSchema.safeParse(option));
+  const currentState = questCycleStateSchema.safeParse(context.currentState);
   if (
     !candidate.success ||
     !profile.success ||
-    gameplay?.success === false ||
-    audience?.success === false ||
-    otherCandidates.some((option) => !option.success) ||
+    !currentState.success ||
     !Number.isSafeInteger(context.now) ||
     context.now < 0
   ) {
@@ -413,115 +408,82 @@ export function validateCandidateAtVoteClose(
     };
   }
 
-  const issues = [...safetyAndBoundaryIssues(candidate.data, profile.data)];
-  const text = `${candidate.data.title} ${candidate.data.instruction} ${candidate.data.rationale}`;
-  const knownGameplaySignals =
-    gameplay === null
-      ? new Map<string, readonly string[]>()
-      : knownSignalIdsByKind(gameplay.data, context.now);
-  const knownEvidenceIds = freshKnownEvidenceIdsFromSnapshots(
-    gameplay === null ? null : gameplay.data,
-    audience === null ? null : audience.data,
-    context.now,
+  const envelope = {
+    ...currentState.data.envelope,
+    messageId: `${currentState.data.envelope.messageId}-vote-close-validation`,
+    source: "quest-engine" as const,
+  };
+  const gameplay = gameplaySnapshotSchema.safeParse(
+    context.gameplay === null
+      ? {
+          envelope,
+          capabilities: {
+            tier: "universal-visual",
+            gameId: null,
+            adapterId: null,
+            supportedSignals: [],
+          },
+          signals: [],
+        }
+      : {
+          ...context.gameplay,
+          envelope: {
+            ...context.gameplay.envelope,
+            questCycleId:
+              context.gameplay.envelope.questCycleId ?? currentState.data.envelope.questCycleId,
+          },
+        },
   );
-  const unsupportedIds = candidate.data.sourceSignalIds.filter(
-    (signalId) => !knownEvidenceIds.has(signalId),
+  const audience = audienceSnapshotSchema.safeParse(
+    context.audience === null
+      ? {
+          envelope,
+          sampleSize: 0,
+          signals: [],
+        }
+      : {
+          ...context.audience,
+          envelope: {
+            ...context.audience.envelope,
+            questCycleId:
+              context.audience.envelope.questCycleId ?? currentState.data.envelope.questCycleId,
+          },
+        },
   );
-  if (unsupportedIds.length > 0) {
-    issues.push(
-      issue(
-        "unsupported-evidence",
-        "reject",
-        "Winning candidate cites stale, unknown, low-confidence, or unsupported current evidence.",
-        unsupportedIds,
-      ),
-    );
-  }
-  for (const dependency of factDependencies) {
-    if (!dependency.pattern.test(text)) continue;
-    const supportingIds = dependency.kinds.flatMap((kind) => [
-      ...(knownGameplaySignals.get(kind) ?? []),
-    ]);
-    if (supportingIds.length === 0) {
-      issues.push(
-        issue(
-          "unknown-dependent",
-          "reject",
-          "Winning candidate is no longer supported by current known gameplay evidence.",
-          dependency.kinds,
-        ),
-      );
-    }
+  const intelligence = intelligenceSnapshotSchema.safeParse({
+    envelope,
+    gameplay: gameplay.success ? gameplay.data : null,
+    audience: audience.success ? audience.data : null,
+  });
+  if (!gameplay.success || !audience.success || !intelligence.success) {
+    return {
+      accepted: false,
+      candidate: candidate.data,
+      issues: [issue("malformed", "reject", "Vote-close intelligence context is invalid.")],
+    };
   }
 
-  if (candidate.data.confidence < MINIMUM_CANDIDATE_CONFIDENCE) {
-    issues.push(
-      issue(
-        "low-confidence",
-        "reject",
-        "Winning candidate confidence is below the deterministic acceptance threshold.",
-      ),
-    );
-  } else if (candidate.data.confidence < 0.65) {
-    issues.push(
-      issue(
-        "quality-warning",
-        "warning",
-        "Winning candidate confidence is acceptable but below the preferred level.",
-      ),
-    );
-  }
-  if (
-    candidate.data.durationSeconds < 15 ||
-    candidate.data.durationSeconds > PREFERRED_MAXIMUM_DURATION_SECONDS
-  ) {
-    issues.push(
-      issue(
-        "duration-out-of-range",
-        "reject",
-        "Winning candidate duration must be between 15 and 180 seconds for the MVP.",
-      ),
-    );
-  }
-  const difficultyRange = durationRangeByDifficulty[candidate.data.difficulty];
-  if (
-    candidate.data.durationSeconds < difficultyRange.minimum ||
-    candidate.data.durationSeconds > difficultyRange.maximum
-  ) {
-    issues.push(
-      issue(
-        "difficulty-mismatch",
-        "reject",
-        `${candidate.data.difficulty} candidates must last ${difficultyRange.minimum}-${difficultyRange.maximum} seconds.`,
-      ),
-    );
-  }
-  if (normalisedTokens(candidate.data.instruction).length > MAXIMUM_INSTRUCTION_WORDS) {
-    issues.push(
-      issue(
-        "unclear",
-        "reject",
-        "Winning candidate instruction is too long to understand under stream pressure.",
-      ),
-    );
-  }
-  const duplicate = otherCandidates
-    .flatMap((option) => (option.success ? [option.data] : []))
-    .find((option) => substantiallySimilar(candidate.data, option));
-  if (duplicate !== undefined) {
-    issues.push(
-      issue(
-        "duplicate",
-        "reject",
-        "Winning candidate is not meaningfully distinct from another voting option.",
-        [duplicate.candidateId],
-      ),
-    );
-  }
-
-  return issues.some(({ severity }) => severity === "reject")
-    ? { accepted: false, candidate: candidate.data, issues }
-    : { accepted: true, candidate: candidate.data, issues };
+  const validationState = questCycleStateSchema.parse({
+    ...currentState.data,
+    status: "idle",
+    activeCandidateId: null,
+    availableStreamerActions: [],
+    voteTallies: [],
+    startsAt: null,
+    endsAt: null,
+    progress: null,
+    result: null,
+  });
+  return new DefaultCandidateValidator().validate(candidate.data, {
+    intelligence: intelligence.data,
+    profile: profile.data,
+    currentState: validationState,
+    recentQuests: context.recentQuests,
+    acceptedCandidates: currentState.data.options.filter(
+      ({ candidateId }) => candidateId !== candidate.data.candidateId,
+    ),
+    now: context.now,
+  });
 }
 
 function freshKnownEvidenceIdsFromSnapshots(

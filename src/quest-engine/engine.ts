@@ -435,9 +435,8 @@ function transitionVoteClose(input: QuestEngineInput): QuestEngineResult {
     audience: audience === null ? null : audience.data,
     profile: profile.data,
     gameplay: gameplay === null ? null : gameplay.data,
-    otherCandidates: input.currentState.options.filter(
-      ({ candidateId }) => candidateId !== winner.candidateId,
-    ),
+    currentState: input.currentState,
+    recentQuests: [],
     now: input.now,
   });
   if (!winnerValidation.accepted) {
