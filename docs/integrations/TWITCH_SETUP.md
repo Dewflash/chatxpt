@@ -20,7 +20,7 @@ Config:      /twitch/config
 Live Config: /twitch/live-config
 ```
 
-Those Extension surface paths are registration targets only until Role 4/5 modules are mounted through Role 1-owned thin routes.
+Those Extension surface paths now resolve to safe Role 1 setup shells. They show readiness and limitations only until Role 4/5 modules are mounted through the same Role 1-owned thin routes.
 
 ## Environment Variables
 
@@ -49,12 +49,13 @@ Before claiming Twitch readiness:
 2. Confirm an unauthorised callback request returns safe JSON and no Twitch secrets.
 3. Confirm the Twitch app has the deployed callback URL configured.
 4. Confirm the Twitch Extension has the viewer, config, and live-config URLs configured.
-5. Run the focused setup tests locally:
+5. Confirm `/twitch/viewer`, `/twitch/config`, and `/twitch/live-config` return the setup shell before replacing them with role-owned UI modules.
+6. Run the focused setup tests locally:
 
 ```bash
-npm run test -- tests/integration/twitch-setup.test.ts
+npm run test -- tests/integration/twitch-setup.test.ts tests/integration/twitch-extension-routes.test.tsx
 ```
 
-6. Record real developer-console, Local Test, or Hosted Test evidence in `docs/evidence/manifest.json` before citing Twitch as live.
+7. Record real developer-console, Local Test, or Hosted Test evidence in `docs/evidence/manifest.json` before citing Twitch as live.
 
 This runbook does not prove Twitch OAuth, EventSub, chat delivery, or Extension runtime behaviour. Those require separate live test-channel evidence.
