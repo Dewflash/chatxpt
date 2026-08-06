@@ -77,8 +77,9 @@ function formatStatus(status: string): string {
 }
 
 function timeLeft(viewer: ViewerViewModel | null): string {
-  if (viewer?.questCycle.endsAt === null || viewer?.questCycle.endsAt === undefined) return "--";
-  const seconds = Math.max(0, Math.round((viewer.questCycle.endsAt - Date.now()) / 1_000));
+  const { endsAt, startsAt } = viewer?.questCycle ?? {};
+  if (endsAt === null || endsAt === undefined || startsAt === null || startsAt === undefined) return "--";
+  const seconds = Math.max(0, Math.round((endsAt - startsAt) / 1_000));
   return `${seconds}s`;
 }
 
