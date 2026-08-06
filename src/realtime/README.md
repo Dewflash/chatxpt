@@ -43,6 +43,17 @@ snapshot, discarding duplicate or older revisions.
 Local memory mode is a real development fallback, not evidence of shared-cloud
 or multi-browser Supabase execution. See `supabase/README.md` for that boundary.
 
+## Environment Health
+
+The server-only environment resolver also powers `/api/health`. The route
+reports deployment mode, persistence mode, safe service health for persistence,
+Twitch app, Twitch Extension, and OBS overlay setup, plus public Supabase
+realtime configuration when Supabase is fully configured. It never includes
+server-only Supabase, Twitch, or OBS setup secrets. A healthy local response can
+still show external services as unavailable; that means the credential-free
+fallback is active, not that live Twitch, OBS, Vercel, or Supabase evidence has
+been executed.
+
 ## Authoritative vote ledger
 
 All three MVP participation paths converge on the same private ledger. A vote

@@ -3,9 +3,13 @@ import "server-only";
 /** Server-only composition entrypoint. Never import this file from a client component. */
 export {
   publicRealtimeEnvironment,
+  resolveServerEnvironmentHealth,
   resolveServerPersistenceEnvironment,
+  statusForServerEnvironmentHealth,
   type MemoryPersistenceEnvironment,
   type MisconfiguredPersistenceEnvironment,
+  type PublicRealtimeConfiguration,
+  type ServerEnvironmentHealthReport,
   type ServerPersistenceEnvironment,
   type SupabasePersistenceEnvironment,
 } from "./environment";
