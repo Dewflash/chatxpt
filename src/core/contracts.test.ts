@@ -13,6 +13,7 @@ import {
   questCycleStateSchema,
   sessionHistorySnapshotSchema,
   serviceHealthSchema,
+  streamerReadinessViewSchema,
   signalObservationSchema,
   streamSessionSchema,
   streamerProfileSettingsCommandSchema,
@@ -32,6 +33,7 @@ import {
   contractFixtureSession,
   contractFixtureStreamerView,
   contractFixtureUiX04SessionHistory,
+  contractFixtureUiX01ReadinessCatalog,
   contractFixtureUiX06QuestStateCatalog,
   contractFixtureUiX06RoleViewCatalog,
   contractFixtureUiX09GenerationCatalog,
@@ -246,6 +248,41 @@ describe("candidate and lifecycle boundaries", () => {
     });
     expect(history.entries[0]).not.toHaveProperty("viewerId");
     expect(history.entries[0]).not.toHaveProperty("rawChat");
+  });
+
+  it("publishes UI-X01 setup readiness examples for Studio consumers", () => {
+    expect(Object.keys(contractFixtureUiX01ReadinessCatalog)).toEqual(
+      expect.arrayContaining([
+        "r4.setup.ready.v1",
+        "r4.setup.permission-denied.v1",
+        "r4.setup.misconfigured.v1",
+        "r4.setup.disconnected.v1",
+        "r4.setup.diagnostic.v1",
+      ]),
+    );
+
+    for (const readiness of Object.values(contractFixtureUiX01ReadinessCatalog)) {
+      expect(streamerReadinessViewSchema.safeParse(readiness).success).toBe(true);
+      expect(readiness.evidenceClass).toBe("fixture");
+      expect(readiness.liveInputsUsed).toBe(false);
+      expect(readiness.services.map(({ service }) => service).sort()).toEqual([
+        "intelligence",
+        "obs-capture",
+        "realtime",
+        "session",
+        "twitch",
+      ]);
+    }
+
+    expect(contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"].ready).toBe(true);
+    expect(
+      contractFixtureUiX01ReadinessCatalog["r4.setup.permission-denied.v1"].services.find(
+        (service) => service.service === "obs-capture",
+      )?.health.status,
+    ).toBe("permission-denied");
+    expect(
+      contractFixtureUiX01ReadinessCatalog["r4.setup.misconfigured.v1"].recommendedAction,
+    ).toBe("connect-twitch");
   });
 });
 

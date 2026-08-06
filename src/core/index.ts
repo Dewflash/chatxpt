@@ -4,6 +4,7 @@ export {
   contractFixtureUiX06QuestStateCatalog,
   contractFixtureUiX06RoleViewCatalog,
   contractFixtureUiX04SessionHistory,
+  contractFixtureUiX01ReadinessCatalog,
   contractFixtureUiX09GenerationCatalog,
   contractFixtureUiX09IntelligenceCatalog,
 } from "./testing";

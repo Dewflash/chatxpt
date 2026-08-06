@@ -12,6 +12,7 @@ import {
   streamerProfileSchema,
   streamerQuestCommandSchema,
   systemIntelligenceCommandSchema,
+  contractFixtureUiX01ReadinessCatalog,
   contractFixtureUiX04SessionHistory,
   contractFixtureUiX06QuestStateCatalog,
   contractFixtureUiX06RoleViewCatalog,
@@ -76,6 +77,7 @@ export const diagnosticUiGatewayQuestCycleId = QUEST_CYCLE_ID;
 export const diagnosticUiGatewayBroadcasterId = BROADCASTER_ID;
 export const diagnosticUiGatewayRoomCode = ROOM_CODE;
 export const diagnosticUiGatewayFixtureCatalog = {
+  readiness: contractFixtureUiX01ReadinessCatalog,
   sessionHistory: contractFixtureUiX04SessionHistory,
   questStates: contractFixtureUiX06QuestStateCatalog,
   roleViews: contractFixtureUiX06RoleViewCatalog,

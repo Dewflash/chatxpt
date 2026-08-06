@@ -67,6 +67,9 @@ describe("diagnostic UI harness client", () => {
     expect(screen.getByText("Vote Window")).toBeInTheDocument();
     expect(screen.getByText("Hold Your Ground")).toBeInTheDocument();
     expect(screen.getByText("30s")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Setup Readiness" })).toBeInTheDocument();
+    expect(screen.getByText(/r4\.setup\.permission-denied\.v1/)).toBeInTheDocument();
+    expect(screen.getByText(/r4\.setup\.misconfigured\.v1/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Intelligence Examples" })).toBeInTheDocument();
     expect(screen.getByText(/r4\.intelligence\.capture-denied\.v1/)).toBeInTheDocument();
     expect(screen.getByText(/r4\.generation\.algorithmic\.v1/)).toBeInTheDocument();

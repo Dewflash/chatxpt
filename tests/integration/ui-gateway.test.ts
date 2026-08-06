@@ -93,6 +93,18 @@ describe("Role 1 diagnostic UI gateway", () => {
         "r4.quest.cooldown.v1",
       ]),
     );
+    expect(Object.keys(result.fixtureCatalog.readiness)).toEqual(
+      expect.arrayContaining([
+        "r4.setup.ready.v1",
+        "r4.setup.permission-denied.v1",
+        "r4.setup.misconfigured.v1",
+        "r4.setup.disconnected.v1",
+        "r4.setup.diagnostic.v1",
+      ]),
+    );
+    expect(result.fixtureCatalog.readiness["r4.setup.permission-denied.v1"].services.find(
+      (service: { service: string }) => service.service === "obs-capture",
+    )?.health.status).toBe("permission-denied");
     expect(result.fixtureCatalog.roleViews["r5.quest.succeeded-reward.v1"].viewer.sessionPoints).toBe(100);
     expect(result.fixtureCatalog.sessionHistory.privacy).toMatchObject({
       rawChatHistoryRetained: false,

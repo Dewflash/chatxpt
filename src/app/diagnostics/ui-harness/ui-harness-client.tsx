@@ -31,6 +31,21 @@ interface HarnessSnapshots {
 }
 
 interface UiX09FixtureCatalog {
+  readonly readiness: Record<
+    string,
+    {
+      readonly ready: boolean;
+      readonly status: string;
+      readonly label: string;
+      readonly blockerCodes: readonly string[];
+      readonly recommendedAction: string | null;
+      readonly services: readonly {
+        readonly service: string;
+        readonly configured: boolean;
+        readonly health: { readonly status: string };
+      }[];
+    }
+  >;
   readonly sessionHistory: {
     readonly summary: {
       readonly totalQuestCycles: number;
@@ -299,6 +314,7 @@ export function DiagnosticUiHarnessClient({
   const intelligenceExamples = fixtureCatalog === null ? [] : Object.entries(fixtureCatalog.intelligence);
   const generationExamples = fixtureCatalog === null ? [] : Object.entries(fixtureCatalog.generation);
   const questExamples = fixtureCatalog === null ? [] : Object.entries(fixtureCatalog.questStates);
+  const readinessExamples = fixtureCatalog === null ? [] : Object.entries(fixtureCatalog.readiness);
   const history = fixtureCatalog?.sessionHistory ?? null;
 
   return (
@@ -382,6 +398,20 @@ export function DiagnosticUiHarnessClient({
                 </article>
               ))}
             </div>
+            <section className="diagnostic-fixture-catalog" aria-label="Setup readiness fixture examples">
+              <h3>Setup Readiness</h3>
+              <div>
+                {readinessExamples.map(([fixtureId, fixture]) => {
+                  const blockers = fixture.blockerCodes.length === 0 ? "no blockers" : fixture.blockerCodes.join(", ");
+                  const action = fixture.recommendedAction === null ? "no action" : fixture.recommendedAction;
+                  return (
+                    <span key={fixtureId}>
+                      {fixtureId}: {formatStatus(fixture.status)} / {fixture.ready ? "ready" : blockers} / {formatStatus(action)}
+                    </span>
+                  );
+                })}
+              </div>
+            </section>
             <section className="diagnostic-fixture-catalog" aria-label="Intelligence fixture examples">
               <h3>Intelligence Examples</h3>
               <div>
