@@ -12,3 +12,16 @@ export type {
   GameplayFrameObservation,
   PlatformEvent,
 } from "../core";
+export {
+  FixedWindowTwitchChatRateLimiter,
+  deliverTwitchChatFallbackAnnouncement,
+  deliverTwitchChatVoteAcknowledgement,
+  type DeliveredTwitchChatVoteAcknowledgement,
+  type DeliverTwitchChatFallbackAnnouncementInput,
+  type DeliverTwitchChatVoteAcknowledgementInput,
+  type TwitchChatOutboundAttempt,
+  type TwitchChatOutboundMessage,
+  type TwitchChatOutboundSender,
+  type TwitchChatRateLimitDecision,
+  type TwitchChatRateLimiter,
+} from "./twitch/chat-delivery";
