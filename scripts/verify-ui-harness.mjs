@@ -89,7 +89,7 @@ try {
     path: join(screenshotDirectory, "desktop-viewer-vote-accepted.png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Overlay" }).click();
+  await page.getByRole("button", { name: "Overlay", exact: true }).click();
   await page.getByRole("heading", { name: "Hold Your Ground" }).waitFor();
   await page.screenshot({ path: overlayScreenshotPath, fullPage: true });
   if (primaryScreenshotPath !== overlayScreenshotPath) {

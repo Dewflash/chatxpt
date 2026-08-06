@@ -15,6 +15,46 @@ import {
 } from "../../src/app";
 
 const endpoint = "http://localhost/api/diagnostics/ui-gateway";
+const healthEndpoint = "http://localhost/api/health";
+
+const healthReport = {
+  ok: true,
+  checkedAt: 1_786_200_000_000,
+  deployment: "local",
+  persistenceMode: "memory",
+  services: [
+    {
+      service: "persistence",
+      status: "ready",
+      message: "Credential-free in-memory persistence is active for local development",
+      retryable: false,
+    },
+    {
+      service: "twitch-app",
+      status: "unavailable",
+      message: "Twitch application credentials are not configured",
+      retryable: false,
+    },
+    {
+      service: "twitch-extension",
+      status: "unavailable",
+      message: "Twitch Extension credentials are not configured",
+      retryable: false,
+    },
+    {
+      service: "obs-overlay",
+      status: "unavailable",
+      message: "OBS overlay setup key is not configured",
+      retryable: false,
+    },
+  ],
+  publicRealtime: null,
+  limitations: [
+    "Health reports configuration only; it does not prove a live Supabase realtime round trip.",
+    "Unavailable Twitch or OBS services require Role 1-owned credentials and setup before live evidence.",
+    "No server secrets are included in this response.",
+  ],
+} as const;
 
 function urlRole(input: RequestInfo | URL): "streamer" | "viewer" | "overlay" {
   const url = new URL(String(input));
@@ -38,6 +78,10 @@ describe("diagnostic UI harness client", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(String(input));
+        if (url.pathname === "/api/health") {
+          return Response.json(healthReport);
+        }
         if (init?.method === "POST") {
           const body = JSON.parse(String(init.body)) as { command: unknown };
           return Response.json(await getDiagnosticUiGateway().executeCommand(body.command));
@@ -55,6 +99,7 @@ describe("diagnostic UI harness client", () => {
       <DiagnosticUiHarnessClient
         contractVersion="1.0.0"
         endpoint={endpoint}
+        healthEndpoint={healthEndpoint}
         principals={diagnosticUiGatewayPrincipals}
         questCycleId={diagnosticUiGatewayQuestCycleId}
         sessionId={diagnosticUiGatewaySessionId}
@@ -63,6 +108,14 @@ describe("diagnostic UI harness client", () => {
 
     expect(await screen.findByText("Fixture revision 3")).toBeInTheDocument();
     expect(screen.getByText("FIXTURE / NOT LIVE EVIDENCE")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Environment health" })).toBeInTheDocument();
+    expect(screen.getByText("Environment Health")).toBeInTheDocument();
+    expect(screen.getByText("Ready")).toBeInTheDocument();
+    expect(screen.getByText("local")).toBeInTheDocument();
+    expect(screen.getByText("memory")).toBeInTheDocument();
+    expect(screen.getByText("persistence: ready")).toBeInTheDocument();
+    expect(screen.getByText("twitch-app: unavailable")).toBeInTheDocument();
+    expect(screen.getByText(/does not prove a live Supabase realtime round trip/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Vote In Progress" })).toBeInTheDocument();
     expect(screen.getByText("Vote Window")).toBeInTheDocument();
     expect(screen.getByText("Hold Your Ground")).toBeInTheDocument();

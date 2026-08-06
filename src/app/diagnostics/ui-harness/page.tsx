@@ -18,6 +18,7 @@ export default function DiagnosticUiHarnessPage() {
     <DiagnosticUiHarnessClient
       contractVersion="1.0.0"
       endpoint="/api/diagnostics/ui-gateway"
+      healthEndpoint="/api/health"
       principals={diagnosticUiGatewayPrincipals}
       questCycleId={diagnosticUiGatewayQuestCycleId}
       sessionId={diagnosticUiGatewaySessionId}

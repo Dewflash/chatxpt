@@ -115,9 +115,20 @@ input[type="range"] { accent-color: var(--violet); padding: 7px 0; background: t
 .diagnostic-sidebar { padding: 20px; }
 .diagnostic-sidebar strong { display: block; margin-bottom: 16px; font: 600 20px "Space Grotesk", sans-serif; }
 .diagnostic-sidebar dl { display: grid; gap: 10px; margin: 0; }
-.diagnostic-sidebar div { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.07); }
+.diagnostic-sidebar > dl > div, .diagnostic-health dl > div { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.07); }
 .diagnostic-sidebar dt { color: var(--muted); font-size: 12px; }
 .diagnostic-sidebar dd { margin: 0; font-weight: 800; text-transform: capitalize; }
+.diagnostic-health { margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.08); }
+.diagnostic-health > strong { display: inline-flex; min-height: 28px; align-items: center; margin: 0 0 12px; padding: 0 9px; border-radius: 8px; color: #0c0912; background: var(--muted); font: 800 12px "DM Sans", sans-serif; text-transform: uppercase; letter-spacing: .08em; }
+.diagnostic-health > strong[data-state="ready"] { background: var(--lime); }
+.diagnostic-health > strong[data-state="error"] { color: white; background: var(--coral); }
+.diagnostic-health > span { display: block; margin-bottom: 10px; color: var(--coral); font-size: 12px; line-height: 1.4; }
+.diagnostic-health dl { margin-bottom: 12px; }
+.diagnostic-health-services { display: grid; gap: 7px; }
+.diagnostic-health-services span { min-height: 30px; display: flex; align-items: center; padding: 6px 8px; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; color: #d6d0e4; background: rgba(255,255,255,.025); font-size: 11px; line-height: 1.35; text-transform: capitalize; overflow-wrap: anywhere; }
+.diagnostic-health-services span[data-state="ready"] { border-color: rgba(215,255,82,.28); color: var(--lime); background: rgba(215,255,82,.06); }
+.diagnostic-health-services span[data-state="misconfigured"] { border-color: rgba(255,111,97,.28); color: var(--coral); background: rgba(255,111,97,.06); }
+.diagnostic-health ul { margin: 12px 0 0; padding-left: 16px; color: var(--muted); font-size: 11px; line-height: 1.45; }
 .diagnostic-main { min-height: 430px; padding: 22px; }
 .diagnostic-main h2 { font-size: 30px; }
 .diagnostic-metrics, .diagnostic-action-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }

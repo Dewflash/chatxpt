@@ -19,6 +19,7 @@ interface HarnessPrincipals {
 interface HarnessProps {
   readonly contractVersion: "1.0.0";
   readonly endpoint: string;
+  readonly healthEndpoint?: string;
   readonly principals: HarnessPrincipals;
   readonly questCycleId: string;
   readonly sessionId: string;
@@ -131,6 +132,21 @@ interface CommandResponse {
   readonly error?: HarnessError;
 }
 
+interface EnvironmentHealthReport {
+  readonly ok: boolean;
+  readonly checkedAt: number;
+  readonly deployment: "local" | "preview" | "production" | "invalid";
+  readonly persistenceMode: "memory" | "supabase" | "misconfigured";
+  readonly services: readonly {
+    readonly service: string;
+    readonly status: string;
+    readonly message: string;
+    readonly retryable: boolean;
+  }[];
+  readonly publicRealtime: { readonly url: string; readonly publishableKey: string } | null;
+  readonly limitations: readonly string[];
+}
+
 const surfaceLabels = {
   studio: "Studio",
   live: "Live Config",
@@ -163,6 +179,7 @@ function voteSharePercent(votes: number, totalVotes: number): number {
 export function DiagnosticUiHarnessClient({
   contractVersion,
   endpoint,
+  healthEndpoint = "/api/health",
   principals,
   questCycleId,
   sessionId,
@@ -176,6 +193,8 @@ export function DiagnosticUiHarnessClient({
   const [fixtureCatalog, setFixtureCatalog] = useState<UiX09FixtureCatalog | null>(null);
   const [status, setStatus] = useState("Loading fixture state");
   const [error, setError] = useState<HarnessError | null>(null);
+  const [environmentHealth, setEnvironmentHealth] = useState<EnvironmentHealthReport | null>(null);
+  const [healthError, setHealthError] = useState<HarnessError | null>(null);
   const [acceptedChoice, setAcceptedChoice] = useState<string | null>(null);
   const [pendingCandidateId, setPendingCandidateId] = useState<string | null>(null);
   const [pendingSettings, setPendingSettings] = useState(false);
@@ -198,14 +217,31 @@ export function DiagnosticUiHarnessClient({
     [endpoint, sessionId],
   );
 
+  const readEnvironmentHealth = useCallback(async (): Promise<EnvironmentHealthReport> => {
+    const response = await fetch(healthEndpoint, { cache: "no-store" });
+    return readJson<EnvironmentHealthReport>(response);
+  }, [healthEndpoint]);
+
   const refresh = useCallback(async () => {
     setError(null);
+    setHealthError(null);
     try {
-      const [streamerResult, viewerResult, overlayResult] = await Promise.all([
+      const healthPromise = readEnvironmentHealth().then(
+        (value) => ({ ok: true as const, value }),
+        () => ({ ok: false as const }),
+      );
+      const [streamerResult, viewerResult, overlayResult, healthResult] = await Promise.all([
         readSnapshot("streamer", principals.streamer),
         readSnapshot("viewer", principals.viewer),
         readSnapshot("overlay", principals.overlay),
+        healthPromise,
       ]);
+      if (healthResult.ok) {
+        setEnvironmentHealth(healthResult.value);
+      } else {
+        setEnvironmentHealth(null);
+        setHealthError({ code: "health-unavailable", message: "Could not load environment health" });
+      }
       const { snapshot: streamer } = streamerResult;
       const { snapshot: viewer } = viewerResult;
       const { snapshot: overlay } = overlayResult;
@@ -213,14 +249,18 @@ export function DiagnosticUiHarnessClient({
         throw { code: "internal", message: "Diagnostic gateway returned an empty snapshot" };
       }
       setSnapshots({ streamer, viewer, overlay });
-      setFixtureCatalog(streamerResult.fixtureCatalog ?? viewerResult.fixtureCatalog ?? overlayResult.fixtureCatalog);
+      setFixtureCatalog(
+        streamerResult.fixtureCatalog ??
+        viewerResult.fixtureCatalog ??
+        overlayResult.fixtureCatalog,
+      );
       setStatus(`Fixture revision ${viewer.envelope.revision}`);
     } catch (caught) {
       const next = caught as HarnessError;
       setError(next);
       setStatus("Fixture unavailable");
     }
-  }, [principals.overlay, principals.streamer, principals.viewer, readSnapshot]);
+  }, [principals.overlay, principals.streamer, principals.viewer, readEnvironmentHealth, readSnapshot]);
 
   useEffect(() => {
     void Promise.resolve().then(refresh);
@@ -316,6 +356,7 @@ export function DiagnosticUiHarnessClient({
   const questExamples = fixtureCatalog === null ? [] : Object.entries(fixtureCatalog.questStates);
   const readinessExamples = fixtureCatalog === null ? [] : Object.entries(fixtureCatalog.readiness);
   const history = fixtureCatalog?.sessionHistory ?? null;
+  const healthState = environmentHealth === null ? "loading" : environmentHealth.ok ? "ready" : "error";
 
   return (
     <main className="diagnostic-shell">
@@ -375,6 +416,43 @@ export function DiagnosticUiHarnessClient({
               <dd>{streamer?.profile.experience.intensity.toFixed(2) ?? "--"}</dd>
             </div>
           </dl>
+          <section className="diagnostic-health" aria-label="Environment health">
+            <p className="diagnostic-kicker">Environment Health</p>
+            <strong data-state={healthState}>
+              {environmentHealth === null ? "Checking" : environmentHealth.ok ? "Ready" : "Needs Setup"}
+            </strong>
+            {healthError === null ? null : <span>{healthError.code}: {healthError.message}</span>}
+            {environmentHealth === null ? null : (
+              <>
+                <dl>
+                  <div>
+                    <dt>Deployment</dt>
+                    <dd>{formatStatus(environmentHealth.deployment)}</dd>
+                  </div>
+                  <div>
+                    <dt>Persistence</dt>
+                    <dd>{formatStatus(environmentHealth.persistenceMode)}</dd>
+                  </div>
+                  <div>
+                    <dt>Realtime</dt>
+                    <dd>{environmentHealth.publicRealtime === null ? "not configured" : "configured"}</dd>
+                  </div>
+                </dl>
+                <div className="diagnostic-health-services">
+                  {environmentHealth.services.map((service) => (
+                    <span data-state={service.status} key={service.service} title={service.message}>
+                      {service.service}: {formatStatus(service.status)}
+                    </span>
+                  ))}
+                </div>
+                <ul>
+                  {environmentHealth.limitations.map((limitation) => (
+                    <li key={limitation}>{limitation}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
         </aside>
 
         {activeSurface === "studio" ? (
