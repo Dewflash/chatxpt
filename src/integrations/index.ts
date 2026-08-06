@@ -26,6 +26,7 @@ export {
   type TwitchChatRateLimiter,
 } from "./twitch/chat-delivery";
 export {
+  TwitchChatVerifiedVoteActorStore,
   normaliseTwitchChatVote,
   twitchChatActorId,
   twitchChatVoterKey,

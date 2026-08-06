@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import {
+  commandFingerprint,
   viewerVoteCommandSchema,
   type CommandEnvelope,
   type ParticipationSourceMode,
@@ -40,6 +41,11 @@ export type TwitchChatVoteNormalisationResult =
       readonly status: "ignored";
       readonly reason: "not-a-vote" | "missing-user-id" | "invalid-input";
     };
+
+interface StoredVerifiedVoteActor {
+  readonly fingerprint: string;
+  readonly verifiedActor: TwitchChatVerifiedVoteActor;
+}
 
 function digest(value: string): string {
   return createHash("sha256").update(value).digest("hex").slice(0, 24);
@@ -118,4 +124,25 @@ export function normaliseTwitchChatVote(
       participationModes: ["twitch-chat"],
     },
   };
+}
+
+export class TwitchChatVerifiedVoteActorStore {
+  private readonly actorsByCommandId = new Map<string, StoredVerifiedVoteActor>();
+
+  remember(result: TwitchChatVoteNormalisationResult): boolean {
+    if (result.status !== "accepted") return false;
+    this.actorsByCommandId.set(result.command.commandId, {
+      fingerprint: commandFingerprint(result.command),
+      verifiedActor: result.verifiedActor,
+    });
+    return true;
+  }
+
+  resolve(command: CommandEnvelope): TwitchChatVerifiedVoteActor | null {
+    const stored = this.actorsByCommandId.get(command.commandId);
+    if (stored === undefined || stored.fingerprint !== commandFingerprint(command)) {
+      return null;
+    }
+    return stored.verifiedActor;
+  }
 }

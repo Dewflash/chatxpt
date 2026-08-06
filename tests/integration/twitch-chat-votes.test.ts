@@ -1,15 +1,28 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  TwitchChatVerifiedVoteActorStore,
   normaliseTwitchChatVote,
   twitchChatActorId,
   twitchChatVoterKey,
 } from "../../src/integrations";
 import {
+  bindPersistenceRuntime,
+  createMemoryPersistenceRuntime,
   ServerCommandAuthorizer,
+  SessionLifecycleService,
   StaticVerifiedActorResolver,
 } from "../../src/realtime";
 import {
+  ChatXptOrchestrator,
+  type OrchestratorDependencies,
+} from "../../src/core";
+import {
+  CanonicalFixtureViewProjector,
+  FixedFixtureClock,
+  FixtureProjectionContextResolver,
+  ScriptedFixtureQuestEngine,
+  SequenceFixtureMessageIds,
   contractFixtureCandidateBatch,
   contractFixtureQuestCycle,
   contractFixtureSession,
@@ -38,6 +51,73 @@ function liveState() {
       },
     },
   };
+}
+
+function logicDependencies(
+  actorStore: TwitchChatVerifiedVoteActorStore,
+): Omit<OrchestratorDependencies, "repository" | "candidateBatches" | "acceptedVotes" | "publisher"> {
+  return {
+    authorizer: new ServerCommandAuthorizer(actorStore, () => FIXTURE_NOW + 2_000),
+    engine: new ScriptedFixtureQuestEngine((input) => ({
+      ok: true,
+      decision: {
+        nextState: structuredClone(input.currentState),
+        events: [
+          {
+            eventType: "fixture.twitch-chat-vote",
+            attributes: { commandType: input.command.type },
+          },
+        ],
+      },
+    })),
+    projectionContext: new FixtureProjectionContextResolver({
+      participationMode: "twitch-chat",
+      viewerId: null,
+      sessionPoints: 0,
+      acceptedCandidateId: null,
+      connection: {
+        service: "twitch-chat-votes",
+        status: "ready",
+        checkedAt: FIXTURE_NOW + 2_000,
+        retryable: false,
+      },
+    }),
+    projector: new CanonicalFixtureViewProjector(),
+    clock: new FixedFixtureClock(FIXTURE_NOW + 2_000),
+    ids: new SequenceFixtureMessageIds(),
+  };
+}
+
+async function preparedRuntime() {
+  const runtime = createMemoryPersistenceRuntime();
+  const initialState = persistenceState();
+  const lifecycle = new SessionLifecycleService(
+    runtime.lifecycle,
+    { next: () => "CHATXPT2" },
+    { next: (action) => `twitch-chat-${action}` },
+  );
+  const created = await lifecycle.create(
+    {
+      ...initialState,
+      session: {
+        ...initialState.session,
+        capabilities: {
+          ...initialState.session.capabilities,
+          twitchChatVoting: true,
+        },
+      },
+    },
+    FIXTURE_NOW,
+  );
+  if (!created.ok) throw new Error(created.error.message);
+  const started = await lifecycle.start(
+    contractFixtureSession.sessionId,
+    0,
+    FIXTURE_NOW + 500,
+    "twitch-chat-start",
+  );
+  if (!started.ok) throw new Error(started.error.message);
+  return runtime;
 }
 
 describe("Twitch chat vote normalisation", () => {
@@ -87,6 +167,77 @@ describe("Twitch chat vote normalisation", () => {
       () => FIXTURE_NOW + 2_000,
     );
     await expect(authorizer.authorize(result.command, liveState())).resolves.toBeNull();
+  });
+
+  it("commits a verified chat vote through the authoritative orchestrator path", async () => {
+    const actorStore = new TwitchChatVerifiedVoteActorStore();
+    const runtime = await preparedRuntime();
+    const current = await runtime.sessions.load(contractFixtureSession.sessionId);
+    if (current === null) throw new Error("Expected fixture session to be live");
+    const orchestrator = new ChatXptOrchestrator(
+      bindPersistenceRuntime(logicDependencies(actorStore), runtime),
+    );
+    const normalised = normaliseTwitchChatVote({
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId,
+      expectedRevision: current.session.revision,
+      candidateIds,
+      twitchMessageId: "twitch-message-commit",
+      twitchChannelId: "twitch-channel-1",
+      twitchUserId: "twitch-user-commit",
+      text: "3",
+      receivedAt: FIXTURE_NOW + 1_000,
+    });
+    expect(actorStore.remember(normalised)).toBe(true);
+    if (normalised.status !== "accepted") return;
+
+    const committed = await orchestrator.execute(normalised.command);
+    expect(committed.ok).toBe(true);
+    if (!committed.ok) return;
+    expect(committed.outcome).toBe("committed");
+    expect(committed.receipt.command.type).toBe("viewer.vote");
+    if (committed.receipt.command.type !== "viewer.vote") return;
+    expect(committed.receipt.command.sourceMode).toBe("twitch-chat");
+    expect(committed.receipt.events[0]?.event.eventType).toBe("fixture.twitch-chat-vote");
+
+    const tally = await runtime.acceptedVotes.readAcceptedVoteTally({
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId,
+      revision: committed.receipt.state.session.revision,
+      candidateIds,
+      acceptedBefore: FIXTURE_NOW + 3_000,
+      closedAt: FIXTURE_NOW + 3_000,
+    });
+    expect(tally.acceptedVoteCount).toBe(1);
+    expect(tally.tallies[2]).toMatchObject({
+      candidateId: candidateIds[2],
+      votes: 1,
+    });
+  });
+
+  it("does not let a reused command ID borrow Twitch verification for changed command content", () => {
+    const actorStore = new TwitchChatVerifiedVoteActorStore();
+    const normalised = normaliseTwitchChatVote({
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId,
+      expectedRevision: 4,
+      candidateIds,
+      twitchMessageId: "twitch-message-fingerprint",
+      twitchChannelId: "twitch-channel-1",
+      twitchUserId: "twitch-user-123",
+      text: "1",
+      receivedAt: FIXTURE_NOW,
+    });
+    expect(actorStore.remember(normalised)).toBe(true);
+    if (normalised.status !== "accepted") return;
+
+    const tampered = {
+      ...normalised.command,
+      candidateId: candidateIds[1],
+    };
+
+    expect(actorStore.resolve(normalised.command)).toEqual(normalised.verifiedActor);
+    expect(actorStore.resolve(tampered)).toBeNull();
   });
 
   it("keeps Twitch message IDs idempotent without giving the adapter vote authority", () => {
