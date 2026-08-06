@@ -1,10 +1,13 @@
 import {
+  audienceSnapshotSchema,
   candidateBatchSchema,
   contractEnvelopeSchema,
+  gameplaySnapshotSchema,
   intelligenceSnapshotSchema,
   questCandidateSchema,
   questCycleStateSchema,
   streamerProfileSchema,
+  type AudienceSnapshot,
   type CandidateBatch,
   type ContractEnvelope,
   type GameplaySnapshot,
@@ -56,7 +59,9 @@ export interface CandidateValidationContext {
 }
 
 export interface VoteCloseCandidateValidationContext {
+  readonly audience: AudienceSnapshot | null;
   readonly gameplay: GameplaySnapshot | null;
+  readonly otherCandidates: readonly QuestCandidate[];
   readonly profile: StreamerProfile;
   readonly now: number;
 }
@@ -387,7 +392,20 @@ export function validateCandidateAtVoteClose(
 ): CandidateValidationResult {
   const candidate = questCandidateSchema.safeParse(candidateInput);
   const profile = streamerProfileSchema.safeParse(context.profile);
-  if (!candidate.success || !profile.success || !Number.isSafeInteger(context.now) || context.now < 0) {
+  const gameplay =
+    context.gameplay === null ? null : gameplaySnapshotSchema.safeParse(context.gameplay);
+  const audience =
+    context.audience === null ? null : audienceSnapshotSchema.safeParse(context.audience);
+  const otherCandidates = context.otherCandidates.map((option) => questCandidateSchema.safeParse(option));
+  if (
+    !candidate.success ||
+    !profile.success ||
+    gameplay?.success === false ||
+    audience?.success === false ||
+    otherCandidates.some((option) => !option.success) ||
+    !Number.isSafeInteger(context.now) ||
+    context.now < 0
+  ) {
     return {
       accepted: false,
       candidate: candidate.success ? candidate.data : null,
@@ -398,9 +416,27 @@ export function validateCandidateAtVoteClose(
   const issues = [...safetyAndBoundaryIssues(candidate.data, profile.data)];
   const text = `${candidate.data.title} ${candidate.data.instruction} ${candidate.data.rationale}`;
   const knownGameplaySignals =
-    context.gameplay === null
+    gameplay === null
       ? new Map<string, readonly string[]>()
-      : knownSignalIdsByKind(context.gameplay, context.now);
+      : knownSignalIdsByKind(gameplay.data, context.now);
+  const knownEvidenceIds = freshKnownEvidenceIdsFromSnapshots(
+    gameplay === null ? null : gameplay.data,
+    audience === null ? null : audience.data,
+    context.now,
+  );
+  const unsupportedIds = candidate.data.sourceSignalIds.filter(
+    (signalId) => !knownEvidenceIds.has(signalId),
+  );
+  if (unsupportedIds.length > 0) {
+    issues.push(
+      issue(
+        "unsupported-evidence",
+        "reject",
+        "Winning candidate cites stale, unknown, low-confidence, or unsupported current evidence.",
+        unsupportedIds,
+      ),
+    );
+  }
   for (const dependency of factDependencies) {
     if (!dependency.pattern.test(text)) continue;
     const supportingIds = dependency.kinds.flatMap((kind) => [
@@ -418,19 +454,85 @@ export function validateCandidateAtVoteClose(
     }
   }
 
+  if (candidate.data.confidence < MINIMUM_CANDIDATE_CONFIDENCE) {
+    issues.push(
+      issue(
+        "low-confidence",
+        "reject",
+        "Winning candidate confidence is below the deterministic acceptance threshold.",
+      ),
+    );
+  } else if (candidate.data.confidence < 0.65) {
+    issues.push(
+      issue(
+        "quality-warning",
+        "warning",
+        "Winning candidate confidence is acceptable but below the preferred level.",
+      ),
+    );
+  }
+  if (
+    candidate.data.durationSeconds < 15 ||
+    candidate.data.durationSeconds > PREFERRED_MAXIMUM_DURATION_SECONDS
+  ) {
+    issues.push(
+      issue(
+        "duration-out-of-range",
+        "reject",
+        "Winning candidate duration must be between 15 and 180 seconds for the MVP.",
+      ),
+    );
+  }
+  const difficultyRange = durationRangeByDifficulty[candidate.data.difficulty];
+  if (
+    candidate.data.durationSeconds < difficultyRange.minimum ||
+    candidate.data.durationSeconds > difficultyRange.maximum
+  ) {
+    issues.push(
+      issue(
+        "difficulty-mismatch",
+        "reject",
+        `${candidate.data.difficulty} candidates must last ${difficultyRange.minimum}-${difficultyRange.maximum} seconds.`,
+      ),
+    );
+  }
+  if (normalisedTokens(candidate.data.instruction).length > MAXIMUM_INSTRUCTION_WORDS) {
+    issues.push(
+      issue(
+        "unclear",
+        "reject",
+        "Winning candidate instruction is too long to understand under stream pressure.",
+      ),
+    );
+  }
+  const duplicate = otherCandidates
+    .flatMap((option) => (option.success ? [option.data] : []))
+    .find((option) => substantiallySimilar(candidate.data, option));
+  if (duplicate !== undefined) {
+    issues.push(
+      issue(
+        "duplicate",
+        "reject",
+        "Winning candidate is not meaningfully distinct from another voting option.",
+        [duplicate.candidateId],
+      ),
+    );
+  }
+
   return issues.some(({ severity }) => severity === "reject")
     ? { accepted: false, candidate: candidate.data, issues }
     : { accepted: true, candidate: candidate.data, issues };
 }
 
-function freshKnownEvidenceIds(
-  intelligence: IntelligenceSnapshot,
+function freshKnownEvidenceIdsFromSnapshots(
+  gameplay: GameplaySnapshot | null,
+  audience: AudienceSnapshot | null,
   now: number,
 ): ReadonlySet<string> {
   const result = new Set<string>();
   for (const [signals, maximumAge] of [
-    [intelligence.gameplay.signals, MAXIMUM_SIGNAL_AGE_MILLISECONDS],
-    [intelligence.audience.signals, MAXIMUM_AUDIENCE_SIGNAL_AGE_MILLISECONDS],
+    [gameplay?.signals ?? [], MAXIMUM_SIGNAL_AGE_MILLISECONDS],
+    [audience?.signals ?? [], MAXIMUM_AUDIENCE_SIGNAL_AGE_MILLISECONDS],
   ] as const) {
     for (const signal of signals) {
       if (signal.observation.status !== "known") continue;
@@ -445,6 +547,17 @@ function freshKnownEvidenceIds(
     }
   }
   return result;
+}
+
+function freshKnownEvidenceIds(
+  intelligence: IntelligenceSnapshot,
+  now: number,
+): ReadonlySet<string> {
+  return freshKnownEvidenceIdsFromSnapshots(
+    intelligence.gameplay,
+    intelligence.audience,
+    now,
+  );
 }
 
 export class DefaultCandidateValidator {

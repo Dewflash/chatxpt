@@ -186,6 +186,31 @@ const emptyProgressAudience = audienceSnapshotSchema.parse({
   signals: [],
 });
 
+const sessionScopedGameplay = gameplaySnapshotSchema.parse({
+  envelope: {
+    ...role3FixtureIdleState.envelope,
+    questCycleId: null,
+    messageId: "role-3-session-gameplay",
+  },
+  capabilities: {
+    tier: "universal-visual",
+    gameId: null,
+    adapterId: null,
+    supportedSignals: [],
+  },
+  signals: [],
+});
+
+const sessionScopedAudience = audienceSnapshotSchema.parse({
+  envelope: {
+    ...role3FixtureIdleState.envelope,
+    questCycleId: null,
+    messageId: "role-3-session-audience",
+  },
+  sampleSize: 0,
+  signals: [],
+});
+
 function votingFixture(options = role3FixtureCandidateBatch.candidates) {
   return questCycleStateSchema.parse({
     ...role3FixtureIdleState,
@@ -475,6 +500,54 @@ describe("DefaultQuestEngine", () => {
     });
   });
 
+  it("rechecks the winner against intrinsic confidence and duration hard gates", () => {
+    const options = role3FixtureCandidateBatch.candidates.map((candidate, index) =>
+      index === 0
+        ? {
+            ...candidate,
+            durationSeconds: 900,
+            difficulty: "easy" as const,
+            confidence: 0.1,
+          }
+        : candidate,
+    );
+    const result = decision(
+      new DefaultQuestEngine().decide(
+        voteCloseInput([5, 1, 0], { currentState: votingFixture(options) }),
+      ),
+    );
+
+    expect(result.nextState.status).toBe("cancelled");
+    expect(result.events[0]).toMatchObject({
+      eventType: "quest-cycle.vote-closed-no-activation",
+      attributes: {
+        reasonCode: "winner-invalid",
+        validationCodes: expect.stringContaining("low-confidence"),
+      },
+    });
+    expect(result.events[0]?.attributes.validationCodes).toContain("duration-out-of-range");
+    expect(result.events[0]?.attributes.validationCodes).toContain("difficulty-mismatch");
+  });
+
+  it("rechecks that the winner's cited evidence still exists at vote close", () => {
+    const options = role3FixtureCandidateBatch.candidates.map((candidate, index) =>
+      index === 0 ? { ...candidate, sourceSignalIds: ["missing-signal"] } : candidate,
+    );
+    const result = decision(
+      new DefaultQuestEngine().decide(
+        voteCloseInput([5, 1, 0], { currentState: votingFixture(options) }),
+      ),
+    );
+
+    expect(result.nextState.status).toBe("cancelled");
+    expect(result.events[0]).toMatchObject({
+      attributes: {
+        reasonCode: "winner-invalid",
+        validationCodes: expect.stringContaining("unsupported-evidence"),
+      },
+    });
+  });
+
   it("does not activate a winner made unsafe by the current streamer boundary", () => {
     const input = voteCloseInput([5, 1, 0]);
     const result = decision(
@@ -548,6 +621,51 @@ describe("DefaultQuestEngine", () => {
       attributes: { reasonCode: "session-not-live", sessionStatus: "ended" },
     });
     expect(disconnectedAudience.nextState.status).toBe("active");
+  });
+
+  it("accepts canonical session-scoped gameplay and audience snapshots at vote close", () => {
+    const gameplayInput = voteCloseInput([2, 1, 0]);
+    const withGameplay = decision(
+      new DefaultQuestEngine().decide({
+        ...gameplayInput,
+        voteCloseValidationContext: {
+          ...gameplayInput.voteCloseValidationContext!,
+          gameplay: sessionScopedGameplay,
+        },
+      }),
+    );
+    const audienceInput = voteCloseInput([2, 1, 0]);
+    const withAudience = decision(
+      new DefaultQuestEngine().decide({
+        ...audienceInput,
+        voteCloseValidationContext: {
+          ...audienceInput.voteCloseValidationContext!,
+          audience: sessionScopedAudience,
+        },
+      }),
+    );
+
+    expect(withGameplay.nextState.status).toBe("active");
+    expect(withAudience.nextState.status).toBe("active");
+  });
+
+  it("still rejects a non-null snapshot cycle belonging to another quest", () => {
+    const input = voteCloseInput([2, 1, 0]);
+    const result = new DefaultQuestEngine().decide({
+      ...input,
+      voteCloseValidationContext: {
+        ...input.voteCloseValidationContext!,
+        gameplay: gameplaySnapshotSchema.parse({
+          ...sessionScopedGameplay,
+          envelope: {
+            ...sessionScopedGameplay.envelope,
+            questCycleId: "another-cycle",
+          },
+        }),
+      },
+    });
+
+    expect(result).toMatchObject({ ok: false, error: { code: "validation" } });
   });
 
   it("applies terminal outcomes to an authoritative active-state fixture", () => {

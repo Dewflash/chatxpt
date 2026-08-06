@@ -386,7 +386,8 @@ function transitionVoteClose(input: QuestEngineInput): QuestEngineResult {
       (snapshot) =>
         snapshot !== null &&
         (snapshot.envelope.sessionId !== input.currentState.envelope.sessionId ||
-          snapshot.envelope.questCycleId !== input.currentState.envelope.questCycleId),
+          (snapshot.envelope.questCycleId !== null &&
+            snapshot.envelope.questCycleId !== input.currentState.envelope.questCycleId)),
     )
   ) {
     return error("validation", "Vote-close tally or context does not belong to the current cycle");
@@ -431,8 +432,12 @@ function transitionVoteClose(input: QuestEngineInput): QuestEngineResult {
   }
 
   const winnerValidation = validateCandidateAtVoteClose(winner, {
+    audience: audience === null ? null : audience.data,
     profile: profile.data,
     gameplay: gameplay === null ? null : gameplay.data,
+    otherCandidates: input.currentState.options.filter(
+      ({ candidateId }) => candidateId !== winner.candidateId,
+    ),
     now: input.now,
   });
   if (!winnerValidation.accepted) {
