@@ -12,6 +12,7 @@ export { POST as obsOverlayGrantPOST } from "./api/overlay/grant/route";
 export { GET as obsOverlaySnapshotGET } from "./api/overlay/snapshot/route";
 export {
   diagnosticUiGatewayBroadcasterId,
+  diagnosticUiGatewayFixtureCatalog,
   diagnosticUiGatewayPrincipals,
   diagnosticUiGatewayQuestCycleId,
   diagnosticUiGatewayRoomCode,

@@ -16,17 +16,6 @@ import {
 
 const endpoint = "http://localhost/api/diagnostics/ui-gateway";
 
-async function readGatewaySnapshot(role: "streamer" | "viewer" | "overlay") {
-  const principalId = diagnosticUiGatewayPrincipals[role];
-  const result = await getDiagnosticUiGateway().readSnapshot({
-    sessionId: diagnosticUiGatewaySessionId,
-    role,
-    principalId,
-  });
-  if (!result.ok) throw new Error(result.error.message);
-  return result.snapshot;
-}
-
 function urlRole(input: RequestInfo | URL): "streamer" | "viewer" | "overlay" {
   const url = new URL(String(input));
   const role = url.searchParams.get("role");
@@ -54,17 +43,11 @@ describe("diagnostic UI harness client", () => {
           return Response.json(await getDiagnosticUiGateway().executeCommand(body.command));
         }
         const role = urlRole(input);
-        return Response.json({
-          ok: true,
-          reality: {
-            evidenceClass: "fixture",
-            liveInputsUsed: false,
-            label: "local diagnostic UI gateway",
-          },
+        return Response.json(await getDiagnosticUiGateway().readSnapshot({
           sessionId: diagnosticUiGatewaySessionId,
           role,
-          snapshot: await readGatewaySnapshot(role),
-        });
+          principalId: diagnosticUiGatewayPrincipals[role],
+        }));
       }),
     );
 
@@ -84,6 +67,9 @@ describe("diagnostic UI harness client", () => {
     expect(screen.getByText("Vote Window")).toBeInTheDocument();
     expect(screen.getByText("Hold Your Ground")).toBeInTheDocument();
     expect(screen.getByText("30s")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Intelligence Examples" })).toBeInTheDocument();
+    expect(screen.getByText(/r4\.intelligence\.capture-denied\.v1/)).toBeInTheDocument();
+    expect(screen.getByText(/r4\.generation\.algorithmic\.v1/)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Viewer Board" }));
     expect(screen.getByRole("heading", { name: "Choose A Quest" })).toBeInTheDocument();

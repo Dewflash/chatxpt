@@ -10,6 +10,7 @@ import {
   diagnosticUiGatewayDELETE,
   diagnosticUiGatewayChatFallbackGET,
   diagnosticUiGatewayChatFallbackPOST,
+  diagnosticUiGatewayFixtureCatalog,
   diagnosticUiGatewayGET,
   diagnosticUiGatewayHostedBoardGET,
   diagnosticUiGatewayPOST,
@@ -65,6 +66,23 @@ describe("Role 1 diagnostic UI gateway", () => {
     expect(result.snapshot.session.sessionId).toBe(diagnosticUiGatewaySessionId);
     expect(result.snapshot.envelope.evidenceClass).toBe("fixture");
     expect(result.snapshot.questCycle.status).toBe("voting");
+    expect(result.fixtureCatalog).toBe(diagnosticUiGatewayFixtureCatalog);
+    expect(Object.keys(result.fixtureCatalog.intelligence)).toEqual(
+      expect.arrayContaining([
+        "r4.intelligence.known.v1",
+        "r4.intelligence.low-confidence.v1",
+        "r4.intelligence.unknown.v1",
+        "r4.intelligence.stale.v1",
+        "r4.intelligence.capture-denied.v1",
+      ]),
+    );
+    expect(Object.keys(result.fixtureCatalog.generation)).toEqual(
+      expect.arrayContaining([
+        "r4.generation.ai-provider.v1",
+        "r4.generation.algorithmic.v1",
+        "r4.generation.fallback.v1",
+      ]),
+    );
   });
 
   it("executes a canonical viewer command and returns the current revision plus private receipt view", async () => {
@@ -159,6 +177,7 @@ describe("Role 1 diagnostic UI gateway", () => {
     expect(readResponse.status).toBe(200);
     expect(readBody.ok).toBe(true);
     expect(readBody.snapshot.profile.streamerId).toBe(diagnosticUiGatewayBroadcasterId);
+    expect(readBody.fixtureCatalog.generation["r4.generation.ai-provider.v1"].providerHealth.status).toBe("ready");
 
     const commandResponse = await diagnosticUiGatewayPOST(
       new Request("http://localhost/api/diagnostics/ui-gateway", {

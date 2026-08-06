@@ -11,6 +11,7 @@ import {
   intelligenceSnapshotSchema,
   overlayViewModelSchema,
   questCycleStateSchema,
+  serviceHealthSchema,
   signalObservationSchema,
   streamSessionSchema,
   streamerProfileSchema,
@@ -28,6 +29,8 @@ import {
   contractFixtureQuestCycle,
   contractFixtureSession,
   contractFixtureStreamerView,
+  contractFixtureUiX09GenerationCatalog,
+  contractFixtureUiX09IntelligenceCatalog,
   contractFixtureViewerView,
   invalidCalibratedCapabilitiesWithoutAdapter,
   invalidLiveFixtureEnvelope,
@@ -119,6 +122,44 @@ describe("signal and capability truthfulness", () => {
     expect(
       gameplayCapabilitiesSchema.safeParse(invalidCalibratedCapabilitiesWithoutAdapter).success,
     ).toBe(false);
+  });
+
+  it("publishes UI-X09 intelligence and provider examples without live-evidence claims", () => {
+    const intelligenceExamples = Object.values(contractFixtureUiX09IntelligenceCatalog);
+    const generationExamples = Object.values(contractFixtureUiX09GenerationCatalog);
+
+    expect(intelligenceExamples).toHaveLength(5);
+    expect(generationExamples).toHaveLength(3);
+
+    const gameplayStatuses = intelligenceExamples.flatMap((example) =>
+      example.gameplay.signals.map((signal) => signal.observation.status),
+    );
+    const gameplayReasons = intelligenceExamples.flatMap((example) =>
+      example.gameplay.signals.map((signal) =>
+        "reason" in signal.observation ? signal.observation.reason : null,
+      ),
+    );
+    expect(gameplayStatuses).toEqual(expect.arrayContaining(["known", "unknown", "stale"]));
+    expect(gameplayReasons).toEqual(
+      expect.arrayContaining(["low-confidence", "unsupported", "permission-denied"]),
+    );
+
+    for (const example of intelligenceExamples) {
+      expect(intelligenceSnapshotSchema.safeParse(example).success).toBe(true);
+      expect(example.envelope.evidenceClass).toBe("fixture");
+      expect(example.gameplay.envelope.evidenceClass).toBe("fixture");
+      expect(example.audience.envelope.evidenceClass).toBe("fixture");
+    }
+
+    const methods = generationExamples.map((example) => example.batch.candidates[0]?.generation.method);
+    expect(methods).toEqual(
+      expect.arrayContaining(["ai-provider", "algorithmic", "deterministic-fallback"]),
+    );
+    for (const example of generationExamples) {
+      expect(candidateBatchSchema.safeParse(example.batch).success).toBe(true);
+      expect(serviceHealthSchema.safeParse(example.providerHealth).success).toBe(true);
+      expect(example.batch.envelope.evidenceClass).toBe("fixture");
+    }
   });
 });
 

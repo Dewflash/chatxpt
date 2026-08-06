@@ -12,6 +12,8 @@ import {
   streamerProfileSchema,
   streamerQuestCommandSchema,
   systemIntelligenceCommandSchema,
+  contractFixtureUiX09GenerationCatalog,
+  contractFixtureUiX09IntelligenceCatalog,
   type CommandEnvelope,
   type ContractEnvelope,
   type DomainError,
@@ -70,6 +72,10 @@ export const diagnosticUiGatewaySessionId = SESSION_ID;
 export const diagnosticUiGatewayQuestCycleId = QUEST_CYCLE_ID;
 export const diagnosticUiGatewayBroadcasterId = BROADCASTER_ID;
 export const diagnosticUiGatewayRoomCode = ROOM_CODE;
+export const diagnosticUiGatewayFixtureCatalog = {
+  intelligence: contractFixtureUiX09IntelligenceCatalog,
+  generation: contractFixtureUiX09GenerationCatalog,
+} as const;
 
 type SnapshotRole = keyof RoleViewModels;
 
@@ -129,6 +135,7 @@ export type DiagnosticUiGatewayReadResult =
       readonly sessionId: string;
       readonly role: SnapshotRole;
       readonly snapshot: RoleViewModels[SnapshotRole];
+      readonly fixtureCatalog: typeof diagnosticUiGatewayFixtureCatalog;
     }
   | {
       readonly ok: false;
@@ -492,6 +499,7 @@ export class DiagnosticUiGateway {
       sessionId: parsed.data.sessionId,
       role: parsed.data.role,
       snapshot,
+      fixtureCatalog: diagnosticUiGatewayFixtureCatalog,
     };
   }
 

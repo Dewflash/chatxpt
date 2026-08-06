@@ -30,6 +30,31 @@ interface HarnessSnapshots {
   readonly overlay: OverlayViewModel | null;
 }
 
+interface UiX09FixtureCatalog {
+  readonly intelligence: Record<
+    string,
+    {
+      readonly envelope: { readonly evidenceClass: string };
+      readonly gameplay: {
+        readonly signals: readonly {
+          readonly observation: { readonly status: string; readonly reason?: string };
+        }[];
+      };
+    }
+  >;
+  readonly generation: Record<
+    string,
+    {
+      readonly providerHealth: { readonly service: string; readonly status: string };
+      readonly batch: {
+        readonly candidates: readonly {
+          readonly generation: { readonly method: string; readonly provider: string | null };
+        }[];
+      };
+    }
+  >;
+}
+
 interface HarnessError {
   readonly code: string;
   readonly message: string;
@@ -44,6 +69,7 @@ interface SnapshotResponse<Role extends SnapshotRole> {
     readonly liveInputsUsed: boolean;
     readonly label: string;
   };
+  readonly fixtureCatalog?: UiX09FixtureCatalog;
 }
 
 interface CommandResponse {
@@ -101,6 +127,7 @@ export function DiagnosticUiHarnessClient({
     viewer: null,
     overlay: null,
   });
+  const [fixtureCatalog, setFixtureCatalog] = useState<UiX09FixtureCatalog | null>(null);
   const [status, setStatus] = useState("Loading fixture state");
   const [error, setError] = useState<HarnessError | null>(null);
   const [acceptedChoice, setAcceptedChoice] = useState<string | null>(null);
@@ -109,14 +136,17 @@ export function DiagnosticUiHarnessClient({
   const voterKey = `ui-harness-browser-${useId().replaceAll(":", "id")}`;
 
   const readSnapshot = useCallback(
-    async <Role extends SnapshotRole>(role: Role, principalId: string): Promise<HarnessSnapshots[Role]> => {
+    async <Role extends SnapshotRole>(
+      role: Role,
+      principalId: string,
+    ): Promise<{ readonly snapshot: HarnessSnapshots[Role]; readonly fixtureCatalog: UiX09FixtureCatalog | null }> => {
       const query = new URLSearchParams({ sessionId, role, principalId });
       const response = await fetch(`${endpoint}?${query.toString()}`, { cache: "no-store" });
       const body = await readJson<SnapshotResponse<Role>>(response);
       if (!body.ok || body.snapshot === undefined) {
         throw body.error ?? { code: "internal", message: `Could not load ${role}` };
       }
-      return body.snapshot;
+      return { snapshot: body.snapshot, fixtureCatalog: body.fixtureCatalog ?? null };
     },
     [endpoint, sessionId],
   );
@@ -124,15 +154,19 @@ export function DiagnosticUiHarnessClient({
   const refresh = useCallback(async () => {
     setError(null);
     try {
-      const [streamer, viewer, overlay] = await Promise.all([
+      const [streamerResult, viewerResult, overlayResult] = await Promise.all([
         readSnapshot("streamer", principals.streamer),
         readSnapshot("viewer", principals.viewer),
         readSnapshot("overlay", principals.overlay),
       ]);
+      const { snapshot: streamer } = streamerResult;
+      const { snapshot: viewer } = viewerResult;
+      const { snapshot: overlay } = overlayResult;
       if (streamer === null || viewer === null || overlay === null) {
         throw { code: "internal", message: "Diagnostic gateway returned an empty snapshot" };
       }
       setSnapshots({ streamer, viewer, overlay });
+      setFixtureCatalog(streamerResult.fixtureCatalog ?? viewerResult.fixtureCatalog ?? overlayResult.fixtureCatalog);
       setStatus(`Fixture revision ${viewer.envelope.revision}`);
     } catch (caught) {
       const next = caught as HarnessError;
@@ -192,6 +226,8 @@ export function DiagnosticUiHarnessClient({
   const overlay = snapshots.overlay;
   const options = viewer?.questCycle.options ?? [];
   const totalVotes = viewer?.questCycle.voteTallies.reduce((sum, tally) => sum + tally.votes, 0) ?? 0;
+  const intelligenceExamples = fixtureCatalog === null ? [] : Object.entries(fixtureCatalog.intelligence);
+  const generationExamples = fixtureCatalog === null ? [] : Object.entries(fixtureCatalog.generation);
 
   return (
     <main className="diagnostic-shell">
@@ -270,6 +306,28 @@ export function DiagnosticUiHarnessClient({
                 </article>
               ))}
             </div>
+            <section className="diagnostic-fixture-catalog" aria-label="Intelligence fixture examples">
+              <h3>Intelligence Examples</h3>
+              <div>
+                {intelligenceExamples.map(([fixtureId, fixture]) => {
+                  const primarySignal = fixture.gameplay.signals[0]?.observation;
+                  const reason = primarySignal?.reason === undefined ? "" : ` / ${primarySignal.reason}`;
+                  return (
+                    <span key={fixtureId}>
+                      {fixtureId}: {primarySignal?.status ?? "unknown"}{reason} ({fixture.envelope.evidenceClass})
+                    </span>
+                  );
+                })}
+                {generationExamples.map(([fixtureId, fixture]) => {
+                  const generation = fixture.batch.candidates[0]?.generation;
+                  return (
+                    <span key={fixtureId}>
+                      {fixtureId}: {generation?.method ?? "unknown"} / {fixture.providerHealth.status}
+                    </span>
+                  );
+                })}
+              </div>
+            </section>
           </section>
         ) : null}
 
