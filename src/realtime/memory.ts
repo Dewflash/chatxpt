@@ -1,9 +1,13 @@
 import {
+  acceptedVoteTallySnapshotSchema,
   acceptedCommandReceiptSchema,
   authoritativeSessionStateSchema,
   canonicalJsonStringify,
   candidateBatchSchema,
   type AcceptedCommandReceipt,
+  type AcceptedVoteTallyReadInput,
+  type AcceptedVoteTallyReader,
+  type AcceptedVoteTallySnapshot,
   type AuthoritativeSessionState,
   type CandidateBatch,
   type CommitAuthoritativeStateInput,
@@ -44,7 +48,12 @@ function active(status: AuthoritativeSessionState["session"]["status"]): boolean
 }
 
 export class MemoryChatXptPersistence
-  implements CandidateBatchRepository, RoleSnapshotPublisher, RealtimeAccessGrantStore, SessionLifecycleStore
+  implements
+    AcceptedVoteTallyReader,
+    CandidateBatchRepository,
+    RoleSnapshotPublisher,
+    RealtimeAccessGrantStore,
+    SessionLifecycleStore
 {
   private readonly states = new Map<string, AuthoritativeSessionState>();
   private readonly receipts = new Map<string, AcceptedCommandReceipt>();
@@ -55,6 +64,16 @@ export class MemoryChatXptPersistence
   private readonly lifecycle = new Map<string, MemoryLifecycleMetadata>();
   private readonly lifecycleOperations = new Map<string, SessionLifecycleCommitResult>();
   private readonly accessGrants = new Map<string, RealtimeAccessGrant>();
+  private readonly voteLedger = new Map<
+    string,
+    {
+      sessionId: string;
+      questCycleId: string;
+      voterKey: string;
+      candidateId: string;
+      acceptedAt: number;
+    }
+  >();
 
   async bootstrap(input: BootstrapSessionInput): Promise<void> {
     const state = authoritativeSessionStateSchema.parse(input.state);
@@ -116,6 +135,18 @@ export class MemoryChatXptPersistence
       return { status: "stale", currentRevision: current?.session.revision ?? 0 };
     }
     if (
+      input.command.type === "viewer.vote" &&
+      this.voteLedger.has(
+        this.voteKey(
+          input.command.sessionId,
+          input.command.questCycleId,
+          input.command.voterKey,
+        ),
+      )
+    ) {
+      return { status: "participation-conflict", reason: "vote-already-accepted" };
+    }
+    if (
       input.nextState.session.sessionId !== input.command.sessionId ||
       input.nextState.session.revision !== input.expectedRevision + 1 ||
       input.nextState.questCycle.envelope.revision !== input.expectedRevision + 1
@@ -132,11 +163,63 @@ export class MemoryChatXptPersistence
     });
     this.replaceState(receipt.state);
     this.receipts.set(input.command.commandId, clone(receipt));
+    if (input.command.type === "viewer.vote") {
+      this.voteLedger.set(
+        this.voteKey(
+          input.command.sessionId,
+          input.command.questCycleId,
+          input.command.voterKey,
+        ),
+        {
+          sessionId: input.command.sessionId,
+          questCycleId: input.command.questCycleId,
+          voterKey: input.command.voterKey,
+          candidateId: input.command.candidateId,
+          acceptedAt: input.acceptedAt,
+        },
+      );
+    }
     const updatedLifecycle = this.lifecycle.get(input.command.sessionId);
     if (updatedLifecycle !== undefined) {
       updatedLifecycle.lastActivityAt = input.acceptedAt;
     }
     return { status: "committed", receipt: clone(receipt) };
+  }
+
+  async readAcceptedVoteTally(
+    input: AcceptedVoteTallyReadInput,
+  ): Promise<AcceptedVoteTallySnapshot> {
+    const counts = new Map(input.candidateIds.map((candidateId) => [candidateId, 0]));
+    for (const vote of this.voteLedger.values()) {
+      if (
+        vote.sessionId !== input.sessionId ||
+        vote.questCycleId !== input.questCycleId ||
+        vote.acceptedAt >= input.acceptedBefore
+      ) {
+        continue;
+      }
+      const current = counts.get(vote.candidateId);
+      if (current === undefined) {
+        throw new Error("Accepted vote references a candidate outside the closing cycle");
+      }
+      counts.set(vote.candidateId, current + 1);
+    }
+    const tallies = input.candidateIds.map((candidateId) => ({
+      candidateId,
+      votes: counts.get(candidateId) ?? 0,
+    })) as [
+      { candidateId: string; votes: number },
+      { candidateId: string; votes: number },
+      { candidateId: string; votes: number },
+    ];
+    return acceptedVoteTallySnapshotSchema.parse({
+      sessionId: input.sessionId,
+      questCycleId: input.questCycleId,
+      revision: input.revision,
+      closedAt: input.closedAt,
+      acceptedVoteCount: tallies.reduce((sum, tally) => sum + tally.votes, 0),
+      tallies,
+    });
   }
 
   async store(batch: CandidateBatch): Promise<void> {
@@ -330,6 +413,10 @@ export class MemoryChatXptPersistence
   private grantKey(principalId: string, sessionId: string, role: SnapshotRole): string {
     return `${principalId}:${sessionId}:${role}`;
   }
+
+  private voteKey(sessionId: string, questCycleId: string, voterKey: string): string {
+    return JSON.stringify([sessionId, questCycleId, voterKey]);
+  }
 }
 
 export function createMemoryPersistenceRuntime() {
@@ -339,6 +426,7 @@ export function createMemoryPersistenceRuntime() {
     sessions: backend,
     lifecycle: backend,
     candidates: backend,
+    acceptedVotes: backend,
     snapshots: backend,
     accessGrants: backend,
   };

@@ -10,6 +10,7 @@ export {
   type SupabasePersistenceEnvironment,
 } from "./environment";
 export {
+  SupabaseAcceptedVoteTallyReader,
   SupabaseCandidateBatchRepository,
   SupabaseChatXptDataApi,
   SupabaseDataError,

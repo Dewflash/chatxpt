@@ -47,7 +47,7 @@ Role 2 is complete when:
 | D2-03 | Which UI features are P0, P1, or excluded within accepted product direction | Resolved by Joelyrk | P0 covers Role 4 setup-to-live-control and Role 5 voting-to-result across all three participation paths plus OBS. P1 covers deeper history/analytics, reaction polish, and diagnostic refinements. Provider/model pickers, non-Twitch integrations, persistent rewards, and simulated-live claims are excluded. |
 | D2-03A | Cross-plan view-model/command/fixture/dependency matrix and early design-system handoff | Resolved by Joelyrk | Publish two standalone plans plus one authoritative shared matrix. Role 4 publishes minimum design tokens/base components first; Role 5 consumes that entry point without waiting for the complete Studio. |
 
-**Draft deliverables (3 August 2026):** `ROLE-4-BUILD-PLAN.md`, `ROLE-5-BUILD-PLAN.md`, and `ROLE-4-5-DELIVERY-MATRIX.md`. Each plan is awaiting its implementing owner's one consolidated feasibility review. R2-P01/R2-P02/R2-P02A remain in progress until Role 2 records one revision and notifies Role 1.
+**Accepted baseline (5 August 2026):** `ROLE-4-BUILD-PLAN.md`, `ROLE-5-BUILD-PLAN.md`, and `ROLE-4-5-DELIVERY-MATRIX.md` are accepted after one consolidated feasibility review from each implementing owner. Role 4's review required no scope revision. Role 2 compared Role 5's F5-01 through F5-04 recommendations and settled D5-01 through D5-04 baseline, accepted them without a scope revision, preserved every UI-X dependency, and notified Role 1 through issues #15 and #16. R2-P01, R2-P02, and R2-P02A are complete.
 
 ### R2-P01 — Role 4 Streamer Studio plan
 
@@ -66,6 +66,8 @@ Role 2 is complete when:
 
 **Acceptance:** Role 4 provides one feasibility response; Joelyrk records one revision; Role 1 is notified; Role 4 can start without inventing scope.
 
+**Accepted:** Role 4's response was accepted without a plan revision through issue #15 and PR #30. Its reported gaps remain assigned to UI-X01 through UI-X06, UI-X09, and UI-X10.
+
 ### R2-P02 — Role 5 Viewer/Overlay plan
 
 **Outcome:** drdexe receives an implementation-ready plan for Twitch viewer, fallback board, chat fallback, and OBS visuals.
@@ -83,6 +85,8 @@ Role 2 is complete when:
 
 **Acceptance:** Role 5 provides one feasibility response; Joelyrk records one revision; Role 1 is notified; Role 5 can start without inventing scope.
 
+**Accepted:** Role 5's response was [accepted without a plan revision through issue #16](https://github.com/Dewflash/chatxpt/issues/16#issuecomment-5189664413). F5-01 through F5-04 remain Role 5 implementation recommendations; the shared matrix already assigns every cross-role dependency and interim path.
+
 ### R2-P02A — Cross-plan integration matrix
 
 **Outcome:** Roles 4 and 5 build separate experiences against one synchronised runtime.
@@ -95,6 +99,8 @@ Role 2 is complete when:
 - State explicitly that UIs cannot own AI, extraction, lifecycle, vote resolution, countdown outcomes, permissions, rewards, persistence, or fallback selection.
 
 **Acceptance:** The two feasibility reviews confirm no missing seam or circular dependency; Role 4 and Role 5 can implement concurrently and both name the same canonical fixtures/revisions.
+
+**Accepted:** Both reviews confirmed the split plans are feasible with the recorded upstream dependencies. Role 4 and Role 5 may progress independently through their sequential phases once each phase's named dependencies are available.
 
 ## Phase 2: Define Role 2 boundaries and real fixtures
 
@@ -121,6 +127,8 @@ Role 2 is complete when:
 **Acceptance:** Extraction and AI tests run without Twitch/OBS; fixtures carry provenance; expected answers are not supplied to production analyzers.
 
 **Progress (4 August 2026):** The public extraction pipeline interfaces, injected observation-fusion boundary, canonical snapshot builders, validating intelligence/candidate provider factories, and Role 2 producer tests are implemented on `role-2/intelligence-boundary`. Fixture-only UI-X09 proposal payloads cover known, low-confidence, unsupported, stale, capture-denied, provider, algorithmic, and deterministic-fallback presentation states. Role 1 promotion into canonical `@/core/testing`, real owned gameplay/chat fixtures, and real `FrameSource` execution remain pending and are not claimed as live evidence.
+
+**Progress (5 August 2026):** `role-2/real-fixture-spike` adds a bounded browser-canvas sampler, game-neutral pixel-change measurement stream over the canonical `FrameSource`, guaranteed ephemeral-frame release, and selective-region OCR adapter plumbing. Ten focused tests use explicitly synthetic pixel arrays and a fake OCR adapter. R2-P03/P03A remain open for authorised gameplay/chat assets with separate annotations, a real browser-delivered OBS frame, an actual OCR engine experiment, and the joint free-provider/no-credential run; none of those are claimed by this slice.
 
 ### R2-P03A — Early feasibility spikes
 
@@ -267,6 +275,8 @@ Raw chat is processed in memory by default. If Joelyrk's D2-15 choice requires t
 **Evaluation:** Integration effort, free availability, latency, privacy, structured output, reliability, quest quality, game fit, and fallback behaviour.
 
 **Acceptance:** No client secret; runtime validation; clear provider status; no paid calls; recommendation recorded with Role 3 and sent to Role 1.
+
+**Progress (6 August 2026):** `role-2/provider-fallback-evaluation` adds a provider-neutral, injected trial/fallback strategy plus privacy-safe operational observations and summary metrics. Fixture tests cover valid provider output, malformed/partial/overfull/incorrectly-labelled output, timeout, refusal, rate limiting, unavailability, generic failure, cancellation, and invalid algorithmic recovery. No external provider call, provider/model selection, concrete algorithmic policy, or joint recommendation is claimed; D23-01 through D23-03 and D2-16 through D2-18 remain open.
 
 ### R2-P11 — Context and candidate generation
 

@@ -4,7 +4,7 @@
 
 **Plan owner:** Role 2 (`joelyrk`) under D-016
 
-**Status:** Awaiting Role 4's one consolidated feasibility review in [issue #15](https://github.com/Dewflash/chatxpt/issues/15)
+**Status:** Accepted after Role 4's consolidated feasibility review in [issue #15](https://github.com/Dewflash/chatxpt/issues/15) and [PR #30](https://github.com/Dewflash/chatxpt/pull/30); no scope revision was required
 
 **Primary directories:** `src/streamer/`, `src/design-system/`
 
@@ -128,10 +128,10 @@ Codex first prepares the technical feasibility review itself, then uses these as
 
 | ID | What Codex asks Role 4 | Choices explained in plain language | Recommended starting point | Baseline status |
 | --- | --- | --- | --- | --- |
-| D4-01 | What should Studio feel like at first glance? | A serious broadcast control room, a playful quest/game interface, or a plain utility dashboard. | A clean broadcast control room with a few playful quest accents; trustworthy during setup and energetic only around quests. | Open |
-| D4-02 | How should the main Studio be organised? | A left sidebar keeps major areas visible; top tabs save horizontal space; a step-by-step flow guides one task at a time. | Desktop sidebar for Setup, Profile, Live Quests, and Test Lab; guided steps inside first-time Setup; compact mobile navigation. Add History only if the optional P1 phase is approved and built. | Open |
-| D4-03 | How much information should be visible? | Large guided sections are easier for beginners; dense panels help during a live stream; showing everything at once becomes noisy. | Spacious and guided before the stream, compact and status-dense during the stream. | Open |
-| D4-04 | Does Role 4 already have brand references it wants Codex to follow? | Existing colours, logos, or screenshots can guide the system; otherwise Codex creates reversible defaults and Role 4 reviews screenshots. | Do not block on assets; begin with an original dark/light system and one energetic accent, then revise from screenshots. | Open |
+| D4-01 | What should Studio feel like at first glance? | A serious broadcast control room, a playful quest/game interface, or a plain utility dashboard. | A clean broadcast control room with a few playful quest accents; trustworthy during setup and energetic only around quests. | Settled in `ROLE-4-EXECUTION.md` |
+| D4-02 | How should the main Studio be organised? | A left sidebar keeps major areas visible; top tabs save horizontal space; a step-by-step flow guides one task at a time. | Desktop sidebar for Setup, Profile, Live Quests, and Test Lab; guided steps inside first-time Setup; compact mobile navigation. Add History only if the optional P1 phase is approved and built. | Settled in `ROLE-4-EXECUTION.md` |
+| D4-03 | How much information should be visible? | Large guided sections are easier for beginners; dense panels help during a live stream; showing everything at once becomes noisy. | Spacious and guided before the stream, compact and status-dense during the stream. | Settled in `ROLE-4-EXECUTION.md` |
+| D4-04 | Does Role 4 already have brand references it wants Codex to follow? | Existing colours, logos, or screenshots can guide the system; otherwise Codex creates reversible defaults and Role 4 reviews screenshots. | Do not block on assets; begin with an original dark/light system and one energetic accent, then revise from screenshots. | Settled in `ROLE-4-EXECUTION.md` |
 
 ### Work
 
@@ -147,6 +147,8 @@ Codex first prepares the technical feasibility review itself, then uses these as
 - Role 2 records one revision or explicitly records that no revision was needed.
 - Every blocker has an owner and required-by phase.
 - No source implementation starts before this exit.
+
+**Acceptance record (4 August 2026):** Role 2 accepted Role 4's review without changing phase, priority, ownership, or scope. The existing UI-X01 through UI-X06, UI-X09, and UI-X10 assignments preserve every reported dependency, and Role 4 may proceed through its role-owned execution record without inventing upstream behaviour.
 
 ## Phase 1 / R4-P02: Public UI boundary and shared design foundation
 

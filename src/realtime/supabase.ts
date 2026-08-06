@@ -4,6 +4,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 import {
+  acceptedVoteTallySnapshotSchema,
   acceptedCommandReceiptSchema,
   authoritativeSessionStateSchema,
   canonicalJsonStringify,
@@ -13,6 +14,9 @@ import {
   streamerViewModelSchema,
   viewerViewModelSchema,
   type AcceptedCommandReceipt,
+  type AcceptedVoteTallyReadInput,
+  type AcceptedVoteTallyReader,
+  type AcceptedVoteTallySnapshot,
   type AuthoritativeSessionState,
   type CandidateBatch,
   type CommitAuthoritativeStateInput,
@@ -46,7 +50,15 @@ const commitResultSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("committed"), receipt: acceptedCommandReceiptSchema }).strict(),
   z.object({ status: z.literal("duplicate"), receipt: acceptedCommandReceiptSchema }).strict(),
   z.object({ status: z.literal("stale"), currentRevision: z.number().int().nonnegative() }).strict(),
+  z
+    .object({
+      status: z.literal("participation-conflict"),
+      reason: z.literal("vote-already-accepted"),
+    })
+    .strict(),
 ]);
+
+const acceptedVoteRowSchema = z.object({ candidate_id: z.string().min(1).max(128) }).passthrough();
 
 const lifecycleCommitResultSchema = z.discriminatedUnion("status", [
   z
@@ -201,6 +213,22 @@ export class SupabaseChatXptDataApi {
       .maybeSingle();
     throwIfError(error);
     return data === null ? null : rowJson(data, "payload");
+  }
+
+  async loadAcceptedVotes(
+    sessionId: string,
+    questCycleId: string,
+    acceptedBefore: number,
+  ): Promise<readonly unknown[]> {
+    const { data, error } = await this.client
+      .from("accepted_participation")
+      .select("candidate_id")
+      .eq("session_id", sessionId)
+      .eq("quest_cycle_id", questCycleId)
+      .eq("participation_type", "vote")
+      .lt("accepted_at", new Date(acceptedBefore).toISOString());
+    throwIfError(error);
+    return data ?? [];
   }
 
   async persistRoleSnapshots(views: RoleViewModels): Promise<void> {
@@ -379,7 +407,59 @@ export class SupabaseSessionStateRepository {
   }
 
   async commit(input: CommitAuthoritativeStateInput): Promise<CommitAuthoritativeStateResult> {
-    return commitResultSchema.parse(await this.api.commitState(input));
+    try {
+      return commitResultSchema.parse(await this.api.commitState(input));
+    } catch (caught) {
+      if (caught instanceof SupabaseDataError && caught.code === "23505") {
+        const evidence = `${caught.message} ${caught.details ?? ""}`;
+        if (evidence.includes("accepted_participation_one_vote_per_voter_cycle")) {
+          return { status: "participation-conflict", reason: "vote-already-accepted" };
+        }
+      }
+      throw caught;
+    }
+  }
+}
+
+export class SupabaseAcceptedVoteTallyReader implements AcceptedVoteTallyReader {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async readAcceptedVoteTally(
+    input: AcceptedVoteTallyReadInput,
+  ): Promise<AcceptedVoteTallySnapshot> {
+    const counts = new Map(input.candidateIds.map((candidateId) => [candidateId, 0]));
+    const rows = z
+      .array(acceptedVoteRowSchema)
+      .parse(
+        await this.api.loadAcceptedVotes(
+          input.sessionId,
+          input.questCycleId,
+          input.acceptedBefore,
+        ),
+      );
+    for (const row of rows) {
+      const current = counts.get(row.candidate_id);
+      if (current === undefined) {
+        throw new Error("Accepted vote references a candidate outside the closing cycle");
+      }
+      counts.set(row.candidate_id, current + 1);
+    }
+    const tallies = input.candidateIds.map((candidateId) => ({
+      candidateId,
+      votes: counts.get(candidateId) ?? 0,
+    })) as [
+      { candidateId: string; votes: number },
+      { candidateId: string; votes: number },
+      { candidateId: string; votes: number },
+    ];
+    return acceptedVoteTallySnapshotSchema.parse({
+      sessionId: input.sessionId,
+      questCycleId: input.questCycleId,
+      revision: input.revision,
+      closedAt: input.closedAt,
+      acceptedVoteCount: tallies.reduce((sum, tally) => sum + tally.votes, 0),
+      tallies,
+    });
   }
 }
 
@@ -565,6 +645,7 @@ export function createSupabasePersistenceRuntime(
 } {
   const api = new SupabaseChatXptDataApi(createSupabaseServerClient(environment));
   const sessions = new SupabaseSessionStateRepository(api);
+  const acceptedVotes = new SupabaseAcceptedVoteTallyReader(api);
   const snapshots = new SupabaseRoleSnapshotPublisher(api);
   return {
     mode: "supabase",
@@ -572,6 +653,7 @@ export function createSupabasePersistenceRuntime(
     sessions,
     lifecycle: new SupabaseSessionLifecycleStore(api, sessions),
     candidates: new SupabaseCandidateBatchRepository(api),
+    acceptedVotes,
     snapshots,
     accessGrants: new SupabaseRealtimeAccessGrantStore(api),
     probe: (checkedAt) => api.probe(checkedAt),
