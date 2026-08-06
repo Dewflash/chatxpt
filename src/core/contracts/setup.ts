@@ -1,9 +1,14 @@
 import { z } from "zod";
 
 import {
+  actorSchema,
+  contractVersionSchema,
+  domainErrorSchema,
   evidenceClassSchema,
   identifierSchema,
+  revisionSchema,
   serviceHealthSchema,
+  timestampSchema,
 } from "./common";
 
 export const streamerSetupServiceIdSchema = z.enum([
@@ -97,7 +102,81 @@ export const streamerReadinessViewSchema = z
     }
   });
 
+const streamerServiceCommandFields = {
+  contractVersion: contractVersionSchema,
+  sessionId: identifierSchema,
+  commandId: identifierSchema,
+  correlationId: identifierSchema,
+  expectedRevision: revisionSchema,
+  issuedAt: timestampSchema,
+  actor: actorSchema,
+};
+
+export const streamerSetupCommandSchema = z
+  .object({
+    ...streamerServiceCommandFields,
+    type: z.literal("streamer.setup"),
+    service: streamerSetupServiceIdSchema,
+    action: streamerSetupActionSchema,
+  })
+  .strict()
+  .superRefine((command, context) => {
+    if (command.actor.kind !== "broadcaster") {
+      context.addIssue({
+        code: "custom",
+        message: "Only the broadcaster may change integration setup",
+        path: ["actor", "kind"],
+      });
+    }
+  });
+
+export const streamerSessionCommandSchema = z
+  .object({
+    ...streamerServiceCommandFields,
+    type: z.literal("streamer.session"),
+    action: z.enum(["start", "end"]),
+  })
+  .strict()
+  .superRefine((command, context) => {
+    if (command.actor.kind !== "broadcaster") {
+      context.addIssue({
+        code: "custom",
+        message: "Only the broadcaster may start or end a stream session",
+        path: ["actor", "kind"],
+      });
+    }
+  });
+
+export const streamerServiceCommandSchema = z.discriminatedUnion("type", [
+  streamerSetupCommandSchema,
+  streamerSessionCommandSchema,
+]);
+
+export const streamerServiceCommandResultSchema = z.discriminatedUnion("ok", [
+  z
+    .object({
+      ok: z.literal(true),
+      commandId: identifierSchema,
+      currentRevision: revisionSchema,
+      status: z.enum(["accepted", "no-op", "diagnostic-only"]),
+      readiness: streamerReadinessViewSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ok: z.literal(false),
+      commandId: identifierSchema.nullable(),
+      currentRevision: revisionSchema.nullable(),
+      error: domainErrorSchema,
+    })
+    .strict(),
+]);
+
 export type StreamerSetupServiceId = z.infer<typeof streamerSetupServiceIdSchema>;
 export type StreamerSetupAction = z.infer<typeof streamerSetupActionSchema>;
 export type StreamerSetupService = z.infer<typeof streamerSetupServiceSchema>;
 export type StreamerReadinessView = z.infer<typeof streamerReadinessViewSchema>;
+export type StreamerSetupCommand = z.infer<typeof streamerSetupCommandSchema>;
+export type StreamerSessionCommand = z.infer<typeof streamerSessionCommandSchema>;
+export type StreamerServiceCommand = z.infer<typeof streamerServiceCommandSchema>;
+export type StreamerServiceCommandResult = z.infer<typeof streamerServiceCommandResultSchema>;

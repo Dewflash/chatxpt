@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { CONTRACT_VERSION, viewerVoteCommandSchema } from "../core";
+import { CONTRACT_VERSION, streamerSetupCommandSchema, viewerVoteCommandSchema } from "../core";
 import { FetchUiGatewayClient } from "./browser";
 
 function voteCommand(commandId = "fixture-command") {
@@ -17,6 +17,21 @@ function voteCommand(commandId = "fixture-command") {
     candidateId: "fixture-candidate-1",
     voterKey: "fixture-voter",
     sourceMode: "hosted-board",
+  });
+}
+
+function setupCommand(commandId = "fixture-setup-command") {
+  return streamerSetupCommandSchema.parse({
+    contractVersion: CONTRACT_VERSION,
+    sessionId: "fixture-session",
+    commandId,
+    correlationId: `${commandId}-correlation`,
+    expectedRevision: 1,
+    issuedAt: 1_786_000_001_000,
+    actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+    type: "streamer.setup",
+    service: "obs-capture",
+    action: "request-capture-permission",
   });
 }
 
@@ -103,6 +118,46 @@ describe("FetchUiGatewayClient", () => {
     expect(init?.credentials).toBe("same-origin");
     expect(JSON.parse(String(init?.body))).toMatchObject({
       command: { commandId: "fixture-command" },
+    });
+  });
+
+  it("dispatches setup service commands through the same browser boundary", async () => {
+    const request = vi.fn(async () =>
+      Response.json({
+        ok: true,
+        reality: fixtureReality,
+        outcome: "committed",
+        revision: 1,
+        delivery: "not-republished",
+        receipt: {
+          commandId: "fixture-setup-command",
+          acceptedAt: 1_786_000_002_000,
+          eventTypes: ["streamer.setup.diagnostic-acknowledged"],
+        },
+        views: null,
+        serviceCommand: {
+          status: "diagnostic-only",
+          readiness: { ready: false },
+        },
+      }),
+    );
+    const client = new FetchUiGatewayClient({ fetch: request as typeof fetch });
+
+    const result = await client.dispatch(setupCommand());
+
+    expect(result).toMatchObject({
+      ok: true,
+      commandId: "fixture-setup-command",
+      currentRevision: 1,
+      delivery: "not-republished",
+    });
+    const init = (request.mock.calls[0] as unknown as Parameters<typeof fetch>)[1];
+    expect(JSON.parse(String(init?.body))).toMatchObject({
+      command: {
+        type: "streamer.setup",
+        service: "obs-capture",
+        action: "request-capture-permission",
+      },
     });
   });
 

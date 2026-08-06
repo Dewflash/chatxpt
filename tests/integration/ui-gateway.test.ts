@@ -171,6 +171,62 @@ describe("Role 1 diagnostic UI gateway", () => {
     expect(result.views?.streamer.profile.experience.intensity).toBe(0.8);
   });
 
+  it("executes fixture-only setup and session service commands through the gateway", async () => {
+    const gateway = getDiagnosticUiGateway();
+    const snapshot = await gateway.readSnapshot({
+      sessionId: diagnosticUiGatewaySessionId,
+      role: "streamer",
+      principalId: diagnosticUiGatewayPrincipals.streamer,
+    });
+    if (!snapshot.ok) throw new Error(snapshot.error.message);
+
+    const setup = await gateway.executeCommand({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: diagnosticUiGatewaySessionId,
+      commandId: "ui-gateway-setup-command",
+      correlationId: "ui-gateway-setup-correlation",
+      expectedRevision: snapshot.snapshot.envelope.revision,
+      issuedAt: 1_786_200_001_000,
+      actor: { kind: "broadcaster", actorId: diagnosticUiGatewayBroadcasterId },
+      type: "streamer.setup",
+      service: "obs-capture",
+      action: "request-capture-permission",
+    });
+    expect(setup.ok).toBe(true);
+    if (!setup.ok) return;
+    expect(setup).toMatchObject({
+      revision: snapshot.snapshot.envelope.revision,
+      delivery: "not-republished",
+      receipt: {
+        commandId: "ui-gateway-setup-command",
+        eventTypes: ["streamer.setup.diagnostic-acknowledged"],
+      },
+      serviceCommand: {
+        status: "diagnostic-only",
+        readiness: {
+          blockerCodes: ["obs-capture-permission-denied"],
+          recommendedAction: "request-capture-permission",
+        },
+      },
+    });
+
+    const session = await gateway.executeCommand({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: diagnosticUiGatewaySessionId,
+      commandId: "ui-gateway-session-command",
+      correlationId: "ui-gateway-session-correlation",
+      expectedRevision: snapshot.snapshot.envelope.revision,
+      issuedAt: 1_786_200_001_000,
+      actor: { kind: "broadcaster", actorId: diagnosticUiGatewayBroadcasterId },
+      type: "streamer.session",
+      action: "start",
+    });
+    expect(session.ok).toBe(true);
+    if (session.ok) {
+      expect(session.serviceCommand?.readiness.ready).toBe(true);
+    }
+  });
+
   it("keeps reconnect snapshots sanitised after a private viewer command", async () => {
     const gateway = getDiagnosticUiGateway();
     const initial = await gateway.readSnapshot({

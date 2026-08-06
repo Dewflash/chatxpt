@@ -14,6 +14,7 @@ import {
   sessionHistorySnapshotSchema,
   serviceHealthSchema,
   streamerReadinessViewSchema,
+  streamerServiceCommandSchema,
   signalObservationSchema,
   streamSessionSchema,
   streamerProfileSettingsCommandSchema,
@@ -463,6 +464,43 @@ describe("identity and command permissions", () => {
       voteSchema.safeParse({
         ...vote,
         voter: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts broadcaster-only setup and session service commands", () => {
+    const base = {
+      contractVersion: CONTRACT_VERSION,
+      sessionId: "fixture-session",
+      commandId: "fixture-setup-command",
+      correlationId: "fixture-setup-correlation",
+      expectedRevision: 4,
+      issuedAt: 10,
+      actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+    };
+
+    expect(
+      streamerServiceCommandSchema.safeParse({
+        ...base,
+        type: "streamer.setup",
+        service: "obs-capture",
+        action: "request-capture-permission",
+      }).success,
+    ).toBe(true);
+    expect(
+      streamerServiceCommandSchema.safeParse({
+        ...base,
+        type: "streamer.session",
+        action: "start",
+      }).success,
+    ).toBe(true);
+    expect(
+      streamerServiceCommandSchema.safeParse({
+        ...base,
+        actor: { kind: "moderator", actorId: "fixture-moderator" },
+        type: "streamer.setup",
+        service: "twitch",
+        action: "connect-twitch",
       }).success,
     ).toBe(false);
   });

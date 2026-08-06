@@ -11,6 +11,7 @@ import {
   streamSessionSchema,
   streamerProfileSchema,
   streamerQuestCommandSchema,
+  streamerServiceCommandSchema,
   systemIntelligenceCommandSchema,
   contractFixtureUiX01ReadinessCatalog,
   contractFixtureUiX04SessionHistory,
@@ -24,6 +25,8 @@ import {
   type OrchestratorResult,
   type QuestCandidate,
   type RoleViewModels,
+  type StreamerReadinessView,
+  type StreamerServiceCommand,
   type TwitchChatFallbackAnnouncementKind,
   type TwitchChatFallbackDeliveryStatus,
   type TwitchChatVoteAcknowledgementStatus,
@@ -175,6 +178,10 @@ export type DiagnosticUiGatewayCommandResult =
         readonly eventTypes: readonly string[];
       };
       readonly views: RoleViewModels | null;
+      readonly serviceCommand?: {
+        readonly status: "diagnostic-only";
+        readonly readiness: StreamerReadinessView;
+      };
     }
   | {
       readonly ok: false;
@@ -440,6 +447,27 @@ function fixtureCandidateBatch(revision: number) {
   });
 }
 
+function readinessForCommand(command: StreamerServiceCommand): StreamerReadinessView {
+  if (command.type === "streamer.session") {
+    return command.action === "start"
+      ? contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"]
+      : contractFixtureUiX01ReadinessCatalog["r4.setup.diagnostic.v1"];
+  }
+  if (command.action === "request-capture-permission" || command.action === "select-capture-source") {
+    return contractFixtureUiX01ReadinessCatalog["r4.setup.permission-denied.v1"];
+  }
+  if (command.action === "connect-twitch" || command.action === "install-extension") {
+    return contractFixtureUiX01ReadinessCatalog["r4.setup.misconfigured.v1"];
+  }
+  if (command.action === "retry-service") {
+    return contractFixtureUiX01ReadinessCatalog["r4.setup.disconnected.v1"];
+  }
+  if (command.action === "start-session") {
+    return contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"];
+  }
+  return contractFixtureUiX01ReadinessCatalog["r4.setup.diagnostic.v1"];
+}
+
 export class DiagnosticUiGateway {
   private readonly persistence = new MemoryChatXptPersistence();
   private readonly clock = new FixedClock();
@@ -519,12 +547,17 @@ export class DiagnosticUiGateway {
   }
 
   async executeCommand(input: unknown): Promise<DiagnosticUiGatewayCommandResult> {
+    const parsedServiceCommand = streamerServiceCommandSchema.safeParse(input);
+    if (parsedServiceCommand.success) {
+      return this.executeStreamerServiceCommand(parsedServiceCommand.data);
+    }
+
     const parsed = commandEnvelopeSchema.safeParse(input);
     if (!parsed.success) {
       return {
         ok: false,
         reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
-        error: error("validation", "Command does not match the canonical schema"),
+        error: error("validation", "Command does not match a supported canonical schema"),
       };
     }
     await this.ensureReady();
@@ -548,6 +581,48 @@ export class DiagnosticUiGateway {
         eventTypes: result.receipt.events.map(({ event }) => event.eventType),
       },
       views: result.views,
+    };
+  }
+
+  private async executeStreamerServiceCommand(
+    command: StreamerServiceCommand,
+  ): Promise<DiagnosticUiGatewayCommandResult> {
+    await this.ensureReady();
+    const state = await this.persistence.load(command.sessionId);
+    if (state === null) {
+      return {
+        ok: false,
+        reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+        error: error("dependency-unavailable", "Diagnostic session is unavailable", true),
+      };
+    }
+    if (command.actor.actorId !== BROADCASTER_ID || command.expectedRevision !== state.session.revision) {
+      return {
+        ok: false,
+        reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+        error: command.actor.actorId !== BROADCASTER_ID
+          ? error("forbidden", "Only the fixture broadcaster may run setup/session commands")
+          : error("stale-revision", "A concurrent command changed the diagnostic session"),
+      };
+    }
+
+    const readiness = readinessForCommand(command);
+    return {
+      ok: true,
+      reality: DIAGNOSTIC_UI_GATEWAY_REALITY,
+      outcome: "committed",
+      revision: state.session.revision,
+      delivery: "not-republished",
+      receipt: {
+        commandId: command.commandId,
+        acceptedAt: this.clock.now(),
+        eventTypes: [`${command.type}.diagnostic-acknowledged`],
+      },
+      views: null,
+      serviceCommand: {
+        status: "diagnostic-only",
+        readiness,
+      },
     };
   }
 

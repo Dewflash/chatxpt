@@ -1,9 +1,11 @@
 import {
   commandEnvelopeSchema,
   domainErrorSchema,
+  streamerServiceCommandSchema,
   type CommandEnvelope,
   type DomainError,
   type RoleViewModels,
+  type StreamerServiceCommand,
 } from "../core";
 
 export type UiGatewaySnapshotRole = keyof RoleViewModels;
@@ -65,7 +67,7 @@ export interface UiGatewayClient {
   read<Role extends UiGatewaySnapshotRole>(
     input: UiGatewayReadRequest<Role>,
   ): Promise<UiGatewayReadResult<Role>>;
-  dispatch(command: CommandEnvelope): Promise<UiGatewayCommandResult>;
+  dispatch(command: CommandEnvelope | StreamerServiceCommand): Promise<UiGatewayCommandResult>;
 }
 
 export interface FetchUiGatewayClientOptions {
@@ -193,9 +195,13 @@ export class FetchUiGatewayClient implements UiGatewayClient {
     };
   }
 
-  async dispatch(command: CommandEnvelope): Promise<UiGatewayCommandResult> {
-    const parsedCommand = commandEnvelopeSchema.safeParse(command);
-    if (!parsedCommand.success) {
+  async dispatch(command: CommandEnvelope | StreamerServiceCommand): Promise<UiGatewayCommandResult> {
+    const parsedCommand = commandEnvelopeSchema.safeParse(command).success
+      ? commandEnvelopeSchema.parse(command)
+      : streamerServiceCommandSchema.safeParse(command).success
+        ? streamerServiceCommandSchema.parse(command)
+        : null;
+    if (parsedCommand === null) {
       return {
         ok: false,
         commandId: isObject(command) && typeof command.commandId === "string" ? command.commandId : null,
@@ -214,12 +220,12 @@ export class FetchUiGatewayClient implements UiGatewayClient {
         headers,
         credentials: "same-origin",
         cache: "no-store",
-        body: JSON.stringify({ command: parsedCommand.data }),
+        body: JSON.stringify({ command: parsedCommand }),
       });
     } catch {
       return {
         ok: false,
-        commandId: parsedCommand.data.commandId,
+        commandId: parsedCommand.commandId,
         currentRevision: null,
         error: typedError("dependency-unavailable", "UI gateway command request failed"),
       };
@@ -230,7 +236,7 @@ export class FetchUiGatewayClient implements UiGatewayClient {
       return {
         ok: false,
         reality: parseReality(body),
-        commandId: parsedCommand.data.commandId,
+        commandId: parsedCommand.commandId,
         currentRevision: null,
         error: parseError(
           body,
@@ -243,7 +249,7 @@ export class FetchUiGatewayClient implements UiGatewayClient {
           commandId:
             typeof body.receipt.commandId === "string"
               ? body.receipt.commandId
-              : parsedCommand.data.commandId,
+              : parsedCommand.commandId,
           acceptedAt:
             typeof body.receipt.acceptedAt === "number" ? body.receipt.acceptedAt : 0,
           eventTypes: Array.isArray(body.receipt.eventTypes)
@@ -251,7 +257,7 @@ export class FetchUiGatewayClient implements UiGatewayClient {
             : [],
         }
       : {
-          commandId: parsedCommand.data.commandId,
+          commandId: parsedCommand.commandId,
           acceptedAt: 0,
           eventTypes: [],
         };
@@ -259,7 +265,7 @@ export class FetchUiGatewayClient implements UiGatewayClient {
     if (reality === undefined) {
       return {
         ok: false,
-        commandId: parsedCommand.data.commandId,
+        commandId: parsedCommand.commandId,
         currentRevision: null,
         error: typedError("internal", "UI gateway returned an incomplete command result"),
       };

@@ -17,11 +17,18 @@ command from a browser surface. The client sends same-origin credentials, can ad
 a scoped bearer token when the host provides one, marks command POSTs with
 `x-chatxpt-command`, and maps malformed responses, transport failures, and token
 provider failures into typed domain errors instead of throwing through UI code.
+It accepts both quest/runtime `CommandEnvelope` values and Role 1-owned
+streamer setup/session service commands.
 
 The current endpoint defaults to the fixture-only diagnostic gateway. That route
 is production-disabled unless Role 1 explicitly enables diagnostics, so passing
 tests here prove browser command/read shape and failure handling only; they do
 not prove live Twitch, OBS, Supabase, or deployed authentication behaviour.
+
+Setup and session service commands are diagnostic-only in the local gateway
+until Role 1 wires real Twitch/OBS/session operations. They return the current
+authoritative revision and a readiness fixture so UI consumers can render
+success, stale, forbidden, and blocked states without becoming the authority.
 
 Authoritative writes always flow through the Role 1 orchestrator or lifecycle
 service. The Supabase publisher persists role-sanitised snapshots through a
