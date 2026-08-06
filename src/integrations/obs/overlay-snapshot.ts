@@ -17,11 +17,72 @@ const overlaySnapshotReadInputSchema = z
   })
   .strict();
 
+export const MAX_OBS_OVERLAY_READ_GRANT_MILLISECONDS = 4 * 60 * 60 * 1_000;
+
+const obsOverlayReadGrantInputSchema = z
+  .object({
+    baseUrl: z
+      .string()
+      .trim()
+      .min(1)
+      .max(2_048)
+      .refine((value) => {
+        try {
+          const url = new URL(value);
+          return url.protocol === "http:" || url.protocol === "https:";
+        } catch {
+          return false;
+        }
+      }, "OBS overlay base URL must be absolute HTTP(S)"),
+    sessionId: z.string().trim().min(1).max(128),
+    readKey: z.string().trim().min(16).max(128),
+    now: z.number().int().nonnegative(),
+    expiresAt: z.number().int().nonnegative(),
+    minimumRevision: z.number().int().nonnegative().optional(),
+  })
+  .strict()
+  .superRefine((input, context) => {
+    if (input.expiresAt <= input.now) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["expiresAt"],
+        message: "OBS overlay read grant expiry must be in the future",
+      });
+    }
+    if (input.expiresAt - input.now > MAX_OBS_OVERLAY_READ_GRANT_MILLISECONDS) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["expiresAt"],
+        message: "OBS overlay read grant exceeds the maximum supported lifetime",
+      });
+    }
+  });
+
 export interface ObsOverlaySnapshotReadInput {
   readonly sessionId: string;
   readonly readKey: string;
   readonly minimumRevision?: number;
   readonly now: number;
+}
+
+export interface ObsOverlayReadGrantInput {
+  readonly baseUrl: string;
+  readonly sessionId: string;
+  readonly readKey: string;
+  readonly now: number;
+  readonly expiresAt: number;
+  readonly minimumRevision?: number;
+}
+
+export interface ObsOverlayReadGrantDependencies {
+  readonly accessGrants: {
+    grant(input: {
+      readonly principalId: string;
+      readonly sessionId: string;
+      readonly viewRole: "overlay";
+      readonly expiresAt: number;
+    }): Promise<unknown>;
+  };
 }
 
 export interface ObsOverlaySnapshotReadDependencies {
@@ -37,6 +98,24 @@ export interface ObsOverlaySnapshotReadDependencies {
     readSnapshot(sessionId: string, role: "overlay"): Promise<RoleViewModels["overlay"] | null>;
   };
 }
+
+export type ObsOverlayReadGrantResult =
+  | {
+      readonly ok: true;
+      readonly role: "overlay";
+      readonly sessionId: string;
+      readonly readKey: string;
+      readonly snapshotUrl: string;
+      readonly expiresAt: number;
+      readonly reconnect: {
+        readonly nextPollMs: 1_000;
+        readonly stale: false;
+      };
+    }
+  | {
+      readonly ok: false;
+      readonly error: DomainError;
+    };
 
 export type ObsOverlaySnapshotReadResult =
   | {
@@ -80,6 +159,51 @@ export function buildObsOverlaySnapshotUrl(input: {
     url.searchParams.set("minimumRevision", String(input.minimumRevision));
   }
   return url.toString();
+}
+
+export async function issueObsOverlayReadGrant(
+  dependencies: ObsOverlayReadGrantDependencies,
+  input: ObsOverlayReadGrantInput,
+): Promise<ObsOverlayReadGrantResult> {
+  const parsed = obsOverlayReadGrantInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: error("validation", "OBS overlay read grant request is invalid", false),
+    };
+  }
+
+  try {
+    await dependencies.accessGrants.grant({
+      principalId: parsed.data.readKey,
+      sessionId: parsed.data.sessionId,
+      viewRole: "overlay",
+      expiresAt: parsed.data.expiresAt,
+    });
+  } catch {
+    return {
+      ok: false,
+      error: error("dependency-unavailable", "OBS overlay read grant could not be issued", true),
+    };
+  }
+
+  return {
+    ok: true,
+    role: "overlay",
+    sessionId: parsed.data.sessionId,
+    readKey: parsed.data.readKey,
+    snapshotUrl: buildObsOverlaySnapshotUrl({
+      baseUrl: parsed.data.baseUrl,
+      sessionId: parsed.data.sessionId,
+      readKey: parsed.data.readKey,
+      minimumRevision: parsed.data.minimumRevision,
+    }),
+    expiresAt: parsed.data.expiresAt,
+    reconnect: {
+      nextPollMs: 1_000,
+      stale: false,
+    },
+  };
 }
 
 export async function readObsOverlaySnapshot(

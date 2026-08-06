@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { obsOverlaySnapshotGET } from "../../src/app";
 import {
+  MAX_OBS_OVERLAY_READ_GRANT_MILLISECONDS,
   buildObsOverlaySnapshotUrl,
+  issueObsOverlayReadGrant,
   readObsOverlaySnapshot,
 } from "../../src/integrations";
 import { createMemoryPersistenceRuntime } from "../../src/realtime";
@@ -49,6 +51,109 @@ describe("OBS browser overlay snapshot seam", () => {
     expect(url).toBe(
       `https://chatxpt.example/api/overlay/snapshot?sessionId=${contractFixtureSession.sessionId}&readKey=${READ_KEY}&minimumRevision=3`,
     );
+  });
+
+  it("issues a bounded overlay-only Browser Source read grant that can recover the snapshot", async () => {
+    const runtime = createMemoryPersistenceRuntime();
+    await runtime.lifecycle.bootstrap({
+      roomCode: "ABCDEF23",
+      state: persistenceState(),
+      createdAt: FIXTURE_NOW,
+    });
+    await runtime.snapshots.publish({
+      streamer: contractFixtureStreamerView,
+      viewer: contractFixtureViewerView,
+      overlay: contractFixtureOverlayView,
+    });
+
+    const grant = await issueObsOverlayReadGrant(runtime, {
+      baseUrl: "https://chatxpt.example/studio",
+      sessionId: contractFixtureSession.sessionId,
+      readKey: READ_KEY,
+      now: FIXTURE_NOW,
+      expiresAt: FIXTURE_NOW + MAX_OBS_OVERLAY_READ_GRANT_MILLISECONDS,
+      minimumRevision: contractFixtureOverlayView.envelope.revision,
+    });
+
+    expect(grant.ok).toBe(true);
+    if (!grant.ok) return;
+    expect(grant).toMatchObject({
+      role: "overlay",
+      sessionId: contractFixtureSession.sessionId,
+      readKey: READ_KEY,
+      expiresAt: FIXTURE_NOW + MAX_OBS_OVERLAY_READ_GRANT_MILLISECONDS,
+      reconnect: { nextPollMs: 1_000, stale: false },
+    });
+    expect(grant.snapshotUrl).toBe(
+      `https://chatxpt.example/api/overlay/snapshot?sessionId=${contractFixtureSession.sessionId}&readKey=${READ_KEY}&minimumRevision=${contractFixtureOverlayView.envelope.revision}`,
+    );
+    await expect(
+      runtime.accessGrants.canRead(
+        READ_KEY,
+        contractFixtureSession.sessionId,
+        "streamer",
+        FIXTURE_NOW + 1_000,
+      ),
+    ).resolves.toBe(false);
+    await expect(
+      runtime.accessGrants.canRead(
+        READ_KEY,
+        contractFixtureSession.sessionId,
+        "viewer",
+        FIXTURE_NOW + 1_000,
+      ),
+    ).resolves.toBe(false);
+
+    const readable = await readObsOverlaySnapshot(runtime, {
+      sessionId: contractFixtureSession.sessionId,
+      readKey: READ_KEY,
+      minimumRevision: contractFixtureOverlayView.envelope.revision,
+      now: FIXTURE_NOW + 1_000,
+    });
+
+    expect(readable).toMatchObject({
+      ok: true,
+      role: "overlay",
+      snapshot: { readOnly: true },
+    });
+  });
+
+  it("fails closed when issuing an invalid or missing-session overlay read grant", async () => {
+    const runtime = await preparedRuntime();
+    const expired = await issueObsOverlayReadGrant(runtime, {
+      baseUrl: "https://chatxpt.example",
+      sessionId: contractFixtureSession.sessionId,
+      readKey: READ_KEY,
+      now: FIXTURE_NOW,
+      expiresAt: FIXTURE_NOW,
+    });
+    const tooLong = await issueObsOverlayReadGrant(runtime, {
+      baseUrl: "https://chatxpt.example",
+      sessionId: contractFixtureSession.sessionId,
+      readKey: READ_KEY,
+      now: FIXTURE_NOW,
+      expiresAt: FIXTURE_NOW + MAX_OBS_OVERLAY_READ_GRANT_MILLISECONDS + 1,
+    });
+    const missingSession = await issueObsOverlayReadGrant(runtime, {
+      baseUrl: "https://chatxpt.example",
+      sessionId: "missing-session",
+      readKey: READ_KEY,
+      now: FIXTURE_NOW,
+      expiresAt: FIXTURE_NOW + 60_000,
+    });
+
+    expect(expired).toMatchObject({
+      ok: false,
+      error: { code: "validation", retryable: false },
+    });
+    expect(tooLong).toMatchObject({
+      ok: false,
+      error: { code: "validation", retryable: false },
+    });
+    expect(missingSession).toMatchObject({
+      ok: false,
+      error: { code: "dependency-unavailable", retryable: true },
+    });
   });
 
   it("returns only the authorised read-only overlay snapshot", async () => {

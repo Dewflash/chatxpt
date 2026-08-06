@@ -44,8 +44,13 @@ export {
   type TwitchChatVoteSubmissionResult,
 } from "./twitch/chat-votes";
 export {
+  MAX_OBS_OVERLAY_READ_GRANT_MILLISECONDS,
   buildObsOverlaySnapshotUrl,
+  issueObsOverlayReadGrant,
   readObsOverlaySnapshot,
+  type ObsOverlayReadGrantDependencies,
+  type ObsOverlayReadGrantInput,
+  type ObsOverlayReadGrantResult,
   type ObsOverlaySnapshotReadDependencies,
   type ObsOverlaySnapshotReadInput,
   type ObsOverlaySnapshotReadResult,
