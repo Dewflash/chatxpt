@@ -49,6 +49,14 @@ export {
   type TwitchChatVoteSubmissionResult,
 } from "./twitch/chat-votes";
 export {
+  TWITCH_EXTENSION_CONFIG_PATH,
+  TWITCH_EXTENSION_LIVE_CONFIG_PATH,
+  TWITCH_EXTENSION_VIEWER_PATH,
+  TWITCH_OAUTH_CALLBACK_PATH,
+  resolveTwitchSetupReadiness,
+  type TwitchSetupReadiness,
+} from "./twitch/setup";
+export {
   MAX_OBS_OVERLAY_READ_GRANT_MILLISECONDS,
   buildObsOverlaySnapshotUrl,
   issueObsOverlayReadGrant,

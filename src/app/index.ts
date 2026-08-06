@@ -11,6 +11,7 @@ export { GET as diagnosticUiGatewaySessionHistoryGET } from "./api/diagnostics/u
 export { GET as diagnosticUiGatewayViewerReceiptGET } from "./api/diagnostics/ui-gateway/viewer-receipt/route";
 export { POST as obsOverlayGrantPOST } from "./api/overlay/grant/route";
 export { GET as obsOverlaySnapshotGET } from "./api/overlay/snapshot/route";
+export { GET as twitchOAuthCallbackGET } from "./api/twitch/oauth/callback/route";
 export {
   diagnosticUiGatewayBroadcasterId,
   diagnosticUiGatewayFixtureCatalog,
