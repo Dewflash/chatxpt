@@ -76,11 +76,16 @@ function formatStatus(status: string): string {
   return status.replaceAll("-", " ");
 }
 
-function timeLeft(viewer: ViewerViewModel | null): string {
+function voteWindowDuration(viewer: ViewerViewModel | null): string {
   const { endsAt, startsAt } = viewer?.questCycle ?? {};
   if (endsAt === null || endsAt === undefined || startsAt === null || startsAt === undefined) return "--";
   const seconds = Math.max(0, Math.round((endsAt - startsAt) / 1_000));
   return `${seconds}s`;
+}
+
+function voteSharePercent(votes: number, totalVotes: number): number {
+  if (totalVotes === 0) return 0;
+  return Math.round((votes / totalVotes) * 100);
 }
 
 export function DiagnosticUiHarnessClient({
@@ -190,6 +195,10 @@ export function DiagnosticUiHarnessClient({
 
   return (
     <main className="diagnostic-shell">
+      <div className="diagnostic-evidence-banner" role="note">
+        FIXTURE / NOT LIVE EVIDENCE
+      </div>
+
       <header className="diagnostic-header">
         <div>
           <p className="diagnostic-kicker">Fixture Harness</p>
@@ -230,8 +239,8 @@ export function DiagnosticUiHarnessClient({
               <dd>{viewer?.envelope.revision ?? "--"}</dd>
             </div>
             <div>
-              <dt>Timer</dt>
-              <dd>{timeLeft(viewer)}</dd>
+              <dt>Vote Window</dt>
+              <dd>{voteWindowDuration(viewer)}</dd>
             </div>
             <div>
               <dt>Votes</dt>
@@ -288,6 +297,7 @@ export function DiagnosticUiHarnessClient({
             <div className="diagnostic-list">
               {options.map((candidate, index) => {
                 const votes = viewer?.questCycle.voteTallies.find((tally) => tally.candidateId === candidate.candidateId)?.votes ?? 0;
+                const voteShare = voteSharePercent(votes, totalVotes);
                 return (
                   <article key={candidate.candidateId}>
                     <span>{index + 1}</span>
@@ -295,7 +305,7 @@ export function DiagnosticUiHarnessClient({
                       <strong>{candidate.title}</strong>
                       <p>{candidate.instruction}</p>
                       <div className="diagnostic-vote-track">
-                        <i style={{ width: `${Math.max(8, votes * 35)}%` }} />
+                        <i style={{ width: `${voteShare}%` }} />
                       </div>
                     </div>
                     <button
@@ -319,7 +329,7 @@ export function DiagnosticUiHarnessClient({
               <h2>{options[0]?.title ?? "Quest Pending"}</h2>
               <span>{options[0]?.instruction ?? "No active fixture option."}</span>
               <div className="diagnostic-overlay-meter">
-                <i style={{ width: `${Math.min(100, Math.max(10, totalVotes * 35))}%` }} />
+                <i style={{ width: `${Math.min(100, totalVotes * 35)}%` }} />
               </div>
             </div>
           </section>

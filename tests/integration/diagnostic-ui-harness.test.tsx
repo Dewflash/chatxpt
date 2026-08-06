@@ -79,13 +79,16 @@ describe("diagnostic UI harness client", () => {
     );
 
     expect(await screen.findByText("Fixture revision 3")).toBeInTheDocument();
+    expect(screen.getByText("FIXTURE / NOT LIVE EVIDENCE")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Vote In Progress" })).toBeInTheDocument();
+    expect(screen.getByText("Vote Window")).toBeInTheDocument();
     expect(screen.getByText("Hold Your Ground")).toBeInTheDocument();
     expect(screen.getByText("30s")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Viewer Board" }));
     expect(screen.getByRole("heading", { name: "Choose A Quest" })).toBeInTheDocument();
     const firstChoice = screen.getAllByRole("article")[0];
+    expect(firstChoice.querySelector(".diagnostic-vote-track i")).toHaveStyle({ width: "0%" });
     await userEvent.click(within(firstChoice).getByRole("button", { name: "0 votes" }));
 
     expect(await screen.findByRole("heading", { name: "Vote Accepted" })).toBeInTheDocument();
