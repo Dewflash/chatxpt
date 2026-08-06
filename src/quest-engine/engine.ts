@@ -141,7 +141,6 @@ function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
             context === null ||
             context === undefined ||
             context.gameplay === null ||
-            context.audience === null ||
             completionRule?.mode !== "signal"
           ) {
             return {
@@ -156,7 +155,15 @@ function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
               source: "orchestrator",
             },
             gameplay: context.gameplay,
-            audience: context.audience,
+            audience: context.audience ?? {
+              envelope: {
+                ...input.currentState.envelope,
+                messageId: `${input.command.commandId}-progress-audience-unavailable`,
+                source: "orchestrator",
+              },
+              sampleSize: 0,
+              signals: [],
+            },
           });
           if (!intelligence.success) {
             return {
