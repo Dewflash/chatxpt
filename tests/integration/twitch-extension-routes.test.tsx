@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -54,5 +56,17 @@ describe("Twitch Extension route shells", () => {
     const body = document.body.textContent ?? "";
     expect(body).not.toContain("fixture-client-secret");
     expect(body).not.toContain("fixture-extension-secret");
+  });
+
+  it("keeps registration shells dynamic so readiness reflects runtime environment", () => {
+    for (const route of ["viewer", "config", "live-config"]) {
+      const source = readFileSync(
+        resolve(process.cwd(), `src/app/twitch/${route}/page.tsx`),
+        "utf8",
+      );
+
+      expect(source).toContain('export const runtime = "nodejs"');
+      expect(source).toContain('export const dynamic = "force-dynamic"');
+    }
   });
 });
