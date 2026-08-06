@@ -26,6 +26,14 @@ export {
   type TwitchChatRateLimiter,
 } from "./twitch/chat-delivery";
 export {
+  normaliseTwitchChatVote,
+  twitchChatActorId,
+  twitchChatVoterKey,
+  type TwitchChatVerifiedVoteActor,
+  type TwitchChatVoteMessage,
+  type TwitchChatVoteNormalisationResult,
+} from "./twitch/chat-votes";
+export {
   buildObsOverlaySnapshotUrl,
   readObsOverlaySnapshot,
   type ObsOverlaySnapshotReadDependencies,
