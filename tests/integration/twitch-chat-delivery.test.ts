@@ -4,10 +4,56 @@ import {
   FixedWindowTwitchChatRateLimiter,
   deliverTwitchChatFallbackAnnouncement,
   deliverTwitchChatVoteAcknowledgement,
+  deliverTwitchChatVoteSubmissionAcknowledgement,
   type TwitchChatOutboundSender,
+  type TwitchChatVoteSubmissionResult,
 } from "../../src/integrations";
+import { viewerVoteCommandSchema } from "../../src/core";
 
 const FIXTURE_NOW = 1_900_000_000_000;
+
+function voteCommand(candidateId = "quest-candidate-1") {
+  return viewerVoteCommandSchema.parse({
+    contractVersion: "1.0.0",
+    sessionId: "fixture-session",
+    questCycleId: "fixture-cycle",
+    commandId: `fixture-command-${candidateId}`,
+    correlationId: `fixture-correlation-${candidateId}`,
+    expectedRevision: 1,
+    issuedAt: FIXTURE_NOW,
+    actor: { kind: "viewer", actorId: "fixture-viewer" },
+    type: "viewer.vote",
+    candidateId,
+    voterKey: "fixture-voter",
+    sourceMode: "twitch-chat",
+  });
+}
+
+function submittedVote(input: {
+  readonly outcome: "committed" | "duplicate";
+  readonly candidateId?: string;
+}): TwitchChatVoteSubmissionResult {
+  const command = voteCommand(input.candidateId);
+  return {
+    status: "submitted",
+    selectedIndex: 0,
+    command,
+    acceptedCandidateId: command.candidateId,
+    result: {
+      ok: true,
+      outcome: input.outcome,
+      receipt: {
+        command,
+        commandFingerprint: "fixture-fingerprint",
+        state: {} as never,
+        events: [],
+        acceptedAt: FIXTURE_NOW,
+      },
+      views: null,
+      delivery: "not-republished",
+    },
+  };
+}
 
 describe("Twitch chat outbound delivery boundary", () => {
   it("reports chat fallback as unavailable when no Twitch sender is configured", async () => {
@@ -128,6 +174,81 @@ describe("Twitch chat outbound delivery boundary", () => {
       status: "not-delivered",
       candidateId: null,
       deliveredAt: null,
+    });
+  });
+
+  it("does not deliver acknowledgements for ignored chat", async () => {
+    let sendCount = 0;
+    const result = await deliverTwitchChatVoteSubmissionAcknowledgement({
+      submission: { status: "ignored", reason: "not-a-vote" },
+      channelId: "twitch-channel-1",
+      sender: {
+        async sendMessage() {
+          sendCount += 1;
+          throw new Error("Ignored chat must not send");
+        },
+      },
+      now: () => FIXTURE_NOW,
+      correlationId: "chat-ack-ignored",
+    });
+
+    expect(sendCount).toBe(0);
+    expect(result).toEqual({
+      status: "not-required",
+      intent: { status: "none", candidateId: null, reason: "not-a-vote" },
+      delivery: null,
+      acknowledgement: null,
+    });
+  });
+
+  it("delivers acknowledgement intent for submitted chat votes", async () => {
+    const sentMessages: string[] = [];
+    const sender: TwitchChatOutboundSender = {
+      async sendMessage(message) {
+        sentMessages.push(message.messageText);
+        return { status: "delivered", deliveredAt: message.sentAt + 5 };
+      },
+    };
+
+    const result = await deliverTwitchChatVoteSubmissionAcknowledgement({
+      submission: submittedVote({ outcome: "committed", candidateId: "quest-candidate-2" }),
+      channelId: "twitch-channel-1",
+      sender,
+      now: () => FIXTURE_NOW,
+      correlationId: "chat-ack-submission-counted",
+    });
+
+    expect(sentMessages).toEqual(["ChatXPT counted your vote."]);
+    expect(result).toMatchObject({
+      status: "delivery-attempted",
+      intent: { status: "counted", candidateId: "quest-candidate-2" },
+      delivery: { status: "delivered", deliveredAt: FIXTURE_NOW + 5 },
+      acknowledgement: {
+        status: "counted",
+        candidateId: "quest-candidate-2",
+        deliveredAt: FIXTURE_NOW + 5,
+      },
+    });
+  });
+
+  it("keeps duplicate acknowledgement unavailable when no Twitch sender exists", async () => {
+    const result = await deliverTwitchChatVoteSubmissionAcknowledgement({
+      submission: submittedVote({ outcome: "duplicate", candidateId: "quest-candidate-3" }),
+      channelId: null,
+      sender: null,
+      now: () => FIXTURE_NOW,
+      correlationId: "chat-ack-submission-unavailable",
+    });
+
+    expect(result).toMatchObject({
+      status: "delivery-attempted",
+      intent: { status: "duplicate", candidateId: "quest-candidate-3" },
+      delivery: { status: "unavailable", deliveredAt: null },
+      acknowledgement: {
+        status: "unavailable",
+        candidateId: null,
+        deliveredAt: null,
+      },
     });
   });
 });

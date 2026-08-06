@@ -9,6 +9,11 @@ import {
   type TwitchChatVoteAcknowledgement,
   type TwitchChatVoteAcknowledgementStatus,
 } from "../../core";
+import {
+  twitchChatVoteAcknowledgementIntent,
+  type TwitchChatVoteAcknowledgementIntent,
+  type TwitchChatVoteSubmissionResult,
+} from "./chat-votes";
 
 export type TwitchChatVoteProcessingStatus = Extract<
   TwitchChatVoteAcknowledgementStatus,
@@ -71,6 +76,25 @@ export interface DeliverTwitchChatVoteAcknowledgementInput extends TwitchChatDel
 export interface DeliveredTwitchChatVoteAcknowledgement {
   readonly delivery: TwitchChatAcknowledgementDelivery;
   readonly acknowledgement: TwitchChatVoteAcknowledgement;
+}
+
+export type DeliveredTwitchChatVoteSubmissionAcknowledgement =
+  | {
+      readonly status: "not-required";
+      readonly intent: Extract<TwitchChatVoteAcknowledgementIntent, { status: "none" }>;
+      readonly delivery: null;
+      readonly acknowledgement: null;
+    }
+  | {
+      readonly status: "delivery-attempted";
+      readonly intent: Exclude<TwitchChatVoteAcknowledgementIntent, { status: "none" }>;
+      readonly delivery: TwitchChatAcknowledgementDelivery;
+      readonly acknowledgement: TwitchChatVoteAcknowledgement;
+    };
+
+export interface DeliverTwitchChatVoteSubmissionAcknowledgementInput
+  extends TwitchChatDeliveryContext {
+  readonly submission: TwitchChatVoteSubmissionResult;
 }
 
 const acknowledgementMessages: Record<TwitchChatVoteProcessingStatus, string> = {
@@ -210,6 +234,36 @@ export async function deliverTwitchChatVoteAcknowledgement(
       processingStatus: input.processingStatus,
       candidateId: input.candidateId,
     }),
+  };
+}
+
+export async function deliverTwitchChatVoteSubmissionAcknowledgement(
+  input: DeliverTwitchChatVoteSubmissionAcknowledgementInput,
+): Promise<DeliveredTwitchChatVoteSubmissionAcknowledgement> {
+  const intent = twitchChatVoteAcknowledgementIntent(input.submission);
+  if (intent.status === "none") {
+    return {
+      status: "not-required",
+      intent,
+      delivery: null,
+      acknowledgement: null,
+    };
+  }
+
+  const delivered = await deliverTwitchChatVoteAcknowledgement({
+    channelId: input.channelId,
+    sender: input.sender,
+    rateLimiter: input.rateLimiter,
+    now: input.now,
+    correlationId: input.correlationId,
+    processingStatus: intent.status,
+    candidateId: intent.candidateId,
+  });
+  return {
+    status: "delivery-attempted",
+    intent,
+    delivery: delivered.delivery,
+    acknowledgement: delivered.acknowledgement,
   };
 }
 
