@@ -29,6 +29,11 @@ export {
   type TwitchChatRateLimiter,
 } from "./twitch/chat-delivery";
 export {
+  handleTwitchChatVoteMessage,
+  type TwitchChatVoteMessageHandlerDependencies,
+  type TwitchChatVoteMessageHandlingResult,
+} from "./twitch/chat-handler";
+export {
   TwitchChatVerifiedVoteActorStore,
   normaliseTwitchChatVote,
   submitTwitchChatVote,

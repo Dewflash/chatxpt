@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   TwitchChatVerifiedVoteActorStore,
+  handleTwitchChatVoteMessage,
   normaliseTwitchChatVote,
   submitTwitchChatVote,
   twitchChatActorId,
   twitchChatVoteAcknowledgementIntent,
   twitchChatVoterKey,
+  type TwitchChatOutboundSender,
 } from "../../src/integrations";
 import {
   bindPersistenceRuntime,
@@ -222,6 +224,180 @@ describe("Twitch chat vote normalisation", () => {
     expect(tally.tallies[2]).toMatchObject({
       candidateId: candidateIds[2],
       votes: 1,
+    });
+  });
+
+  it("handles a Twitch chat message through submit plus delivered acknowledgement", async () => {
+    const actorStore = new TwitchChatVerifiedVoteActorStore();
+    const runtime = await preparedRuntime();
+    const current = await runtime.sessions.load(contractFixtureSession.sessionId);
+    if (current === null) throw new Error("Expected fixture session to be live");
+    const sentMessages: Array<{ readonly messageText: string; readonly correlationId: string }> = [];
+    const sender: TwitchChatOutboundSender = {
+      async sendMessage(message) {
+        sentMessages.push({
+          messageText: message.messageText,
+          correlationId: message.correlationId,
+        });
+        return { status: "delivered", deliveredAt: message.sentAt + 12 };
+      },
+    };
+    const orchestrator = new ChatXptOrchestrator(
+      bindPersistenceRuntime(logicDependencies(actorStore), runtime),
+    );
+
+    const handled = await handleTwitchChatVoteMessage(
+      {
+        actorStore,
+        executor: orchestrator,
+        sender,
+        now: () => FIXTURE_NOW + 2_000,
+      },
+      {
+        sessionId: contractFixtureSession.sessionId,
+        questCycleId,
+        expectedRevision: current.session.revision,
+        candidateIds,
+        twitchMessageId: "twitch-message-handle-counted",
+        twitchChannelId: "twitch-channel-1",
+        twitchUserId: "twitch-user-handle-counted",
+        text: "2",
+        receivedAt: FIXTURE_NOW + 1_000,
+      },
+    );
+
+    expect(handled.submission.status).toBe("submitted");
+    if (handled.submission.status !== "submitted") return;
+    expect(handled.submission.result).toMatchObject({ ok: true, outcome: "committed" });
+    expect(sentMessages).toEqual([
+      {
+        messageText: "ChatXPT counted your vote.",
+        correlationId: handled.submission.command.correlationId,
+      },
+    ]);
+    expect(handled.acknowledgement).toMatchObject({
+      status: "delivery-attempted",
+      intent: { status: "counted", candidateId: candidateIds[1] },
+      delivery: { status: "delivered", deliveredAt: FIXTURE_NOW + 2_012 },
+      acknowledgement: {
+        status: "counted",
+        candidateId: candidateIds[1],
+        deliveredAt: FIXTURE_NOW + 2_012,
+      },
+    });
+  });
+
+  it("handles ignored Twitch chat without executing or delivering acknowledgement", async () => {
+    const actorStore = new TwitchChatVerifiedVoteActorStore();
+    let executeCount = 0;
+    let sendCount = 0;
+
+    const handled = await handleTwitchChatVoteMessage(
+      {
+        actorStore,
+        executor: {
+          execute() {
+            executeCount += 1;
+            throw new Error("Ignored chat must not execute");
+          },
+        },
+        sender: {
+          async sendMessage() {
+            sendCount += 1;
+            throw new Error("Ignored chat must not send");
+          },
+        },
+        now: () => FIXTURE_NOW,
+      },
+      {
+        sessionId: contractFixtureSession.sessionId,
+        questCycleId,
+        expectedRevision: 0,
+        candidateIds,
+        twitchMessageId: "twitch-message-handle-ignored",
+        twitchChannelId: "twitch-channel-1",
+        twitchUserId: "twitch-user-ignored",
+        text: "hello chat",
+        receivedAt: FIXTURE_NOW,
+      },
+    );
+
+    expect(handled.submission).toEqual({ status: "ignored", reason: "not-a-vote" });
+    expect(handled.acknowledgement).toEqual({
+      status: "not-required",
+      intent: { status: "none", candidateId: null, reason: "not-a-vote" },
+      delivery: null,
+      acknowledgement: null,
+    });
+    expect(executeCount).toBe(0);
+    expect(sendCount).toBe(0);
+  });
+
+  it("handles duplicate Twitch chat votes with an acknowledgement for the original candidate", async () => {
+    const actorStore = new TwitchChatVerifiedVoteActorStore();
+    const runtime = await preparedRuntime();
+    const current = await runtime.sessions.load(contractFixtureSession.sessionId);
+    if (current === null) throw new Error("Expected fixture session to be live");
+    const sentMessages: string[] = [];
+    const sender: TwitchChatOutboundSender = {
+      async sendMessage(message) {
+        sentMessages.push(message.messageText);
+        return { status: "delivered", deliveredAt: message.sentAt };
+      },
+    };
+    const orchestrator = new ChatXptOrchestrator(
+      bindPersistenceRuntime(logicDependencies(actorStore), runtime),
+    );
+
+    const first = await handleTwitchChatVoteMessage(
+      { actorStore, executor: orchestrator, sender, now: () => FIXTURE_NOW + 2_000 },
+      {
+        sessionId: contractFixtureSession.sessionId,
+        questCycleId,
+        expectedRevision: current.session.revision,
+        candidateIds,
+        twitchMessageId: "twitch-message-handle-duplicate-first",
+        twitchChannelId: "twitch-channel-1",
+        twitchUserId: "twitch-user-handle-duplicate",
+        text: "1",
+        receivedAt: FIXTURE_NOW + 1_000,
+      },
+    );
+    expect(first.submission.status).toBe("submitted");
+    if (first.submission.status !== "submitted" || !first.submission.result.ok) return;
+
+    const second = await handleTwitchChatVoteMessage(
+      { actorStore, executor: orchestrator, sender, now: () => FIXTURE_NOW + 3_000 },
+      {
+        sessionId: contractFixtureSession.sessionId,
+        questCycleId,
+        expectedRevision: first.submission.result.receipt.state.session.revision,
+        candidateIds,
+        twitchMessageId: "twitch-message-handle-duplicate-second",
+        twitchChannelId: "twitch-channel-1",
+        twitchUserId: "twitch-user-handle-duplicate",
+        text: "3",
+        receivedAt: FIXTURE_NOW + 2_000,
+      },
+    );
+
+    expect(sentMessages).toEqual([
+      "ChatXPT counted your vote.",
+      "ChatXPT already counted your first vote.",
+    ]);
+    expect(second.submission).toMatchObject({
+      status: "submitted",
+      result: { ok: false, error: { code: "duplicate" } },
+      acceptedCandidateId: candidateIds[0],
+    });
+    expect(second.acknowledgement).toMatchObject({
+      status: "delivery-attempted",
+      intent: { status: "duplicate", candidateId: candidateIds[0] },
+      acknowledgement: {
+        status: "duplicate",
+        candidateId: candidateIds[0],
+        deliveredAt: FIXTURE_NOW + 3_000,
+      },
     });
   });
 
