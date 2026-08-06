@@ -10,6 +10,16 @@ export {
 } from "../core";
 
 export {
+  FetchUiGatewayClient,
+  type FetchUiGatewayClientOptions,
+  type UiGatewayClient,
+  type UiGatewayCommandResult,
+  type UiGatewayReadRequest,
+  type UiGatewayReadResult,
+  type UiGatewayRealityLabel,
+  type UiGatewaySnapshotRole,
+} from "./browser";
+export {
   buildTwitchChatFinalResultText,
   buildTwitchChatPollOpenText,
   buildTwitchChatVoteAcknowledgement,

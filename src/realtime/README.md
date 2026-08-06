@@ -3,10 +3,25 @@
 Role 1 owns authoritative command handling, persistence ordering, revisions, snapshot recovery, and broadcast composition. Transport-specific clients must stay behind this entrypoint.
 
 The public entrypoint now provides the credential-free memory persistence,
-server command-permission policy, session lifecycle service, and private
-Supabase snapshot subscriber used by role-owned clients. Server composition
-imports `@/realtime/server` for environment validation and Supabase service-role
-adapters; client code must never import that server entrypoint.
+server command-permission policy, session lifecycle service, browser-safe UI
+gateway client, and private Supabase snapshot subscriber used by role-owned
+clients. Server composition imports `@/realtime/server` for environment
+validation and Supabase service-role adapters; client code must never import
+that server entrypoint.
+
+## Browser UI gateway client
+
+Role-owned client modules should use `FetchUiGatewayClient` from `@/realtime`
+when they need to read a Role 1-authorised snapshot or dispatch a canonical
+command from a browser surface. The client sends same-origin credentials, can add
+a scoped bearer token when the host provides one, marks command POSTs with
+`x-chatxpt-command`, and maps malformed responses, transport failures, and token
+provider failures into typed domain errors instead of throwing through UI code.
+
+The current endpoint defaults to the fixture-only diagnostic gateway. That route
+is production-disabled unless Role 1 explicitly enables diagnostics, so passing
+tests here prove browser command/read shape and failure handling only; they do
+not prove live Twitch, OBS, Supabase, or deployed authentication behaviour.
 
 Authoritative writes always flow through the Role 1 orchestrator or lifecycle
 service. The Supabase publisher persists role-sanitised snapshots through a
