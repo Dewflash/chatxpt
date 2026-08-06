@@ -190,10 +190,10 @@ Role 1 owns vote authentication, acceptance, storage, and deduplication. Role 3 
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D3-16 | Manual versus automatic progress and completion policy | Open | — |
-| D3-17 | Success, failure, cancellation, skip, and expiry semantics | Open | — |
-| D3-18 | Session-point and hype formulas | Open | — |
-| D3-19 | Cooldown/history effects on future intervention and candidates | Open | — |
+| D3-16 | Manual versus automatic progress and completion policy | Accepted | Manual progress/completion is the MVP default and must be monotonic. Automatic progress is accepted only when a deterministic quest rule names the allowed gameplay signal kind and every cited signal is known, supported, no older than 15 seconds, and at least 0.75 confidence; missing, audience-only, unknown, unsupported, disallowed, stale, or weak evidence cannot advance progress. The policy remains pure until Role 1 lands a canonical progress command/context seam. |
+| D3-17 | Success, failure, cancellation, skip, and expiry semantics | Accepted | Success requires an active candidate, sets manual progress to 1, and awards that candidate's points. Failure preserves observed progress. Cancellation, skip, and expiry remain distinct zero-point terminal results with authoritative time and reason; cancellation includes safety/emergency invalidation, skip is an intentional streamer choice, and expiry is deadline-driven through the accepted future tick seam. |
+| D3-18 | Session-point and hype formulas | Accepted | Award the candidate's configured session points only on success. Emit deterministic session-scoped hype deltas of +10 for success, +2 for a completed failed attempt, and 0 for cancellation, skip, or expiry. Rewards are non-monetary, non-wagering, and never create persistent viewer balances; Role 1 stamps/persists/broadcasts canonical reward events. |
+| D3-19 | Cooldown/history effects on future intervention and candidates | Accepted | Every terminal outcome calculates the existing 120-second cooldown. Record the active candidate in recent history for any post-activation outcome so it cannot be immediately repeated; a batch cancelled or skipped before activation records no fabricated active quest. The accepted five-cycle/30-minute repetition window remains unchanged. |
 
 ### R3-P10 — Progress and terminal outcomes
 
@@ -221,8 +221,8 @@ Role 1 owns vote authentication, acceptance, storage, and deduplication. Role 3 
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D3-20 | Quest objectives/instructions Role 2's model context must optimise for | Open | — |
-| D3-21 | How provider/algorithmic source affects validation without bypassing rules | Open | — |
+| D3-20 | Quest objectives/instructions Role 2's model context must optimise for | Accepted | Request exactly three meaningfully distinct, game-neutral quests that are understandable at a glance, feasible in the current evidenced moment, measurable within the current match, and calibrated to the streamer's profile, audience state, duration, difficulty, and reward settings. Each candidate must include a concise title, one unambiguous instruction, a duration or completion condition, difficulty, session points, and a producer-only rationale grounded only in known supported signals. Never optimise spectacle over safety, consent, accessibility, teammate welfare, or streamer restrictions, and never invent unknown gameplay facts. |
+| D3-21 | How provider/algorithmic source affects validation without bypassing rules | Accepted | Treat source and provider status as provenance, never as trust or a quality waiver. Provider-generated, algorithmic, and deterministic-fallback candidates all pass the same Role 3 safety, boundary, evidence, feasibility, clarity, timing, diversity, repetition, and lifecycle validation in the same order. A provider refusal, timeout, malformed batch, missing candidate, or rejected candidate yields separately validated deterministic replacements; no source may weaken a hard rejection, bypass exactly-three assembly, or receive semantic repair. |
 
 ### R3-P12 — Quest-domain AI quality contract
 

@@ -4,7 +4,7 @@
 
 **Plan owner:** Role 2 (`joelyrk`) under D-016
 
-**Status:** Awaiting Role 5's one consolidated feasibility review in [issue #16](https://github.com/Dewflash/chatxpt/issues/16)
+**Status:** Accepted by Role 2 after Role 5's consolidated feasibility review in [issue #16](https://github.com/Dewflash/chatxpt/issues/16#issuecomment-5189664413); no scope revision was required
 
 **Primary directory:** `src/viewer/`
 
@@ -133,10 +133,10 @@ Codex first prepares the technical feasibility review itself, then uses these as
 
 | ID | What Codex asks Role 5 | Choices explained in plain language | Recommended starting point | Baseline status |
 | --- | --- | --- | --- | --- |
-| D5-01 | What should the viewer experience feel like? | A game HUD feels competitive; a community party feels expressive; a clean Twitch panel prioritises speed. | A clean, high-energy Twitch panel: fast to understand, with celebration reserved for meaningful quest moments. | Open |
-| D5-02 | How should voting feel? | Tapping the whole quest card is fastest; a separate vote button is explicit; selecting then confirming reduces mistakes. | Select an accessible full card, then use one clear Vote button; preserve the selected state while waiting for authority. | Open |
-| D5-03 | How loud should reactions and celebrations be? | Minimal feedback stays calm; arcade effects add hype but can obscure voting and strain Extension performance. | Short, bounded celebrations that never cover the options or block the next action, with reduced-motion alternatives. | Open |
-| D5-04 | Does Role 5 already have viewer/overlay references it wants Codex to follow? | Existing screenshots can guide composition; otherwise Codex applies Role 4's system and proposes reversible layouts. | Do not block on references; begin from Role 4 tokens and review compact, mobile, and overlay screenshots. | Open |
+| D5-01 | What should the viewer experience feel like? | A game HUD feels competitive; a community party feels expressive; a clean Twitch panel prioritises speed. | A clean, high-energy Twitch panel: fast to understand, with celebration reserved for meaningful quest moments. | Settled in `ROLE-5-EXECUTION.md` |
+| D5-02 | How should voting feel? | Tapping the whole quest card is fastest; a separate vote button is explicit; selecting then confirming reduces mistakes. | Select an accessible full card, then use one clear Vote button; preserve the selected state while waiting for authority. | Settled in `ROLE-5-EXECUTION.md` |
+| D5-03 | How loud should reactions and celebrations be? | Minimal feedback stays calm; arcade effects add hype but can obscure voting and strain Extension performance. | Short, bounded celebrations that never cover the options or block the next action, with reduced-motion alternatives. | Settled in `ROLE-5-EXECUTION.md` |
+| D5-04 | Does Role 5 already have viewer/overlay references it wants Codex to follow? | Existing screenshots can guide composition; otherwise Codex applies Role 4's system and proposes reversible layouts. | Do not block on references; begin from Role 4 tokens and review compact, mobile, and overlay screenshots. | Settled in `ROLE-5-EXECUTION.md` |
 
 ### Work
 
@@ -152,6 +152,8 @@ Codex first prepares the technical feasibility review itself, then uses these as
 - Role 2 records one revision or explicitly records that no revision was needed.
 - Every blocker has an owner and required-by phase.
 - No source implementation starts before this exit.
+
+**Acceptance record (5 August 2026):** Role 2 [accepted Role 5's review](https://github.com/Dewflash/chatxpt/issues/16#issuecomment-5189664413) without changing phase, priority, ownership, or scope. F5-01 through F5-04 remain implementing-owner recommendations, while UI-X05 through UI-X08 and UI-X10 retain authority for the missing harness, lifecycle examples, fallbacks, and private viewer recovery. Role 5 may begin its Phase 1 prop and fixture work, but design-system consumption still waits for Role 4's minimum public handoff.
 
 ## Phase 1 / R5-P02: Public viewer boundary, design-system consumption, and harness
 
