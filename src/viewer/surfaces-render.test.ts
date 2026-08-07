@@ -27,6 +27,8 @@ describe("Role 5 public viewer surfaces", () => {
     expect(html).toContain("Guardian Protocol");
     expect(html).toContain("Caster Mode");
     expect(html).toContain("Chat Battle Cry");
+    expect(html).toContain("Hype 82");
+    expect(html).toContain("120 XP");
     expect(html).toContain("Select a card, then vote.");
     expect(html).not.toContain("Fixture-only surface");
     expect(html).not.toContain("fixture dispatcher");
@@ -48,6 +50,27 @@ describe("Role 5 public viewer surfaces", () => {
     expect(html).toContain("Fixture-only surface");
     expect(html).toContain("Role 5 renders state");
     expect(html).toContain("Role 1 remains");
+  });
+
+  it("enables reactions only when an authorised dispatcher is supplied", () => {
+    const baseProps = {
+      dispatchVote: async () => ({ ok: false as const, message: "not submitted during server render" }),
+      initialView: createViewerDemoView(),
+      surface: "extension" as const,
+      voterKey: "render-test-viewer",
+    };
+    const disabledHtml = renderToStaticMarkup(h(ViewerQuestBoard, baseProps));
+    const enabledHtml = renderToStaticMarkup(
+      h(ViewerQuestBoard, {
+        ...baseProps,
+        dispatchReaction: async () => ({ ok: true, message: "Reaction confirmed." }),
+      }),
+    );
+    const disabledRegion = disabledHtml.slice(disabledHtml.indexOf('aria-label="Reaction controls"'));
+    const enabledRegion = enabledHtml.slice(enabledHtml.indexOf('aria-label="Reaction controls"'));
+
+    expect(disabledRegion).toContain("disabled");
+    expect(enabledRegion).not.toContain("disabled");
   });
 
   it("renders chat fallback instructions without claiming chat parsing authority", () => {

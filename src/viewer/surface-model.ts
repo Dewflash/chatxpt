@@ -4,6 +4,7 @@ import {
   type QuestCandidate,
   type QuestCycleState,
   type ServiceHealth,
+  type ViewerReactionCommand,
   type ViewerViewModel,
   type ViewerVoteCommand,
 } from "../core";
@@ -22,6 +23,13 @@ export type ViewerVoteDispatchResult =
     };
 
 export type ViewerVoteDispatcher = (command: ViewerVoteCommand) => Promise<ViewerVoteDispatchResult>;
+
+export type ViewerReactionDispatchResult = {
+  readonly ok: boolean;
+  readonly message: string;
+};
+
+export type ViewerReactionDispatcher = (command: ViewerReactionCommand) => Promise<ViewerReactionDispatchResult>;
 
 export type HostedQuestBoardAccessState =
   | {
@@ -114,4 +122,30 @@ export function buildViewerVoteCommand(input: {
     voterKey: input.voterKey,
     sourceMode,
   };
+}
+
+export function buildViewerReactionCommand(input: {
+  readonly view: ViewerViewModel;
+  readonly reaction: string;
+  readonly issuedAt: number;
+}): ViewerReactionCommand {
+  return {
+    contractVersion: CONTRACT_VERSION,
+    sessionId: input.view.session.sessionId,
+    questCycleId: input.view.questCycle.envelope.questCycleId,
+    commandId: `viewer-react-${reactionSlug(input.reaction)}-${input.issuedAt}`,
+    correlationId: `viewer-reaction-correlation-${input.issuedAt}`,
+    expectedRevision: input.view.envelope.revision,
+    issuedAt: input.issuedAt,
+    actor: input.view.viewerId === null
+      ? { kind: "anonymous", actorId: null }
+      : { kind: "viewer", actorId: input.view.viewerId },
+    type: "viewer.react",
+    reaction: input.reaction,
+  };
+}
+
+function reactionSlug(reaction: string): string {
+  const slug = reaction.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return slug || "reaction";
 }

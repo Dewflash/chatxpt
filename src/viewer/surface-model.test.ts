@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createOverlayDemoView, createViewerDemoView } from "./demo-fixtures";
 import {
   activeQuest,
+  buildViewerReactionCommand,
   buildViewerVoteCommand,
   overlayPlacementClass,
   remainingSeconds,
@@ -35,6 +36,21 @@ describe("Role 5 viewer surface helpers", () => {
     expect(command.sourceMode).toBe("twitch-extension");
     expect(command.commandId.startsWith("viewer-vote-")).toBe(true);
     expect(view.questCycle.voteTallies[0]?.votes).toBe(beforeVotes);
+  });
+
+  it("builds viewer reaction commands without claiming reaction acceptance locally", () => {
+    const view = createViewerDemoView();
+
+    const command = buildViewerReactionCommand({
+      view,
+      reaction: "hype",
+      issuedAt: 1_786_200_001_001,
+    });
+
+    expect(command.type).toBe("viewer.react");
+    expect(command.reaction).toBe("hype");
+    expect(command.expectedRevision).toBe(view.envelope.revision);
+    expect(command.commandId).toBe("viewer-react-hype-1786200001001");
   });
 
   it("summarises health and overlay states for UI presentation", () => {

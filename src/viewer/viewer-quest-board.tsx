@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import type { ViewerViewModel } from "../core";
 import { Button, CardGrid, DesignSystemRoot, Notice, Panel, Progress, StatusBadge } from "../design-system";
 import {
+  buildViewerReactionCommand,
   buildViewerVoteCommand,
   remainingSeconds,
   serviceStatusLabel,
@@ -12,6 +13,7 @@ import {
   voteCountFor,
   voteShareFor,
   type HostedQuestBoardAccessState,
+  type ViewerReactionDispatcher,
   type ViewerVoteDispatcher,
   type ViewerSurfaceMode,
 } from "./surface-model";
@@ -22,6 +24,7 @@ export interface ViewerQuestBoardProps {
   readonly surface: ViewerSurfaceMode;
   readonly voterKey: string;
   readonly dispatchVote: ViewerVoteDispatcher;
+  readonly dispatchReaction?: ViewerReactionDispatcher;
   readonly heading?: string;
   readonly demoLabel?: string;
 }
@@ -38,6 +41,7 @@ export function ViewerQuestBoard({
   surface,
   voterKey,
   dispatchVote,
+  dispatchReaction,
   heading = "Vote on the sidequest",
   demoLabel,
 }: ViewerQuestBoardProps) {
@@ -45,6 +49,7 @@ export function ViewerQuestBoard({
   const [viewOverride, setViewOverride] = useState<{ readonly key: string; readonly view: ViewerViewModel } | null>(null);
   const [selectedOverride, setSelectedOverride] = useState<{ readonly key: string; readonly candidateId: string | null } | null>(null);
   const [pendingState, setPendingState] = useState<{ readonly key: string; readonly pending: boolean } | null>(null);
+  const [pendingReaction, setPendingReaction] = useState<{ readonly key: string; readonly reaction: string } | null>(null);
   const [messageState, setMessageState] = useState<{ readonly key: string; readonly message: string } | null>(null);
   const commandSequence = useRef(0);
   const view = viewOverride?.key === inputKey ? viewOverride.view : initialView;
@@ -53,6 +58,7 @@ export function ViewerQuestBoard({
       ? selectedOverride.candidateId
       : initialView.acceptedCandidateId;
   const pending = pendingState?.key === inputKey ? pendingState.pending : false;
+  const activeReaction = pendingReaction?.key === inputKey ? pendingReaction.reaction : null;
   const message = messageState?.key === inputKey ? messageState.message : "";
   const now =
     view.envelope.evidenceClass === "fixture" && view.questCycle.startsAt !== null
@@ -62,6 +68,7 @@ export function ViewerQuestBoard({
   const seconds = remainingSeconds(now, view.questCycle.endsAt);
   const selectedOption = options.find((option) => option.candidateId === selectedId) ?? null;
   const hasAcceptedVote = view.acceptedCandidateId !== null;
+  const canSendReaction = view.canReact && dispatchReaction !== undefined && view.connection.status === "ready";
   const shellClass = `${styles.viewerShell} ${surface === "extension" ? styles.extension : ""}`;
 
   function submitVote() {
@@ -99,6 +106,32 @@ export function ViewerQuestBoard({
       });
   }
 
+  function submitReaction(reaction: string) {
+    if (!canSendReaction || activeReaction !== null) return;
+
+    setPendingReaction({ key: inputKey, reaction });
+    setMessageState({ key: inputKey, message: `Sending ${reaction.toLowerCase()} reaction...` });
+
+    commandSequence.current += 1;
+
+    const command = buildViewerReactionCommand({
+      view,
+      reaction: reaction.toLowerCase(),
+      issuedAt: view.envelope.receivedAt + commandSequence.current,
+    });
+
+    dispatchReaction(command)
+      .then((result) => {
+        setMessageState({ key: inputKey, message: result.message });
+      })
+      .catch(() => {
+        setMessageState({ key: inputKey, message: "Reaction could not be sent. Try again after reconnecting." });
+      })
+      .finally(() => {
+        setPendingReaction((current) => (current?.key === inputKey ? null : current));
+      });
+  }
+
   return (
     <DesignSystemRoot className={styles.viewerSurface} data-surface={surface} density={surface === "extension" ? "compact" : "comfortable"} theme="twitch">
       <div className={shellClass}>
@@ -123,6 +156,8 @@ export function ViewerQuestBoard({
             </div>
             <div className={styles.metaRow}>
               <StatusBadge tone="info">{view.participationMode.replace("-", " ")}</StatusBadge>
+              <StatusBadge tone="info">{`Hype ${view.communityHype}`}</StatusBadge>
+              <StatusBadge tone="success">{`${view.sessionPoints} XP`}</StatusBadge>
               {seconds !== null && <span className={styles.countdown}>{seconds}s</span>}
             </div>
           </div>
@@ -179,7 +214,14 @@ export function ViewerQuestBoard({
 
           <div className={styles.reactionRow} aria-label="Reaction controls">
             {["Hype", "Clutch", "Careful"].map((reaction) => (
-              <Button disabled key={reaction} type="button" variant="secondary">
+              <Button
+                disabled={!canSendReaction || activeReaction !== null}
+                key={reaction}
+                loading={activeReaction === reaction}
+                onClick={() => submitReaction(reaction)}
+                type="button"
+                variant="secondary"
+              >
                 {reaction}
               </Button>
             ))}

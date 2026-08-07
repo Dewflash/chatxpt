@@ -10,6 +10,7 @@ export { ViewerOverlayInactive, ViewerRuntimeUnavailable } from "./runtime-unava
 export type { ViewerRuntimeSurface } from "./runtime-unavailable";
 export {
   activeQuest,
+  buildViewerReactionCommand,
   buildViewerVoteCommand,
   overlayPlacementClass,
   remainingSeconds,
@@ -18,7 +19,13 @@ export {
   voteCountFor,
   voteShareFor,
 } from "./surface-model";
-export type { ViewerSurfaceMode, ViewerVoteDispatchResult, ViewerVoteDispatcher } from "./surface-model";
+export type {
+  ViewerReactionDispatcher,
+  ViewerReactionDispatchResult,
+  ViewerSurfaceMode,
+  ViewerVoteDispatchResult,
+  ViewerVoteDispatcher,
+} from "./surface-model";
 export type { ChatVoteAcknowledgement, HostedQuestBoardAccessState } from "./surface-model";
 export {
   HostedQuestBoard,
