@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import {
   commandFingerprint,
+  deriveViewerVoterKey,
   viewerVoteCommandSchema,
   type CommandEnvelope,
   type OrchestratorResult,
@@ -102,7 +103,10 @@ export function twitchChatVoterKey(input: {
   readonly sessionId: string;
   readonly twitchUserId: string;
 }): string {
-  return `twitch-voter-${digest(`${input.sessionId}:${input.twitchUserId}`)}`;
+  return deriveViewerVoterKey({
+    principalId: twitchChatActorId(input.twitchUserId),
+    identityKind: "authenticated",
+  });
 }
 
 export function normaliseTwitchChatVote(

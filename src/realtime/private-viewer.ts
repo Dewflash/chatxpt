@@ -1,4 +1,4 @@
-import type { PrivateViewerIdentityKind } from "../core";
+import { deriveViewerVoterKey, type PrivateViewerIdentityKind } from "../core";
 
 export interface PrivateViewerIdentityInput {
   readonly principalId: string;
@@ -6,6 +6,5 @@ export interface PrivateViewerIdentityInput {
 }
 
 export function derivePrivateViewerVoterKey(input: PrivateViewerIdentityInput): string {
-  const prefix = input.identityKind === "authenticated" ? "viewer" : "anonymous";
-  return `${prefix}:${input.principalId}`;
+  return deriveViewerVoterKey(input);
 }

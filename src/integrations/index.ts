@@ -13,6 +13,16 @@ export type {
   PlatformEvent,
 } from "../core";
 export {
+  PRIVATE_VIEWER_RECOVERY_DECISION_ID,
+  privateViewerRecoveryPolicyReportSchema,
+  privateViewerRecoveryPolicyResolutionSchema,
+  privateViewerRecoveryVerificationSchema,
+  resolvePrivateViewerRecoveryPolicy,
+  type PrivateViewerRecoveryPolicyReport,
+  type PrivateViewerRecoveryPolicyResolution,
+  type PrivateViewerRecoveryVerification,
+} from "./test-lab/private-viewer-recovery-policy";
+export {
   UI_GATEWAY_HARNESS_DECISION_ID,
   resolveUiGatewayHarnessPolicy,
   uiGatewayHarnessPolicyReportSchema,
