@@ -44,15 +44,15 @@ export function HostedBoardAccessShell({
               <dt>Room</dt>
               <dd>{access.roomCode || "Unknown"}</dd>
             </div>
-          <div>
-            <dt>Status</dt>
-            <dd>{access.status}</dd>
-          </div>
-        </dl>
-        <p className="hosted-board-share">{access.message}</p>
-      </section>
-    </main>
-  );
+            <div>
+              <dt>Status</dt>
+              <dd>{access.status}</dd>
+            </div>
+          </dl>
+          <p className="hosted-board-share">{access.message}</p>
+        </section>
+      </main>
+    );
   }
 
   return (
@@ -79,6 +79,7 @@ export function HostedBoardAccessShell({
           </div>
         </dl>
         <p className="hosted-board-share">{access.share.viewerPath}</p>
+        <p className="hosted-board-share">{access.share.qrPayload}</p>
       </section>
     </main>
   );

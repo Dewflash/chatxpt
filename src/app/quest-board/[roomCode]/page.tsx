@@ -31,6 +31,8 @@ export default async function QuestBoardPage({
   try {
     const environment = resolveServerPersistenceEnvironment(process.env);
     const runtime = createConfiguredPersistenceRuntime(environment);
+    // Hosted-board access grants are request-scoped and need a server timestamp.
+    // eslint-disable-next-line react-hooks/purity
     const requestedAt = Date.now();
     const service = new HostedBoardAccessService(
       runtime.hostedBoardSessions,

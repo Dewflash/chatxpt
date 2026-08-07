@@ -28,6 +28,7 @@ describe("hosted board route shell", () => {
     expect(html).toContain("ABCDEFGH");
     expect(html).toContain("fixture-session");
     expect(html).toContain("/quest-board/ABCDEFGH");
+    expect(html).toContain("Revision");
     expect(html).not.toContain("acceptedCandidateId");
     expect(html).not.toContain("sessionPoints");
   });
