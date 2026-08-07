@@ -261,7 +261,7 @@ Run this loop throughout every phase:
 | D1-07 | Twitch OAuth scopes, callback URLs, and test-channel allowlist | Resolved by D-055 | Initial app registration uses the deployed and local callback URLs with no OAuth scopes while token exchange is disabled; EventSub/API chat and IRC fallback scopes are deferred runtime profiles; testing stays on the team-controlled broadcaster and allowlisted team viewers. |
 | D1-08 | Extension view types and exact Viewer/Config/Live Config routes | Resolved by D-056 | Register Panel and Mobile only. Both use Viewer `/twitch/viewer`; Panel height is 496px. Config uses `/twitch/config`; Live Config uses `/twitch/live-config`; video Extension types are deferred because OBS Browser Source owns broadcast overlay visuals for the MVP. |
 | D1-09 | OBS Virtual Camera selection/setup UX and capture-session lifecycle | Resolved by D-057 | Studio requests same-origin browser camera permission, selects OBS Virtual Camera only, requires raw-game-scene and overlay-excluded confirmation, samples fresh frames through the ephemeral `FrameSource` boundary, and blocks ready state on permission/source/recursion/stale-frame failures. |
-| D1-10 | Owned gameplay fixture and team-controlled Twitch test-stream procedure | Open | — |
+| D1-10 | Owned gameplay fixture and team-controlled Twitch test-stream procedure | Resolved by D-058 | Use one owned or explicitly authorised scenario in paired local OBS Virtual Camera and team-controlled Twitch-stream runs; keep expected annotations separate from extraction; reject unapproved third-party streams, raw video persistence, overlay-recursive scenes, and non-team-controlled Twitch evidence. |
 
 ### R1-P07 — Twitch developer readiness
 

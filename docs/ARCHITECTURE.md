@@ -86,7 +86,7 @@ For the MVP, the streamer configures OBS Virtual Camera to expose the raw game s
 
 The system is game-neutral through tiered support. Universal algorithms recognise broad action/quiet/transition signals across action games. Calibrated adapters may recognise specific HUD facts only for configured games with adequate evidence and confidence. Official telemetry is future work. Missing, unsupported, or unreliable facts are `unknown`; they are never fabricated.
 
-A developer Test Lab may analyse team-owned or explicitly authorised gameplay, including the same content streamed through a team-controlled Twitch channel. It is not a feature for silently analysing arbitrary third-party streams.
+A developer Test Lab may analyse team-owned or explicitly authorised gameplay, including the same content streamed through a team-controlled Twitch channel. Under D-058, the selected scenario must be run once through local OBS Virtual Camera capture and once through the team-controlled Twitch stream, with annotations recorded separately and never fed to extraction. It is not a feature for silently analysing arbitrary third-party streams.
 
 ## AI and deterministic fallback
 
