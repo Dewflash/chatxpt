@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   TWITCH_EXTENSION_CONFIG_PATH,
@@ -7,11 +7,15 @@ import {
   TWITCH_OAUTH_CALLBACK_PATH,
   resolveTwitchSetupReadiness,
 } from "../../src/integrations";
-import { twitchOAuthCallbackGET } from "../../src/app";
+import { twitchOAuthCallbackGET, twitchSetupReadinessGET } from "../../src/app";
 
 const CHECKED_AT = 1_786_300_000_000;
 
 describe("Twitch setup readiness", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("reports unavailable setup without leaking Twitch secrets", () => {
     const readiness = resolveTwitchSetupReadiness({}, {
       baseUrl: "https://preview.example.test",
@@ -98,5 +102,33 @@ describe("Twitch setup readiness", () => {
       ok: false,
       error: { code: "dependency-unavailable" },
     });
+  });
+
+  it("exposes a no-store setup readiness API without leaking configured secrets", async () => {
+    vi.stubEnv("TWITCH_CLIENT_ID", "fixture-client");
+    vi.stubEnv("TWITCH_CLIENT_SECRET", "fixture-client-secret");
+    vi.stubEnv("TWITCH_EXTENSION_CLIENT_ID", "fixture-extension");
+    vi.stubEnv("TWITCH_EXTENSION_SECRET", "fixture-extension-secret");
+
+    const response = await twitchSetupReadinessGET(
+      new Request("https://preview.example.test/api/twitch/setup/readiness"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    const body = await response.json();
+    expect(body).toMatchObject({
+      ok: true,
+      callbackPath: TWITCH_OAUTH_CALLBACK_PATH,
+      callbackUrl: "https://preview.example.test/api/twitch/oauth/callback",
+      extensionPaths: {
+        viewer: TWITCH_EXTENSION_VIEWER_PATH,
+        config: TWITCH_EXTENSION_CONFIG_PATH,
+        liveConfig: TWITCH_EXTENSION_LIVE_CONFIG_PATH,
+      },
+      missing: [],
+    });
+    expect(JSON.stringify(body)).not.toContain("fixture-client-secret");
+    expect(JSON.stringify(body)).not.toContain("fixture-extension-secret");
   });
 });

@@ -1,0 +1,2 @@
+- Added a no-store `/api/twitch/setup/readiness` route that returns Twitch callback, Extension path, missing-variable, and limitation status without exposing configured secret values.
+- Updated the Twitch setup runbook and Role 1 TODO so Extension registration has a direct server-safe readiness check before real developer-console evidence is available.

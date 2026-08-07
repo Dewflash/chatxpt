@@ -46,16 +46,17 @@ Never prefix Twitch secrets with `NEXT_PUBLIC_`, paste them into issues, or incl
 Before claiming Twitch readiness:
 
 1. Confirm `/api/twitch/oauth/callback` exists on the target deployment.
-2. Confirm an unauthorised callback request returns safe JSON and no Twitch secrets.
-3. Confirm the Twitch app has the deployed callback URL configured.
-4. Confirm the Twitch Extension has the viewer, config, and live-config URLs configured.
-5. Confirm `/twitch/viewer`, `/twitch/config`, and `/twitch/live-config` return the setup shell before replacing them with role-owned UI modules.
-6. Run the focused setup tests locally:
+2. Confirm `/api/twitch/setup/readiness` reports the callback URL, Extension paths, missing variables, and setup limitations without returning secret values.
+3. Confirm an unauthorised callback request returns safe JSON and no Twitch secrets.
+4. Confirm the Twitch app has the deployed callback URL configured.
+5. Confirm the Twitch Extension has the viewer, config, and live-config URLs configured.
+6. Confirm `/twitch/viewer`, `/twitch/config`, and `/twitch/live-config` return the setup shell before replacing them with role-owned UI modules.
+7. Run the focused setup tests locally:
 
 ```bash
 npm run test -- tests/integration/twitch-setup.test.ts tests/integration/twitch-extension-routes.test.tsx
 ```
 
-7. Record real developer-console, Local Test, or Hosted Test evidence in `docs/evidence/manifest.json` before citing Twitch as live.
+8. Record real developer-console, Local Test, or Hosted Test evidence in `docs/evidence/manifest.json` before citing Twitch as live.
 
 This runbook does not prove Twitch OAuth, EventSub, chat delivery, or Extension runtime behaviour. Those require separate live test-channel evidence.
