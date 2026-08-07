@@ -114,6 +114,7 @@ function votingCycle(acceptedCandidateId: string | null = null): QuestCycleState
     startsAt: BASE_TIME - 10_000,
     endsAt: BASE_TIME + 20_000,
     progress: null,
+    completionRule: null,
     result: null,
   };
 }
@@ -129,6 +130,7 @@ function idleCycle(): QuestCycleState {
     startsAt: null,
     endsAt: null,
     progress: null,
+    completionRule: null,
     result: null,
   };
 }
@@ -141,6 +143,10 @@ function activeCycle(): QuestCycleState {
     activeCandidateId: "guardian-protocol",
     startsAt: BASE_TIME - 16_000,
     endsAt: BASE_TIME + 59_000,
+    completionRule: {
+      mode: "signal",
+      allowedSignalKinds: ["fixture-squad-pressure"],
+    },
     progress: {
       value: 0.42,
       updatedAt: BASE_TIME - 2_000,
@@ -156,6 +162,10 @@ function resultCycle(): QuestCycleState {
     envelope: envelope("role-5-demo-result-cycle", 14),
     status: "succeeded",
     endsAt: BASE_TIME,
+    completionRule: {
+      mode: "manual",
+      allowedSignalKinds: [],
+    },
     progress: {
       value: 1,
       updatedAt: BASE_TIME,
