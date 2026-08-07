@@ -1,0 +1,1 @@
+Role 1 integration override added a minimum fixture-only Role 5 viewer/overlay slice: Twitch Extension-style voting, hosted board, chat fallback instructions, and read-only OBS overlay routes now mount public `@/viewer` modules for demo integration review.
