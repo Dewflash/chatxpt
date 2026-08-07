@@ -6,7 +6,7 @@ Update only this role's statuses and evidence. Raise shared-contract needs throu
 
 Execute these outcomes through `docs/build-plans/ROLE-2-BUILD-PLAN.md`; its decision gates belong to Joelyrk unless explicitly marked joint or escalated.
 
-**Next pass:** land the corrected Phase 4 audience pipeline after PR #111 preserves evidence-class boundaries and implements D2-12 through D2-15. In parallel, continue the real OBS/OCR evidence pass when Role 1's capture and Tesseract dependencies merge. D2-18 remains open.
+**Next pass:** land the credential-free algorithmic candidate strategy accepted under D2-18, then continue the real OBS/OCR evidence pass when Role 1's capture and Tesseract dependencies merge.
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
@@ -35,6 +35,7 @@ Provider/model adoption is a joint Role 2/Role 3 recommendation and requires Rol
 - `src/extraction/` defines the Role 1 source-adapter boundary plus private observation fusion and snapshot construction; `src/ai/` exports validating canonical intelligence and candidate provider factories.
 - Role 2 producer tests cover known, partial/unsupported, low-confidence, conflicting, stale, unavailable, permission-denied, abort, malformed candidate-count, and duplicate-title behaviour.
 - `codex/role-2-audience-snapshot-pipeline` adds a credential-free rolling audience pipeline that turns normalised audience events into privacy-safe energy, intent, repeated-request, chat-vote, and negative-pressure signals without retaining raw chat text.
+- `codex/role-2-algorithmic-candidate-strategy` adds the D2-18 credential-free algorithmic candidate strategy for exactly-three output without selecting or calling a provider.
 - `role-2/real-fixture-spike` consumes the canonical ephemeral `FrameSource` through capped pixel sampling and frame-difference measurements, releases frames before yielding, and provides selective-region OCR plumbing without settling the open Phase 3 classification/confidence thresholds.
 - Ten focused visual/OCR tests use explicitly synthetic pixels and a fake OCR adapter; they prove fixture-only component behaviour, not real extraction or OCR accuracy.
 - `codex/role-2-extraction-evidence` adds a Role 2-owned gameplay/chat evidence catalogue so team-owned recordings, sanitised chat, live OBS frames, and synthetic fixtures are labelled before use. It prevents synthetic fixtures from supporting live-demo claims and requires separated annotations for gameplay evaluation.
@@ -53,11 +54,10 @@ Provider/model adoption is a joint Role 2/Role 3 recommendation and requires Rol
 - `role-2/provider-fallback-evaluation` defines the Role 2 operational trial matrix aligned to Role 3's provider-quality rubric without selecting a provider or model.
 - The provider-neutral strategy enforces a configurable timeout and canonical exactly-three/provider-label validation, preserves caller cancellation, and invokes an injected credential-free algorithmic strategy after classified provider failures.
 - Privacy-safe observations and summaries cover success, malformed output, timeout, refusal, rate limiting, unavailability, error, fallback outcome, and p50/p95 latency without retaining raw provider payloads.
-- Fixture tests cover valid, partial, overfull, invalid, duplicate, incorrectly labelled, timeout, refusal, rate-limited, unavailable, generic-error, cancellation, invalid-fallback, and metrics cases. Real provider/model trials, a concrete algorithmic policy, Role 3 scoring, and the joint D23 recommendation remain open.
+- Fixture tests cover valid, partial, overfull, invalid, duplicate, incorrectly labelled, timeout, refusal, rate-limited, unavailable, generic-error, cancellation, invalid-fallback, and metrics cases. Real provider/model trials, Role 3 scoring, and the joint D23 recommendation remain open.
 
 ## Current R2-003 evidence
 
 - D2-12 through D2-15 were approved as one batch on 8 August 2026 and recorded in the Role 2 build plan.
-- PR #111 proposes the audience pipeline, but Role 2 requested changes because a fixture sample followed by a live event could produce a live-labelled aggregate containing fixture-derived repeated-request evidence.
-- Merge acceptance requires a 30-second rolling window; explicit sample size, freshness, expiry, and confidence; in-memory raw-chat processing; per-viewer spam controls; repeated requests across multiple qualifying events; conservative unknown handling; unsafe-intent suppression; and strict evidence-class partitioning.
+- `codex/role-2-audience-snapshot-pipeline` adds a 30-second rolling window with explicit sample size, freshness, expiry, confidence, in-memory raw-chat processing, per-viewer spam controls, repeated requests across multiple qualifying events, conservative unknown handling, unsafe-intent suppression, and strict evidence-class partitioning.
 - Required regressions cover sparse, spammy, repeated-request, sarcastic/conflicting, unsafe, and multilingual or unrecognised inputs. No real Twitch-chat execution is claimed yet.
