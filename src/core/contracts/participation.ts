@@ -225,6 +225,10 @@ export type Vote = z.infer<typeof voteSchema>;
 export type ParticipationSourceMode = z.infer<typeof participationSourceModeSchema>;
 export type AcceptedVoteTallySnapshot = z.infer<typeof acceptedVoteTallySnapshotSchema>;
 export type PrivateViewerIdentityKind = z.infer<typeof privateViewerIdentityKindSchema>;
+export interface ViewerVoterKeyInput {
+  readonly principalId: string;
+  readonly identityKind: PrivateViewerIdentityKind;
+}
 export type ViewerParticipationReceipt = z.infer<typeof viewerParticipationReceiptSchema>;
 export type ViewerParticipationReceiptReadResult = z.infer<
   typeof viewerParticipationReceiptReadResultSchema
@@ -247,3 +251,8 @@ export type TwitchChatVoteAcknowledgementStatus = z.infer<
 export type TwitchChatVoteAcknowledgement = z.infer<
   typeof twitchChatVoteAcknowledgementSchema
 >;
+
+export function deriveViewerVoterKey(input: ViewerVoterKeyInput): string {
+  const prefix = input.identityKind === "authenticated" ? "viewer" : "anonymous";
+  return `${prefix}:${input.principalId}`;
+}

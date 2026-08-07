@@ -20,6 +20,9 @@ import {
   contractFixtureSession,
 } from "../../src/core/testing";
 import {
+  normaliseTwitchChatVote,
+} from "../../src/integrations";
+import {
   bindPersistenceRuntime,
   buildTwitchChatPollOpenText,
   buildTwitchChatVoteAcknowledgement,
@@ -350,6 +353,101 @@ describe("private viewer recovery and fallback delivery seams", () => {
       contractFixtureCandidateBatch.candidates[0].candidateId,
     );
     expect(receipt.receipt.sourceMode).toBe("twitch-extension");
+  });
+
+  it("recovers duplicate state and points for a Twitch-chat-normalised vote", async () => {
+    const runtime = await preparedRuntime();
+    const orchestrator = new ChatXptOrchestrator(
+      bindPersistenceRuntime(logicDependencies(), runtime),
+    );
+    const questCycleId = contractFixtureQuestCycle.envelope.questCycleId ?? "missing-cycle";
+    const candidateIds = contractFixtureCandidateBatch.candidates.map(
+      ({ candidateId }) => candidateId,
+    ) as [string, string, string];
+    const normalised = normaliseTwitchChatVote({
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId,
+      expectedRevision: 0,
+      candidateIds,
+      twitchMessageId: "private-receipt-chat-message",
+      twitchChannelId: "private-receipt-chat-channel",
+      twitchUserId: "private-receipt-chat-user",
+      text: "3",
+      receivedAt: FIXTURE_NOW + 1_000,
+    });
+
+    expect(normalised.status).toBe("accepted");
+    if (normalised.status !== "accepted") return;
+    const principalId = normalised.command.actor.actorId;
+    if (principalId === null) throw new Error("Accepted Twitch chat votes require viewer actor IDs");
+    await runtime.accessGrants.grant({
+      principalId,
+      sessionId: contractFixtureSession.sessionId,
+      viewRole: "viewer",
+      expiresAt: FIXTURE_NOW + 60_000,
+    });
+    expect(normalised.command.voterKey).toBe(
+      derivePrivateViewerVoterKey({
+        principalId,
+        identityKind: "authenticated",
+      }),
+    );
+
+    const submitted = await orchestrator.execute(normalised.command);
+
+    expect(submitted.ok).toBe(true);
+    if (!submitted.ok) return;
+    const duplicate = await orchestrator.execute(
+      voteCommand({
+        commandId: "private-receipt-chat-duplicate",
+        expectedRevision: submitted.receipt.state.session.revision,
+        candidateIndex: 0,
+        voterKey: derivePrivateViewerVoterKey({
+          principalId,
+          identityKind: "authenticated",
+        }),
+        actorId: principalId,
+        sourceMode: "hosted-board",
+      }),
+    );
+
+    expect(duplicate.ok).toBe(false);
+    if (duplicate.ok) return;
+    expect(duplicate.error.code).toBe("duplicate");
+    const receipt = await runtime.viewerReceipts.readViewerParticipationReceipt({
+      principalId,
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId,
+      identityKind: "authenticated",
+      at: FIXTURE_NOW + 2_000,
+    });
+
+    expect(receipt.status).toBe("available");
+    if (receipt.status !== "available") return;
+    expect(receipt.receipt.acceptedCandidateId).toBe(
+      contractFixtureCandidateBatch.candidates[2].candidateId,
+    );
+    expect(receipt.receipt.sourceMode).toBe("twitch-chat");
+
+    await commitSuccessfulResult({
+      runtime,
+      current: submitted.receipt.state,
+      commandId: "private-receipt-chat-result",
+      questCycleId,
+      activeCandidateId: contractFixtureCandidateBatch.candidates[2].candidateId,
+      rewardPointsAwarded: 60,
+    });
+    const rewardedReceipt = await runtime.viewerReceipts.readViewerParticipationReceipt({
+      principalId,
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId,
+      identityKind: "authenticated",
+      at: FIXTURE_NOW + 3_000,
+    });
+
+    expect(rewardedReceipt.status).toBe("available");
+    if (rewardedReceipt.status !== "available") return;
+    expect(rewardedReceipt.receipt.sessionPoints).toBe(60);
   });
 
   it("restores accumulated session-scoped points across completed cycles", async () => {

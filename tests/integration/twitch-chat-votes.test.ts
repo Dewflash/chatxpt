@@ -13,6 +13,7 @@ import {
 import {
   bindPersistenceRuntime,
   createMemoryPersistenceRuntime,
+  derivePrivateViewerVoterKey,
   ServerCommandAuthorizer,
   SessionLifecycleService,
   StaticVerifiedActorResolver,
@@ -157,6 +158,14 @@ describe("Twitch chat vote normalisation", () => {
         twitchUserId: "twitch-user-123",
       }),
     });
+    const principalId = result.command.actor.actorId;
+    if (principalId === null) throw new Error("Accepted Twitch chat votes require viewer actor IDs");
+    expect(result.command.voterKey).toBe(
+      derivePrivateViewerVoterKey({
+        principalId,
+        identityKind: "authenticated",
+      }),
+    );
     expect(result.command.commandId).not.toContain("twitch-message-1");
     expect(result.command.voterKey).not.toContain("twitch-user-123");
     expect(result.verifiedActor).toMatchObject({
