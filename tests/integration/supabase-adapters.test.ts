@@ -16,6 +16,7 @@ import {
   SupabaseDataError,
   SupabaseAcceptedVoteTallyReader,
   SupabaseDueVoteCycleReader,
+  SupabaseHostedBoardSessionDirectory,
   SupabaseRoleSnapshotPublisher,
   SupabaseSessionStateRepository,
   SupabaseViewerRecoveryReader,
@@ -27,6 +28,7 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
   persisted: RoleViewModels | null = null;
   acceptedVoteRows: readonly unknown[] = [];
   viewerAcceptedVoteRow: unknown | null = null;
+  hostedBoardSessionRow: unknown | null = null;
   dueVoteStates: readonly unknown[] = [];
 
   constructor() {
@@ -47,6 +49,10 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
 
   override async loadViewerAcceptedVote(): Promise<unknown | null> {
     return this.viewerAcceptedVoteRow;
+  }
+
+  override async loadHostedBoardSession(): Promise<unknown | null> {
+    return this.hostedBoardSessionRow;
   }
 
   override async loadDueVoteCycleStates(): Promise<readonly unknown[]> {
@@ -146,6 +152,31 @@ describe("Supabase production adapters", () => {
       sessionPoints: 0,
       sourceMode: "hosted-board",
     });
+  });
+
+  it("validates hosted-board room lookup rows", async () => {
+    const api = new RecordingDataApi();
+    const directory = new SupabaseHostedBoardSessionDirectory(api);
+
+    expect(await directory.findHostedBoardSession("ABCDEFGH")).toBeNull();
+
+    const hostedRow = {
+      session_id: "fixture-session",
+      room_code: "ABCDEFGH",
+      status: "live",
+      revision: 3,
+    };
+    api.hostedBoardSessionRow = hostedRow;
+
+    expect(await directory.findHostedBoardSession("ABCDEFGH")).toEqual({
+      sessionId: "fixture-session",
+      roomCode: "ABCDEFGH",
+      status: "live",
+      revision: 3,
+    });
+
+    api.hostedBoardSessionRow = { ...hostedRow, room_code: "INVALID1" };
+    await expect(directory.findHostedBoardSession("INVALID1")).rejects.toThrow();
   });
 
   it("validates authoritative JSON loaded from the database", async () => {

@@ -17,6 +17,15 @@ snapshot, discarding duplicate or older revisions.
 Local memory mode is a real development fallback, not evidence of shared-cloud
 or multi-browser Supabase execution. See `supabase/README.md` for that boundary.
 
+## Hosted board access
+
+`HostedBoardAccessService` is the UI-X08 server-side seam for the hosted Viewer
+Quest Board. It validates the eight-character room code, resolves the matching
+preparing or live session, creates a viewer realtime read grant, and returns the
+direct viewer path plus copy/QR payload data. Invalid, missing, inactive,
+expired, and temporarily unavailable states are typed so Role 5 can render
+recovery without reading product tables or inventing access state.
+
 ## Authoritative vote ledger
 
 All three MVP participation paths converge on the same private ledger. A vote
