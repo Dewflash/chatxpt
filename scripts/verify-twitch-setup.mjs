@@ -137,13 +137,43 @@ export async function verifyTwitchSetup({
     );
     assert.equal(
       body.oauth?.scopes?.status,
-      "open-decision",
-      "registration manifest must keep OAuth scopes behind the D1-07 decision gate",
+      "accepted",
+      "registration manifest OAuth setup policy must be accepted",
+    );
+    assert.deepEqual(
+      body.oauth?.scopes?.configured,
+      [],
+      "registration manifest initial OAuth registration must request no scopes",
+    );
+    assert.ok(
+      Array.isArray(body.oauth?.callbackUrls),
+      "registration manifest callbackUrls must be an array",
+    );
+    assert.ok(
+      body.oauth.callbackUrls.some((url) => String(url).endsWith("/api/twitch/oauth/callback")),
+      "registration manifest callbackUrls must include a deployable callback URL",
+    );
+    assert.ok(
+      body.oauth.callbackUrls.includes("http://localhost:3000/api/twitch/oauth/callback"),
+      "registration manifest callbackUrls must include the local development callback URL",
     );
     assert.equal(
       body.oauth?.tokenExchange,
       "reserved-disabled",
       "registration manifest must not claim OAuth token exchange is enabled",
+    );
+    assert.ok(
+      Array.isArray(body.oauth?.deferredRuntimeScopeProfiles),
+      "registration manifest deferredRuntimeScopeProfiles must be an array",
+    );
+    assert.ok(
+      body.oauth.deferredRuntimeScopeProfiles.some((profile) =>
+        profile?.name === "eventsub-chat-api"
+        && profile?.status === "deferred-runtime"
+        && Array.isArray(profile?.scopes)
+        && profile.scopes.includes("user:read:chat")
+        && profile.scopes.includes("user:write:chat")),
+      "registration manifest must document deferred EventSub/API chat scopes",
     );
     assert.equal(body.extension?.viewerPath, "/twitch/viewer", "registration manifest viewer path must be canonical");
     assert.equal(body.extension?.configPath, "/twitch/config", "registration manifest config path must be canonical");

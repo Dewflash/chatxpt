@@ -1,0 +1,3 @@
+- Accepted D-055 for staged Twitch registration: deployed plus local callback URLs, no initial OAuth scopes while token exchange is disabled, team-controlled test-channel allowlist, and deferred runtime scope profiles for EventSub/API chat or IRC fallback.
+- Updated the registration manifest, setup verifier, focused tests, build plan gate, and setup runbook so D1-07 no longer remains open.
+- Preserved the evidence boundary: this records setup policy and verifier coverage, not real Twitch developer-console, OAuth, chat, Local Test, Hosted Test, or Extension runtime proof.
