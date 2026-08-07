@@ -57,6 +57,7 @@ Before claiming Twitch readiness:
 npm run test -- tests/integration/twitch-setup.test.ts tests/integration/twitch-extension-routes.test.tsx
 ```
 
-8. Record real developer-console, Local Test, or Hosted Test evidence in `docs/evidence/manifest.json` before citing Twitch as live.
+8. Run `npm run verify:twitch-setup -- <preview-or-local-url>` to verify the setup readiness API, callback failure shape, and reserved Extension route shells.
+9. Record real developer-console, Local Test, or Hosted Test evidence in `docs/evidence/manifest.json` before citing Twitch as live.
 
 This runbook does not prove Twitch OAuth, EventSub, chat delivery, or Extension runtime behaviour. Those require separate live test-channel evidence.
