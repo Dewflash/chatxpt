@@ -36,3 +36,13 @@ The Supabase adapter reads the server-only `accepted_participation` audit table,
 and the additive migration enforces the same one-vote rule across Twitch
 Extension, hosted-board, and Twitch-chat sources. Static tests do not claim the
 migration has run against a live Supabase project.
+
+## Viewer recovery and fallbacks
+
+Role 1 exposes three render-safe participation seams for Role 5:
+
+- `PrivateViewerRecovery` restores only the current viewer's accepted candidate, accepted time, source, and session points. Shared broadcasts must clear it.
+- `HostedBoardDiscovery` resolves an active eight-character room code into a hosted-board URL and optional QR URL. Unavailable rooms expose no join details.
+- `TwitchChatVoteAcknowledgement` reports unavailable, not-delivered, pending, counted, duplicate, late, or rejected status. Role 5 renders the status but never parses Twitch chat or claims a vote was delivered without this server-side acknowledgement.
+
+The memory runtime implements recovery and hosted discovery for local development. Real Twitch chat ingestion/delivery and Supabase-backed recovery remain separate evidence requirements.

@@ -3,6 +3,9 @@ import type {
   AuthoritativeSessionState,
   CandidateBatch,
   CandidateBatchReader,
+  HostedBoardDiscovery,
+  ParticipationSourceMode,
+  PrivateViewerRecovery,
   RoleViewModels,
   SessionStateRepository,
   StatePublisher,
@@ -112,12 +115,46 @@ export interface DueVoteCycleReader {
   dueVoteCycles(at: number): Promise<readonly AuthoritativeSessionState[]>;
 }
 
+export interface ViewerRecoveryReadInput {
+  readonly sessionId: string;
+  readonly questCycleId: string;
+  readonly viewerId: string | null;
+  readonly voterKey: string | null;
+  readonly restoredAt: number;
+}
+
+export interface ViewerRecoveryReader {
+  readViewerRecovery(input: ViewerRecoveryReadInput): Promise<PrivateViewerRecovery>;
+}
+
+export interface HostedBoardDiscoveryInput {
+  readonly roomCode: string;
+  readonly baseUrl: string;
+  readonly qrImageUrl?: string | null;
+  readonly at: number;
+}
+
+export interface HostedBoardDiscoveryReader {
+  discoverHostedBoard(input: HostedBoardDiscoveryInput): Promise<HostedBoardDiscovery>;
+}
+
+export interface AcceptedViewerParticipation {
+  readonly sessionId: string;
+  readonly questCycleId: string;
+  readonly voterKey: string;
+  readonly candidateId: string;
+  readonly acceptedAt: number;
+  readonly sourceMode: ParticipationSourceMode;
+}
+
 export interface ChatXptPersistenceRuntime {
   readonly mode: "memory" | "supabase";
   readonly sessions: SessionStateRepository;
   readonly lifecycle: SessionLifecycleStore;
   readonly candidates: CandidateBatchRepository;
   readonly acceptedVotes: AcceptedVoteTallyReader;
+  readonly viewerRecovery?: ViewerRecoveryReader;
+  readonly hostedDiscovery?: HostedBoardDiscoveryReader;
   readonly snapshots: RoleSnapshotPublisher;
   readonly accessGrants: RealtimeAccessGrantStore;
   readonly dueVotes: DueVoteCycleReader;

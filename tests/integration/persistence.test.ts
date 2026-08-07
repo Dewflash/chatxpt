@@ -137,6 +137,80 @@ describe("production-shaped memory persistence integration", () => {
     expect(reconnect?.viewerId).toBeNull();
     expect(reconnect?.sessionPoints).toBe(0);
     expect(reconnect?.acceptedCandidateId).toBeNull();
+    expect(reconnect?.privateRecovery?.status).toBe("unavailable");
+    expect(reconnect?.privateRecovery?.acceptedCandidateId).toBeNull();
+    expect(reconnect?.chatVote?.commandId).toBeNull();
+  });
+
+  it("resolves hosted-board room codes without exposing inactive sessions", async () => {
+    const runtime = await preparedRuntime();
+
+    const discovered = await runtime.hostedDiscovery?.discoverHostedBoard({
+      roomCode: "ABCDEFGH",
+      baseUrl: "https://chatxpt.example",
+      at: FIXTURE_NOW + 1_000,
+    });
+    expect(discovered).toMatchObject({
+      status: "available",
+      sessionId: "fixture-session",
+      roomCode: "ABCDEFGH",
+      url: "https://chatxpt.example/viewer/hosted?room=ABCDEFGH",
+    });
+
+    const missing = await runtime.hostedDiscovery?.discoverHostedBoard({
+      roomCode: "JKLMNPQR",
+      baseUrl: "https://chatxpt.example",
+      at: FIXTURE_NOW + 1_000,
+    });
+    expect(missing).toMatchObject({
+      status: "unavailable",
+      sessionId: null,
+      roomCode: null,
+      url: null,
+    });
+  });
+
+  it("restores only the matching viewer's accepted participation", async () => {
+    const runtime = await preparedRuntime();
+    const orchestrator = new ChatXptOrchestrator(
+      bindPersistenceRuntime(logicDependencies(), runtime),
+    );
+
+    const result = await orchestrator.execute(voteCommand("memory-vote", 0, "hosted-board"));
+
+    expect(result.ok).toBe(true);
+    const questCycleId = contractFixtureQuestCycle.envelope.questCycleId;
+    expect(questCycleId).not.toBeNull();
+    const restored = await runtime.viewerRecovery?.readViewerRecovery({
+      sessionId: "fixture-session",
+      questCycleId: questCycleId as string,
+      viewerId: "fixture-viewer",
+      voterKey: "fixture-session-scoped-voter",
+      restoredAt: FIXTURE_NOW + 2_000,
+    });
+    expect(restored).toMatchObject({
+      status: "identified",
+      viewerId: "fixture-viewer",
+      acceptedCandidateId: contractFixtureCandidateBatch.candidates[0].candidateId,
+      acceptedAt: FIXTURE_NOW + 1_000,
+      sourceMode: "hosted-board",
+      sessionPoints: 1,
+    });
+
+    const otherViewer = await runtime.viewerRecovery?.readViewerRecovery({
+      sessionId: "fixture-session",
+      questCycleId: questCycleId as string,
+      viewerId: "other-viewer",
+      voterKey: "other-session-scoped-voter",
+      restoredAt: FIXTURE_NOW + 2_000,
+    });
+    expect(otherViewer).toMatchObject({
+      status: "identified",
+      viewerId: "other-viewer",
+      acceptedCandidateId: null,
+      acceptedAt: null,
+      sessionPoints: 0,
+    });
   });
 
   it("keeps the first accepted vote final across participation surfaces", async () => {

@@ -8,13 +8,16 @@ import {
   contractEnvelopeSchema,
   gameplayCapabilitiesSchema,
   gameplaySnapshotSchema,
+  hostedBoardDiscoverySchema,
   intelligenceSnapshotSchema,
   overlayViewModelSchema,
+  privateViewerRecoverySchema,
   questCycleStateSchema,
   signalObservationSchema,
   streamSessionSchema,
   streamerProfileSchema,
   streamerViewModelSchema,
+  twitchChatVoteAcknowledgementSchema,
   viewerViewModelSchema,
   voteSchema,
 } from "./contracts";
@@ -283,6 +286,117 @@ describe("identity and command permissions", () => {
       voteSchema.safeParse({
         ...vote,
         voter: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("viewer recovery and fallback contracts", () => {
+  it("keeps hosted board discovery explicit and room-code based", () => {
+    expect(
+      hostedBoardDiscoverySchema.safeParse({
+        status: "available",
+        sessionId: "fixture-session",
+        roomCode: "ABCDEFGH",
+        url: "https://chatxpt.example/viewer/hosted?room=ABCDEFGH",
+        qrImageUrl: null,
+        expiresAt: null,
+        message: "Hosted board access is available.",
+      }).success,
+    ).toBe(true);
+
+    expect(
+      hostedBoardDiscoverySchema.safeParse({
+        status: "available",
+        sessionId: "fixture-session",
+        roomCode: null,
+        url: "https://chatxpt.example/viewer/hosted",
+        qrImageUrl: null,
+        expiresAt: null,
+      }).success,
+    ).toBe(false);
+
+    expect(
+      hostedBoardDiscoverySchema.safeParse({
+        status: "unavailable",
+        sessionId: null,
+        roomCode: "ABCDEFGH",
+        url: null,
+        qrImageUrl: null,
+        expiresAt: null,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("restores only one viewer's own vote and points", () => {
+    expect(
+      privateViewerRecoverySchema.safeParse({
+        status: "identified",
+        viewerId: "fixture-viewer",
+        acceptedCandidateId: "fixture-candidate-1",
+        acceptedAt: 1_786_000_001_000,
+        sourceMode: "hosted-board",
+        sessionPoints: 1,
+        restoredAt: 1_786_000_002_000,
+      }).success,
+    ).toBe(true);
+
+    expect(
+      privateViewerRecoverySchema.safeParse({
+        status: "anonymous",
+        viewerId: "fixture-viewer",
+        acceptedCandidateId: null,
+        acceptedAt: null,
+        sourceMode: null,
+        sessionPoints: 0,
+        restoredAt: 1_786_000_002_000,
+      }).success,
+    ).toBe(false);
+
+    expect(
+      privateViewerRecoverySchema.safeParse({
+        status: "unavailable",
+        viewerId: null,
+        acceptedCandidateId: "fixture-candidate-1",
+        acceptedAt: 1_786_000_001_000,
+        sourceMode: "hosted-board",
+        sessionPoints: 1,
+        restoredAt: 1_786_000_002_000,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("does not let Twitch chat fallback overclaim delivery", () => {
+    expect(
+      twitchChatVoteAcknowledgementSchema.safeParse({
+        status: "not-delivered",
+        commandId: null,
+        candidateId: null,
+        receivedAt: null,
+        message: "Send 1, 2, or 3 only when chat fallback is active.",
+        retryable: false,
+      }).success,
+    ).toBe(true);
+
+    expect(
+      twitchChatVoteAcknowledgementSchema.safeParse({
+        status: "counted",
+        commandId: "fixture-command",
+        candidateId: "fixture-candidate-1",
+        receivedAt: 1_786_000_001_000,
+        message: "Your chat vote was counted.",
+        retryable: false,
+      }).success,
+    ).toBe(true);
+
+    expect(
+      twitchChatVoteAcknowledgementSchema.safeParse({
+        status: "counted",
+        commandId: null,
+        candidateId: "fixture-candidate-1",
+        receivedAt: 1_786_000_001_000,
+        message: "Your chat vote was counted.",
+        retryable: false,
       }).success,
     ).toBe(false);
   });

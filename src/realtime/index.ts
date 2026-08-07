@@ -45,6 +45,8 @@ export {
   type ChatXptPersistenceRuntime,
   type CommitSessionLifecycleInput,
   type DueVoteCycleReader,
+  type HostedBoardDiscoveryInput,
+  type HostedBoardDiscoveryReader,
   type LifecycleStoreCommitResult,
   type RealtimeAccessGrant,
   type RealtimeAccessGrantStore,
@@ -56,6 +58,8 @@ export {
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,
+  type ViewerRecoveryReadInput,
+  type ViewerRecoveryReader,
 } from "./types";
 export type {
   AcceptedCommandReceipt,
@@ -67,16 +71,19 @@ export type {
   CommandEnvelope,
   CommitAuthoritativeStateInput,
   DomainError,
+  HostedBoardDiscovery,
   MessageIdFactory,
   OverlayViewModel,
   OrchestratorDependencies,
   OrchestratorResult,
+  PrivateViewerRecovery,
   ProjectionContextResolver,
   ServiceHealth,
   ServerClock,
   SessionStateRepository,
   StatePublisher,
   StreamerViewModel,
+  TwitchChatVoteAcknowledgement,
   ViewerViewModel,
 } from "../core";
 

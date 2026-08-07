@@ -12,6 +12,8 @@ import {
   type CandidateBatch,
   type CommitAuthoritativeStateInput,
   type CommitAuthoritativeStateResult,
+  hostedBoardDiscoverySchema,
+  privateViewerRecoverySchema,
   type RoleViewModels,
 } from "../core";
 import {
@@ -22,6 +24,8 @@ import {
   type CandidateBatchRepository,
   type CommitSessionLifecycleInput,
   type DueVoteCycleReader,
+  type HostedBoardDiscoveryInput,
+  type HostedBoardDiscoveryReader,
   type LifecycleStoreCommitResult,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
@@ -31,6 +35,8 @@ import {
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,
+  type ViewerRecoveryReadInput,
+  type ViewerRecoveryReader,
 } from "./types";
 import { sanitizeRoleViewsForBroadcast } from "./sanitization";
 
@@ -55,7 +61,9 @@ export class MemoryChatXptPersistence
     DueVoteCycleReader,
     RoleSnapshotPublisher,
     RealtimeAccessGrantStore,
-    SessionLifecycleStore
+    SessionLifecycleStore,
+    ViewerRecoveryReader,
+    HostedBoardDiscoveryReader
 {
   private readonly states = new Map<string, AuthoritativeSessionState>();
   private readonly receipts = new Map<string, AcceptedCommandReceipt>();
@@ -74,6 +82,7 @@ export class MemoryChatXptPersistence
       voterKey: string;
       candidateId: string;
       acceptedAt: number;
+      sourceMode: "twitch-extension" | "hosted-board" | "twitch-chat";
     }
   >();
 
@@ -178,6 +187,7 @@ export class MemoryChatXptPersistence
           voterKey: input.command.voterKey,
           candidateId: input.command.candidateId,
           acceptedAt: input.acceptedAt,
+          sourceMode: input.command.sourceMode,
         },
       );
     }
@@ -221,6 +231,61 @@ export class MemoryChatXptPersistence
       closedAt: input.closedAt,
       acceptedVoteCount: tallies.reduce((sum, tally) => sum + tally.votes, 0),
       tallies,
+    });
+  }
+
+  async readViewerRecovery(input: ViewerRecoveryReadInput) {
+    if (input.voterKey === null) {
+      return privateViewerRecoverySchema.parse({
+        status: input.viewerId === null ? "anonymous" : "identified",
+        viewerId: input.viewerId,
+        acceptedCandidateId: null,
+        acceptedAt: null,
+        sourceMode: null,
+        sessionPoints: 0,
+        restoredAt: input.restoredAt,
+      });
+    }
+
+    const accepted = this.voteLedger.get(
+      this.voteKey(input.sessionId, input.questCycleId, input.voterKey),
+    );
+
+    return privateViewerRecoverySchema.parse({
+      status: input.viewerId === null ? "anonymous" : "identified",
+      viewerId: input.viewerId,
+      acceptedCandidateId: accepted?.candidateId ?? null,
+      acceptedAt: accepted?.acceptedAt ?? null,
+      sourceMode: accepted?.sourceMode ?? null,
+      sessionPoints: accepted === undefined ? 0 : 1,
+      restoredAt: input.restoredAt,
+    });
+  }
+
+  async discoverHostedBoard(input: HostedBoardDiscoveryInput) {
+    const sessionId = this.roomSessions.get(input.roomCode);
+    const state = sessionId === undefined ? undefined : this.states.get(sessionId);
+    if (state === undefined || !active(state.session.status)) {
+      return hostedBoardDiscoverySchema.parse({
+        status: "unavailable",
+        sessionId: null,
+        roomCode: null,
+        url: null,
+        qrImageUrl: null,
+        expiresAt: null,
+        message: "No active ChatXPT session was found for that room code.",
+      });
+    }
+
+    const baseUrl = input.baseUrl.endsWith("/") ? input.baseUrl.slice(0, -1) : input.baseUrl;
+    return hostedBoardDiscoverySchema.parse({
+      status: "available",
+      sessionId: state.session.sessionId,
+      roomCode: input.roomCode,
+      url: `${baseUrl}/viewer/hosted?room=${encodeURIComponent(input.roomCode)}`,
+      qrImageUrl: input.qrImageUrl ?? null,
+      expiresAt: null,
+      message: "Hosted board access is available as the first viewer fallback.",
     });
   }
 
@@ -448,6 +513,8 @@ export function createMemoryPersistenceRuntime() {
     lifecycle: backend,
     candidates: backend,
     acceptedVotes: backend,
+    viewerRecovery: backend,
+    hostedDiscovery: backend,
     snapshots: backend,
     accessGrants: backend,
     dueVotes: backend,

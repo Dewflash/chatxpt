@@ -100,6 +100,13 @@ describe("Role 5 presentation boundary", () => {
       ...votingViewer(),
       canVote: false,
       acceptedCandidateId: fixtureOptions[1].candidateId,
+      privateRecovery: {
+        ...contractFixtureViewerView.privateRecovery,
+        status: "anonymous",
+        acceptedCandidateId: fixtureOptions[1].candidateId,
+        acceptedAt: contractFixtureViewerView.envelope.occurredAt + 1_000,
+        sourceMode: "hosted-board",
+      },
     });
     const presentation = presentViewer(view);
 

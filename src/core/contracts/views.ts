@@ -5,6 +5,11 @@ import { streamerProfileSchema } from "./profile";
 import { questCycleStateSchema } from "./quests";
 import { participationCapabilitiesSchema, streamSessionSchema } from "./session";
 import { audienceSnapshotSchema, gameplaySnapshotSchema } from "./signals";
+import {
+  hostedBoardDiscoverySchema,
+  privateViewerRecoverySchema,
+  twitchChatVoteAcknowledgementSchema,
+} from "./participation";
 
 export const participationModeSchema = z.enum([
   "twitch-extension",
@@ -86,6 +91,9 @@ export const viewerViewModelSchema = z
     sessionPoints: z.number().int().nonnegative(),
     communityHype: z.number().int().nonnegative(),
     acceptedCandidateId: identifierSchema.nullable(),
+    privateRecovery: privateViewerRecoverySchema.optional(),
+    hostedBoard: hostedBoardDiscoverySchema.optional(),
+    chatVote: twitchChatVoteAcknowledgementSchema.optional(),
     questCycle: questCycleStateSchema,
     connection: serviceHealthSchema,
   })
@@ -135,6 +143,27 @@ export const viewerViewModelSchema = z
         code: "custom",
         message: "acceptedCandidateId must reference a visible cycle option",
         path: ["acceptedCandidateId"],
+      });
+    }
+    if (
+      view.privateRecovery?.acceptedCandidateId !== undefined &&
+      view.privateRecovery.acceptedCandidateId !== null &&
+      !view.questCycle.options.some((candidate) => candidate.candidateId === view.privateRecovery?.acceptedCandidateId)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "privateRecovery.acceptedCandidateId must reference a visible cycle option",
+        path: ["privateRecovery", "acceptedCandidateId"],
+      });
+    }
+    if (
+      view.privateRecovery !== undefined &&
+      view.privateRecovery.acceptedCandidateId !== view.acceptedCandidateId
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Private recovery and viewer acceptedCandidateId must agree",
+        path: ["privateRecovery", "acceptedCandidateId"],
       });
     }
   });
