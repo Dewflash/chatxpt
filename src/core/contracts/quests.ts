@@ -125,6 +125,29 @@ export const questProgressSchema = z
   })
   .strict();
 
+export const questCompletionRuleSchema = z
+  .object({
+    mode: z.enum(["manual", "signal"]),
+    allowedSignalKinds: z.array(z.string().trim().min(1).max(80)).max(24),
+  })
+  .strict()
+  .superRefine((rule, context) => {
+    if (rule.mode === "manual" && rule.allowedSignalKinds.length > 0) {
+      context.addIssue({
+        code: "custom",
+        message: "Manual completion cannot allow automatic signal kinds",
+        path: ["allowedSignalKinds"],
+      });
+    }
+    if (new Set(rule.allowedSignalKinds).size !== rule.allowedSignalKinds.length) {
+      context.addIssue({
+        code: "custom",
+        message: "Completion signal kinds must be distinct",
+        path: ["allowedSignalKinds"],
+      });
+    }
+  });
+
 export const questResultSchema = z
   .object({
     outcome: z.enum(["succeeded", "failed", "cancelled", "skipped", "expired"]),
@@ -159,6 +182,7 @@ export const questCycleStateSchema = z
     startsAt: timestampSchema.nullable(),
     endsAt: timestampSchema.nullable(),
     progress: questProgressSchema.nullable(),
+    completionRule: questCompletionRuleSchema.nullable().default(null),
     result: questResultSchema.nullable(),
   })
   .strict()
@@ -230,6 +254,7 @@ export type CandidateBatch = z.infer<typeof candidateBatchSchema>;
 export type QuestCycleState = z.infer<typeof questCycleStateSchema>;
 export type StreamerQuestAction = z.infer<typeof streamerQuestActionSchema>;
 export type QuestProgress = z.infer<typeof questProgressSchema>;
+export type QuestCompletionRule = z.infer<typeof questCompletionRuleSchema>;
 export type QuestResult = z.infer<typeof questResultSchema>;
 export type QuestEngineEventDraft = z.infer<typeof questEngineEventDraftSchema>;
 export type QuestEngineEvent = z.infer<typeof questEngineEventSchema>;

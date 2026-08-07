@@ -191,6 +191,7 @@ export const contractFixtureStreamerView = streamerViewModelSchema.parse({
   gameplay: contractFixtureGameplaySnapshot,
   audience: contractFixtureAudienceSnapshot,
   questCycle: contractFixtureQuestCycle,
+  emergencyPaused: false,
 });
 
 export const contractFixtureViewerView = viewerViewModelSchema.parse({

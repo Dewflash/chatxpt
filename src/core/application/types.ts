@@ -18,6 +18,7 @@ export interface AuthoritativeSessionState {
   readonly gameplay: GameplaySnapshot | null;
   readonly audience: AudienceSnapshot | null;
   readonly questCycle: QuestCycleState;
+  readonly emergencyPaused: boolean;
   readonly communityHype: number;
 }
 

@@ -60,6 +60,7 @@ export function persistenceState(
         messageId: `cycle-${sessionId}`,
       },
     },
+    emergencyPaused: false,
     communityHype: 0,
   };
   return authoritativeSessionStateSchema.parse(state);

@@ -21,6 +21,7 @@ import {
   type BootstrapSessionInput,
   type CandidateBatchRepository,
   type CommitSessionLifecycleInput,
+  type DueVoteCycleReader,
   type LifecycleStoreCommitResult,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
@@ -51,6 +52,7 @@ export class MemoryChatXptPersistence
   implements
     AcceptedVoteTallyReader,
     CandidateBatchRepository,
+    DueVoteCycleReader,
     RoleSnapshotPublisher,
     RealtimeAccessGrantStore,
     SessionLifecycleStore
@@ -396,6 +398,25 @@ export class MemoryChatXptPersistence
     return due;
   }
 
+  async dueVoteCycles(at: number): Promise<readonly AuthoritativeSessionState[]> {
+    const due: AuthoritativeSessionState[] = [];
+    for (const state of this.states.values()) {
+      if (
+        state.session.status === "live" &&
+        state.questCycle.status === "voting" &&
+        state.questCycle.endsAt !== null &&
+        state.questCycle.endsAt <= at
+      ) {
+        due.push(clone(state));
+      }
+    }
+    return due.sort(
+      (left, right) =>
+        (left.questCycle.endsAt ?? 0) - (right.questCycle.endsAt ?? 0) ||
+        left.session.sessionId.localeCompare(right.session.sessionId),
+    );
+  }
+
   private replaceState(nextState: AuthoritativeSessionState): void {
     const previous = this.states.get(nextState.session.sessionId);
     this.states.set(nextState.session.sessionId, clone(nextState));
@@ -429,5 +450,6 @@ export function createMemoryPersistenceRuntime() {
     acceptedVotes: backend,
     snapshots: backend,
     accessGrants: backend,
+    dueVotes: backend,
   };
 }
