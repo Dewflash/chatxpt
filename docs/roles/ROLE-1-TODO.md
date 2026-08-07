@@ -36,6 +36,11 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 - `codex/role-1-demo-runbook` adds `docs/evidence/GOLDEN_REHEARSAL_RUNBOOK.md`, a privacy-safe rehearsal path for memory-backed and real Twitch/OBS runs.
 - `npm run check:demo-runbook` verifies the runbook keeps the required evidence resources, phases, fixture-vs-live warning, unknown-handling rule, authoritative revision gate, and secret/link guardrails.
 
+## Current R1-010/R1-018 disclosure evidence
+
+- `codex/role-1-third-party-disclosures` adds `docs/THIRD_PARTY_DISCLOSURES.md` and links it from the README.
+- `tests/integration/disclosures.test.ts` checks the disclosure covers all current runtime/dev package dependencies and preserves explicit Twitch/OBS/cloud/provider/evidence limitations.
+
 ## Decisions Role 1 still owns
 
 - Shared contract acceptance and breaking changes
