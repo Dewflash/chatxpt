@@ -9,7 +9,9 @@ import {
   authoritativeSessionStateSchema,
   canonicalJsonStringify,
   candidateBatchSchema,
+  hostedBoardDiscoverySchema,
   overlayViewModelSchema,
+  privateViewerRecoverySchema,
   serviceHealthSchema,
   streamerViewModelSchema,
   viewerViewModelSchema,
@@ -21,6 +23,8 @@ import {
   type CandidateBatch,
   type CommitAuthoritativeStateInput,
   type CommitAuthoritativeStateResult,
+  type HostedBoardDiscovery,
+  type PrivateViewerRecovery,
   type RoleViewModels,
   type ServiceHealth,
 } from "../core";
@@ -33,6 +37,8 @@ import {
   type ChatXptPersistenceRuntime,
   type CommitSessionLifecycleInput,
   type DueVoteCycleReader,
+  type HostedBoardDiscoveryInput,
+  type HostedBoardDiscoveryReader,
   type LifecycleStoreCommitResult,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
@@ -42,6 +48,8 @@ import {
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,
+  type ViewerRecoveryReadInput,
+  type ViewerRecoveryReader,
 } from "./types";
 import { sanitizeRoleViewsForBroadcast } from "./sanitization";
 
@@ -60,6 +68,25 @@ const commitResultSchema = z.discriminatedUnion("status", [
 ]);
 
 const acceptedVoteRowSchema = z.object({ candidate_id: z.string().min(1).max(128) }).passthrough();
+
+const acceptedViewerParticipationRowSchema = z
+  .object({
+    candidate_id: z.string().min(1).max(128),
+    accepted_at: z.iso.datetime({ offset: true }),
+    payload: z
+      .object({
+        sourceMode: z.enum(["twitch-extension", "hosted-board", "twitch-chat"]),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+const hostedBoardSessionRowSchema = z
+  .object({
+    session_id: z.string().min(1).max(128),
+    status: z.enum(["preparing", "live", "ended", "offline"]),
+  })
+  .passthrough();
 
 const lifecycleCommitResultSchema = z.discriminatedUnion("status", [
   z
@@ -230,6 +257,33 @@ export class SupabaseChatXptDataApi {
       .lt("accepted_at", new Date(acceptedBefore).toISOString());
     throwIfError(error);
     return data ?? [];
+  }
+
+  async loadAcceptedViewerParticipation(
+    sessionId: string,
+    questCycleId: string,
+    voterKey: string,
+  ): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("accepted_participation")
+      .select("candidate_id, accepted_at, payload")
+      .eq("session_id", sessionId)
+      .eq("quest_cycle_id", questCycleId)
+      .eq("participation_type", "vote")
+      .eq("payload->>voterKey", voterKey)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
+  }
+
+  async loadHostedBoardSession(roomCode: string): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("stream_sessions")
+      .select("session_id, status")
+      .eq("room_code", roomCode)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
   }
 
   async persistRoleSnapshots(views: RoleViewModels): Promise<void> {
@@ -482,6 +536,71 @@ export class SupabaseDueVoteCycleReader implements DueVoteCycleReader {
   }
 }
 
+export class SupabaseViewerRecoveryReader implements ViewerRecoveryReader {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async readViewerRecovery(input: ViewerRecoveryReadInput): Promise<PrivateViewerRecovery> {
+    if (input.voterKey === null) {
+      return privateViewerRecoverySchema.parse({
+        status: input.viewerId === null ? "anonymous" : "identified",
+        viewerId: input.viewerId,
+        acceptedCandidateId: null,
+        acceptedAt: null,
+        sourceMode: null,
+        sessionPoints: 0,
+        restoredAt: input.restoredAt,
+      });
+    }
+
+    const raw = await this.api.loadAcceptedViewerParticipation(
+      input.sessionId,
+      input.questCycleId,
+      input.voterKey,
+    );
+    const row = raw === null ? null : acceptedViewerParticipationRowSchema.parse(raw);
+    return privateViewerRecoverySchema.parse({
+      status: input.viewerId === null ? "anonymous" : "identified",
+      viewerId: input.viewerId,
+      acceptedCandidateId: row?.candidate_id ?? null,
+      acceptedAt: row === null ? null : Date.parse(row.accepted_at),
+      sourceMode: row?.payload.sourceMode ?? null,
+      sessionPoints: 0,
+      restoredAt: input.restoredAt,
+    });
+  }
+}
+
+export class SupabaseHostedBoardDiscoveryReader implements HostedBoardDiscoveryReader {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async discoverHostedBoard(input: HostedBoardDiscoveryInput): Promise<HostedBoardDiscovery> {
+    const raw = await this.api.loadHostedBoardSession(input.roomCode);
+    const row = raw === null ? null : hostedBoardSessionRowSchema.parse(raw);
+    if (row === null || (row.status !== "preparing" && row.status !== "live")) {
+      return hostedBoardDiscoverySchema.parse({
+        status: "unavailable",
+        sessionId: null,
+        roomCode: null,
+        url: null,
+        qrImageUrl: null,
+        expiresAt: null,
+        message: "No active ChatXPT session was found for that room code.",
+      });
+    }
+
+    const baseUrl = input.baseUrl.endsWith("/") ? input.baseUrl.slice(0, -1) : input.baseUrl;
+    return hostedBoardDiscoverySchema.parse({
+      status: "available",
+      sessionId: row.session_id,
+      roomCode: input.roomCode,
+      url: `${baseUrl}/viewer/hosted?room=${encodeURIComponent(input.roomCode)}`,
+      qrImageUrl: input.qrImageUrl ?? null,
+      expiresAt: null,
+      message: "Hosted board access is available as the first viewer fallback.",
+    });
+  }
+}
+
 export class SupabaseCandidateBatchRepository implements CandidateBatchRepository {
   constructor(private readonly api: SupabaseChatXptDataApi) {}
 
@@ -667,6 +786,8 @@ export function createSupabasePersistenceRuntime(
   const acceptedVotes = new SupabaseAcceptedVoteTallyReader(api);
   const snapshots = new SupabaseRoleSnapshotPublisher(api);
   const dueVotes = new SupabaseDueVoteCycleReader(api);
+  const viewerRecovery = new SupabaseViewerRecoveryReader(api);
+  const hostedDiscovery = new SupabaseHostedBoardDiscoveryReader(api);
   return {
     mode: "supabase",
     api,
@@ -674,6 +795,8 @@ export function createSupabasePersistenceRuntime(
     lifecycle: new SupabaseSessionLifecycleStore(api, sessions),
     candidates: new SupabaseCandidateBatchRepository(api),
     acceptedVotes,
+    viewerRecovery,
+    hostedDiscovery,
     snapshots,
     accessGrants: new SupabaseRealtimeAccessGrantStore(api),
     dueVotes,

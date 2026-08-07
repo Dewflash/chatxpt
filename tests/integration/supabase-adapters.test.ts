@@ -16,8 +16,10 @@ import {
   SupabaseDataError,
   SupabaseAcceptedVoteTallyReader,
   SupabaseDueVoteCycleReader,
+  SupabaseHostedBoardDiscoveryReader,
   SupabaseRoleSnapshotPublisher,
   SupabaseSessionStateRepository,
+  SupabaseViewerRecoveryReader,
 } from "../../src/realtime/server";
 import { persistenceState } from "./persistence-fixtures";
 
@@ -25,6 +27,8 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
   state: unknown | null = persistenceState();
   persisted: RoleViewModels | null = null;
   acceptedVoteRows: readonly unknown[] = [];
+  acceptedViewerParticipation: unknown | null = null;
+  hostedBoardSession: unknown | null = null;
   dueVoteStates: readonly unknown[] = [];
 
   constructor() {
@@ -41,6 +45,14 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
 
   override async loadAcceptedVotes(): Promise<readonly unknown[]> {
     return this.acceptedVoteRows;
+  }
+
+  override async loadAcceptedViewerParticipation(): Promise<unknown | null> {
+    return this.acceptedViewerParticipation;
+  }
+
+  override async loadHostedBoardSession(): Promise<unknown | null> {
+    return this.hostedBoardSession;
   }
 
   override async loadDueVoteCycleStates(): Promise<readonly unknown[]> {
@@ -117,6 +129,84 @@ describe("Supabase production adapters", () => {
 
     api.dueVoteStates = [{ invalid: true }];
     await expect(reader.dueVoteCycles(2_000)).rejects.toThrow();
+  });
+
+  it("restores one viewer's accepted vote from the Supabase participation ledger", async () => {
+    const api = new RecordingDataApi();
+    api.acceptedViewerParticipation = {
+      candidate_id: "candidate-2",
+      accepted_at: new Date(2_000).toISOString(),
+      payload: { voterKey: "private-voter", sourceMode: "twitch-chat" },
+    };
+    const reader = new SupabaseViewerRecoveryReader(api);
+
+    await expect(
+      reader.readViewerRecovery({
+        sessionId: "fixture-session",
+        questCycleId: "fixture-cycle",
+        viewerId: "fixture-viewer",
+        voterKey: "private-voter",
+        restoredAt: 3_000,
+      }),
+    ).resolves.toMatchObject({
+      status: "identified",
+      viewerId: "fixture-viewer",
+      acceptedCandidateId: "candidate-2",
+      acceptedAt: 2_000,
+      sourceMode: "twitch-chat",
+      sessionPoints: 0,
+    });
+
+    api.acceptedViewerParticipation = null;
+    await expect(
+      reader.readViewerRecovery({
+        sessionId: "fixture-session",
+        questCycleId: "fixture-cycle",
+        viewerId: null,
+        voterKey: "private-voter",
+        restoredAt: 4_000,
+      }),
+    ).resolves.toMatchObject({
+      status: "anonymous",
+      viewerId: null,
+      acceptedCandidateId: null,
+      sessionPoints: 0,
+    });
+  });
+
+  it("resolves hosted-board room codes only for active Supabase sessions", async () => {
+    const api = new RecordingDataApi();
+    api.hostedBoardSession = { session_id: "fixture-session", status: "live" };
+    const reader = new SupabaseHostedBoardDiscoveryReader(api);
+
+    await expect(
+      reader.discoverHostedBoard({
+        roomCode: "ABCDEFGH",
+        baseUrl: "https://chatxpt.example/",
+        qrImageUrl: "https://chatxpt.example/qr/ABCDEFGH.png",
+        at: 5_000,
+      }),
+    ).resolves.toMatchObject({
+      status: "available",
+      sessionId: "fixture-session",
+      roomCode: "ABCDEFGH",
+      url: "https://chatxpt.example/viewer/hosted?room=ABCDEFGH",
+      qrImageUrl: "https://chatxpt.example/qr/ABCDEFGH.png",
+    });
+
+    api.hostedBoardSession = { session_id: "fixture-session", status: "ended" };
+    await expect(
+      reader.discoverHostedBoard({
+        roomCode: "ABCDEFGH",
+        baseUrl: "https://chatxpt.example",
+        at: 6_000,
+      }),
+    ).resolves.toMatchObject({
+      status: "unavailable",
+      sessionId: null,
+      roomCode: null,
+      url: null,
+    });
   });
 
   it("removes viewer-specific fields before the database trigger can broadcast", async () => {

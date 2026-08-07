@@ -15,10 +15,12 @@ export {
   SupabaseChatXptDataApi,
   SupabaseDataError,
   SupabaseDueVoteCycleReader,
+  SupabaseHostedBoardDiscoveryReader,
   SupabaseRoleSnapshotPublisher,
   SupabaseRealtimeAccessGrantStore,
   SupabaseSessionLifecycleStore,
   SupabaseSessionStateRepository,
+  SupabaseViewerRecoveryReader,
   createSupabasePersistenceRuntime,
   createSupabaseServerClient,
 } from "./supabase";
