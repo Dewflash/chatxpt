@@ -6,6 +6,8 @@ export const TWITCH_EXTENSION_CONFIG_PATH = "/twitch/config";
 export const TWITCH_EXTENSION_LIVE_CONFIG_PATH = "/twitch/live-config";
 export const TWITCH_LOCAL_CALLBACK_URL = "http://localhost:3000/api/twitch/oauth/callback";
 export const TWITCH_REGISTRATION_DECISION_ID = "D-055";
+export const TWITCH_EXTENSION_VIEW_DECISION_ID = "D-056";
+export const TWITCH_EXTENSION_PANEL_HEIGHT_PX = 496;
 
 export interface TwitchSetupReadiness {
   readonly ok: boolean;
@@ -45,6 +47,22 @@ export interface TwitchSetupRegistrationManifest {
   readonly extension: {
     readonly viewerPath: typeof TWITCH_EXTENSION_VIEWER_PATH;
     readonly viewerUrl: string | null;
+    readonly viewPolicy: {
+      readonly status: "accepted";
+      readonly decisionId: typeof TWITCH_EXTENSION_VIEW_DECISION_ID;
+      readonly selectedTypes: readonly ["Panel", "Mobile"];
+      readonly panelHeightPx: typeof TWITCH_EXTENSION_PANEL_HEIGHT_PX;
+      readonly viewerPaths: readonly {
+        readonly twitchField: "Panel Viewer Path" | "Mobile Viewer Path";
+        readonly value: typeof TWITCH_EXTENSION_VIEWER_PATH;
+        readonly url: string | null;
+      }[];
+      readonly unselectedTypes: readonly {
+        readonly twitchLabel: "Video - Fullscreen" | "Video - Component";
+        readonly reason: string;
+      }[];
+      readonly notes: readonly string[];
+    };
     readonly configPath: typeof TWITCH_EXTENSION_CONFIG_PATH;
     readonly configUrl: string | null;
     readonly liveConfigPath: typeof TWITCH_EXTENSION_LIVE_CONFIG_PATH;
@@ -247,6 +265,41 @@ export function resolveTwitchSetupRegistrationManifest(
     extension: {
       viewerPath: TWITCH_EXTENSION_VIEWER_PATH,
       viewerUrl: pathUrlFor(baseUrl, TWITCH_EXTENSION_VIEWER_PATH),
+      viewPolicy: {
+        status: "accepted",
+        decisionId: TWITCH_EXTENSION_VIEW_DECISION_ID,
+        selectedTypes: ["Panel", "Mobile"],
+        panelHeightPx: TWITCH_EXTENSION_PANEL_HEIGHT_PX,
+        viewerPaths: [
+          {
+            twitchField: "Panel Viewer Path",
+            value: TWITCH_EXTENSION_VIEWER_PATH,
+            url: pathUrlFor(baseUrl, TWITCH_EXTENSION_VIEWER_PATH),
+          },
+          {
+            twitchField: "Mobile Viewer Path",
+            value: TWITCH_EXTENSION_VIEWER_PATH,
+            url: pathUrlFor(baseUrl, TWITCH_EXTENSION_VIEWER_PATH),
+          },
+        ],
+        unselectedTypes: [
+          {
+            twitchLabel: "Video - Fullscreen",
+            reason:
+              "OBS Browser Source remains the MVP broadcast overlay path, so the Twitch Extension is not activated as a full-video overlay.",
+          },
+          {
+            twitchLabel: "Video - Component",
+            reason:
+              "The MVP voting surface targets compact panel and mobile contexts; partial-video component placement is deferred until Role 5 asks for it.",
+          },
+        ],
+        notes: [
+          "Use one viewer route for Panel and Mobile so Role 5 can keep the voting surface consistent across Twitch clients.",
+          "Keep the Panel height at 496px to match the compact Role 5 target while staying inside Twitch's panel-height range.",
+          "Config remains install-time setup, while Live Config remains the streamer dashboard control surface.",
+        ],
+      },
       configPath: TWITCH_EXTENSION_CONFIG_PATH,
       configUrl: pathUrlFor(baseUrl, TWITCH_EXTENSION_CONFIG_PATH),
       liveConfigPath: TWITCH_EXTENSION_LIVE_CONFIG_PATH,

@@ -66,6 +66,29 @@ const registrationBody = {
   extension: {
     viewerPath: "/twitch/viewer",
     viewerUrl: "https://preview.example.test/twitch/viewer",
+    viewPolicy: {
+      status: "accepted",
+      decisionId: "D-056",
+      selectedTypes: ["Panel", "Mobile"],
+      panelHeightPx: 496,
+      viewerPaths: [
+        {
+          twitchField: "Panel Viewer Path",
+          value: "/twitch/viewer",
+          url: "https://preview.example.test/twitch/viewer",
+        },
+        {
+          twitchField: "Mobile Viewer Path",
+          value: "/twitch/viewer",
+          url: "https://preview.example.test/twitch/viewer",
+        },
+      ],
+      unselectedTypes: [
+        { twitchLabel: "Video - Fullscreen", reason: "OBS overlay owns broadcast graphics" },
+        { twitchLabel: "Video - Component", reason: "panel/mobile owns MVP voting" },
+      ],
+      notes: ["Panel and Mobile share one viewer route."],
+    },
     configPath: "/twitch/config",
     configUrl: "https://preview.example.test/twitch/config",
     liveConfigPath: "/twitch/live-config",

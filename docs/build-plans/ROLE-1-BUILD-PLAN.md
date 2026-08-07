@@ -259,7 +259,7 @@ Run this loop throughout every phase:
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
 | D1-07 | Twitch OAuth scopes, callback URLs, and test-channel allowlist | Resolved by D-055 | Initial app registration uses the deployed and local callback URLs with no OAuth scopes while token exchange is disabled; EventSub/API chat and IRC fallback scopes are deferred runtime profiles; testing stays on the team-controlled broadcaster and allowlisted team viewers. |
-| D1-08 | Extension view types and exact Viewer/Config/Live Config routes | Open | — |
+| D1-08 | Extension view types and exact Viewer/Config/Live Config routes | Resolved by D-056 | Register Panel and Mobile only. Both use Viewer `/twitch/viewer`; Panel height is 496px. Config uses `/twitch/config`; Live Config uses `/twitch/live-config`; video Extension types are deferred because OBS Browser Source owns broadcast overlay visuals for the MVP. |
 | D1-09 | OBS Virtual Camera selection/setup UX and capture-session lifecycle | Open | — |
 | D1-10 | Owned gameplay fixture and team-controlled Twitch test-stream procedure | Open | — |
 

@@ -182,6 +182,41 @@ export async function verifyTwitchSetup({
       "/twitch/live-config",
       "registration manifest live config path must be canonical",
     );
+    assert.equal(
+      body.extension?.viewPolicy?.status,
+      "accepted",
+      "registration manifest Extension view policy must be accepted",
+    );
+    assert.deepEqual(
+      body.extension?.viewPolicy?.selectedTypes,
+      ["Panel", "Mobile"],
+      "registration manifest must select the Panel and Mobile Extension types",
+    );
+    assert.equal(
+      body.extension?.viewPolicy?.panelHeightPx,
+      496,
+      "registration manifest Panel height must match the compact Twitch panel target",
+    );
+    assert.ok(
+      Array.isArray(body.extension?.viewPolicy?.viewerPaths),
+      "registration manifest view policy must include per-type viewer paths",
+    );
+    assert.ok(
+      body.extension.viewPolicy.viewerPaths.some((path) =>
+        path?.twitchField === "Panel Viewer Path" && path?.value === "/twitch/viewer"),
+      "registration manifest must include the Panel Viewer Path",
+    );
+    assert.ok(
+      body.extension.viewPolicy.viewerPaths.some((path) =>
+        path?.twitchField === "Mobile Viewer Path" && path?.value === "/twitch/viewer"),
+      "registration manifest must include the Mobile Viewer Path",
+    );
+    assert.ok(
+      Array.isArray(body.extension?.viewPolicy?.unselectedTypes)
+        && body.extension.viewPolicy.unselectedTypes.some((type) => type?.twitchLabel === "Video - Fullscreen")
+        && body.extension.viewPolicy.unselectedTypes.some((type) => type?.twitchLabel === "Video - Component"),
+      "registration manifest must document deferred video Extension types",
+    );
     assert.ok(
       String(body.extension?.viewerUrl ?? "").endsWith("/twitch/viewer"),
       "registration manifest viewerUrl must point at the viewer route",
