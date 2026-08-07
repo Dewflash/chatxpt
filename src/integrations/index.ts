@@ -9,6 +9,30 @@ export {
   buildChatFallbackResultAnnouncement,
   describeChatVoteReceipt,
 } from "./chat-fallback";
+export {
+  BrowserMediaFrameSource,
+  MediaStreamVideoFrameCapture,
+  findObsVirtualCameraDevice,
+  requestObsVirtualCameraStream,
+} from "./obs/browser-frame-source";
+export {
+  OBS_BROWSER_SOURCE_DEFAULT_HEIGHT,
+  OBS_BROWSER_SOURCE_DEFAULT_WIDTH,
+  createObsBrowserSourceDescriptor,
+  parseObsBrowserSourceRequest,
+  redactObsBrowserSourceUrl,
+} from "./obs/browser-source";
+export type {
+  BrowserFrameCapture,
+  BrowserMediaFrameSourceOptions,
+  MediaStreamVideoFrameCaptureOptions,
+  ObsVirtualCameraRequestOptions,
+} from "./obs/browser-frame-source";
+export type {
+  CreateObsBrowserSourceDescriptorInput,
+  ObsBrowserSourceDescriptor,
+  ObsBrowserSourceRequest,
+} from "./obs/browser-source";
 export type {
   AudienceEvent,
   AudienceEventSource,
