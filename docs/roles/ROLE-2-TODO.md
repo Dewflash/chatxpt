@@ -36,6 +36,7 @@ Provider/model adoption is a joint Role 2/Role 3 recommendation and requires Rol
 - Role 2 producer tests cover known, partial/unsupported, low-confidence, conflicting, stale, unavailable, permission-denied, abort, malformed candidate-count, and duplicate-title behaviour.
 - `role-2/real-fixture-spike` consumes the canonical ephemeral `FrameSource` through capped pixel sampling and frame-difference measurements, releases frames before yielding, and provides selective-region OCR plumbing without settling the open Phase 3 classification/confidence thresholds.
 - Ten focused visual/OCR tests use explicitly synthetic pixels and a fake OCR adapter; they prove fixture-only component behaviour, not real extraction or OCR accuracy.
+- `codex/role-2-extraction-evidence` adds a Role 2-owned gameplay/chat evidence catalogue so team-owned recordings, sanitised chat, live OBS frames, and synthetic fixtures are labelled before use. It prevents synthetic fixtures from supporting live-demo claims and requires separated annotations for gameplay evaluation.
 - Fixture-only UI-X09 proposals cover intelligence and generation disclosure states without being exported to product consumers or labelled live.
 - Outstanding before `DONE`: Role 1 review/promotion of canonical UI-X09 fixtures, two team-owned or authorised gameplay samples plus separate annotations, sanitised/real chat fixtures, and one real browser-delivered `FrameSource` execution.
 
