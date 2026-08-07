@@ -1,4 +1,5 @@
 import type { OverlayViewModel } from "../core";
+import { DesignSystemRoot, Progress, StatusBadge } from "../design-system";
 import { createOverlayDemoView } from "./demo-fixtures";
 import { activeQuest, overlayPlacementClass, remainingSeconds } from "./surface-model";
 import styles from "./viewer-surfaces.module.css";
@@ -18,7 +19,7 @@ export function ViewerOverlayVisual({ view, now }: ViewerOverlayVisualProps) {
   const result = view.questCycle.result;
 
   return (
-    <main className={styles.overlaySurface}>
+    <DesignSystemRoot className={styles.overlaySurface} theme="twitch">
       {quest === null ? (
         <section className={`${styles.overlayCard} ${styles.quiet}`} aria-label="Overlay waiting state">
           <div className={styles.overlayMeta}><span>ChatXPT</span><span>Ready</span></div>
@@ -35,12 +36,17 @@ export function ViewerOverlayVisual({ view, now }: ViewerOverlayVisualProps) {
           <p>{result ? result.reason : quest.instruction}</p>
           <div className={styles.overlayFooter}>
             <span className={styles.overlaySeconds}>{seconds ?? "--"}s</span>
-            <div className={styles.progressTrack}><i style={{ width: `${Math.round(progress * 100)}%` }} /></div>
-            <span className={styles.smallPill}>Hype {view.communityHype}</span>
+            <Progress
+              className={styles.overlayProgress}
+              label="Quest progress"
+              value={Math.round(progress * 100)}
+              valueLabel={`${Math.round(progress * 100)}%`}
+            />
+            <StatusBadge tone="info">{`Hype ${view.communityHype}`}</StatusBadge>
           </div>
         </section>
       )}
-    </main>
+    </DesignSystemRoot>
   );
 }
 

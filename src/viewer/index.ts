@@ -4,7 +4,7 @@ export { createOverlayDemoView, createViewerDemoView } from "./demo-fixtures";
 export { ViewerOverlayDemo, ViewerOverlayVisual } from "./overlay-visual";
 export {
   activeQuest,
-  buildFixtureVoteCommand,
+  buildViewerVoteCommand,
   overlayPlacementClass,
   remainingSeconds,
   serviceStatusLabel,
@@ -12,7 +12,7 @@ export {
   voteCountFor,
   voteShareFor,
 } from "./surface-model";
-export type { ViewerSurfaceMode, ViewerVoteDispatchResult } from "./surface-model";
+export type { ViewerSurfaceMode, ViewerVoteDispatchResult, ViewerVoteDispatcher } from "./surface-model";
 export { ViewerQuestBoard, ViewerQuestBoardDemo } from "./viewer-quest-board";
 export {
   overlayViewModelSchema,

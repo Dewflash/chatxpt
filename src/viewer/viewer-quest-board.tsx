@@ -1,16 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import type { ViewerViewModel } from "../core";
+import { Button, CardGrid, DesignSystemRoot, Notice, Panel, Progress, StatusBadge } from "../design-system";
 import { acceptFixtureVote, createViewerDemoView } from "./demo-fixtures";
 import {
-  buildFixtureVoteCommand,
+  buildViewerVoteCommand,
   remainingSeconds,
   serviceStatusLabel,
   visibleQuestOptions,
   voteCountFor,
   voteShareFor,
+  type ViewerVoteDispatcher,
   type ViewerSurfaceMode,
 } from "./surface-model";
 import styles from "./viewer-surfaces.module.css";
@@ -18,14 +20,25 @@ import styles from "./viewer-surfaces.module.css";
 export interface ViewerQuestBoardProps {
   readonly initialView: ViewerViewModel;
   readonly surface: ViewerSurfaceMode;
+  readonly voterKey: string;
+  readonly dispatchVote: ViewerVoteDispatcher;
   readonly heading?: string;
+  readonly demoLabel?: string;
 }
 
-export function ViewerQuestBoard({ initialView, surface, heading = "Vote on the sidequest" }: ViewerQuestBoardProps) {
+export function ViewerQuestBoard({
+  initialView,
+  surface,
+  voterKey,
+  dispatchVote,
+  heading = "Vote on the sidequest",
+  demoLabel,
+}: ViewerQuestBoardProps) {
   const [view, setView] = useState(initialView);
   const [selectedId, setSelectedId] = useState<string | null>(initialView.acceptedCandidateId);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
+  const commandSequence = useRef(0);
   const now =
     view.envelope.evidenceClass === "fixture" && view.questCycle.startsAt !== null
       ? view.questCycle.startsAt + 10_000
@@ -35,54 +48,68 @@ export function ViewerQuestBoard({ initialView, surface, heading = "Vote on the 
   const selectedOption = options.find((option) => option.candidateId === selectedId) ?? null;
   const hasAcceptedVote = view.acceptedCandidateId !== null;
   const shellClass = `${styles.viewerShell} ${surface === "extension" ? styles.extension : ""}`;
-  const statusClass = view.connection.status === "ready" ? styles.statusReady : styles.statusWarn;
 
   function submitVote() {
     if (selectedOption === null || pending || !view.canVote || hasAcceptedVote) return;
     setPending(true);
-    setMessage("Sending vote to the fixture dispatcher...");
+    setMessage("Sending vote for authoritative acknowledgement...");
 
-    const command = buildFixtureVoteCommand({
+    commandSequence.current += 1;
+
+    const command = buildViewerVoteCommand({
       view,
       candidateId: selectedOption.candidateId,
-      voterKey: "fixture-viewer-key",
-      issuedAt: view.envelope.receivedAt + 1,
+      voterKey,
+      issuedAt: view.envelope.receivedAt + commandSequence.current,
     });
 
-    window.setTimeout(() => {
-      setView(acceptFixtureVote(view, command.candidateId));
-      setPending(false);
-      setMessage("Vote accepted by fixture authority.");
-    }, 420);
+    dispatchVote(command)
+      .then((result) => {
+        if (result.ok) {
+          setView(result.view);
+          setMessage(result.message);
+          return;
+        }
+
+        setMessage(result.message);
+      })
+      .catch(() => {
+        setMessage("Vote could not be sent. Reconnect and try again.");
+      })
+      .finally(() => {
+        setPending(false);
+      });
   }
 
   return (
-    <main className={styles.viewerSurface}>
+    <DesignSystemRoot className={styles.viewerSurface} data-surface={surface} density={surface === "extension" ? "compact" : "comfortable"} theme="twitch">
       <div className={shellClass}>
         <header className={styles.viewerTopbar}>
           <div className={styles.brand}><span className={styles.mark}>XP</span><span>ChatXPT</span></div>
-          <span className={`${styles.statusPill} ${statusClass}`}>{serviceStatusLabel(view.connection)}</span>
+          <StatusBadge tone={view.connection.status === "ready" ? "success" : "warning"}>
+            {serviceStatusLabel(view.connection)}
+          </StatusBadge>
         </header>
 
         <section className={styles.hero}>
-          <p className={styles.eyebrow}>{surface === "extension" ? "Twitch Extension" : "Hosted Quest Board"} fixture</p>
+          <p className={styles.eyebrow}>{surface === "extension" ? "Twitch Extension" : "Hosted Quest Board"}</p>
           <h1>{heading}</h1>
           <p>Exactly three options, one authoritative vote acknowledgement, and latest safe state during reconnect.</p>
         </section>
 
-        <section className={styles.panel} aria-label="Viewer vote panel">
+        <Panel className={styles.panel} aria-label="Viewer vote panel">
           <div className={styles.voteHeader}>
             <div>
               <p className={styles.eyebrow}>Choose one</p>
               <h2>{view.questCycle.status === "voting" ? "Voting is open" : "Quest state"}</h2>
             </div>
             <div className={styles.metaRow}>
-              <span className={styles.modePill}>{view.participationMode.replace("-", " ")}</span>
+              <StatusBadge tone="info">{view.participationMode.replace("-", " ")}</StatusBadge>
               {seconds !== null && <span className={styles.countdown}>{seconds}s</span>}
             </div>
           </div>
 
-          <div className={styles.optionGrid}>
+          <CardGrid className={styles.optionGrid}>
             {options.map((option, index) => {
               const isSelected = option.candidateId === selectedId;
               const isAccepted = option.candidateId === view.acceptedCandidateId;
@@ -106,43 +133,44 @@ export function ViewerQuestBoard({ initialView, surface, heading = "Vote on the 
                     <span>{option.durationSeconds}s</span>
                     <span>{option.rewardPoints} XP</span>
                   </div>
-                  <div className={styles.tally} aria-label={`${voteCountFor(view.questCycle, option.candidateId)} votes`}>
-                    <span>{hasAcceptedVote ? `${voteShareFor(view.questCycle, option.candidateId)}%` : "Tally after vote"}</span>
-                    <div className={styles.tallyTrack}><i style={{ width: `${hasAcceptedVote ? voteShareFor(view.questCycle, option.candidateId) : 0}%` }} /></div>
-                  </div>
+                  <Progress
+                    className={styles.tally}
+                    label={`${voteCountFor(view.questCycle, option.candidateId)} votes`}
+                    value={hasAcceptedVote ? voteShareFor(view.questCycle, option.candidateId) : 0}
+                    valueLabel={hasAcceptedVote ? `${voteShareFor(view.questCycle, option.candidateId)}%` : "After vote"}
+                  />
                 </button>
               );
             })}
-          </div>
+          </CardGrid>
 
           <div className={styles.voteBar}>
             <div className={styles.confirmation} role="status" aria-live="polite">
-              {message || (hasAcceptedVote ? "Your accepted vote is restored in this fixture view." : "Select a card, then vote.")}
+              {message || (hasAcceptedVote ? "Your accepted vote is restored in this view." : "Select a card, then vote.")}
             </div>
-            <button
-              className={styles.voteButton}
+            <Button
               disabled={selectedOption === null || pending || !view.canVote || hasAcceptedVote}
+              loading={pending}
               onClick={submitVote}
-              type="button"
             >
-              {pending ? "Pending..." : hasAcceptedVote ? "Vote accepted" : "Vote"}
-            </button>
+              {hasAcceptedVote ? "Vote accepted" : "Vote"}
+            </Button>
           </div>
 
           <div className={styles.reactionRow} aria-label="Reaction controls">
             {["Hype", "Clutch", "Careful"].map((reaction) => (
-              <button className={styles.reactionButton} disabled={!view.canReact} key={reaction} type="button">
+              <Button disabled={!view.canReact} key={reaction} type="button" variant="secondary">
                 {reaction}
-              </button>
+              </Button>
             ))}
           </div>
 
-          <p className={styles.notice}>
-            Fixture-only surface: Role 5 renders state and emits commands; Role 1 remains the vote, identity, tally, timer, and persistence authority.
-          </p>
-        </section>
+          <Notice className={styles.notice} title={demoLabel ?? "Role boundary"} tone={demoLabel ? "warning" : "info"}>
+            Role 5 renders state and emits commands; Role 1 remains the vote, identity, tally, timer, and persistence authority.
+          </Notice>
+        </Panel>
       </div>
-    </main>
+    </DesignSystemRoot>
   );
 }
 
@@ -152,11 +180,25 @@ export function ViewerQuestBoardDemo({ surface }: { readonly surface: ViewerSurf
     [surface],
   );
 
+  const dispatchVote: ViewerVoteDispatcher = (command) =>
+    new Promise((resolve) => {
+      window.setTimeout(() => {
+        resolve({
+          ok: true,
+          view: acceptFixtureVote(initialView, command.candidateId),
+          message: "Vote accepted by fixture authority.",
+        });
+      }, 420);
+    });
+
   return (
     <ViewerQuestBoard
+      demoLabel="Fixture-only surface"
+      dispatchVote={dispatchVote}
       initialView={initialView}
       surface={surface}
       heading={surface === "extension" ? "Vote without leaving Twitch" : "Join by link or room code"}
+      voterKey="fixture-viewer-key"
     />
   );
 }

@@ -21,6 +21,8 @@ export type ViewerVoteDispatchResult =
       readonly message: string;
     };
 
+export type ViewerVoteDispatcher = (command: ViewerVoteCommand) => Promise<ViewerVoteDispatchResult>;
+
 export function visibleQuestOptions(cycle: QuestCycleState): readonly QuestCandidate[] {
   if (cycle.status !== "proposed" && cycle.status !== "voting" && cycle.status !== "active") {
     return [];
@@ -68,7 +70,7 @@ export function overlayPlacementClass(view: OverlayViewModel): "edge" | "result"
   return "edge";
 }
 
-export function buildFixtureVoteCommand(input: {
+export function buildViewerVoteCommand(input: {
   readonly view: ViewerViewModel;
   readonly candidateId: string;
   readonly voterKey: string;
@@ -81,8 +83,8 @@ export function buildFixtureVoteCommand(input: {
     contractVersion: CONTRACT_VERSION,
     sessionId: input.view.session.sessionId,
     questCycleId: input.view.questCycle.envelope.questCycleId ?? "fixture-cycle",
-    commandId: `fixture-vote-${input.candidateId}-${input.issuedAt}`,
-    correlationId: `fixture-correlation-${input.issuedAt}`,
+    commandId: `viewer-vote-${input.candidateId}-${input.issuedAt}`,
+    correlationId: `viewer-correlation-${input.issuedAt}`,
     expectedRevision: input.view.envelope.revision,
     issuedAt: input.issuedAt,
     actor: input.view.viewerId === null

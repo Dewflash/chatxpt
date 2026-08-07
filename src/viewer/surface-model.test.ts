@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createOverlayDemoView, createViewerDemoView } from "./demo-fixtures";
 import {
   activeQuest,
-  buildFixtureVoteCommand,
+  buildViewerVoteCommand,
   overlayPlacementClass,
   remainingSeconds,
   serviceStatusLabel,
@@ -19,11 +19,11 @@ describe("Role 5 viewer surface helpers", () => {
     expect(voteShareFor(view.questCycle, "guardian-protocol")).toBe(47);
   });
 
-  it("builds a fixture vote command without changing authoritative tallies", () => {
+  it("builds a viewer vote command without changing authoritative tallies", () => {
     const view = createViewerDemoView();
     const beforeVotes = view.questCycle.voteTallies[0]?.votes;
 
-    const command = buildFixtureVoteCommand({
+    const command = buildViewerVoteCommand({
       view,
       candidateId: "guardian-protocol",
       voterKey: "fixture-viewer-key",
@@ -33,6 +33,7 @@ describe("Role 5 viewer surface helpers", () => {
     expect(command.type).toBe("viewer.vote");
     expect(command.expectedRevision).toBe(view.envelope.revision);
     expect(command.sourceMode).toBe("twitch-extension");
+    expect(command.commandId.startsWith("viewer-vote-")).toBe(true);
     expect(view.questCycle.voteTallies[0]?.votes).toBe(beforeVotes);
   });
 
