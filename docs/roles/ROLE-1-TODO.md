@@ -27,9 +27,14 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 | R1-015 | P0 | READY | Implement the browser-safe UI gateway, authorised command client, local multi-surface harness, and shared UI verification stack. | R1-003; UI-X01/UI-X02/UI-X05 | Thin Role 1 mounts exercise Role 4/5 public modules, typed commands/revisions/auth failures, canonical fixtures, component interaction tests, and real-browser screenshots without exposing secrets or diagnostic state as live. |
 | R1-016 | P0 | READY | Implement private per-viewer recovery plus hosted-board discovery and Twitch-chat delivery seams. | R1-003/R1-004; UI-X07/UI-X08/UI-X10; D1-06D/D1-06E | Each viewer restores only their accepted vote/points, shared broadcasts remain sanitised, direct-link/code/optional QR entry works, and real chat delivery never overclaims acknowledgement. |
 | R1-017 | P0 | DONE | Establish the evidence manifest and real-test resource matrix for every role. | R1-014 / PR #27 merge | PR #32 merged the versioned manifest/schema, privacy and evidence-class validator, validator tests, PR/agent workflow hooks, and assigned broadcaster/two-viewer/OBS/desktop/mobile/recording resources. `docs/evidence/manifest.json` records the R1-017 validation entry, and `npm run check:evidence` plus `npm run test:evidence` pass. |
-| R1-018 | P0 | READY | Gather problem-solution-fit, originality, usability, and expected-impact evidence while the build proceeds. | None | At least two relevant conversations or one streamer plus viewer observations, a truthful alternatives comparison, measurable hypotheses, and recorded product changes/limitations support the deck. |
+| R1-018 | P0 | IN PROGRESS | Gather problem-solution-fit, originality, usability, and expected-impact evidence while the build proceeds. | None | At least two relevant conversations or one streamer plus viewer observations, a truthful alternatives comparison, measurable hypotheses, and recorded product changes/limitations support the deck. |
 | R1-019 | P0 | BLOCKED | Execute exact submission operations and freeze the immutable package. | R1-008/R1-010 | Team-named Drive folder contains all three deliverables and repository link; access is tested; email is sent to the brief's recipient; post-submission mutation is prohibited and recorded. |
 | R1-020 | P0 | DONE | Implement accepted quest runtime seams for #36, #37, #38, recovered #48 scheduler, and #50 progress commands. | D-044 through D-047; accepted #50 command decision | Canonical tick/progress/emergency-clear commands, durable emergency latch, intervention-before-generation coordinator, vote-close scheduler, memory/Supabase due-cycle readers, migration, focused tests, and `npm run check` pass. |
+
+## Current R1-018 evidence
+
+- `codex/role-1-demo-runbook` adds `docs/evidence/GOLDEN_REHEARSAL_RUNBOOK.md`, a privacy-safe rehearsal path for memory-backed and real Twitch/OBS runs.
+- `npm run check:demo-runbook` verifies the runbook keeps the required evidence resources, phases, fixture-vs-live warning, unknown-handling rule, authoritative revision gate, and secret/link guardrails.
 
 ## Decisions Role 1 still owns
 
