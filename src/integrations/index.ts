@@ -13,6 +13,24 @@ export type {
   PlatformEvent,
 } from "../core";
 export {
+  CONTROLLED_GAMEPLAY_TEST_DECISION_ID,
+  controlledGameplayEvidenceResourceSchema,
+  controlledGameplayOwnershipSchema,
+  controlledGameplayRunModeSchema,
+  controlledGameplayRunReportSchema,
+  controlledGameplayScenarioSchema,
+  controlledGameplayTestPlanSchema,
+  controlledGameplayTestResolutionSchema,
+  resolveControlledGameplayTestPlan,
+  type ControlledGameplayEvidenceResource,
+  type ControlledGameplayOwnership,
+  type ControlledGameplayRunMode,
+  type ControlledGameplayRunReport,
+  type ControlledGameplayScenario,
+  type ControlledGameplayTestPlan,
+  type ControlledGameplayTestResolution,
+} from "./test-lab/controlled-gameplay";
+export {
   FixedWindowTwitchChatRateLimiter,
   deliverTwitchChatFallbackAnnouncement,
   deliverTwitchChatVoteAcknowledgement,
