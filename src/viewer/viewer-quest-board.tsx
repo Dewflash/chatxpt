@@ -12,6 +12,7 @@ import {
   visibleQuestOptions,
   voteCountFor,
   voteShareFor,
+  type HostedQuestBoardAccessState,
   type ViewerVoteDispatcher,
   type ViewerSurfaceMode,
 } from "./surface-model";
@@ -27,7 +28,11 @@ export interface ViewerQuestBoardProps {
 }
 
 export type TwitchViewerPanelProps = Omit<ViewerQuestBoardProps, "surface">;
-export type HostedQuestBoardProps = Omit<ViewerQuestBoardProps, "surface">;
+
+export interface HostedQuestBoardProps extends Omit<ViewerQuestBoardProps, "initialView" | "surface"> {
+  readonly initialView?: ViewerViewModel;
+  readonly access?: HostedQuestBoardAccessState;
+}
 
 export function ViewerQuestBoard({
   initialView,
@@ -188,12 +193,74 @@ export function TwitchViewerPanel(props: TwitchViewerPanelProps) {
 }
 
 export function HostedQuestBoard(props: HostedQuestBoardProps) {
+  const { access, initialView, ...boardProps } = props;
+  if (access !== undefined && access.status !== "ready") {
+    return <HostedQuestBoardAccessPanel access={access} />;
+  }
+
+  const view = access?.status === "ready" ? access.view : initialView;
+  if (view === undefined) {
+    return (
+      <HostedQuestBoardAccessPanel
+        access={{
+          status: "unavailable",
+          message: "The hosted Quest Board cannot load until Role 1 supplies an authorised room view.",
+          retryable: true,
+        }}
+      />
+    );
+  }
+
   return (
     <ViewerQuestBoard
-      {...props}
-      heading={props.heading ?? "Join by link or room code"}
+      {...boardProps}
+      heading={boardProps.heading ?? "Join by link or room code"}
+      initialView={view}
       surface="hosted-board"
     />
+  );
+}
+
+function HostedQuestBoardAccessPanel({ access }: { readonly access: Exclude<HostedQuestBoardAccessState, { readonly status: "ready" }> }) {
+  const titleByStatus: Record<typeof access.status, string> = {
+    loading: "Finding your Quest Board",
+    invalid: "Room code not found",
+    expired: "Room expired",
+    forbidden: "Access not available",
+    unavailable: "Quest Board unavailable",
+  };
+
+  const tone = access.status === "loading" ? "info" : access.retryable ? "warning" : "danger";
+
+  return (
+    <DesignSystemRoot className={styles.viewerSurface} density="compact" theme="twitch">
+      <div className={styles.viewerShell}>
+        <header className={styles.viewerTopbar}>
+          <div className={styles.brand}><span className={styles.mark}>XP</span><span>ChatXPT</span></div>
+          <StatusBadge tone={tone}>Hosted fallback</StatusBadge>
+        </header>
+
+        <section className={styles.hero}>
+          <p className={styles.eyebrow}>Hosted Quest Board</p>
+          <h1>{titleByStatus[access.status]}</h1>
+          <p>{access.message}</p>
+        </section>
+
+        <Panel className={styles.panel} aria-label="Hosted board access status">
+          {access.roomCode ? (
+            <div className={styles.chatLine}>
+              <span>Room code</span>
+              <strong>{access.roomCode}</strong>
+            </div>
+          ) : null}
+          <Notice title={access.retryable ? "Try again" : "Use another voting path"} tone={tone}>
+            {access.retryable
+              ? "Reconnect or ask the streamer for a fresh ChatXPT link."
+              : "This page is displaying only Role 1 supplied access state; Role 5 does not create room access."}
+          </Notice>
+        </Panel>
+      </div>
+    </DesignSystemRoot>
   );
 }
 

@@ -46,6 +46,27 @@ describe("Role 5 public viewer surfaces", () => {
     expect(html).not.toContain("Twitch chat fixture");
   });
 
+  it("renders Role 1 supplied chat vote acknowledgement states", () => {
+    const html = renderToStaticMarkup(
+      h(ChatFallbackInstructions, {
+        acknowledgements: [
+          { status: "counted", optionNumber: 1, message: "Your chat vote was counted." },
+          { status: "duplicate", optionNumber: 1, message: "Your first vote is already counted." },
+          { status: "late", message: "Voting already closed." },
+          { status: "unavailable", message: "Chat voting is not the active fallback." },
+        ],
+        view: createViewerDemoView({ mode: "twitch-chat" }),
+      }),
+    );
+
+    expect(html).toContain("Chat vote acknowledgement status");
+    expect(html).toContain("Counted");
+    expect(html).toContain("Duplicate");
+    expect(html).toContain("Late");
+    expect(html).toContain("Unavailable");
+    expect(html).toContain("Option 1");
+  });
+
   it("exports stable Role 1 mount wrappers for extension and hosted surfaces", () => {
     const view = createViewerDemoView();
     const dispatchVote = async () => ({ ok: false as const, message: "not submitted during server render" });
@@ -68,6 +89,27 @@ describe("Role 5 public viewer surfaces", () => {
     expect(extension).toContain('data-surface="extension"');
     expect(hosted).toContain("Join by link or room code");
     expect(hosted).toContain('data-surface="hosted-board"');
+  });
+
+  it("renders hosted room access failures without inventing room authority", () => {
+    const html = renderToStaticMarkup(
+      h(HostedQuestBoard, {
+        access: {
+          status: "expired",
+          roomCode: "ABCDEFGH",
+          message: "This room is no longer attached to a live ChatXPT session.",
+          retryable: false,
+        },
+        dispatchVote: async () => ({ ok: false as const, message: "not submitted during server render" }),
+        voterKey: "render-test-viewer",
+      }),
+    );
+
+    expect(html).toContain("Room expired");
+    expect(html).toContain("ABCDEFGH");
+    expect(html).toContain("Use another voting path");
+    expect(html).toContain("Role 5 does not create room access");
+    expect(html).not.toContain("Guardian Protocol");
   });
 
   it("renders the overlay as read-only shared quest state", () => {

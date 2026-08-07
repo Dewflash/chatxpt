@@ -23,6 +23,25 @@ export type ViewerVoteDispatchResult =
 
 export type ViewerVoteDispatcher = (command: ViewerVoteCommand) => Promise<ViewerVoteDispatchResult>;
 
+export type HostedQuestBoardAccessState =
+  | {
+      readonly status: "ready";
+      readonly roomCode: string;
+      readonly view: ViewerViewModel;
+    }
+  | {
+      readonly status: "loading" | "invalid" | "expired" | "forbidden" | "unavailable";
+      readonly roomCode?: string;
+      readonly message: string;
+      readonly retryable: boolean;
+    };
+
+export type ChatVoteAcknowledgement = {
+  readonly status: "counted" | "duplicate" | "rejected" | "late" | "unavailable";
+  readonly message: string;
+  readonly optionNumber?: 1 | 2 | 3;
+};
+
 export function visibleQuestOptions(cycle: QuestCycleState): readonly QuestCandidate[] {
   if (cycle.status !== "proposed" && cycle.status !== "voting" && cycle.status !== "active") {
     return [];

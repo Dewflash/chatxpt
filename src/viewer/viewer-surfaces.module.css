@@ -228,6 +228,11 @@
   gap: var(--cx-space-md);
 }
 
+.ackList {
+  display: grid;
+  gap: var(--cx-space-sm);
+}
+
 .chatLine {
   justify-content: space-between;
   padding: var(--cx-space-md);

@@ -17,6 +17,7 @@ export {
   voteShareFor,
 } from "./surface-model";
 export type { ViewerSurfaceMode, ViewerVoteDispatchResult, ViewerVoteDispatcher } from "./surface-model";
+export type { ChatVoteAcknowledgement, HostedQuestBoardAccessState } from "./surface-model";
 export {
   HostedQuestBoard,
   TwitchViewerPanel,
