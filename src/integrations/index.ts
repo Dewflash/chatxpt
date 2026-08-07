@@ -13,6 +13,18 @@ export type {
   PlatformEvent,
 } from "../core";
 export {
+  UI_GATEWAY_HARNESS_DECISION_ID,
+  resolveUiGatewayHarnessPolicy,
+  uiGatewayHarnessPolicyReportSchema,
+  uiGatewayHarnessPolicyResolutionSchema,
+  uiGatewayHarnessSurfaceSchema,
+  uiGatewayHarnessVerificationSchema,
+  type UiGatewayHarnessPolicyReport,
+  type UiGatewayHarnessPolicyResolution,
+  type UiGatewayHarnessSurface,
+  type UiGatewayHarnessVerification,
+} from "./test-lab/ui-gateway-harness-policy";
+export {
   MINIMUM_REAL_WORKFLOW_EVIDENCE_DECISION_ID,
   minimumRealWorkflowEvidenceReportSchema,
   minimumRealWorkflowEvidenceResolutionSchema,
