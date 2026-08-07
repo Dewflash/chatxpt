@@ -2,7 +2,6 @@ import { demoStudioIntegrationHealthView } from "./demo-integration-health";
 import { DesignSystemRoot, Notice, Panel, StatusBadge } from "../design-system";
 import {
   countByStatus,
-  isDemoReady,
   statusLabel,
   type IntegrationStatus,
   type StudioIntegrationHealthItem,
@@ -65,25 +64,10 @@ function IntegrationRow({ item }: { readonly item: StudioIntegrationHealthItem }
 
 export function StudioIntegrationsHealth({ view }: StudioIntegrationsHealthProps) {
   const counts = countByStatus(view.items);
-  const ready = isDemoReady(view);
 
   return (
-    <DesignSystemRoot className={styles.studioShell} theme="twitch">
-      <aside className={styles.sidebar} aria-label="Studio sections">
-        <a className={styles.brand} href="/studio">
-          <span className={styles.brandMark}>XP</span>
-          <span>ChatXPT Studio</span>
-        </a>
-        <nav>
-          <a href="/studio">Overview</a>
-          <a className={styles.activeNav} href="/studio/integrations">Integrations</a>
-          <a href="/studio">Live Quests</a>
-          <a href="/studio">Profile</a>
-          <a href="/studio">Test Lab</a>
-        </nav>
-      </aside>
-
-      <section className={styles.content}>
+    <DesignSystemRoot className={styles.integrationSurface} theme="twitch">
+      <section className={styles.contentOnly}>
         <header className={styles.pageHeader}>
           <div>
             <p className={styles.eyebrow}>Technical health</p>
@@ -93,8 +77,8 @@ export function StudioIntegrationsHealth({ view }: StudioIntegrationsHealthProps
               Role 1 wires real health checks.
             </p>
           </div>
-          <StatusBadge tone={ready ? "success" : "warning"}>
-            {ready ? "Demo ready" : "Demo blocked"}
+          <StatusBadge tone={view.evidenceClass === "live" ? "success" : "diagnostic"}>
+            {`${view.evidenceClass} health`}
           </StatusBadge>
         </header>
 

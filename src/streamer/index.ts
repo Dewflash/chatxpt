@@ -2,8 +2,6 @@
 export { demoStudioIntegrationHealthView } from "./demo-integration-health";
 export {
   countByStatus,
-  demoCriticalItems,
-  isDemoReady,
   itemFromService,
   statusFromServiceHealth,
   statusLabel,

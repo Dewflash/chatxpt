@@ -12,13 +12,15 @@ describe("Studio integrations health surface", () => {
     );
 
     expect(html).toContain('data-theme="twitch"');
-    expect(html).toContain("ChatXPT Studio");
     expect(html).toContain("Integrations");
-    expect(html).toContain("Demo blocked");
+    expect(html).toContain("fixture health");
     expect(html).toContain("Evidence boundary");
     expect(html).toContain("fixture view");
     expect(html).toContain("Twitch app and Extension");
+    expect(html).toContain("Not configured");
     expect(html).toContain("OBS capture and overlay");
+    expect(html).not.toContain("Demo ready");
+    expect(html).not.toContain("Demo blocked");
   });
 
   it("exports the Role 1 mount wrapper without changing the rendered contract", () => {

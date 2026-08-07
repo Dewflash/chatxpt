@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { demoStudioIntegrationHealthView } from "./demo-integration-health";
-import { countByStatus, isDemoReady, statusFromServiceHealth, statusLabel } from "./integration-health-model";
+import { countByStatus, statusFromServiceHealth, statusLabel } from "./integration-health-model";
 
 describe("Studio integration health model", () => {
   it("maps service health to owner-approved configured/not-configured statuses", () => {
@@ -14,10 +14,9 @@ describe("Studio integration health model", () => {
   it("summarises fixture integration state without treating infrastructure as streamer setup", () => {
     const counts = countByStatus(demoStudioIntegrationHealthView.items);
 
-    expect(counts.configured).toBe(1);
+    expect(counts.configured).toBe(0);
     expect(counts.degraded).toBe(4);
-    expect(counts["not-configured"]).toBe(3);
-    expect(isDemoReady(demoStudioIntegrationHealthView)).toBe(false);
+    expect(counts["not-configured"]).toBe(4);
     expect(
       demoStudioIntegrationHealthView.items.filter((item) => !item.streamerFacing).map((item) => item.id),
     ).toContain("vercel");

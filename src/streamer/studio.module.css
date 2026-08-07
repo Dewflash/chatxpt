@@ -6,6 +6,12 @@
   background: var(--cx-color-canvas);
 }
 
+.integrationSurface {
+  min-height: 100vh;
+  color: var(--cx-color-text);
+  background: var(--cx-color-canvas);
+}
+
 .sidebar {
   position: sticky;
   top: 0;
@@ -57,6 +63,12 @@
 }
 
 .content {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: var(--cx-space-xxl) 0 3.25rem;
+}
+
+.contentOnly {
   width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
   padding: var(--cx-space-xxl) 0 3.25rem;

@@ -62,14 +62,6 @@ export function countByStatus(items: readonly StudioIntegrationHealthItem[]): Re
   );
 }
 
-export function demoCriticalItems(items: readonly StudioIntegrationHealthItem[]): readonly StudioIntegrationHealthItem[] {
-  return items.filter((item) => item.id !== "vercel" && item.id !== "supabase");
-}
-
-export function isDemoReady(view: StudioIntegrationHealthView): boolean {
-  return demoCriticalItems(view.items).every((item) => item.status === "configured");
-}
-
 export function itemFromService(input: Omit<StudioIntegrationHealthItem, "status">): StudioIntegrationHealthItem {
   return {
     ...input,

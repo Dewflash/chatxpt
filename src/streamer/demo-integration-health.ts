@@ -26,7 +26,7 @@ export const demoStudioIntegrationHealthView: StudioIntegrationHealthView = {
       id: "twitch",
       name: "Twitch app and Extension",
       owner: "Role 1",
-      service: health("twitch", "ready", "Hosted Test panel is active; OAuth callback is not wired in this fixture."),
+      service: health("twitch", "misconfigured", "Hosted Test panel exists, but OAuth callback is not wired in this fixture.", true),
       purpose: "Viewer surface, OAuth callback, channel context, and chat input.",
       technicalDetail: "Hosted Test shell exists. Real Extension auth and callback URL must be supplied by Role 1 deployment.",
       nextAction: "Replace fixture status with Twitch setup readiness API when merged.",
