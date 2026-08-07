@@ -4,6 +4,8 @@ export const TWITCH_OAUTH_CALLBACK_PATH = "/api/twitch/oauth/callback";
 export const TWITCH_EXTENSION_VIEWER_PATH = "/twitch/viewer";
 export const TWITCH_EXTENSION_CONFIG_PATH = "/twitch/config";
 export const TWITCH_EXTENSION_LIVE_CONFIG_PATH = "/twitch/live-config";
+export const TWITCH_LOCAL_CALLBACK_URL = "http://localhost:3000/api/twitch/oauth/callback";
+export const TWITCH_REGISTRATION_DECISION_ID = "D-055";
 
 export interface TwitchSetupReadiness {
   readonly ok: boolean;
@@ -26,12 +28,19 @@ export interface TwitchSetupRegistrationManifest {
     readonly callbackPath: typeof TWITCH_OAUTH_CALLBACK_PATH;
     readonly callbackUrl: string | null;
     readonly scopes: {
-      readonly status: "open-decision";
-      readonly decisionId: "D1-07";
+      readonly status: "accepted";
+      readonly decisionId: typeof TWITCH_REGISTRATION_DECISION_ID;
       readonly configured: readonly string[];
       readonly note: string;
     };
+    readonly callbackUrls: readonly string[];
     readonly tokenExchange: "reserved-disabled";
+    readonly deferredRuntimeScopeProfiles: readonly {
+      readonly name: string;
+      readonly status: "deferred-runtime";
+      readonly scopes: readonly string[];
+      readonly reason: string;
+    }[];
   };
   readonly extension: {
     readonly viewerPath: typeof TWITCH_EXTENSION_VIEWER_PATH;
@@ -50,6 +59,18 @@ export interface TwitchSetupRegistrationManifest {
   readonly evidenceRequired: readonly string[];
   readonly limitations: readonly string[];
 }
+
+const eventSubChatApiScopes = [
+  "user:read:chat",
+  "user:write:chat",
+  "user:bot",
+  "channel:bot",
+] as const;
+
+const ircFallbackScopes = [
+  "chat:read",
+  "chat:edit",
+] as const;
 
 function normalise(value: string | undefined): string | null {
   const trimmed = value?.trim();
@@ -197,13 +218,31 @@ export function resolveTwitchSetupRegistrationManifest(
     oauth: {
       callbackPath: TWITCH_OAUTH_CALLBACK_PATH,
       callbackUrl: callbackUrlFor(baseUrl),
+      callbackUrls: [
+        ...(callbackUrlFor(baseUrl) === null ? [] : [callbackUrlFor(baseUrl)!]),
+        TWITCH_LOCAL_CALLBACK_URL,
+      ],
       scopes: {
-        status: "open-decision",
-        decisionId: "D1-07",
+        status: "accepted",
+        decisionId: TWITCH_REGISTRATION_DECISION_ID,
         configured: [],
-        note: "OAuth scopes, callback URL allowlist, and test-channel allowlist remain a Role 1 decision gate before token exchange is enabled.",
+        note: "Initial Twitch app registration requests no OAuth scopes because token exchange is disabled until the chat/EventSub adapter is implemented and tested.",
       },
       tokenExchange: "reserved-disabled",
+      deferredRuntimeScopeProfiles: [
+        {
+          name: "eventsub-chat-api",
+          status: "deferred-runtime",
+          scopes: eventSubChatApiScopes,
+          reason: "Use for the later Twitch chat/EventSub adapter if ChatXPT reads and sends chat through the modern EventSub/API path.",
+        },
+        {
+          name: "irc-fallback",
+          status: "deferred-runtime",
+          scopes: ircFallbackScopes,
+          reason: "Use only if Role 1 deliberately enables a legacy IRC fallback instead of the EventSub/API chat path.",
+        },
+      ],
     },
     extension: {
       viewerPath: TWITCH_EXTENSION_VIEWER_PATH,
@@ -218,13 +257,13 @@ export function resolveTwitchSetupRegistrationManifest(
     evidenceRequired: [
       "Twitch developer-console app registration",
       "Twitch Extension Local or Hosted Test",
-      "Configured test channel and allowlisted viewers",
+      "Configured team-controlled broadcaster test channel and allowlisted team viewer accounts",
       "Evidence manifest entry before claiming live Twitch readiness",
     ],
     limitations: [
       "This manifest is a copy-safe registration checklist, not evidence that Twitch accepted the configuration.",
       "OAuth token exchange remains disabled in this build.",
-      "OAuth scopes are intentionally not selected here because D1-07 is still open.",
+      "Initial registration intentionally requests no OAuth scopes; runtime chat scopes are deferred until the Twitch adapter enables that path.",
       "No Twitch secrets are included in this response.",
     ],
   };

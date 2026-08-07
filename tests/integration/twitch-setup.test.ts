@@ -4,7 +4,9 @@ import {
   TWITCH_EXTENSION_CONFIG_PATH,
   TWITCH_EXTENSION_LIVE_CONFIG_PATH,
   TWITCH_EXTENSION_VIEWER_PATH,
+  TWITCH_LOCAL_CALLBACK_URL,
   TWITCH_OAUTH_CALLBACK_PATH,
+  TWITCH_REGISTRATION_DECISION_ID,
   resolveTwitchSetupRegistrationManifest,
   resolveTwitchSetupReadiness,
 } from "../../src/integrations";
@@ -83,7 +85,7 @@ describe("Twitch setup readiness", () => {
     expect(JSON.stringify(readiness)).not.toContain("fixture-extension-secret");
   });
 
-  it("publishes copy-safe Twitch developer-console registration values without settling OAuth scopes", () => {
+  it("publishes copy-safe Twitch developer-console registration values with staged OAuth policy", () => {
     const manifest = resolveTwitchSetupRegistrationManifest({
       TWITCH_CLIENT_ID: "fixture-client",
       TWITCH_CLIENT_SECRET: "fixture-client-secret",
@@ -95,13 +97,29 @@ describe("Twitch setup readiness", () => {
     expect(manifest.oauth).toMatchObject({
       callbackPath: TWITCH_OAUTH_CALLBACK_PATH,
       callbackUrl: "https://preview.example.test/api/twitch/oauth/callback",
+      callbackUrls: [
+        "https://preview.example.test/api/twitch/oauth/callback",
+        TWITCH_LOCAL_CALLBACK_URL,
+      ],
       tokenExchange: "reserved-disabled",
       scopes: {
-        status: "open-decision",
-        decisionId: "D1-07",
+        status: "accepted",
+        decisionId: TWITCH_REGISTRATION_DECISION_ID,
         configured: [],
       },
     });
+    expect(manifest.oauth.deferredRuntimeScopeProfiles).toEqual([
+      expect.objectContaining({
+        name: "eventsub-chat-api",
+        status: "deferred-runtime",
+        scopes: ["user:read:chat", "user:write:chat", "user:bot", "channel:bot"],
+      }),
+      expect.objectContaining({
+        name: "irc-fallback",
+        status: "deferred-runtime",
+        scopes: ["chat:read", "chat:edit"],
+      }),
+    ]);
     expect(manifest.extension).toMatchObject({
       viewerPath: TWITCH_EXTENSION_VIEWER_PATH,
       viewerUrl: "https://preview.example.test/twitch/viewer",
@@ -194,7 +212,11 @@ describe("Twitch setup readiness", () => {
       baseUrl: "https://preview.example.test",
       oauth: {
         callbackUrl: "https://preview.example.test/api/twitch/oauth/callback",
-        scopes: { status: "open-decision", decisionId: "D1-07" },
+        callbackUrls: [
+          "https://preview.example.test/api/twitch/oauth/callback",
+          TWITCH_LOCAL_CALLBACK_URL,
+        ],
+        scopes: { status: "accepted", decisionId: TWITCH_REGISTRATION_DECISION_ID, configured: [] },
         tokenExchange: "reserved-disabled",
       },
       extension: {
@@ -203,6 +225,12 @@ describe("Twitch setup readiness", () => {
         liveConfigUrl: "https://preview.example.test/twitch/live-config",
       },
     });
+    expect(body.oauth.deferredRuntimeScopeProfiles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "eventsub-chat-api" }),
+        expect.objectContaining({ name: "irc-fallback" }),
+      ]),
+    );
     expect(JSON.stringify(body)).not.toContain("fixture-client-secret");
     expect(JSON.stringify(body)).not.toContain("fixture-extension-secret");
   });

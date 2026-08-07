@@ -38,12 +38,30 @@ const registrationBody = {
     callbackPath: "/api/twitch/oauth/callback",
     callbackUrl: "https://preview.example.test/api/twitch/oauth/callback",
     scopes: {
-      status: "open-decision",
-      decisionId: "D1-07",
+      status: "accepted",
+      decisionId: "D-055",
       configured: [],
-      note: "open",
+      note: "accepted",
     },
+    callbackUrls: [
+      "https://preview.example.test/api/twitch/oauth/callback",
+      "http://localhost:3000/api/twitch/oauth/callback",
+    ],
     tokenExchange: "reserved-disabled",
+    deferredRuntimeScopeProfiles: [
+      {
+        name: "eventsub-chat-api",
+        status: "deferred-runtime",
+        scopes: ["user:read:chat", "user:write:chat", "user:bot", "channel:bot"],
+        reason: "later adapter",
+      },
+      {
+        name: "irc-fallback",
+        status: "deferred-runtime",
+        scopes: ["chat:read", "chat:edit"],
+        reason: "legacy fallback",
+      },
+    ],
   },
   extension: {
     viewerPath: "/twitch/viewer",
@@ -134,7 +152,7 @@ test("rejects readiness responses that expose configured secret values", async (
   assert.ok(result.violations.every((violation) => !violation.includes("fixture-secret-value")));
 });
 
-test("rejects registration manifests that settle OAuth scopes early", async () => {
+test("rejects registration manifests that request OAuth scopes during initial setup", async () => {
   const result = await verifyTwitchSetup({
     baseUrl: "https://preview.example.test",
     fetchImpl: fetchFixture({
@@ -142,14 +160,14 @@ test("rejects registration manifests that settle OAuth scopes early", async () =
         ...registrationBody,
         oauth: {
           ...registrationBody.oauth,
-          scopes: { status: "ready", decisionId: "D1-07", configured: ["channel:read:redemptions"] },
+          scopes: { status: "accepted", decisionId: "D-055", configured: ["channel:read:redemptions"] },
         },
       }, 200, { "cache-control": "no-store" }),
     }),
   });
 
   assert.equal(result.ok, false);
-  assert.ok(result.violations.some((violation) => violation.includes("OAuth scopes")));
+  assert.ok(result.violations.some((violation) => violation.includes("request no scopes")));
 });
 
 test("rejects callback routes that do not fail closed on missing query params", async () => {

@@ -12,6 +12,8 @@ https://<chatxpt-preview-or-production-host>/api/twitch/oauth/callback
 
 The callback route is reserved in the app and returns safe setup/readiness JSON. It does not exchange OAuth tokens until Role 1 configures Twitch credentials and enables the token-exchange implementation.
 
+For initial app registration, request no OAuth scopes. D-055 keeps OAuth token exchange disabled until Role 1 implements the runtime adapter. The later EventSub/API chat path may request `user:read:chat`, `user:write:chat`, `user:bot`, and broadcaster `channel:bot` as needed; legacy IRC fallback may request `chat:read` and `chat:edit` only if Role 1 deliberately enables that fallback.
+
 Reserve these Extension paths for Twitch setup:
 
 ```text
@@ -47,7 +49,7 @@ Before claiming Twitch readiness:
 
 1. Confirm `/api/twitch/oauth/callback` exists on the target deployment.
 2. Confirm `/api/twitch/setup/readiness` reports the callback URL, Extension paths, missing variables, and setup limitations without returning secret values.
-3. Confirm `/api/twitch/setup/registration` reports copy-safe developer-console values and keeps OAuth scopes marked as the open D1-07 decision.
+3. Confirm `/api/twitch/setup/registration` reports copy-safe developer-console values, no initial OAuth scopes, deferred runtime chat scope profiles, and the D-055 decision ID.
 4. Confirm an unauthorised callback request returns safe JSON and no Twitch secrets.
 5. Confirm the Twitch app has the deployed callback URL configured.
 6. Confirm the Twitch Extension has the viewer, config, and live-config URLs configured.
@@ -59,6 +61,7 @@ npm run test -- tests/integration/twitch-setup.test.ts tests/integration/twitch-
 ```
 
 9. Run `npm run verify:twitch-setup -- <preview-or-local-url>` to verify the setup readiness API, registration manifest, callback failure shape, and reserved Extension route shells.
-10. Record real developer-console, Local Test, or Hosted Test evidence in `docs/evidence/manifest.json` before citing Twitch as live.
+10. Use only the team-controlled broadcaster test channel and allowlisted team viewer accounts until Role 1 records broader evidence.
+11. Record real developer-console, Local Test, or Hosted Test evidence in `docs/evidence/manifest.json` before citing Twitch as live.
 
 This runbook does not prove Twitch OAuth, EventSub, chat delivery, or Extension runtime behaviour. Those require separate live test-channel evidence.
