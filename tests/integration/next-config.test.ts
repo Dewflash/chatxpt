@@ -17,10 +17,20 @@ describe("Role 1 deployment headers", () => {
     const csp = root?.headers.find(({ key }) => key === "Content-Security-Policy")?.value;
 
     expect(csp).toContain("default-src 'self'");
-    expect(csp).toContain("script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'");
+    expect(csp).toContain(
+      "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://extension-files.twitch.tv",
+    );
     expect(csp).toContain("worker-src 'self' blob:");
-    expect(csp).toContain("connect-src 'self' https://*.supabase.co wss://*.supabase.co");
-    expect(csp).toContain("frame-ancestors 'self' https://*.twitch.tv https://*.twitch-ext.rootonline.de");
+    expect(csp).toContain(
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.twitch.tv wss://pubsub-edge.twitch.tv",
+    );
+    expect(csp).toContain(
+      "frame-ancestors 'self' https://supervisor.ext-twitch.tv https://extension-files.twitch.tv https://*.twitch.tv https://*.twitch.tech https://localhost.twitch.tv:* https://localhost.twitch.tech:* http://localhost.rig.twitch.tv:* https://*.twitch-ext.rootonline.de",
+    );
+    expect(csp).toContain("https://extension-files.twitch.tv");
+    expect(csp).toContain("https://supervisor.ext-twitch.tv");
+    expect(csp).toContain("https://localhost.twitch.tv:*");
+    expect(csp).toContain("http://localhost.rig.twitch.tv:*");
     expect(csp?.split(/\s+/)).not.toContain("*");
     expect(csp).not.toContain("TWITCH_CLIENT_SECRET");
     expect(csp).not.toContain("SUPABASE_SECRET_KEY");
