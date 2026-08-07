@@ -36,3 +36,17 @@ The Supabase adapter reads the server-only `accepted_participation` audit table,
 and the additive migration enforces the same one-vote rule across Twitch
 Extension, hosted-board, and Twitch-chat sources. Static tests do not claim the
 migration has run against a live Supabase project.
+
+## Private viewer recovery
+
+`viewerRecovery.readViewerRecovery` is the UI-X10 server-side read seam for
+viewer reconnect. It accepts the session, quest cycle, and opaque `voterKey`,
+then returns only that viewer's accepted candidate, acceptance time, current
+session points, and participation source. Shared viewer snapshots remain
+sanitised and never broadcast `viewerId`, `acceptedCandidateId`, or personal
+points.
+
+The current authoritative reward ledger is not persisted per viewer yet, so the
+memory and Supabase readers return `sessionPoints: 0` until Role 1 wires the
+reward read model. This keeps Role 5 unblocked for accepted-vote recovery
+without inventing personal rewards.

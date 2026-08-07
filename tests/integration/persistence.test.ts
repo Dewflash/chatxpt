@@ -149,6 +149,26 @@ describe("production-shaped memory persistence integration", () => {
     const repeated = await orchestrator.execute(voteCommand("second-vote", 1, "twitch-chat"));
 
     expect(first.ok).toBe(true);
+    const restored = await runtime.viewerRecovery.readViewerRecovery({
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: contractFixtureQuestCycle.envelope.questCycleId ?? "missing-cycle",
+      voterKey: "fixture-session-scoped-voter",
+    });
+    expect(restored).toEqual({
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: contractFixtureQuestCycle.envelope.questCycleId,
+      acceptedCandidateId: contractFixtureCandidateBatch.candidates[0].candidateId,
+      acceptedAt: FIXTURE_NOW + 1_000,
+      sessionPoints: 0,
+      sourceMode: "twitch-extension",
+    });
+    const otherViewer = await runtime.viewerRecovery.readViewerRecovery({
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: contractFixtureQuestCycle.envelope.questCycleId ?? "missing-cycle",
+      voterKey: "another-session-scoped-voter",
+    });
+    expect(otherViewer.acceptedCandidateId).toBeNull();
+    expect(otherViewer.sessionPoints).toBe(0);
     expect(repeated.ok).toBe(false);
     if (repeated.ok) return;
     expect(repeated.error.code).toBe("duplicate");

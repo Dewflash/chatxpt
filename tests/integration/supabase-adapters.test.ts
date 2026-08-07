@@ -18,6 +18,7 @@ import {
   SupabaseDueVoteCycleReader,
   SupabaseRoleSnapshotPublisher,
   SupabaseSessionStateRepository,
+  SupabaseViewerRecoveryReader,
 } from "../../src/realtime/server";
 import { persistenceState } from "./persistence-fixtures";
 
@@ -25,6 +26,7 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
   state: unknown | null = persistenceState();
   persisted: RoleViewModels | null = null;
   acceptedVoteRows: readonly unknown[] = [];
+  viewerAcceptedVoteRow: unknown | null = null;
   dueVoteStates: readonly unknown[] = [];
 
   constructor() {
@@ -41,6 +43,10 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
 
   override async loadAcceptedVotes(): Promise<readonly unknown[]> {
     return this.acceptedVoteRows;
+  }
+
+  override async loadViewerAcceptedVote(): Promise<unknown | null> {
+    return this.viewerAcceptedVoteRow;
   }
 
   override async loadDueVoteCycleStates(): Promise<readonly unknown[]> {
@@ -96,6 +102,50 @@ describe("Supabase production adapters", () => {
       { candidateId: "candidate-3", votes: 0 },
     ]);
     expect(snapshot).not.toHaveProperty("winnerCandidateId");
+  });
+
+  it("reads only the requesting viewer's private accepted vote recovery state", async () => {
+    const api = new RecordingDataApi();
+    const reader = new SupabaseViewerRecoveryReader(api);
+
+    expect(
+      await reader.readViewerRecovery({
+        sessionId: "fixture-session",
+        questCycleId: "fixture-cycle",
+        voterKey: "missing-viewer",
+      }),
+    ).toEqual({
+      sessionId: "fixture-session",
+      questCycleId: "fixture-cycle",
+      acceptedCandidateId: null,
+      acceptedAt: null,
+      sessionPoints: 0,
+      sourceMode: null,
+    });
+
+    api.viewerAcceptedVoteRow = {
+      candidate_id: "candidate-2",
+      accepted_at: "2026-08-07T22:31:00.000Z",
+      payload: {
+        voterKey: "private-key-not-returned",
+        sourceMode: "hosted-board",
+      },
+    };
+
+    expect(
+      await reader.readViewerRecovery({
+        sessionId: "fixture-session",
+        questCycleId: "fixture-cycle",
+        voterKey: "private-key-not-returned",
+      }),
+    ).toEqual({
+      sessionId: "fixture-session",
+      questCycleId: "fixture-cycle",
+      acceptedCandidateId: "candidate-2",
+      acceptedAt: Date.parse("2026-08-07T22:31:00.000Z"),
+      sessionPoints: 0,
+      sourceMode: "hosted-board",
+    });
   });
 
   it("validates authoritative JSON loaded from the database", async () => {

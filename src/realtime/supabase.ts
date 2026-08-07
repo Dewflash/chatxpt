@@ -12,6 +12,7 @@ import {
   overlayViewModelSchema,
   serviceHealthSchema,
   streamerViewModelSchema,
+  viewerRecoveryStateSchema,
   viewerViewModelSchema,
   type AcceptedCommandReceipt,
   type AcceptedVoteTallyReadInput,
@@ -23,6 +24,9 @@ import {
   type CommitAuthoritativeStateResult,
   type RoleViewModels,
   type ServiceHealth,
+  type ViewerRecoveryReadInput,
+  type ViewerRecoveryReader,
+  type ViewerRecoveryState,
 } from "../core";
 import type { SupabasePersistenceEnvironment } from "./environment";
 import {
@@ -60,6 +64,17 @@ const commitResultSchema = z.discriminatedUnion("status", [
 ]);
 
 const acceptedVoteRowSchema = z.object({ candidate_id: z.string().min(1).max(128) }).passthrough();
+const acceptedVoteRecoveryRowSchema = z
+  .object({
+    candidate_id: z.string().min(1).max(128),
+    accepted_at: z.iso.datetime({ offset: true }),
+    payload: z
+      .object({
+        sourceMode: z.enum(["twitch-extension", "hosted-board", "twitch-chat"]),
+      })
+      .passthrough(),
+  })
+  .passthrough();
 
 const lifecycleCommitResultSchema = z.discriminatedUnion("status", [
   z
@@ -230,6 +245,23 @@ export class SupabaseChatXptDataApi {
       .lt("accepted_at", new Date(acceptedBefore).toISOString());
     throwIfError(error);
     return data ?? [];
+  }
+
+  async loadViewerAcceptedVote(
+    sessionId: string,
+    questCycleId: string,
+    voterKey: string,
+  ): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("accepted_participation")
+      .select("candidate_id, accepted_at, payload")
+      .eq("session_id", sessionId)
+      .eq("quest_cycle_id", questCycleId)
+      .eq("participation_type", "vote")
+      .eq("payload->>voterKey", voterKey)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
   }
 
   async persistRoleSnapshots(views: RoleViewModels): Promise<void> {
@@ -472,6 +504,37 @@ export class SupabaseAcceptedVoteTallyReader implements AcceptedVoteTallyReader 
   }
 }
 
+export class SupabaseViewerRecoveryReader implements ViewerRecoveryReader {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async readViewerRecovery(input: ViewerRecoveryReadInput): Promise<ViewerRecoveryState> {
+    const raw = await this.api.loadViewerAcceptedVote(
+      input.sessionId,
+      input.questCycleId,
+      input.voterKey,
+    );
+    if (raw === null) {
+      return viewerRecoveryStateSchema.parse({
+        sessionId: input.sessionId,
+        questCycleId: input.questCycleId,
+        acceptedCandidateId: null,
+        acceptedAt: null,
+        sessionPoints: 0,
+        sourceMode: null,
+      });
+    }
+    const row = acceptedVoteRecoveryRowSchema.parse(raw);
+    return viewerRecoveryStateSchema.parse({
+      sessionId: input.sessionId,
+      questCycleId: input.questCycleId,
+      acceptedCandidateId: row.candidate_id,
+      acceptedAt: Date.parse(row.accepted_at),
+      sessionPoints: 0,
+      sourceMode: row.payload.sourceMode,
+    });
+  }
+}
+
 export class SupabaseDueVoteCycleReader implements DueVoteCycleReader {
   constructor(private readonly api: SupabaseChatXptDataApi) {}
 
@@ -665,6 +728,7 @@ export function createSupabasePersistenceRuntime(
   const api = new SupabaseChatXptDataApi(createSupabaseServerClient(environment));
   const sessions = new SupabaseSessionStateRepository(api);
   const acceptedVotes = new SupabaseAcceptedVoteTallyReader(api);
+  const viewerRecovery = new SupabaseViewerRecoveryReader(api);
   const snapshots = new SupabaseRoleSnapshotPublisher(api);
   const dueVotes = new SupabaseDueVoteCycleReader(api);
   return {
@@ -677,6 +741,7 @@ export function createSupabasePersistenceRuntime(
     snapshots,
     accessGrants: new SupabaseRealtimeAccessGrantStore(api),
     dueVotes,
+    viewerRecovery,
     probe: (checkedAt) => api.probe(checkedAt),
   };
 }
