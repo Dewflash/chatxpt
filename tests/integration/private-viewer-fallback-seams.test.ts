@@ -20,6 +20,9 @@ import {
   contractFixtureSession,
 } from "../../src/core/testing";
 import {
+  normaliseTwitchChatVote,
+} from "../../src/integrations";
+import {
   bindPersistenceRuntime,
   buildTwitchChatPollOpenText,
   buildTwitchChatVoteAcknowledgement,
@@ -350,6 +353,63 @@ describe("private viewer recovery and fallback delivery seams", () => {
       contractFixtureCandidateBatch.candidates[0].candidateId,
     );
     expect(receipt.receipt.sourceMode).toBe("twitch-extension");
+  });
+
+  it("recovers a Twitch-chat-normalised vote through the private receipt path", async () => {
+    const runtime = await preparedRuntime();
+    const orchestrator = new ChatXptOrchestrator(
+      bindPersistenceRuntime(logicDependencies(), runtime),
+    );
+    const questCycleId = contractFixtureQuestCycle.envelope.questCycleId ?? "missing-cycle";
+    const candidateIds = contractFixtureCandidateBatch.candidates.map(
+      ({ candidateId }) => candidateId,
+    ) as [string, string, string];
+    const normalised = normaliseTwitchChatVote({
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId,
+      expectedRevision: 0,
+      candidateIds,
+      twitchMessageId: "private-receipt-chat-message",
+      twitchChannelId: "private-receipt-chat-channel",
+      twitchUserId: "private-receipt-chat-user",
+      text: "3",
+      receivedAt: FIXTURE_NOW + 1_000,
+    });
+
+    expect(normalised.status).toBe("accepted");
+    if (normalised.status !== "accepted") return;
+    const principalId = normalised.command.actor.actorId;
+    if (principalId === null) throw new Error("Accepted Twitch chat votes require viewer actor IDs");
+    await runtime.accessGrants.grant({
+      principalId,
+      sessionId: contractFixtureSession.sessionId,
+      viewRole: "viewer",
+      expiresAt: FIXTURE_NOW + 60_000,
+    });
+    expect(normalised.command.voterKey).toBe(
+      derivePrivateViewerVoterKey({
+        principalId,
+        identityKind: "authenticated",
+      }),
+    );
+
+    const submitted = await orchestrator.execute(normalised.command);
+
+    expect(submitted.ok).toBe(true);
+    const receipt = await runtime.viewerReceipts.readViewerParticipationReceipt({
+      principalId,
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId,
+      identityKind: "authenticated",
+      at: FIXTURE_NOW + 2_000,
+    });
+
+    expect(receipt.status).toBe("available");
+    if (receipt.status !== "available") return;
+    expect(receipt.receipt.acceptedCandidateId).toBe(
+      contractFixtureCandidateBatch.candidates[2].candidateId,
+    );
+    expect(receipt.receipt.sourceMode).toBe("twitch-chat");
   });
 
   it("restores accumulated session-scoped points across completed cycles", async () => {
