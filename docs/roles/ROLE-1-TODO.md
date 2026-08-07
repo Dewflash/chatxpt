@@ -51,7 +51,8 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 
 - `codex/role-1-hosted-access` adds the UI-X08 server-side `HostedBoardAccessService` for room-code lookup, viewer access grants, direct path/share data, and typed invalid/not-found/inactive/unavailable states.
 - Memory and Supabase adapters expose a hosted-board session directory backed by the existing session room-code records.
-- Twitch-chat delivery/acknowledgement (UI-X07) remains open under R1-016 after this pass.
+- `codex/role-1-hosted-board-access` adds the thin `/quest-board/[roomCode]` route shell over the accepted hosted-board access service.
+- Twitch-chat delivery/acknowledgement (UI-X07) and real multi-client hosted-board evidence remain open under R1-016 after this pass.
 
 ## Current R1-016 chat fallback policy pass
 
