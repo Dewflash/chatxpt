@@ -22,7 +22,7 @@ export function ChatFallbackInstructions({ acknowledgements = [], view }: ChatFa
         <section className={styles.hero}>
           <p className={styles.eyebrow}>Twitch chat fallback</p>
           <h1>Vote with 1, 2, or 3</h1>
-          <p>Role 5 owns this instruction surface only. Role 1 owns Twitch chat reading, identity, duplicate handling, and acknowledgement.</p>
+          <p>When the extension is unavailable, send the number shown beside your choice in Twitch chat. Status updates appear only after ChatXPT confirms them.</p>
         </section>
 
         <Panel className={`${styles.panel} ${styles.chatPanel}`} aria-label="Chat fallback instructions">
@@ -34,7 +34,7 @@ export function ChatFallbackInstructions({ acknowledgements = [], view }: ChatFa
           ))}
 
           <Notice className={styles.notice} title="Stream message" tone="info">
-            ChatXPT vote is open. Send 1, 2, or 3 once. Counted, duplicate, rejected, and late status must come from Role 1.
+            ChatXPT vote is open. Send 1, 2, or 3 once. Counted, duplicate, rejected, and late status appear only after confirmation.
           </Notice>
 
           {acknowledgements.length > 0 ? (

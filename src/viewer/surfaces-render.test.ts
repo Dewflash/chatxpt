@@ -30,6 +30,24 @@ describe("Role 5 public viewer surfaces", () => {
     expect(html).toContain("Select a card, then vote.");
     expect(html).not.toContain("Fixture-only surface");
     expect(html).not.toContain("fixture dispatcher");
+    expect(html).not.toContain("Role 1");
+    expect(html).not.toContain("Role 5");
+  });
+
+  it("keeps technical fixture wording gated behind the diagnostic label", () => {
+    const html = renderToStaticMarkup(
+      h(ViewerQuestBoard, {
+        demoLabel: "Fixture-only surface",
+        dispatchVote: async () => ({ ok: false as const, message: "not submitted during server render" }),
+        initialView: createViewerDemoView(),
+        surface: "extension",
+        voterKey: "render-test-viewer",
+      }),
+    );
+
+    expect(html).toContain("Fixture-only surface");
+    expect(html).toContain("Role 5 renders state");
+    expect(html).toContain("Role 1 remains");
   });
 
   it("renders chat fallback instructions without claiming chat parsing authority", () => {
@@ -43,7 +61,9 @@ describe("Role 5 public viewer surfaces", () => {
     expect(html).toContain("Vote with 1, 2, or 3");
     expect(html).toContain("Send 1, 2, or 3 once");
     expect(html).toContain("duplicate");
-    expect(html).toContain("Role 1 owns Twitch chat reading");
+    expect(html).toContain("Status updates appear only after ChatXPT confirms them.");
+    expect(html).not.toContain("Role 1");
+    expect(html).not.toContain("Role 5");
     expect(html).not.toContain("Twitch chat fixture");
   });
 
@@ -109,7 +129,9 @@ describe("Role 5 public viewer surfaces", () => {
     expect(html).toContain("Room expired");
     expect(html).toContain("ABCDEFGH");
     expect(html).toContain("Use another voting path");
-    expect(html).toContain("Role 5 does not create room access");
+    expect(html).toContain("Ask the streamer for a fresh link");
+    expect(html).not.toContain("Role 1");
+    expect(html).not.toContain("Role 5");
     expect(html).not.toContain("Guardian Protocol");
   });
 
@@ -173,9 +195,11 @@ describe("Role 5 public viewer surfaces", () => {
     const overlay = renderToStaticMarkup(h(ViewerOverlayInactive));
 
     expect(html).toContain("Viewer voting is waiting for the stream session");
-    expect(html).toContain("does not include static fixture votes");
+    expect(html).toContain("Waiting for live stream state");
     expect(html).not.toContain("Guardian Protocol");
     expect(html).not.toContain("Fixture-only surface");
+    expect(html).not.toContain("Role 1");
+    expect(html).not.toContain("Role 5");
     expect(overlay).toContain("Overlay inactive");
     expect(overlay).not.toContain("Overlay ready");
   });

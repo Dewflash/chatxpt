@@ -12,7 +12,7 @@ const surfaceCopy: Record<ViewerRuntimeSurface, { readonly eyebrow: string; read
   "hosted-board": {
     eyebrow: "Hosted Quest Board",
     title: "Quest Board is not linked yet",
-    body: "Open this page from a live ChatXPT room link once Role 1 has supplied an authorised room view.",
+    body: "Open this page from a live ChatXPT room link once the streamer starts an authorised session.",
   },
   chat: {
     eyebrow: "Twitch chat fallback",
@@ -22,7 +22,7 @@ const surfaceCopy: Record<ViewerRuntimeSurface, { readonly eyebrow: string; read
   "overlay-preview": {
     eyebrow: "OBS overlay",
     title: "Overlay is waiting for a live quest",
-    body: "The broadcast overlay stays quiet until Role 1 supplies an active, voting, or result view.",
+    body: "The broadcast overlay stays quiet until there is a live vote, active quest, or result to show.",
   },
 };
 
@@ -44,9 +44,8 @@ export function ViewerRuntimeUnavailable({ surface }: { readonly surface: Viewer
         </section>
 
         <Panel className={styles.panel} aria-label="Viewer runtime status">
-          <Notice title="Waiting for Role 1 runtime" tone="warning">
-            This public route does not include static fixture votes. It will render authorised
-            viewer state after the integration gateway supplies the current session snapshot.
+          <Notice title="Waiting for live stream state" tone="warning">
+            This page will show the current viewer state after ChatXPT receives the live session snapshot.
           </Notice>
         </Panel>
       </div>

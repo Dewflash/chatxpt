@@ -67,7 +67,7 @@ export function ViewerQuestBoard({
   function submitVote() {
     if (selectedOption === null || pending || !view.canVote || hasAcceptedVote) return;
     setPendingState({ key: inputKey, pending: true });
-    setMessageState({ key: inputKey, message: "Sending vote for authoritative acknowledgement..." });
+    setMessageState({ key: inputKey, message: "Sending vote for confirmation..." });
 
     commandSequence.current += 1;
 
@@ -112,7 +112,7 @@ export function ViewerQuestBoard({
         <section className={styles.hero}>
           <p className={styles.eyebrow}>{surface === "extension" ? "Twitch Extension" : "Hosted Quest Board"}</p>
           <h1>{heading}</h1>
-          <p>Exactly three options, one authoritative vote acknowledgement, and latest safe state during reconnect.</p>
+          <p>Pick one challenge while the stream is live. ChatXPT confirms votes and keeps the latest safe state visible during reconnect.</p>
         </section>
 
         <Panel className={styles.panel} aria-label="Viewer vote panel">
@@ -185,8 +185,10 @@ export function ViewerQuestBoard({
             ))}
           </div>
 
-          <Notice className={styles.notice} title={demoLabel ?? "Role boundary"} tone={demoLabel ? "warning" : "info"}>
-            Role 5 renders state and emits commands; Role 1 remains the vote, identity, tally, timer, and persistence authority.
+          <Notice className={styles.notice} title={demoLabel ?? "Live stream state"} tone={demoLabel ? "warning" : "info"}>
+            {demoLabel
+              ? "Fixture-only diagnostics: Role 5 renders state and emits commands; Role 1 remains the vote, identity, tally, timer, and persistence authority."
+              : "Votes, timers, and results are confirmed by ChatXPT, so this panel will not guess while the stream is reconnecting."}
           </Notice>
         </Panel>
       </div>
@@ -216,7 +218,7 @@ export function HostedQuestBoard(props: HostedQuestBoardProps) {
       <HostedQuestBoardAccessPanel
         access={{
           status: "unavailable",
-          message: "The hosted Quest Board cannot load until Role 1 supplies an authorised room view.",
+          message: "The hosted Quest Board cannot load until an authorised room view is available.",
           retryable: true,
         }}
       />
@@ -268,7 +270,7 @@ function HostedQuestBoardAccessPanel({ access }: { readonly access: Exclude<Host
           <Notice title={access.retryable ? "Try again" : "Use another voting path"} tone={tone}>
             {access.retryable
               ? "Reconnect or ask the streamer for a fresh ChatXPT link."
-              : "This page is displaying only Role 1 supplied access state; Role 5 does not create room access."}
+              : "This page only displays room access returned by ChatXPT. Ask the streamer for a fresh link or use Twitch chat if available."}
           </Notice>
         </Panel>
       </div>
