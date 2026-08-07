@@ -3,7 +3,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   TWITCH_EXTENSION_CONFIG_PATH,
   TWITCH_EXTENSION_LIVE_CONFIG_PATH,
+  TWITCH_EXTENSION_PANEL_HEIGHT_PX,
   TWITCH_EXTENSION_VIEWER_PATH,
+  TWITCH_EXTENSION_VIEW_DECISION_ID,
   TWITCH_LOCAL_CALLBACK_URL,
   TWITCH_OAUTH_CALLBACK_PATH,
   TWITCH_REGISTRATION_DECISION_ID,
@@ -123,12 +125,34 @@ describe("Twitch setup readiness", () => {
     expect(manifest.extension).toMatchObject({
       viewerPath: TWITCH_EXTENSION_VIEWER_PATH,
       viewerUrl: "https://preview.example.test/twitch/viewer",
+      viewPolicy: {
+        status: "accepted",
+        decisionId: TWITCH_EXTENSION_VIEW_DECISION_ID,
+        selectedTypes: ["Panel", "Mobile"],
+        panelHeightPx: TWITCH_EXTENSION_PANEL_HEIGHT_PX,
+      },
       configPath: TWITCH_EXTENSION_CONFIG_PATH,
       configUrl: "https://preview.example.test/twitch/config",
       liveConfigPath: TWITCH_EXTENSION_LIVE_CONFIG_PATH,
       liveConfigUrl: "https://preview.example.test/twitch/live-config",
       status: "reserved-shells",
     });
+    expect(manifest.extension.viewPolicy.viewerPaths).toEqual([
+      {
+        twitchField: "Panel Viewer Path",
+        value: TWITCH_EXTENSION_VIEWER_PATH,
+        url: "https://preview.example.test/twitch/viewer",
+      },
+      {
+        twitchField: "Mobile Viewer Path",
+        value: TWITCH_EXTENSION_VIEWER_PATH,
+        url: "https://preview.example.test/twitch/viewer",
+      },
+    ]);
+    expect(manifest.extension.viewPolicy.unselectedTypes).toEqual([
+      expect.objectContaining({ twitchLabel: "Video - Fullscreen" }),
+      expect.objectContaining({ twitchLabel: "Video - Component" }),
+    ]);
     expect(manifest.requiredEnvironment).toEqual(
       expect.arrayContaining([
         { name: "TWITCH_CLIENT_ID", configured: true, serverOnly: false },
@@ -221,6 +245,12 @@ describe("Twitch setup readiness", () => {
       },
       extension: {
         viewerUrl: "https://preview.example.test/twitch/viewer",
+        viewPolicy: {
+          status: "accepted",
+          decisionId: TWITCH_EXTENSION_VIEW_DECISION_ID,
+          selectedTypes: ["Panel", "Mobile"],
+          panelHeightPx: TWITCH_EXTENSION_PANEL_HEIGHT_PX,
+        },
         configUrl: "https://preview.example.test/twitch/config",
         liveConfigUrl: "https://preview.example.test/twitch/live-config",
       },
