@@ -118,6 +118,21 @@ function votingCycle(acceptedCandidateId: string | null = null): QuestCycleState
   };
 }
 
+function idleCycle(): QuestCycleState {
+  return {
+    envelope: envelope("role-5-demo-idle-cycle", 11),
+    status: "idle",
+    options: [],
+    activeCandidateId: null,
+    availableStreamerActions: [],
+    voteTallies: [],
+    startsAt: null,
+    endsAt: null,
+    progress: null,
+    result: null,
+  };
+}
+
 function activeCycle(): QuestCycleState {
   return {
     ...votingCycle("guardian-protocol"),
@@ -184,8 +199,17 @@ export function createViewerDemoView(input: {
   });
 }
 
-export function createOverlayDemoView(state: "active" | "result" | "reconnecting" = "active"): OverlayViewModel {
-  const cycle = state === "result" ? resultCycle() : activeCycle();
+export function createOverlayDemoView(
+  state: "inactive" | "voting" | "active" | "result" | "reconnecting" = "active",
+): OverlayViewModel {
+  const cycle =
+    state === "inactive"
+      ? idleCycle()
+      : state === "voting"
+        ? votingCycle()
+        : state === "result"
+          ? resultCycle()
+          : activeCycle();
   return overlayViewModelSchema.parse({
     envelope: envelope(`role-5-demo-overlay-${state}`, cycle.envelope.revision),
     session: { ...session, revision: cycle.envelope.revision },

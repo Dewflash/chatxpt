@@ -128,6 +128,28 @@ describe("Role 5 public viewer surfaces", () => {
     expect(html).not.toContain("Vote");
   });
 
+  it("renders inactive and voting overlay states without pretending a winner exists", () => {
+    const inactive = renderToStaticMarkup(
+      h(ViewerOverlayVisual, {
+        view: createOverlayDemoView("inactive"),
+      }),
+    );
+    const voting = renderToStaticMarkup(
+      h(ViewerOverlayVisual, {
+        now: 1_786_200_000_000,
+        view: createOverlayDemoView("voting"),
+      }),
+    );
+
+    expect(inactive).toContain("Overlay ready");
+    expect(inactive).toContain("No active quest is currently visible.");
+    expect(voting).toContain("Voting open");
+    expect(voting).toContain("Chat is choosing");
+    expect(voting).toContain("Guardian Protocol");
+    expect(voting).toContain("Caster Mode");
+    expect(voting).not.toContain("+600 XP");
+  });
+
   it("exports the accepted quest overlay wrapper name", () => {
     const html = renderToStaticMarkup(
       h(QuestOverlay, {

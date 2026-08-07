@@ -11,20 +11,47 @@ export interface ViewerOverlayVisualProps {
 
 export function ViewerOverlayVisual({ view, now }: ViewerOverlayVisualProps) {
   const effectiveNow = now ?? view.envelope.receivedAt;
-  const quest = activeQuest(view.questCycle) ?? view.questCycle.options[0] ?? null;
+  const quest = activeQuest(view.questCycle);
   const seconds = remainingSeconds(effectiveNow, view.questCycle.endsAt);
   const progress = view.questCycle.progress?.value ?? 0;
   const placement = overlayPlacementClass(view);
   const connectionCopy = view.connection.status === "ready" ? "Chat sidequest" : "Reconnecting";
   const result = view.questCycle.result;
+  const votingOptions = view.questCycle.status === "voting" ? view.questCycle.options : [];
 
   return (
     <DesignSystemRoot className={styles.overlaySurface} theme="twitch">
-      {quest === null ? (
+      {quest === null && votingOptions.length === 0 ? (
         <section className={`${styles.overlayCard} ${styles.quiet}`} aria-label="Overlay waiting state">
           <div className={styles.overlayMeta}><span>ChatXPT</span><span>Ready</span></div>
           <h1>Overlay ready</h1>
           <p>No active quest is currently visible.</p>
+        </section>
+      ) : quest === null ? (
+        <section className={`${styles.overlayCard} ${styles.edge}`} aria-label="Voting overlay">
+          <div className={styles.overlayMeta}>
+            <span>{view.connection.status === "ready" ? "Voting open" : "Reconnecting"}</span>
+            <span>{seconds ?? "--"}s</span>
+          </div>
+          <h1>Chat is choosing</h1>
+          <ol className={styles.overlayOptionList}>
+            {votingOptions.map((option, index) => (
+              <li key={option.candidateId}>
+                <span>{index + 1}</span>
+                <strong>{option.title}</strong>
+              </li>
+            ))}
+          </ol>
+          <div className={styles.overlayFooter}>
+            <span className={styles.overlaySeconds}>{seconds ?? "--"}s</span>
+            <Progress
+              className={styles.overlayProgress}
+              label="Voting time"
+              value={seconds === null ? 0 : Math.max(0, Math.min(100, 100 - Math.round((seconds / 30) * 100)))}
+              valueLabel={seconds === null ? "Open" : `${seconds}s left`}
+            />
+            <StatusBadge tone="info">{`Hype ${view.communityHype}`}</StatusBadge>
+          </div>
         </section>
       ) : (
         <section className={`${styles.overlayCard} ${styles[placement]}`} aria-label="Active quest overlay">

@@ -303,6 +303,37 @@
   line-height: 1.38;
 }
 
+.overlayOptionList {
+  display: grid;
+  gap: var(--cx-space-sm);
+  padding: 0;
+  margin: 0 0 var(--cx-space-lg);
+  list-style: none;
+}
+
+.overlayOptionList li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: var(--cx-space-sm);
+  align-items: center;
+  color: var(--cx-color-text-muted);
+}
+
+.overlayOptionList span {
+  display: grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  place-items: center;
+  border-radius: var(--cx-radius-sm);
+  color: var(--cx-color-on-accent);
+  background: var(--cx-color-accent);
+  font-weight: var(--cx-font-weight-bold);
+}
+
+.overlayOptionList strong {
+  color: var(--cx-color-text);
+}
+
 .overlayFooter {
   display: grid;
   grid-template-columns: 4.5rem minmax(0, 1fr) auto;
