@@ -324,7 +324,7 @@ Run this loop throughout every phase:
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
 | D1-11 | Contract-change cutoff before feature freeze | Resolved by D-051 | No automatic cutoff or freeze date; only the project owner may explicitly call the freeze. Dated milestones remain delivery targets. |
-| D1-12 | Minimum acceptable real extraction, quest, and participation evidence | Open | — |
+| D1-12 | Minimum acceptable real extraction, quest, and participation evidence | Resolved by D-059 | A privacy-reviewed real evidence entry must prove owned OBS gameplay, real Twitch activity, universal visual signals, one known calibrated demo fact, labelled unknowns, exactly-three candidate/validated-option flow, streamer control, terminal outcome, two accepted viewer votes, duplicate/reconnect, same session/cycle/revision across orchestrator/persistence/Studio/active participation surface/OBS overlay, and result/reward display. |
 | D1-13 | Final golden real-gameplay scenario and demo narrative | Deferred by D-048/D-053 | Brawl Stars is the intended scenario subject to real capture proof, but Role 1 does not assemble or optimise the final narrative until the project owner declares the product ready. |
 
 ### R1-P11 — Role 2 to Role 3 integration
