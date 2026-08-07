@@ -12,8 +12,8 @@ This is the Role 4-owned working record. Codex updates it after the owner answer
 | --- | --- |
 | Plan | `docs/build-plans/ROLE-4-BUILD-PLAN.md` plus the shared delivery matrix |
 | Current phase | R4-P02 shared visual-system foundation |
-| Current TODO | R4-002 (`READY`) |
-| Source editing allowed now | Yes, on a fresh branch after [PR #30](https://github.com/Dewflash/chatxpt/pull/30) merges; remain inside `src/design-system` and the accepted Role 4 boundary |
+| Current TODO | R4-002 (`IN PROGRESS`) |
+| Source editing allowed now | Yes, on `role-4/design-system-foundation`; remain inside `src/design-system` and the accepted Role 4 boundary |
 | Persistent handoff | [GitHub issue #15](https://github.com/Dewflash/chatxpt/issues/15) and [PR #30](https://github.com/Dewflash/chatxpt/pull/30) |
 | Next implementation branch | `role-4/design-system-foundation` |
 
@@ -27,6 +27,10 @@ Codex uses the current phase's open decisions as starting points, then adds only
 | D4-02 | R4-P01 | Desktop sidebar for Setup, Profile, Live Quests, and Test Lab; compact narrow-screen navigation; guided first-time Setup; History only after approved P1 work. | Accepted | 2026-08-03 |
 | D4-03 | R4-P01 | Spacious and explanatory before streaming; compact and status-dense during a live session. | Accepted | 2026-08-03 |
 | D4-04 | R4-P01 | Existing violet/lime prototype is a loose reference only; use reversible accessible dark/light tokens, CSP-safe system/local fonts, and allow later brand assets without blocking P0. | Accepted | 2026-08-03 |
+| D4-05 | R4-P02 | Use responsive card grids for larger sections, compact horizontal control/status rows, and a single-column layout in narrow or Twitch-hosted contexts. | Accepted | 2026-08-05 |
+| D4-06 | R4-P02 | Use badges for status, notices for recovery, one ribbon only for a selected or winning item, and progress only for authoritative completion. | Accepted | 2026-08-05 |
+| D4-07 | R4-P02 | Keep feedback motion subtle at 150–180 ms, avoid continuous decorative animation, and provide a complete reduced-motion mode. | Accepted | 2026-08-05 |
+| D4-08 | R4-P02 | Use medium rounding and high contrast across dark, light, and Twitch contexts, with visible focus rings, at least 44 px controls, and text or symbols alongside status colour. | Accepted | 2026-08-05 |
 
 ## Pass record
 
@@ -36,6 +40,7 @@ Codex appends one row per completed pass.
 | --- | --- | --- | --- | --- | --- |
 | R4-P01 feasibility submission | `role-4/feasibility-review` / [issue #15 comment](https://github.com/Dewflash/chatxpt/issues/15#issuecomment-5164904061) | Owner decisions settled and consolidated technical review submitted; no UI source implementation started. | `git diff --check`; full `npm run check` | Source/document inspection plus fixture/memory verification only | Cleared on 2026-08-04 by Role 1 acknowledgement and Role 1/Role 2 approval of [PR #30](https://github.com/Dewflash/chatxpt/pull/30) |
 | R4-P01 acceptance | `role-4/feasibility-review` / [PR #30](https://github.com/Dewflash/chatxpt/pull/30) | Role 2 accepted the plan with no scope revision, Role 1 approved the handoff, R4-001 moved to `DONE`, and R4-002 moved to `READY`. | GitHub review records; documentation `git diff --check`; full repository check before final push | Coordination and documentation evidence only; no Role 4 UI source implementation | Merge PR #30, branch from current `main`, then begin R4-P02 |
+| R4-P02 implementation candidate | `role-4/design-system-foundation` / PR pending | D4-05 through D4-08 are implemented as an additive `@/design-system` token, theme, layout, control, status, progress, notice, and accessibility contract. | Focused 8-test contract suite; WCAG contrast calculations; dark/focus, light/long-text, narrow Twitch, and reduced-motion evidence; full lint, TypeScript, boundary (58 files / 144 imports), 12 files / 81 tests, and production build | Real source and production-CSS rendering in an isolated local fixture; no app-route integration, real Twitch/OBS, or live backend behavior is claimed | Owner approval to commit, push, and open the draft PR; R4-002 stays `IN PROGRESS` until the public handoff merges |
 
 ## Codex instruction
 

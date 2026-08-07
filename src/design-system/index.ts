@@ -1,8 +1,32 @@
-/**
- * Role 4 owns this deliberately empty public entrypoint.
- *
- * Role 4 will publish its accepted tokens and base components here after the
- * Role 2-authored UI plan and Role 4 feasibility review. Consumers may depend
- * on the module path now, but must not infer an unapproved visual contract.
- */
-export {};
+/** Role 4's stable public visual-system boundary for streamer and viewer UI. */
+export {
+  Button,
+  Card,
+  CardGrid,
+  ControlRow,
+  DesignSystemRoot,
+  Field,
+  IconButton,
+  Notice,
+  Panel,
+  Progress,
+  StatusBadge,
+  VisuallyHidden,
+} from "./components";
+export { designSystemTokens } from "./tokens";
+export type {
+  ButtonProps,
+  ButtonVariant,
+  CardRibbon,
+  DesignSystemRootProps,
+  FieldProps,
+  IconButtonProps,
+  NoticePoliteness,
+  NoticeProps,
+  NoticeTone,
+  ProgressProps,
+  StatusBadgeProps,
+  StatusTone,
+  SurfaceProps,
+} from "./components";
+export type { DesignSystemDensity, DesignSystemTheme } from "./tokens";
