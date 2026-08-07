@@ -142,7 +142,7 @@ Role 2 is complete when:
 
 **Acceptance:** Executed results, latency/resource observations, failure modes, dependency requests, and immediate recovery recommendations reach Role 1 during the first integration wave.
 
-**Progress (6 August 2026):** `role-2/real-input-evidence` adds a threshold-agnostic evidence-report boundary over canonical OBS measurements. It preserves separate human annotations, summarises quiet/action/transition and p50/p95 processing metrics, records sanitised OCR/unknown metadata, checks two-sample and sanitised-audience coverage, and refuses to promote diagnostic inputs to real evidence. This is tooling and fixture-only verification: Role 1's browser capture branch, an approved OCR engine, authorised gameplay/chat inputs, executed browser/resource observations, privacy review, artifacts, and the manifest entry remain pending.
+**Progress (7 August 2026):** `role-2/real-input-evidence` adds a threshold-agnostic evidence-report boundary over canonical OBS measurements. It preserves separate human annotations, summarises quiet/action/transition and p50/p95 processing metrics, records sanitised OCR/unknown metadata, checks two-sample and sanitised-audience coverage, and refuses to promote diagnostic inputs to real evidence. Two user-authorised Brawl Stars clips are source-inspected with separate relative-time annotations and local-only hashes, but remain unexecuted inputs rather than live evidence. Role 1's safely merged browser capture and Tesseract revisions, a sanitised real Twitch audience fixture, executed browser/resource observations, privacy review, artifacts, and the manifest entry remain pending.
 
 ## Phase 3: Real-frame gameplay extraction
 

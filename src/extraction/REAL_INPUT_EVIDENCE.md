@@ -28,12 +28,12 @@ The report retains frame identifiers, capture times, frame-difference metrics, p
 
 Record p50/p95 latency and practical resource observations from the executing browser. Note capture resolution, bounded sample size, cadence, browser/device class, CPU or responsiveness observations, permission state, and any dropped/stale frames. Do not infer resource usage that was not measured.
 
-## Current blockers on 6 August 2026
+## Current blockers on 7 August 2026
 
 - Role 1's `role-1/obs-capture-spine` is not yet merged into `main`, so the canonical browser `FrameSource` cannot yet be executed from this branch.
 - The evidence manifest lists `obs-gameplay-machine` as `owner-action-required`.
-- No real OCR engine is currently installed; Role 1's comparison and decision are pending in issue #70.
-- The two authorised gameplay samples and sanitised real-chat input have not been supplied.
+- Role 1 accepted `tesseract.js@7.0.0` in D-054 and PR #75, but the dependency revision is not merged onto a safe `main`; deployed worker/CSP and language-data loading remain unverified.
+- Two authorised Brawl Stars clips are supplied and source-inspected in `BRAWL_STARS_SAMPLE_ANNOTATIONS.md`, but they have not passed through the browser `FrameSource`. A sanitised real Twitch audience fixture is still not supplied.
 - D2-07 through D2-11 were approved on 6 August 2026. Their diagnostic implementation cannot produce real-calibrated thresholds until both authorised runs are available.
 
 Until those items are resolved, tests and diagnostic-shaped reports are fixture/diagnostic evidence only.
