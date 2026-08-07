@@ -13,6 +13,16 @@ export type {
   PlatformEvent,
 } from "../core";
 export {
+  FALLBACK_DELIVERY_DECISION_ID,
+  fallbackDeliveryPolicyReportSchema,
+  fallbackDeliveryPolicyResolutionSchema,
+  fallbackDeliveryVerificationSchema,
+  resolveFallbackDeliveryPolicy,
+  type FallbackDeliveryPolicyReport,
+  type FallbackDeliveryPolicyResolution,
+  type FallbackDeliveryVerification,
+} from "./test-lab/fallback-delivery-policy";
+export {
   PRIVATE_VIEWER_RECOVERY_DECISION_ID,
   privateViewerRecoveryPolicyReportSchema,
   privateViewerRecoveryPolicyResolutionSchema,
