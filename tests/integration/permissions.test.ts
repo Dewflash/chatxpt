@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   streamerQuestCommandSchema,
+  streamerQuestProgressCommandSchema,
+  systemQuestProgressCommandSchema,
+  systemQuestTickCommandSchema,
   systemVoteCloseCommandSchema,
   viewerReactionCommandSchema,
   viewerVoteCommandSchema,
@@ -84,6 +87,56 @@ describe("server-authoritative command permissions", () => {
         ).authorize(command, state)
       )?.code,
     ).toBe("unauthenticated");
+  });
+
+  it("authorizes trusted timer/progress identities without widening viewer authority", async () => {
+    const state = liveState();
+    const tick = systemQuestTickCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: state.session.sessionId,
+      questCycleId: state.questCycle.envelope.questCycleId,
+      commandId: "system-quest-tick",
+      correlationId: "system-quest-tick-correlation",
+      expectedRevision: 0,
+      issuedAt: FIXTURE_NOW,
+      actor: { kind: "system", actorId: "fixture-orchestrator" },
+      type: "system.quest-tick",
+    });
+    const progress = systemQuestProgressCommandSchema.parse({
+      ...tick,
+      commandId: "system-quest-progress",
+      correlationId: "system-quest-progress-correlation",
+      type: "system.quest-progress",
+      requestedValue: 0.4,
+      evidenceSignalIds: ["fixture-signal"],
+    });
+    const moderatorProgress = streamerQuestProgressCommandSchema.parse({
+      ...tick,
+      commandId: "moderator-quest-progress",
+      correlationId: "moderator-quest-progress-correlation",
+      actor: { kind: "moderator", actorId: "fixture-moderator" },
+      type: "streamer.quest-progress",
+      requestedValue: 0.4,
+    });
+    const authorizer = new ServerCommandAuthorizer(
+      new StaticVerifiedActorResolver(
+        new Map([
+          [tick.commandId, grant("system", "fixture-orchestrator")],
+          [progress.commandId, grant("system", "fixture-orchestrator")],
+          [
+            moderatorProgress.commandId,
+            grant("moderator", "fixture-moderator", {
+              moderatorForBroadcasterIds: [state.session.broadcasterId],
+            }),
+          ],
+        ]),
+      ),
+      () => FIXTURE_NOW,
+    );
+
+    expect(await authorizer.authorize(tick, state)).toBeNull();
+    expect(await authorizer.authorize(progress, state)).toBeNull();
+    expect(await authorizer.authorize(moderatorProgress, state)).toBeNull();
   });
 
   it("allows only the owning broadcaster full streamer command authority", async () => {

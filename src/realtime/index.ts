@@ -44,6 +44,7 @@ export {
   type CandidateBatchRepository,
   type ChatXptPersistenceRuntime,
   type CommitSessionLifecycleInput,
+  type DueVoteCycleReader,
   type LifecycleStoreCommitResult,
   type RealtimeAccessGrant,
   type RealtimeAccessGrantStore,

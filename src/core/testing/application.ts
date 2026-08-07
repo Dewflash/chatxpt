@@ -197,6 +197,7 @@ export class CanonicalFixtureViewProjector implements ViewModelProjector {
         gameplay: input.gameplay,
         audience: input.audience,
         questCycle: input.questCycle,
+        emergencyPaused: input.emergencyPaused,
       }),
       viewer: viewerViewModelSchema.parse({
         envelope: input.envelope,

@@ -22,6 +22,7 @@ export const streamerViewModelSchema = z
     gameplay: gameplaySnapshotSchema.nullable(),
     audience: audienceSnapshotSchema.nullable(),
     questCycle: questCycleStateSchema,
+    emergencyPaused: z.boolean(),
   })
   .strict()
   .superRefine((view, context) => {

@@ -222,6 +222,52 @@ describe("identity and command permissions", () => {
     ).toBe(false);
   });
 
+  it("accepts neutral timer/progress commands without lifecycle or reward authority", () => {
+    const base = {
+      contractVersion: CONTRACT_VERSION,
+      sessionId: "fixture-session",
+      questCycleId: "fixture-cycle",
+      commandId: "fixture-command",
+      correlationId: "fixture-correlation",
+      expectedRevision: 4,
+      issuedAt: 10,
+    };
+
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...base,
+        type: "system.quest-tick",
+        actor: { kind: "system", actorId: "fixture-orchestrator" },
+      }).success,
+    ).toBe(true);
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...base,
+        type: "system.quest-progress",
+        actor: { kind: "system", actorId: "fixture-orchestrator" },
+        requestedValue: 0.5,
+        evidenceSignalIds: ["fixture-signal"],
+        outcome: "succeeded",
+      }).success,
+    ).toBe(false);
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...base,
+        type: "streamer.quest-progress",
+        actor: { kind: "moderator", actorId: "fixture-moderator" },
+        requestedValue: 0.5,
+      }).success,
+    ).toBe(true);
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...base,
+        questCycleId: null,
+        type: "streamer.emergency-clear",
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+      }).success,
+    ).toBe(true);
+  });
+
   it("accepts an anonymous fixture vote and rejects a broadcaster vote", () => {
     const vote = {
       envelope: contractFixtureEnvelope,

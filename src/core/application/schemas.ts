@@ -21,6 +21,7 @@ export const authoritativeSessionStateSchema = z
     gameplay: gameplaySnapshotSchema.nullable(),
     audience: audienceSnapshotSchema.nullable(),
     questCycle: questCycleStateSchema,
+    emergencyPaused: z.boolean(),
     communityHype: z.number().int().nonnegative(),
   })
   .strict()
