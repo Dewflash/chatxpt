@@ -357,12 +357,22 @@ function transitionVoteClose(input: QuestEngineInput): QuestEngineResult {
     input.voteCloseValidationContext.audience === null
       ? null
       : audienceSnapshotSchema.safeParse(input.voteCloseValidationContext.audience);
+  const recentQuests = input.voteCloseValidationContext.recentQuests;
   if (
     !tally.success ||
     !profile.success ||
     !session.success ||
     gameplay?.success === false ||
-    audience?.success === false
+    audience?.success === false ||
+    !Array.isArray(recentQuests) ||
+    recentQuests.some(
+      (quest) =>
+        typeof quest.title !== "string" ||
+        quest.title.trim().length < 3 ||
+        quest.title.trim().length > 80 ||
+        !Number.isSafeInteger(quest.occurredAt) ||
+        quest.occurredAt < 0,
+    )
   ) {
     return error("validation", "Vote-close tally or validation context is malformed");
   }
@@ -436,7 +446,7 @@ function transitionVoteClose(input: QuestEngineInput): QuestEngineResult {
     profile: profile.data,
     gameplay: gameplay === null ? null : gameplay.data,
     currentState: input.currentState,
-    recentQuests: [],
+    recentQuests,
     now: input.now,
   });
   if (!winnerValidation.accepted) {

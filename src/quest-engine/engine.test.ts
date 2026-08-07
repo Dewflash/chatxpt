@@ -251,6 +251,7 @@ function voteCloseInput(
       session: voteCloseSession,
       gameplay: null,
       audience: null,
+      recentQuests: [],
     },
     now,
     ...overrides,
@@ -624,6 +625,33 @@ describe("DefaultQuestEngine", () => {
     expect(validationCodes).toContain("low-confidence");
     expect(validationCodes).toContain("duration-out-of-range");
     expect(validationCodes).toContain("difficulty-mismatch");
+  });
+
+  it("does not activate a recently repeated winner at vote close", () => {
+    const input = voteCloseInput([5, 1, 0]);
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        ...input,
+        voteCloseValidationContext: {
+          ...input.voteCloseValidationContext!,
+          recentQuests: [
+            {
+              title: "Hold Your Ground",
+              occurredAt: input.now - 1_000,
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(result.nextState.status).toBe("cancelled");
+    expect(result.events[0]).toMatchObject({
+      eventType: "quest-cycle.vote-closed-no-activation",
+      attributes: {
+        reasonCode: "winner-invalid",
+        validationCodes: "recently-repeated",
+      },
+    });
   });
 
   it("accepts session-scoped close-time snapshots with null quest cycle IDs", () => {

@@ -36,6 +36,8 @@ import type {
   ProjectionContext,
 } from "./types";
 
+const MAX_RECENT_QUEST_SUMMARIES = 20;
+
 function error(code: DomainError["code"], message: string, retryable = false): DomainError {
   return domainErrorSchema.parse({ code, message, retryable });
 }
@@ -164,6 +166,7 @@ function authoritativeDecision(
         : command.type === "streamer.emergency-clear"
           ? false
           : current.emergencyPaused,
+    recentQuests: updatedRecentQuestSummaries(current, parsedEvents.data, acceptedAt),
   };
   const events = [];
   for (const event of parsedEvents.data) {
@@ -185,6 +188,27 @@ function authoritativeDecision(
     events.push(parsedEvent.data);
   }
   return { state, events };
+}
+
+function updatedRecentQuestSummaries(
+  current: AuthoritativeSessionState,
+  events: readonly QuestEngineDecision["events"][number][],
+  acceptedAt: number,
+): AuthoritativeSessionState["recentQuests"] {
+  const nextSummaries = [...(current.recentQuests ?? [])];
+  for (const event of events) {
+    const historyCandidateId = event.attributes.historyCandidateId;
+    if (typeof historyCandidateId !== "string") continue;
+    const candidate = current.questCycle.options.find(
+      (option) => option.candidateId === historyCandidateId,
+    );
+    if (candidate === undefined) continue;
+    nextSummaries.unshift({
+      title: candidate.title,
+      occurredAt: acceptedAt,
+    });
+  }
+  return nextSummaries.slice(0, MAX_RECENT_QUEST_SUMMARIES);
 }
 
 function projectionInput(
@@ -432,6 +456,7 @@ export class ChatXptOrchestrator {
         session: current.session,
         gameplay: current.gameplay,
         audience: current.audience,
+        recentQuests: current.recentQuests ?? [],
       };
     }
     let questProgressValidationContext: QuestProgressValidationContext | null = null;
