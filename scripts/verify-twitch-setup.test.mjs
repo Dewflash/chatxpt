@@ -31,6 +31,37 @@ const callbackBody = {
   error: { code: "validation", message: "missing", retryable: false },
 };
 
+const registrationBody = {
+  ok: true,
+  baseUrl: "https://preview.example.test",
+  oauth: {
+    callbackPath: "/api/twitch/oauth/callback",
+    callbackUrl: "https://preview.example.test/api/twitch/oauth/callback",
+    scopes: {
+      status: "open-decision",
+      decisionId: "D1-07",
+      configured: [],
+      note: "open",
+    },
+    tokenExchange: "reserved-disabled",
+  },
+  extension: {
+    viewerPath: "/twitch/viewer",
+    viewerUrl: "https://preview.example.test/twitch/viewer",
+    configPath: "/twitch/config",
+    configUrl: "https://preview.example.test/twitch/config",
+    liveConfigPath: "/twitch/live-config",
+    liveConfigUrl: "https://preview.example.test/twitch/live-config",
+    status: "reserved-shells",
+  },
+  requiredEnvironment: [
+    { name: "TWITCH_CLIENT_ID", configured: false, serverOnly: false },
+    { name: "TWITCH_CLIENT_SECRET", configured: false, serverOnly: true },
+  ],
+  evidenceRequired: ["Twitch developer-console app registration"],
+  limitations: ["No Twitch secrets are included in this response."],
+};
+
 const routeMarkers = new Map([
   ["/twitch/viewer", "Viewer Quest Surface Reserved"],
   ["/twitch/config", "Extension Config Surface Reserved"],
@@ -64,6 +95,9 @@ function fetchFixture(overrides = {}) {
     if (path === "/api/twitch/setup/readiness") {
       return responseJson(readinessBody, 200, { "cache-control": "no-store" });
     }
+    if (path === "/api/twitch/setup/registration") {
+      return responseJson(registrationBody, 200, { "cache-control": "no-store" });
+    }
     if (path === "/api/twitch/oauth/callback") return responseJson(callbackBody, 400);
     if (routeMarkers.has(path)) {
       return responseText(`${routeMarkers.get(path)} /api/twitch/oauth/callback`);
@@ -72,14 +106,14 @@ function fetchFixture(overrides = {}) {
   };
 }
 
-test("accepts Twitch setup readiness, callback, and Extension route shells", async () => {
+test("accepts Twitch setup readiness, registration, callback, and Extension route shells", async () => {
   const result = await verifyTwitchSetup({
     baseUrl: "https://preview.example.test/dashboard",
     fetchImpl: fetchFixture(),
   });
 
   assert.equal(result.ok, true);
-  assert.equal(result.inspected.length, 5);
+  assert.equal(result.inspected.length, 6);
   assert.deepEqual(result.violations, []);
 });
 
@@ -98,6 +132,24 @@ test("rejects readiness responses that expose configured secret values", async (
   assert.equal(result.ok, false);
   assert.ok(result.violations.some((violation) => violation.includes("TWITCH_CLIENT_SECRET")));
   assert.ok(result.violations.every((violation) => !violation.includes("fixture-secret-value")));
+});
+
+test("rejects registration manifests that settle OAuth scopes early", async () => {
+  const result = await verifyTwitchSetup({
+    baseUrl: "https://preview.example.test",
+    fetchImpl: fetchFixture({
+      "/api/twitch/setup/registration": responseJson({
+        ...registrationBody,
+        oauth: {
+          ...registrationBody.oauth,
+          scopes: { status: "ready", decisionId: "D1-07", configured: ["channel:read:redemptions"] },
+        },
+      }, 200, { "cache-control": "no-store" }),
+    }),
+  });
+
+  assert.equal(result.ok, false);
+  assert.ok(result.violations.some((violation) => violation.includes("OAuth scopes")));
 });
 
 test("rejects callback routes that do not fail closed on missing query params", async () => {

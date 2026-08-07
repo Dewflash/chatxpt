@@ -1,0 +1,3 @@
+- Added a no-store `/api/twitch/setup/registration` route that returns copy-safe Twitch developer-console registration values for the OAuth callback and Extension surfaces.
+- Kept OAuth scopes explicitly marked as the open D1-07 decision and token exchange as reserved-disabled so the manifest cannot silently settle Twitch permissions or claim live OAuth readiness.
+- Extended focused Twitch setup tests and the reusable setup verifier to cover the registration manifest without exposing configured Twitch secret values.

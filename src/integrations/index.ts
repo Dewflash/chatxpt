@@ -53,7 +53,9 @@ export {
   TWITCH_EXTENSION_LIVE_CONFIG_PATH,
   TWITCH_EXTENSION_VIEWER_PATH,
   TWITCH_OAUTH_CALLBACK_PATH,
+  resolveTwitchSetupRegistrationManifest,
   resolveTwitchSetupReadiness,
+  type TwitchSetupRegistrationManifest,
   type TwitchSetupReadiness,
 } from "./twitch/setup";
 export {

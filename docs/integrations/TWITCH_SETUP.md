@@ -47,17 +47,18 @@ Before claiming Twitch readiness:
 
 1. Confirm `/api/twitch/oauth/callback` exists on the target deployment.
 2. Confirm `/api/twitch/setup/readiness` reports the callback URL, Extension paths, missing variables, and setup limitations without returning secret values.
-3. Confirm an unauthorised callback request returns safe JSON and no Twitch secrets.
-4. Confirm the Twitch app has the deployed callback URL configured.
-5. Confirm the Twitch Extension has the viewer, config, and live-config URLs configured.
-6. Confirm `/twitch/viewer`, `/twitch/config`, and `/twitch/live-config` return the setup shell before replacing them with role-owned UI modules.
-7. Run the focused setup tests locally:
+3. Confirm `/api/twitch/setup/registration` reports copy-safe developer-console values and keeps OAuth scopes marked as the open D1-07 decision.
+4. Confirm an unauthorised callback request returns safe JSON and no Twitch secrets.
+5. Confirm the Twitch app has the deployed callback URL configured.
+6. Confirm the Twitch Extension has the viewer, config, and live-config URLs configured.
+7. Confirm `/twitch/viewer`, `/twitch/config`, and `/twitch/live-config` return the setup shell before replacing them with role-owned UI modules.
+8. Run the focused setup tests locally:
 
 ```bash
 npm run test -- tests/integration/twitch-setup.test.ts tests/integration/twitch-extension-routes.test.tsx
 ```
 
-8. Run `npm run verify:twitch-setup -- <preview-or-local-url>` to verify the setup readiness API, callback failure shape, and reserved Extension route shells.
-9. Record real developer-console, Local Test, or Hosted Test evidence in `docs/evidence/manifest.json` before citing Twitch as live.
+9. Run `npm run verify:twitch-setup -- <preview-or-local-url>` to verify the setup readiness API, registration manifest, callback failure shape, and reserved Extension route shells.
+10. Record real developer-console, Local Test, or Hosted Test evidence in `docs/evidence/manifest.json` before citing Twitch as live.
 
 This runbook does not prove Twitch OAuth, EventSub, chat delivery, or Extension runtime behaviour. Those require separate live test-channel evidence.

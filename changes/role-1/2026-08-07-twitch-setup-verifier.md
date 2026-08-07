@@ -1,3 +1,3 @@
-- Added `npm run verify:twitch-setup -- <url>` to verify the setup-readiness API, OAuth callback failure shape, and reserved Twitch Extension route shells against a local or deployed base URL.
+- Added `npm run verify:twitch-setup -- <url>` to verify the setup-readiness API, registration manifest, OAuth callback failure shape, and reserved Twitch Extension route shells against a local or deployed base URL.
 - Added Node tests for the verifier, including configured-secret-value leakage checks and fail-closed callback/shell regressions, and wired them into `npm run check`.
 - Updated deployment and Twitch setup runbooks so route/configuration verification remains distinct from real Twitch developer-console, Local Test, Hosted Test, OAuth, chat, or Extension runtime evidence.

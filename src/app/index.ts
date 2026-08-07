@@ -12,6 +12,7 @@ export { GET as diagnosticUiGatewayViewerReceiptGET } from "./api/diagnostics/ui
 export { POST as obsOverlayGrantPOST } from "./api/overlay/grant/route";
 export { GET as obsOverlaySnapshotGET } from "./api/overlay/snapshot/route";
 export { GET as twitchOAuthCallbackGET } from "./api/twitch/oauth/callback/route";
+export { GET as twitchSetupRegistrationGET } from "./api/twitch/setup/registration/route";
 export { GET as twitchSetupReadinessGET } from "./api/twitch/setup/readiness/route";
 export { TwitchExtensionRouteShell } from "./twitch/extension-shell";
 export {
