@@ -59,7 +59,7 @@ After each preview deployment:
 5. Confirm incomplete Supabase, Twitch, or OBS setup returns an unhealthy report instead of silently selecting local memory mode.
 6. Verify response headers include the CSP, Twitch frame ancestors, Supabase HTTPS/WSS connection policy, first-party worker policy, and camera permission policy.
 7. Run `npm run verify:deployment-health -- <preview-url> --expect-deployment=preview` to verify the health shape and hardening headers in one repeatable command.
-8. Run `npm run verify:twitch-setup -- <preview-url>` to verify the Twitch setup-readiness endpoint, OAuth callback failure shape, and reserved Extension route shells. This is route/configuration evidence only.
+8. Run `npm run verify:twitch-setup -- <preview-url>` to verify the Twitch setup-readiness endpoint, registration manifest, OAuth callback failure shape, and reserved Extension route shells. This is route/configuration evidence only.
 9. Run `npm run check:client-secrets` against the built output in the same environment or a downloaded deployment artifact. The scanner reports variable names only and must not print secret values.
 10. Record the deployment URL, command, source revision, reviewer, and limitations in `docs/evidence/manifest.json` before citing it as deployment evidence.
 

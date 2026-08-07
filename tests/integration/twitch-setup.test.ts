@@ -5,9 +5,14 @@ import {
   TWITCH_EXTENSION_LIVE_CONFIG_PATH,
   TWITCH_EXTENSION_VIEWER_PATH,
   TWITCH_OAUTH_CALLBACK_PATH,
+  resolveTwitchSetupRegistrationManifest,
   resolveTwitchSetupReadiness,
 } from "../../src/integrations";
-import { twitchOAuthCallbackGET, twitchSetupReadinessGET } from "../../src/app";
+import {
+  twitchOAuthCallbackGET,
+  twitchSetupReadinessGET,
+  twitchSetupRegistrationGET,
+} from "../../src/app";
 
 const CHECKED_AT = 1_786_300_000_000;
 
@@ -78,6 +83,45 @@ describe("Twitch setup readiness", () => {
     expect(JSON.stringify(readiness)).not.toContain("fixture-extension-secret");
   });
 
+  it("publishes copy-safe Twitch developer-console registration values without settling OAuth scopes", () => {
+    const manifest = resolveTwitchSetupRegistrationManifest({
+      TWITCH_CLIENT_ID: "fixture-client",
+      TWITCH_CLIENT_SECRET: "fixture-client-secret",
+      TWITCH_EXTENSION_CLIENT_ID: "fixture-extension",
+      TWITCH_EXTENSION_SECRET: "fixture-extension-secret",
+    }, { baseUrl: "https://preview.example.test/dashboard" });
+
+    expect(manifest.ok).toBe(true);
+    expect(manifest.oauth).toMatchObject({
+      callbackPath: TWITCH_OAUTH_CALLBACK_PATH,
+      callbackUrl: "https://preview.example.test/api/twitch/oauth/callback",
+      tokenExchange: "reserved-disabled",
+      scopes: {
+        status: "open-decision",
+        decisionId: "D1-07",
+        configured: [],
+      },
+    });
+    expect(manifest.extension).toMatchObject({
+      viewerPath: TWITCH_EXTENSION_VIEWER_PATH,
+      viewerUrl: "https://preview.example.test/twitch/viewer",
+      configPath: TWITCH_EXTENSION_CONFIG_PATH,
+      configUrl: "https://preview.example.test/twitch/config",
+      liveConfigPath: TWITCH_EXTENSION_LIVE_CONFIG_PATH,
+      liveConfigUrl: "https://preview.example.test/twitch/live-config",
+      status: "reserved-shells",
+    });
+    expect(manifest.requiredEnvironment).toEqual(
+      expect.arrayContaining([
+        { name: "TWITCH_CLIENT_ID", configured: true, serverOnly: false },
+        { name: "TWITCH_CLIENT_SECRET", configured: true, serverOnly: true },
+        { name: "CHATXPT_PUBLIC_BASE_URL", configured: true, serverOnly: false },
+      ]),
+    );
+    expect(JSON.stringify(manifest)).not.toContain("fixture-client-secret");
+    expect(JSON.stringify(manifest)).not.toContain("fixture-extension-secret");
+  });
+
   it("reserves the OAuth callback route with safe validation and setup failures", async () => {
     vi.stubEnv("TWITCH_CLIENT_ID", "");
     vi.stubEnv("TWITCH_CLIENT_SECRET", "");
@@ -127,6 +171,37 @@ describe("Twitch setup readiness", () => {
         liveConfig: TWITCH_EXTENSION_LIVE_CONFIG_PATH,
       },
       missing: [],
+    });
+    expect(JSON.stringify(body)).not.toContain("fixture-client-secret");
+    expect(JSON.stringify(body)).not.toContain("fixture-extension-secret");
+  });
+
+  it("exposes a no-store registration manifest API without leaking configured secrets", async () => {
+    vi.stubEnv("TWITCH_CLIENT_ID", "fixture-client");
+    vi.stubEnv("TWITCH_CLIENT_SECRET", "fixture-client-secret");
+    vi.stubEnv("TWITCH_EXTENSION_CLIENT_ID", "fixture-extension");
+    vi.stubEnv("TWITCH_EXTENSION_SECRET", "fixture-extension-secret");
+
+    const response = await twitchSetupRegistrationGET(
+      new Request("https://preview.example.test/api/twitch/setup/registration"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    const body = await response.json();
+    expect(body).toMatchObject({
+      ok: true,
+      baseUrl: "https://preview.example.test",
+      oauth: {
+        callbackUrl: "https://preview.example.test/api/twitch/oauth/callback",
+        scopes: { status: "open-decision", decisionId: "D1-07" },
+        tokenExchange: "reserved-disabled",
+      },
+      extension: {
+        viewerUrl: "https://preview.example.test/twitch/viewer",
+        configUrl: "https://preview.example.test/twitch/config",
+        liveConfigUrl: "https://preview.example.test/twitch/live-config",
+      },
     });
     expect(JSON.stringify(body)).not.toContain("fixture-client-secret");
     expect(JSON.stringify(body)).not.toContain("fixture-extension-secret");

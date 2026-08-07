@@ -19,6 +19,38 @@ export interface TwitchSetupReadiness {
   readonly limitations: readonly string[];
 }
 
+export interface TwitchSetupRegistrationManifest {
+  readonly ok: boolean;
+  readonly baseUrl: string | null;
+  readonly oauth: {
+    readonly callbackPath: typeof TWITCH_OAUTH_CALLBACK_PATH;
+    readonly callbackUrl: string | null;
+    readonly scopes: {
+      readonly status: "open-decision";
+      readonly decisionId: "D1-07";
+      readonly configured: readonly string[];
+      readonly note: string;
+    };
+    readonly tokenExchange: "reserved-disabled";
+  };
+  readonly extension: {
+    readonly viewerPath: typeof TWITCH_EXTENSION_VIEWER_PATH;
+    readonly viewerUrl: string | null;
+    readonly configPath: typeof TWITCH_EXTENSION_CONFIG_PATH;
+    readonly configUrl: string | null;
+    readonly liveConfigPath: typeof TWITCH_EXTENSION_LIVE_CONFIG_PATH;
+    readonly liveConfigUrl: string | null;
+    readonly status: "reserved-shells";
+  };
+  readonly requiredEnvironment: readonly {
+    readonly name: string;
+    readonly configured: boolean;
+    readonly serverOnly: boolean;
+  }[];
+  readonly evidenceRequired: readonly string[];
+  readonly limitations: readonly string[];
+}
+
 function normalise(value: string | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed === undefined || trimmed.length === 0 ? null : trimmed;
@@ -85,6 +117,12 @@ function callbackUrlFor(baseUrl: string | null): string | null {
   return new URL(TWITCH_OAUTH_CALLBACK_PATH, parsed).toString();
 }
 
+function pathUrlFor(baseUrl: string | null, path: string): string | null {
+  if (baseUrl === null) return null;
+  const parsed = new URL(baseUrl);
+  return new URL(path, parsed).toString();
+}
+
 export function resolveTwitchSetupReadiness(
   source: Record<string, string | undefined>,
   options: { readonly baseUrl?: string | null; readonly checkedAt?: number } = {},
@@ -123,6 +161,70 @@ export function resolveTwitchSetupReadiness(
       "This readiness report validates configuration shape only; it does not prove Twitch developer-console access.",
       "The OAuth callback route is reserved but token exchange remains disabled until Role 1 configures Twitch credentials.",
       "Twitch Extension Local or Hosted Test evidence must be recorded separately from this readiness check.",
+      "No Twitch secrets are included in this response.",
+    ],
+  };
+}
+
+export function resolveTwitchSetupRegistrationManifest(
+  source: Record<string, string | undefined>,
+  options: { readonly baseUrl?: string | null } = {},
+): TwitchSetupRegistrationManifest {
+  const baseUrl = options.baseUrl ?? normalise(source.CHATXPT_PUBLIC_BASE_URL);
+  const requiredEnvironment = [
+    { name: "TWITCH_CLIENT_ID", configured: normalise(source.TWITCH_CLIENT_ID) !== null, serverOnly: false },
+    { name: "TWITCH_CLIENT_SECRET", configured: normalise(source.TWITCH_CLIENT_SECRET) !== null, serverOnly: true },
+    {
+      name: "TWITCH_EXTENSION_CLIENT_ID",
+      configured: normalise(source.TWITCH_EXTENSION_CLIENT_ID) !== null,
+      serverOnly: false,
+    },
+    {
+      name: "TWITCH_EXTENSION_SECRET",
+      configured: normalise(source.TWITCH_EXTENSION_SECRET) !== null,
+      serverOnly: true,
+    },
+    {
+      name: "CHATXPT_PUBLIC_BASE_URL",
+      configured: baseUrl !== null,
+      serverOnly: false,
+    },
+  ];
+
+  return {
+    ok: baseUrl !== null,
+    baseUrl,
+    oauth: {
+      callbackPath: TWITCH_OAUTH_CALLBACK_PATH,
+      callbackUrl: callbackUrlFor(baseUrl),
+      scopes: {
+        status: "open-decision",
+        decisionId: "D1-07",
+        configured: [],
+        note: "OAuth scopes, callback URL allowlist, and test-channel allowlist remain a Role 1 decision gate before token exchange is enabled.",
+      },
+      tokenExchange: "reserved-disabled",
+    },
+    extension: {
+      viewerPath: TWITCH_EXTENSION_VIEWER_PATH,
+      viewerUrl: pathUrlFor(baseUrl, TWITCH_EXTENSION_VIEWER_PATH),
+      configPath: TWITCH_EXTENSION_CONFIG_PATH,
+      configUrl: pathUrlFor(baseUrl, TWITCH_EXTENSION_CONFIG_PATH),
+      liveConfigPath: TWITCH_EXTENSION_LIVE_CONFIG_PATH,
+      liveConfigUrl: pathUrlFor(baseUrl, TWITCH_EXTENSION_LIVE_CONFIG_PATH),
+      status: "reserved-shells",
+    },
+    requiredEnvironment,
+    evidenceRequired: [
+      "Twitch developer-console app registration",
+      "Twitch Extension Local or Hosted Test",
+      "Configured test channel and allowlisted viewers",
+      "Evidence manifest entry before claiming live Twitch readiness",
+    ],
+    limitations: [
+      "This manifest is a copy-safe registration checklist, not evidence that Twitch accepted the configuration.",
+      "OAuth token exchange remains disabled in this build.",
+      "OAuth scopes are intentionally not selected here because D1-07 is still open.",
       "No Twitch secrets are included in this response.",
     ],
   };

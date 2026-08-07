@@ -117,6 +117,61 @@ export async function verifyTwitchSetup({
   }
 
   try {
+    const registrationUrl = new URL("/api/twitch/setup/registration", parsedBaseUrl);
+    const { response, body } = await fetchJson(fetchImpl, registrationUrl);
+    inspected.push(registrationUrl.toString());
+
+    assert.equal(response.status, 200, "registration manifest endpoint must return HTTP 200");
+    assert.ok(
+      (response.headers.get("cache-control") ?? "").toLowerCase().includes("no-store"),
+      "registration manifest endpoint must be no-store",
+    );
+    assert.equal(
+      body.oauth?.callbackPath,
+      "/api/twitch/oauth/callback",
+      "registration manifest must include canonical OAuth callback path",
+    );
+    assert.ok(
+      String(body.oauth?.callbackUrl ?? "").endsWith("/api/twitch/oauth/callback"),
+      "registration manifest callbackUrl must point at the OAuth callback route",
+    );
+    assert.equal(
+      body.oauth?.scopes?.status,
+      "open-decision",
+      "registration manifest must keep OAuth scopes behind the D1-07 decision gate",
+    );
+    assert.equal(
+      body.oauth?.tokenExchange,
+      "reserved-disabled",
+      "registration manifest must not claim OAuth token exchange is enabled",
+    );
+    assert.equal(body.extension?.viewerPath, "/twitch/viewer", "registration manifest viewer path must be canonical");
+    assert.equal(body.extension?.configPath, "/twitch/config", "registration manifest config path must be canonical");
+    assert.equal(
+      body.extension?.liveConfigPath,
+      "/twitch/live-config",
+      "registration manifest live config path must be canonical",
+    );
+    assert.ok(
+      String(body.extension?.viewerUrl ?? "").endsWith("/twitch/viewer"),
+      "registration manifest viewerUrl must point at the viewer route",
+    );
+    assert.ok(
+      Array.isArray(body.requiredEnvironment),
+      "registration manifest requiredEnvironment must be an array",
+    );
+    assert.ok(Array.isArray(body.evidenceRequired), "registration manifest evidenceRequired must be an array");
+    assert.ok(Array.isArray(body.limitations), "registration manifest limitations must be an array");
+    assert.ok(
+      body.limitations.some((limitation) => /No Twitch secrets/i.test(String(limitation))),
+      "registration manifest limitations must state that Twitch secrets are omitted",
+    );
+    assertNoConfiguredSecretValues(JSON.stringify(body), environment);
+  } catch (error) {
+    violations.push(error.message);
+  }
+
+  try {
     const callbackUrl = new URL("/api/twitch/oauth/callback", parsedBaseUrl);
     const { response, body } = await fetchJson(fetchImpl, callbackUrl);
     inspected.push(callbackUrl.toString());
