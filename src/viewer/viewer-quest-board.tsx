@@ -26,6 +26,9 @@ export interface ViewerQuestBoardProps {
   readonly demoLabel?: string;
 }
 
+export type TwitchViewerPanelProps = Omit<ViewerQuestBoardProps, "surface">;
+export type HostedQuestBoardProps = Omit<ViewerQuestBoardProps, "surface">;
+
 export function ViewerQuestBoard({
   initialView,
   surface,
@@ -171,6 +174,26 @@ export function ViewerQuestBoard({
         </Panel>
       </div>
     </DesignSystemRoot>
+  );
+}
+
+export function TwitchViewerPanel(props: TwitchViewerPanelProps) {
+  return (
+    <ViewerQuestBoard
+      {...props}
+      heading={props.heading ?? "Vote without leaving Twitch"}
+      surface="extension"
+    />
+  );
+}
+
+export function HostedQuestBoard(props: HostedQuestBoardProps) {
+  return (
+    <ViewerQuestBoard
+      {...props}
+      heading={props.heading ?? "Join by link or room code"}
+      surface="hosted-board"
+    />
   );
 }
 

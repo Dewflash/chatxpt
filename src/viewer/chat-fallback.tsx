@@ -42,6 +42,10 @@ export function ChatFallbackInstructions({ view }: ChatFallbackInstructionsProps
   );
 }
 
+export function TwitchChatVoteInstructions(props: ChatFallbackInstructionsProps) {
+  return <ChatFallbackInstructions {...props} />;
+}
+
 export function ChatFallbackInstructionsDemo() {
   return <ChatFallbackInstructions view={createViewerDemoView({ mode: "twitch-chat" })} />;
 }

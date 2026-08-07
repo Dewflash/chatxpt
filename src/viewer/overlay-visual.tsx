@@ -50,6 +50,10 @@ export function ViewerOverlayVisual({ view, now }: ViewerOverlayVisualProps) {
   );
 }
 
+export function QuestOverlay(props: ViewerOverlayVisualProps) {
+  return <ViewerOverlayVisual {...props} />;
+}
+
 export function ViewerOverlayDemo() {
   return <ViewerOverlayVisual view={createOverlayDemoView("active")} now={1_786_200_016_000} />;
 }
