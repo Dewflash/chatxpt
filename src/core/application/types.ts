@@ -30,6 +30,15 @@ export interface ProjectionContext {
   readonly connection: ServiceHealth;
 }
 
+export interface ViewerRecoveryState {
+  readonly sessionId: string;
+  readonly questCycleId: string;
+  readonly acceptedCandidateId: string | null;
+  readonly acceptedAt: number | null;
+  readonly sessionPoints: number;
+  readonly sourceMode: "twitch-extension" | "hosted-board" | "twitch-chat" | null;
+}
+
 export interface AcceptedCommandReceipt {
   readonly command: CommandEnvelope;
   readonly commandFingerprint: string;

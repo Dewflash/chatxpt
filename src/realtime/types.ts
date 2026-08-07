@@ -6,6 +6,7 @@ import type {
   RoleViewModels,
   SessionStateRepository,
   StatePublisher,
+  ViewerRecoveryReader,
 } from "../core";
 
 export type SnapshotRole = keyof RoleViewModels;
@@ -121,6 +122,7 @@ export interface ChatXptPersistenceRuntime {
   readonly snapshots: RoleSnapshotPublisher;
   readonly accessGrants: RealtimeAccessGrantStore;
   readonly dueVotes: DueVoteCycleReader;
+  readonly viewerRecovery: ViewerRecoveryReader;
 }
 
 export class PersistenceConflictError extends Error {

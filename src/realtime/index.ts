@@ -78,6 +78,9 @@ export type {
   StatePublisher,
   StreamerViewModel,
   ViewerViewModel,
+  ViewerRecoveryReadInput,
+  ViewerRecoveryReader,
+  ViewerRecoveryState,
 } from "../core";
 
 export {

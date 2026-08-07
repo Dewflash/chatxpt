@@ -4,6 +4,7 @@ import {
   authoritativeSessionStateSchema,
   canonicalJsonStringify,
   candidateBatchSchema,
+  viewerRecoveryStateSchema,
   type AcceptedCommandReceipt,
   type AcceptedVoteTallyReadInput,
   type AcceptedVoteTallyReader,
@@ -13,6 +14,9 @@ import {
   type CommitAuthoritativeStateInput,
   type CommitAuthoritativeStateResult,
   type RoleViewModels,
+  type ViewerRecoveryReadInput,
+  type ViewerRecoveryReader,
+  type ViewerRecoveryState,
 } from "../core";
 import {
   PREPARING_SESSION_EXPIRY_MS,
@@ -55,7 +59,8 @@ export class MemoryChatXptPersistence
     DueVoteCycleReader,
     RoleSnapshotPublisher,
     RealtimeAccessGrantStore,
-    SessionLifecycleStore
+    SessionLifecycleStore,
+    ViewerRecoveryReader
 {
   private readonly states = new Map<string, AuthoritativeSessionState>();
   private readonly receipts = new Map<string, AcceptedCommandReceipt>();
@@ -74,6 +79,7 @@ export class MemoryChatXptPersistence
       voterKey: string;
       candidateId: string;
       acceptedAt: number;
+      sourceMode: "twitch-extension" | "hosted-board" | "twitch-chat";
     }
   >();
 
@@ -178,6 +184,7 @@ export class MemoryChatXptPersistence
           voterKey: input.command.voterKey,
           candidateId: input.command.candidateId,
           acceptedAt: input.acceptedAt,
+          sourceMode: input.command.sourceMode,
         },
       );
     }
@@ -222,6 +229,31 @@ export class MemoryChatXptPersistence
       acceptedVoteCount: tallies.reduce((sum, tally) => sum + tally.votes, 0),
       tallies,
     });
+  }
+
+  async readViewerRecovery(input: ViewerRecoveryReadInput): Promise<ViewerRecoveryState> {
+    const vote = this.voteLedger.get(
+      this.voteKey(input.sessionId, input.questCycleId, input.voterKey),
+    );
+    return viewerRecoveryStateSchema.parse(
+      vote === undefined
+        ? {
+            sessionId: input.sessionId,
+            questCycleId: input.questCycleId,
+            acceptedCandidateId: null,
+            acceptedAt: null,
+            sessionPoints: 0,
+            sourceMode: null,
+          }
+        : {
+            sessionId: input.sessionId,
+            questCycleId: input.questCycleId,
+            acceptedCandidateId: vote.candidateId,
+            acceptedAt: vote.acceptedAt,
+            sessionPoints: 0,
+            sourceMode: vote.sourceMode,
+          },
+    );
   }
 
   async store(batch: CandidateBatch): Promise<void> {
@@ -451,5 +483,6 @@ export function createMemoryPersistenceRuntime() {
     snapshots: backend,
     accessGrants: backend,
     dueVotes: backend,
+    viewerRecovery: backend,
   };
 }

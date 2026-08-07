@@ -12,6 +12,7 @@ import type {
   AuthoritativeSessionState,
   CommitAuthoritativeStateResult,
   ProjectionContext,
+  ViewerRecoveryState,
 } from "./types";
 
 export interface CommandAuthorizer {
@@ -38,6 +39,16 @@ export interface AcceptedVoteTallyReadInput {
 
 export interface AcceptedVoteTallyReader {
   readAcceptedVoteTally(input: AcceptedVoteTallyReadInput): Promise<AcceptedVoteTallySnapshot>;
+}
+
+export interface ViewerRecoveryReadInput {
+  readonly sessionId: string;
+  readonly questCycleId: string;
+  readonly voterKey: string;
+}
+
+export interface ViewerRecoveryReader {
+  readViewerRecovery(input: ViewerRecoveryReadInput): Promise<ViewerRecoveryState>;
 }
 
 export interface CommitAuthoritativeStateInput {
