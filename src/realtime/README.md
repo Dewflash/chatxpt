@@ -54,6 +54,13 @@ still show external services as unavailable; that means the credential-free
 fallback is active, not that live Twitch, OBS, Vercel, or Supabase evidence has
 been executed.
 
+The health report separates `configurationValid` from `demoReady`. Local
+development can be configuration-valid and `ok` while Twitch or OBS are
+unavailable because the credential-free fallback is intentional. Preview and
+production deployments only return `ok: true` when the required persistence,
+Twitch app, Twitch Extension, and OBS setup services are all ready; otherwise the
+route returns 503 even if the Supabase configuration itself is valid.
+
 ## Authoritative vote ledger
 
 All three MVP participation paths converge on the same private ledger. A vote

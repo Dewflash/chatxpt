@@ -100,6 +100,8 @@ describe("Role 1 persistence environment", () => {
       checkedAt: CHECKED_AT,
       deployment: "local",
       persistenceMode: "memory",
+      configurationValid: true,
+      demoReady: true,
       publicRealtime: null,
     });
     expect(report.services.map(({ service, status }) => [service, status])).toEqual([
@@ -128,6 +130,8 @@ describe("Role 1 persistence environment", () => {
     );
 
     expect(report.ok).toBe(true);
+    expect(report.configurationValid).toBe(true);
+    expect(report.demoReady).toBe(true);
     expect(report.persistenceMode).toBe("supabase");
     expect(report.publicRealtime).toEqual({
       url: "https://fixture.supabase.co",
@@ -152,11 +156,38 @@ describe("Role 1 persistence environment", () => {
     );
 
     expect(report.ok).toBe(false);
+    expect(report.configurationValid).toBe(false);
+    expect(report.demoReady).toBe(false);
     expect(statusForServerEnvironmentHealth(report)).toBe(503);
     expect(report.services).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ service: "persistence", status: "misconfigured" }),
         expect.objectContaining({ service: "twitch-app", status: "misconfigured" }),
+      ]),
+    );
+  });
+
+  it("rejects preview demo readiness when Twitch and OBS live services are unavailable", () => {
+    const report = resolveServerEnvironmentHealth(
+      {
+        NEXT_PUBLIC_APP_ENV: "preview",
+        NEXT_PUBLIC_SUPABASE_URL: "https://fixture.supabase.co",
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fixture",
+        SUPABASE_SECRET_KEY: "sb_secret_fixture",
+      },
+      CHECKED_AT,
+    );
+
+    expect(report.configurationValid).toBe(true);
+    expect(report.demoReady).toBe(false);
+    expect(report.ok).toBe(false);
+    expect(statusForServerEnvironmentHealth(report)).toBe(503);
+    expect(report.services).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ service: "persistence", status: "ready" }),
+        expect.objectContaining({ service: "twitch-app", status: "unavailable" }),
+        expect.objectContaining({ service: "twitch-extension", status: "unavailable" }),
+        expect.objectContaining({ service: "obs-overlay", status: "unavailable" }),
       ]),
     );
   });

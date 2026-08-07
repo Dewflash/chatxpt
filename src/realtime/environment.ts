@@ -61,6 +61,8 @@ export interface ServerEnvironmentHealthReport {
   readonly checkedAt: number;
   readonly deployment: "local" | "preview" | "production" | "invalid";
   readonly persistenceMode: ServerPersistenceEnvironment["mode"];
+  readonly configurationValid: boolean;
+  readonly demoReady: boolean;
   readonly services: readonly ServiceHealth[];
   readonly publicRealtime: PublicRealtimeConfiguration | null;
   readonly limitations: readonly string[];
@@ -252,17 +254,24 @@ export function resolveServerEnvironmentHealth(
     false,
   );
   const services = [persistence.health, twitchApp, twitchExtension, obsOverlay];
+  const configurationValid = services.every((service) => service.status !== "misconfigured");
+  const demoReady =
+    persistence.deployment === "local"
+      ? configurationValid
+      : configurationValid && services.every((service) => service.status === "ready");
 
   return {
-    ok: services.every((service) => service.status !== "misconfigured"),
+    ok: demoReady,
     checkedAt,
     deployment: persistence.deployment,
     persistenceMode: persistence.mode,
+    configurationValid,
+    demoReady,
     services,
     publicRealtime,
     limitations: [
       "Health reports configuration only; it does not prove a live Supabase realtime round trip.",
-      "Unavailable Twitch or OBS services require Role 1-owned credentials and setup before live evidence.",
+      "Local health may use credential-free fallbacks, but preview and production are not demo-ready until persistence, Twitch, Extension, and OBS setup services are ready.",
       "No server secrets are included in this response.",
     ],
   };
