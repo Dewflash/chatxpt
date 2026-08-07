@@ -1,4 +1,19 @@
 /** Role 4 public boundary for streamer-facing rendering and typed commands. */
+export { demoStudioIntegrationHealthView } from "./demo-integration-health";
+export {
+  countByStatus,
+  demoCriticalItems,
+  isDemoReady,
+  itemFromService,
+  statusFromServiceHealth,
+  statusLabel,
+} from "./integration-health-model";
+export type {
+  IntegrationStatus,
+  StudioIntegrationHealthItem,
+  StudioIntegrationHealthView,
+} from "./integration-health-model";
+export { StudioIntegrationsHealth, StudioIntegrationsHealthDemo } from "./studio-integrations";
 export {
   streamerQuestCommandSchema,
   streamerProfileSchema,

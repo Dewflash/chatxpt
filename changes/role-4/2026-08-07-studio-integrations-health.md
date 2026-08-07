@@ -1,0 +1,1 @@
+Role 1 integration override added a fixture-only Studio Integrations technical health surface under `@/streamer`, mounted at `/studio` and `/studio/integrations`, with owner-approved configured/not-configured/not-ready/degraded status language for Twitch, OBS, extraction, AI, quest engine, viewer surfaces, Supabase, and Vercel.
