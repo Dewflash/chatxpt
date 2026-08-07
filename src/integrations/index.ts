@@ -4,6 +4,11 @@ export {
   gameplayFrameObservationSchema,
   platformEventSchema,
 } from "../core";
+export {
+  buildChatFallbackPoll,
+  buildChatFallbackResultAnnouncement,
+  describeChatVoteReceipt,
+} from "./chat-fallback";
 export type {
   AudienceEvent,
   AudienceEventSource,
@@ -12,3 +17,11 @@ export type {
   GameplayFrameObservation,
   PlatformEvent,
 } from "../core";
+export type {
+  ChatFallbackChoice,
+  ChatFallbackOption,
+  ChatFallbackPoll,
+  ChatFallbackResultAnnouncement,
+  ChatVoteReceiptPresentation,
+  ChatVoteReceiptStatus,
+} from "./chat-fallback";
