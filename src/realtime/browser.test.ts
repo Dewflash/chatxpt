@@ -6,12 +6,18 @@ import {
   streamerSetupCommandSchema,
   viewerVoteCommandSchema,
 } from "../core";
+import {
+  contractFixtureOverlayView,
+  contractFixtureSession,
+  contractFixtureStreamerView,
+  contractFixtureViewerView,
+} from "../core/testing";
 import { FetchUiGatewayClient } from "./browser";
 
 function voteCommand(commandId = "fixture-command") {
   return viewerVoteCommandSchema.parse({
     contractVersion: CONTRACT_VERSION,
-    sessionId: "fixture-session",
+    sessionId: contractFixtureSession.sessionId,
     questCycleId: "fixture-cycle",
     commandId,
     correlationId: `${commandId}-correlation`,
@@ -28,7 +34,7 @@ function voteCommand(commandId = "fixture-command") {
 function setupCommand(commandId = "fixture-setup-command") {
   return streamerSetupCommandSchema.parse({
     contractVersion: CONTRACT_VERSION,
-    sessionId: "fixture-session",
+    sessionId: contractFixtureSession.sessionId,
     commandId,
     correlationId: `${commandId}-correlation`,
     expectedRevision: 1,
@@ -52,11 +58,9 @@ describe("FetchUiGatewayClient", () => {
       Response.json({
         ok: true,
         reality: fixtureReality,
-        sessionId: "fixture-session",
+        sessionId: contractFixtureSession.sessionId,
         role: "viewer",
-        snapshot: {
-          envelope: { revision: 7 },
-        },
+        snapshot: contractFixtureViewerView,
         fixtureCatalog: { examples: true },
       }),
     );
@@ -67,20 +71,20 @@ describe("FetchUiGatewayClient", () => {
     });
 
     const result = await client.read({
-      sessionId: "fixture-session",
+      sessionId: contractFixtureSession.sessionId,
       role: "viewer",
       principalId: "fixture-principal",
     });
 
     expect(result).toMatchObject({
       ok: true,
-      currentRevision: 7,
+      currentRevision: contractFixtureViewerView.envelope.revision,
       reality: fixtureReality,
       fixtureCatalog: { examples: true },
     });
     const [url, init] = request.mock.calls[0] as unknown as Parameters<typeof fetch>;
     expect(String(url)).toBe(
-      "https://chatxpt.test/api/diagnostics/ui-gateway?sessionId=fixture-session&role=viewer&principalId=fixture-principal",
+      `https://chatxpt.test/api/diagnostics/ui-gateway?sessionId=${contractFixtureSession.sessionId}&role=viewer&principalId=fixture-principal`,
     );
     const headers = new Headers(init?.headers);
     expect(headers.get("authorization")).toBe("Bearer scoped-token");
@@ -124,6 +128,37 @@ describe("FetchUiGatewayClient", () => {
     expect(JSON.parse(String(init?.body))).toMatchObject({
       command: { commandId: "fixture-command" },
     });
+  });
+
+  it("parses canonical command views before exposing them to UI clients", async () => {
+    const command = voteCommand();
+    const roleViews = {
+      streamer: contractFixtureStreamerView,
+      viewer: contractFixtureViewerView,
+      overlay: contractFixtureOverlayView,
+    };
+    const request = vi.fn(async () =>
+      Response.json({
+        ok: true,
+        reality: fixtureReality,
+        outcome: "committed",
+        revision: contractFixtureViewerView.envelope.revision,
+        delivery: "published",
+        receipt: {
+          commandId: command.commandId,
+          acceptedAt: 1_786_000_002_000,
+          eventTypes: ["quest-cycle.vote-recorded"],
+        },
+        views: roleViews,
+      }),
+    );
+    const client = new FetchUiGatewayClient({ fetch: request as typeof fetch });
+
+    const result = await client.dispatch(command);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.views?.viewer.session.sessionId).toBe(command.sessionId);
   });
 
   it("dispatches setup service commands through the same browser boundary", async () => {
@@ -178,6 +213,104 @@ describe("FetchUiGatewayClient", () => {
         action: "request-capture-permission",
       },
     });
+  });
+
+  it("rejects incomplete role snapshots instead of exposing envelope-only views", async () => {
+    const client = new FetchUiGatewayClient({
+      fetch: vi.fn(async () =>
+        Response.json({
+          ok: true,
+          reality: fixtureReality,
+          sessionId: contractFixtureSession.sessionId,
+          role: "viewer",
+          snapshot: { envelope: { revision: 7 } },
+        }),
+      ) as typeof fetch,
+    });
+
+    const result = await client.read({
+      sessionId: contractFixtureSession.sessionId,
+      role: "viewer",
+      principalId: "fixture-principal",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("internal");
+  });
+
+  it("rejects read responses for the wrong role or session", async () => {
+    const client = new FetchUiGatewayClient({
+      fetch: vi.fn(async () =>
+        Response.json({
+          ok: true,
+          reality: fixtureReality,
+          sessionId: contractFixtureSession.sessionId,
+          role: "streamer",
+          snapshot: contractFixtureViewerView,
+        }),
+      ) as typeof fetch,
+    });
+
+    const result = await client.read({
+      sessionId: contractFixtureSession.sessionId,
+      role: "viewer",
+      principalId: "fixture-principal",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("internal");
+  });
+
+  it("rejects malformed command views instead of casting them", async () => {
+    const request = vi.fn(async () =>
+      Response.json({
+        ok: true,
+        reality: fixtureReality,
+        outcome: "committed",
+        revision: 2,
+        delivery: "published",
+        receipt: {
+          commandId: "fixture-command",
+          acceptedAt: 1_786_000_002_000,
+          eventTypes: ["quest-cycle.vote-recorded"],
+        },
+        views: { viewer: { envelope: { revision: 2 } } },
+      }),
+    );
+    const client = new FetchUiGatewayClient({ fetch: request as typeof fetch });
+
+    const result = await client.dispatch(voteCommand());
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("internal");
+  });
+
+  it("rejects service command responses without a typed service result", async () => {
+    const request = vi.fn(async () =>
+      Response.json({
+        ok: true,
+        reality: fixtureReality,
+        outcome: "committed",
+        revision: 1,
+        delivery: "not-republished",
+        receipt: {
+          commandId: "fixture-setup-command",
+          acceptedAt: 1_786_000_002_000,
+          eventTypes: ["streamer.setup.diagnostic-acknowledged"],
+        },
+        views: null,
+      }),
+    );
+    const client = new FetchUiGatewayClient({ fetch: request as typeof fetch });
+
+    const result = await client.dispatch(setupCommand());
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("internal");
   });
 
   it("maps malformed read responses to a typed internal error", async () => {

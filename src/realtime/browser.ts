@@ -1,8 +1,11 @@
 import {
   commandEnvelopeSchema,
   domainErrorSchema,
+  overlayViewModelSchema,
   streamerServiceCommandResultSchema,
   streamerServiceCommandSchema,
+  streamerViewModelSchema,
+  viewerViewModelSchema,
   type CommandEnvelope,
   type DomainError,
   type RoleViewModels,
@@ -133,6 +136,45 @@ function parseServiceCommandResult(value: unknown): StreamerServiceCommandResult
   return parsed.success ? parsed.data : undefined;
 }
 
+function parseSnapshotForRole<Role extends UiGatewaySnapshotRole>(
+  role: Role,
+  value: unknown,
+): RoleViewModels[Role] | null {
+  const parsed =
+    role === "streamer"
+      ? streamerViewModelSchema.safeParse(value)
+      : role === "viewer"
+        ? viewerViewModelSchema.safeParse(value)
+        : overlayViewModelSchema.safeParse(value);
+  return parsed.success ? parsed.data as RoleViewModels[Role] : null;
+}
+
+function parseRoleViewModels(value: unknown): RoleViewModels | null {
+  if (!isObject(value)) return null;
+  const streamer = streamerViewModelSchema.safeParse(value.streamer);
+  const viewer = viewerViewModelSchema.safeParse(value.viewer);
+  const overlay = overlayViewModelSchema.safeParse(value.overlay);
+  if (!streamer.success || !viewer.success || !overlay.success) return null;
+  return {
+    streamer: streamer.data,
+    viewer: viewer.data,
+    overlay: overlay.data,
+  };
+}
+
+function roleViewModelsMatchCommand(
+  views: RoleViewModels,
+  command: CommandEnvelope | StreamerServiceCommand,
+  revision: number,
+): boolean {
+  return [views.streamer, views.viewer, views.overlay].every(
+    (view) =>
+      view.envelope.sessionId === command.sessionId &&
+      view.session.sessionId === command.sessionId &&
+      view.envelope.revision === revision,
+  );
+}
+
 export class FetchUiGatewayClient implements UiGatewayClient {
   private readonly endpoint: string;
   private readonly request: typeof globalThis.fetch;
@@ -180,12 +222,16 @@ export class FetchUiGatewayClient implements UiGatewayClient {
         ),
       };
     }
-    const snapshot = body.snapshot as RoleViewModels[Role];
-    const revision = isObject(snapshot.envelope) && typeof snapshot.envelope.revision === "number"
-      ? snapshot.envelope.revision
-      : null;
+    const snapshot = parseSnapshotForRole(input.role, body.snapshot);
+    const revision = snapshot?.envelope.revision ?? null;
     const reality = parseReality(body);
-    if (revision === null || reality === undefined) {
+    if (
+      revision === null ||
+      reality === undefined ||
+      body.role !== input.role ||
+      body.sessionId !== input.sessionId ||
+      snapshot?.session.sessionId !== input.sessionId
+    ) {
       return {
         ok: false,
         currentRevision: null,
@@ -204,10 +250,12 @@ export class FetchUiGatewayClient implements UiGatewayClient {
   }
 
   async dispatch(command: CommandEnvelope | StreamerServiceCommand): Promise<UiGatewayCommandResult> {
-    const parsedCommand = commandEnvelopeSchema.safeParse(command).success
-      ? commandEnvelopeSchema.parse(command)
-      : streamerServiceCommandSchema.safeParse(command).success
-        ? streamerServiceCommandSchema.parse(command)
+    const parsedEnvelopeCommand = commandEnvelopeSchema.safeParse(command);
+    const parsedServiceCommand = streamerServiceCommandSchema.safeParse(command);
+    const parsedCommand = parsedEnvelopeCommand.success
+      ? parsedEnvelopeCommand.data
+      : parsedServiceCommand.success
+        ? parsedServiceCommand.data
         : null;
     if (parsedCommand === null) {
       return {
@@ -278,6 +326,35 @@ export class FetchUiGatewayClient implements UiGatewayClient {
         error: typedError("internal", "UI gateway returned an incomplete command result"),
       };
     }
+    const views = body.views === null || body.views === undefined
+      ? null
+      : parseRoleViewModels(body.views);
+    if (
+      (body.views !== null && body.views !== undefined && views === null) ||
+      (views !== null && !roleViewModelsMatchCommand(views, parsedCommand, body.revision))
+    ) {
+      return {
+        ok: false,
+        reality,
+        commandId: parsedCommand.commandId,
+        currentRevision: null,
+        error: typedError("internal", "UI gateway returned malformed command views"),
+      };
+    }
+    const serviceCommand = parseServiceCommandResult(body.serviceCommand);
+    if (
+      parsedServiceCommand.success &&
+      (serviceCommand === undefined ||
+        (serviceCommand.commandId !== null && serviceCommand.commandId !== parsedCommand.commandId))
+    ) {
+      return {
+        ok: false,
+        reality,
+        commandId: parsedCommand.commandId,
+        currentRevision: null,
+        error: typedError("internal", "UI gateway returned an incomplete service command result"),
+      };
+    }
     return {
       ok: true,
       reality,
@@ -289,8 +366,8 @@ export class FetchUiGatewayClient implements UiGatewayClient {
           ? body.delivery
           : "published",
       receipt,
-      views: isObject(body.views) ? body.views as unknown as RoleViewModels : null,
-      serviceCommand: parseServiceCommandResult(body.serviceCommand),
+      views,
+      serviceCommand,
     };
   }
 
