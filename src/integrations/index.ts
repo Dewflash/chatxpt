@@ -13,6 +13,22 @@ export type {
   PlatformEvent,
 } from "../core";
 export {
+  MINIMUM_REAL_WORKFLOW_EVIDENCE_DECISION_ID,
+  minimumRealWorkflowEvidenceReportSchema,
+  minimumRealWorkflowEvidenceResolutionSchema,
+  realWorkflowEvidenceClassSchema,
+  realWorkflowParticipationModeSchema,
+  realWorkflowSurfaceSchema,
+  realWorkflowTerminalOutcomeSchema,
+  resolveMinimumRealWorkflowEvidence,
+  type MinimumRealWorkflowEvidenceReport,
+  type MinimumRealWorkflowEvidenceResolution,
+  type RealWorkflowEvidenceClass,
+  type RealWorkflowParticipationMode,
+  type RealWorkflowSurface,
+  type RealWorkflowTerminalOutcome,
+} from "./test-lab/minimum-real-workflow-evidence";
+export {
   CONTROLLED_GAMEPLAY_TEST_DECISION_ID,
   controlledGameplayEvidenceResourceSchema,
   controlledGameplayOwnershipSchema,

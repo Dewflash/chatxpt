@@ -12,6 +12,7 @@
 - [ ] Producer/consumer contract tests pass at every cross-role seam without private implementation imports.
 - [ ] One streamer and two viewers share the same authoritative revision, vote, winner, progress, result, points, and hype state.
 - [ ] The winning quest reaches the real OBS Browser Source overlay.
+- [ ] The D-059 minimum real workflow evidence gate passes before any deck/video claim says the product worked end to end.
 - [ ] Success, failure, cancellation, skip, expiry, and reconnect-relevant paths are demonstrable.
 - [ ] No simulated fixture is presented as live-extraction or end-to-end evidence.
 
