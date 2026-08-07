@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   PersistenceConfigurationError,
   createConfiguredPersistenceRuntime,
+  resolveDeploymentHealthReport,
   publicRealtimeEnvironment,
   resolveServerPersistenceEnvironment,
 } from "../../src/realtime/server";
@@ -85,5 +86,43 @@ describe("Role 1 persistence environment", () => {
 
     const preview = resolveServerPersistenceEnvironment({ NEXT_PUBLIC_APP_ENV: "preview" });
     expect(() => createConfiguredPersistenceRuntime(preview)).toThrow(PersistenceConfigurationError);
+  });
+
+  it("reports deployment health without exposing keys", () => {
+    const local = resolveDeploymentHealthReport({ NEXT_PUBLIC_APP_ENV: "local" }, CHECKED_AT);
+    expect(local).toMatchObject({
+      checkedAt: CHECKED_AT,
+      deployment: "local",
+      persistence: { mode: "memory", status: "ready" },
+      publicRealtime: { configured: false },
+    });
+
+    const preview = resolveDeploymentHealthReport(
+      {
+        NEXT_PUBLIC_APP_ENV: "preview",
+        NEXT_PUBLIC_SUPABASE_URL: "https://fixture.supabase.co",
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fixture",
+        SUPABASE_SECRET_KEY: "sb_secret_fixture",
+      },
+      CHECKED_AT,
+    );
+    expect(preview).toMatchObject({
+      deployment: "preview",
+      persistence: { mode: "supabase", status: "ready" },
+      publicRealtime: { configured: true, url: "https://fixture.supabase.co" },
+    });
+    expect(JSON.stringify(preview)).not.toContain("sb_secret_fixture");
+    expect(JSON.stringify(preview)).not.toContain("sb_publishable_fixture");
+
+    const broken = resolveDeploymentHealthReport({ NEXT_PUBLIC_APP_ENV: "preview" }, CHECKED_AT);
+    expect(broken.persistence).toMatchObject({
+      mode: "misconfigured",
+      status: "misconfigured",
+      missing: [
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+        "SUPABASE_SECRET_KEY",
+      ],
+    });
   });
 });
