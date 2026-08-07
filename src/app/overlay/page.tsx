@@ -1,5 +1,5 @@
-import { ViewerOverlayDemo } from "@/viewer";
+import { ViewerOverlayInactive } from "@/viewer";
 
 export default function OverlayPage() {
-  return <ViewerOverlayDemo />;
+  return <ViewerOverlayInactive />;
 }

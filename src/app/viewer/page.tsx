@@ -1,5 +1,5 @@
-import { ViewerQuestBoardDemo } from "@/viewer";
+import { ViewerRuntimeUnavailable } from "@/viewer";
 
 export default function ViewerExtensionPage() {
-  return <ViewerQuestBoardDemo surface="extension" />;
+  return <ViewerRuntimeUnavailable surface="extension" />;
 }

@@ -1,11 +1,13 @@
 /** Role 5 public boundary for viewer participation and read-only overlay rendering. */
 export {
   ChatFallbackInstructions,
-  ChatFallbackInstructionsDemo,
   TwitchChatVoteInstructions,
 } from "./chat-fallback";
 export { createOverlayDemoView, createViewerDemoView } from "./demo-fixtures";
-export { QuestOverlay, ViewerOverlayDemo, ViewerOverlayVisual } from "./overlay-visual";
+export { ChatFallbackInstructionsDemo, ViewerOverlayDemo, ViewerQuestBoardDemo } from "./demo-surfaces";
+export { QuestOverlay, ViewerOverlayVisual } from "./overlay-visual";
+export { ViewerOverlayInactive, ViewerRuntimeUnavailable } from "./runtime-unavailable";
+export type { ViewerRuntimeSurface } from "./runtime-unavailable";
 export {
   activeQuest,
   buildViewerVoteCommand,
@@ -22,7 +24,6 @@ export {
   HostedQuestBoard,
   TwitchViewerPanel,
   ViewerQuestBoard,
-  ViewerQuestBoardDemo,
 } from "./viewer-quest-board";
 export type { HostedQuestBoardProps, TwitchViewerPanelProps, ViewerQuestBoardProps } from "./viewer-quest-board";
 export {

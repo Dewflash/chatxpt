@@ -1,15 +1,15 @@
 import type { OverlayViewModel } from "../core";
 import { DesignSystemRoot, Progress, StatusBadge } from "../design-system";
-import { createOverlayDemoView } from "./demo-fixtures";
 import { activeQuest, overlayPlacementClass, remainingSeconds } from "./surface-model";
 import styles from "./viewer-surfaces.module.css";
 
 export interface ViewerOverlayVisualProps {
   readonly view: OverlayViewModel;
   readonly now?: number;
+  readonly showInactivePreview?: boolean;
 }
 
-export function ViewerOverlayVisual({ view, now }: ViewerOverlayVisualProps) {
+export function ViewerOverlayVisual({ showInactivePreview = false, view, now }: ViewerOverlayVisualProps) {
   const effectiveNow = now ?? view.envelope.receivedAt;
   const quest = activeQuest(view.questCycle);
   const seconds = remainingSeconds(effectiveNow, view.questCycle.endsAt);
@@ -18,10 +18,28 @@ export function ViewerOverlayVisual({ view, now }: ViewerOverlayVisualProps) {
   const connectionCopy = view.connection.status === "ready" ? "Chat sidequest" : "Reconnecting";
   const result = view.questCycle.result;
   const votingOptions = view.questCycle.status === "voting" ? view.questCycle.options : [];
+  const votingDuration =
+    view.questCycle.startsAt === null || view.questCycle.endsAt === null
+      ? 0
+      : view.questCycle.endsAt - view.questCycle.startsAt;
+  const votingProgress =
+    view.questCycle.startsAt === null || votingDuration <= 0
+      ? 0
+      : Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(
+              ((effectiveNow - view.questCycle.startsAt) / votingDuration) * 100,
+            ),
+          ),
+        );
 
   return (
     <DesignSystemRoot className={styles.overlaySurface} theme="twitch">
-      {quest === null && votingOptions.length === 0 ? (
+      {quest === null && votingOptions.length === 0 && !showInactivePreview ? (
+        <div className={styles.overlayInactive} aria-label="Overlay inactive" />
+      ) : quest === null && votingOptions.length === 0 ? (
         <section className={`${styles.overlayCard} ${styles.quiet}`} aria-label="Overlay waiting state">
           <div className={styles.overlayMeta}><span>ChatXPT</span><span>Ready</span></div>
           <h1>Overlay ready</h1>
@@ -46,8 +64,8 @@ export function ViewerOverlayVisual({ view, now }: ViewerOverlayVisualProps) {
             <span className={styles.overlaySeconds}>{seconds ?? "--"}s</span>
             <Progress
               className={styles.overlayProgress}
-              label="Voting time"
-              value={seconds === null ? 0 : Math.max(0, Math.min(100, 100 - Math.round((seconds / 30) * 100)))}
+              label="Voting countdown"
+              value={votingProgress}
               valueLabel={seconds === null ? "Open" : `${seconds}s left`}
             />
             <StatusBadge tone="info">{`Hype ${view.communityHype}`}</StatusBadge>
@@ -79,8 +97,4 @@ export function ViewerOverlayVisual({ view, now }: ViewerOverlayVisualProps) {
 
 export function QuestOverlay(props: ViewerOverlayVisualProps) {
   return <ViewerOverlayVisual {...props} />;
-}
-
-export function ViewerOverlayDemo() {
-  return <ViewerOverlayVisual view={createOverlayDemoView("active")} now={1_786_200_016_000} />;
 }

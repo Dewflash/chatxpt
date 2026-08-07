@@ -1,5 +1,5 @@
-import { ViewerQuestBoardDemo } from "@/viewer";
+import { ViewerRuntimeUnavailable } from "@/viewer";
 
 export default function HostedViewerBoardPage() {
-  return <ViewerQuestBoardDemo surface="hosted-board" />;
+  return <ViewerRuntimeUnavailable surface="hosted-board" />;
 }

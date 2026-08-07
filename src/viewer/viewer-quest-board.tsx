@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import type { ViewerViewModel } from "../core";
 import { Button, CardGrid, DesignSystemRoot, Notice, Panel, Progress, StatusBadge } from "../design-system";
-import { acceptFixtureVote, createViewerDemoView } from "./demo-fixtures";
 import {
   buildViewerVoteCommand,
   remainingSeconds,
@@ -42,11 +41,19 @@ export function ViewerQuestBoard({
   heading = "Vote on the sidequest",
   demoLabel,
 }: ViewerQuestBoardProps) {
-  const [view, setView] = useState(initialView);
-  const [selectedId, setSelectedId] = useState<string | null>(initialView.acceptedCandidateId);
-  const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState("");
+  const inputKey = `${initialView.envelope.messageId}:${initialView.envelope.revision}:${initialView.acceptedCandidateId ?? "none"}`;
+  const [viewOverride, setViewOverride] = useState<{ readonly key: string; readonly view: ViewerViewModel } | null>(null);
+  const [selectedOverride, setSelectedOverride] = useState<{ readonly key: string; readonly candidateId: string | null } | null>(null);
+  const [pendingState, setPendingState] = useState<{ readonly key: string; readonly pending: boolean } | null>(null);
+  const [messageState, setMessageState] = useState<{ readonly key: string; readonly message: string } | null>(null);
   const commandSequence = useRef(0);
+  const view = viewOverride?.key === inputKey ? viewOverride.view : initialView;
+  const selectedId =
+    selectedOverride?.key === inputKey
+      ? selectedOverride.candidateId
+      : initialView.acceptedCandidateId;
+  const pending = pendingState?.key === inputKey ? pendingState.pending : false;
+  const message = messageState?.key === inputKey ? messageState.message : "";
   const now =
     view.envelope.evidenceClass === "fixture" && view.questCycle.startsAt !== null
       ? view.questCycle.startsAt + 10_000
@@ -59,8 +66,8 @@ export function ViewerQuestBoard({
 
   function submitVote() {
     if (selectedOption === null || pending || !view.canVote || hasAcceptedVote) return;
-    setPending(true);
-    setMessage("Sending vote for authoritative acknowledgement...");
+    setPendingState({ key: inputKey, pending: true });
+    setMessageState({ key: inputKey, message: "Sending vote for authoritative acknowledgement..." });
 
     commandSequence.current += 1;
 
@@ -74,18 +81,21 @@ export function ViewerQuestBoard({
     dispatchVote(command)
       .then((result) => {
         if (result.ok) {
-          setView(result.view);
-          setMessage(result.message);
+          setViewOverride({ key: inputKey, view: result.view });
+          setSelectedOverride({ key: inputKey, candidateId: result.view.acceptedCandidateId });
+          setMessageState({ key: inputKey, message: result.message });
           return;
         }
 
-        setMessage(result.message);
+        setMessageState({ key: inputKey, message: result.message });
       })
       .catch(() => {
-        setMessage("Vote could not be sent. Reconnect and try again.");
+        setMessageState({ key: inputKey, message: "Vote could not be sent. Reconnect and try again." });
       })
       .finally(() => {
-        setPending(false);
+        setPendingState((current) =>
+          current?.key === inputKey ? { key: inputKey, pending: false } : current,
+        );
       });
   }
 
@@ -126,7 +136,9 @@ export function ViewerQuestBoard({
                   className={`${styles.questOption} ${isSelected ? styles.selected : ""} ${isAccepted ? styles.accepted : ""}`}
                   key={option.candidateId}
                   onClick={() => {
-                    if (!pending && !hasAcceptedVote) setSelectedId(option.candidateId);
+                    if (!pending && !hasAcceptedVote) {
+                      setSelectedOverride({ key: inputKey, candidateId: option.candidateId });
+                    }
                   }}
                   type="button"
                   aria-pressed={isSelected}
@@ -167,7 +179,7 @@ export function ViewerQuestBoard({
 
           <div className={styles.reactionRow} aria-label="Reaction controls">
             {["Hype", "Clutch", "Careful"].map((reaction) => (
-              <Button disabled={!view.canReact} key={reaction} type="button" variant="secondary">
+              <Button disabled key={reaction} type="button" variant="secondary">
                 {reaction}
               </Button>
             ))}
@@ -261,34 +273,5 @@ function HostedQuestBoardAccessPanel({ access }: { readonly access: Exclude<Host
         </Panel>
       </div>
     </DesignSystemRoot>
-  );
-}
-
-export function ViewerQuestBoardDemo({ surface }: { readonly surface: ViewerSurfaceMode }) {
-  const initialView = useMemo(
-    () => createViewerDemoView({ mode: surface === "extension" ? "twitch-extension" : "hosted-board" }),
-    [surface],
-  );
-
-  const dispatchVote: ViewerVoteDispatcher = (command) =>
-    new Promise((resolve) => {
-      window.setTimeout(() => {
-        resolve({
-          ok: true,
-          view: acceptFixtureVote(initialView, command.candidateId),
-          message: "Vote accepted by fixture authority.",
-        });
-      }, 420);
-    });
-
-  return (
-    <ViewerQuestBoard
-      demoLabel="Fixture-only surface"
-      dispatchVote={dispatchVote}
-      initialView={initialView}
-      surface={surface}
-      heading={surface === "extension" ? "Vote without leaving Twitch" : "Join by link or room code"}
-      voterKey="fixture-viewer-key"
-    />
   );
 }

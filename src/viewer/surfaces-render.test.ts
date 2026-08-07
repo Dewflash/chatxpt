@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { ChatFallbackInstructions } from "./chat-fallback";
 import { createOverlayDemoView, createViewerDemoView } from "./demo-fixtures";
 import { QuestOverlay, ViewerOverlayVisual } from "./overlay-visual";
+import { ViewerOverlayInactive, ViewerRuntimeUnavailable } from "./runtime-unavailable";
 import { HostedQuestBoard, TwitchViewerPanel, ViewerQuestBoard } from "./viewer-quest-board";
 
 describe("Role 5 public viewer surfaces", () => {
@@ -141,13 +142,42 @@ describe("Role 5 public viewer surfaces", () => {
       }),
     );
 
-    expect(inactive).toContain("Overlay ready");
-    expect(inactive).toContain("No active quest is currently visible.");
+    expect(inactive).toContain("Overlay inactive");
+    expect(inactive).not.toContain("Overlay ready");
+    expect(inactive).not.toContain("No active quest is currently visible.");
     expect(voting).toContain("Voting open");
     expect(voting).toContain("Chat is choosing");
     expect(voting).toContain("Guardian Protocol");
     expect(voting).toContain("Caster Mode");
     expect(voting).not.toContain("+600 XP");
+  });
+
+  it("shows the overlay ready card only when a diagnostic preview asks for it", () => {
+    const html = renderToStaticMarkup(
+      h(ViewerOverlayVisual, {
+        showInactivePreview: true,
+        view: createOverlayDemoView("inactive"),
+      }),
+    );
+
+    expect(html).toContain("Overlay ready");
+    expect(html).toContain("No active quest is currently visible.");
+  });
+
+  it("keeps public route fallbacks free of bundled fixture quest state", () => {
+    const html = renderToStaticMarkup(
+      h(ViewerRuntimeUnavailable, {
+        surface: "extension",
+      }),
+    );
+    const overlay = renderToStaticMarkup(h(ViewerOverlayInactive));
+
+    expect(html).toContain("Viewer voting is waiting for the stream session");
+    expect(html).toContain("does not include static fixture votes");
+    expect(html).not.toContain("Guardian Protocol");
+    expect(html).not.toContain("Fixture-only surface");
+    expect(overlay).toContain("Overlay inactive");
+    expect(overlay).not.toContain("Overlay ready");
   });
 
   it("exports the accepted quest overlay wrapper name", () => {

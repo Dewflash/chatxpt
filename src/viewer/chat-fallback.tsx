@@ -1,6 +1,5 @@
 import type { ViewerViewModel } from "../core";
 import { DesignSystemRoot, Notice, Panel, StatusBadge } from "../design-system";
-import { createViewerDemoView } from "./demo-fixtures";
 import { visibleQuestOptions, type ChatVoteAcknowledgement } from "./surface-model";
 import styles from "./viewer-surfaces.module.css";
 
@@ -92,8 +91,4 @@ function chatAcknowledgementLabel(status: ChatVoteAcknowledgement["status"]): st
 
 export function TwitchChatVoteInstructions(props: ChatFallbackInstructionsProps) {
   return <ChatFallbackInstructions {...props} />;
-}
-
-export function ChatFallbackInstructionsDemo() {
-  return <ChatFallbackInstructions view={createViewerDemoView({ mode: "twitch-chat" })} />;
 }

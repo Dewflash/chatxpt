@@ -1,5 +1,5 @@
-import { ChatFallbackInstructionsDemo } from "@/viewer";
+import { ViewerRuntimeUnavailable } from "@/viewer";
 
 export default function ChatFallbackPage() {
-  return <ChatFallbackInstructionsDemo />;
+  return <ViewerRuntimeUnavailable surface="chat" />;
 }

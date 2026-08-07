@@ -1,5 +1,5 @@
-import { ViewerOverlayDemo } from "@/viewer";
+import { ViewerRuntimeUnavailable } from "@/viewer";
 
 export default function ViewerOverlayPage() {
-  return <ViewerOverlayDemo />;
+  return <ViewerRuntimeUnavailable surface="overlay-preview" />;
 }
