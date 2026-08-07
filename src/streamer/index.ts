@@ -16,3 +16,5 @@ export type {
   StreamerQuestCommand,
   StreamerViewModel,
 } from "../core";
+export { StudioStatusSurface } from "./studio-status";
+export type { StudioStatusSurfaceProps } from "./studio-status";
