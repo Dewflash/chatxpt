@@ -119,11 +119,6 @@ Each role also has an additive public `index.ts` in its owned source directory. 
 
 ## Third-party disclosure
 
-- Next.js and React - application framework and UI
-- OpenAI JavaScript SDK and Responses API - optional structured generation
-- Zod - runtime validation
-- Supabase JavaScript client and CLI - shared persistence, private realtime transport, and reproducible database migrations
-- `server-only` - build-time protection against importing secret-key adapters into client components
-- Vitest - automated tests
+Submission-facing third-party disclosures live in [`docs/THIRD_PARTY_DISCLOSURES.md`](docs/THIRD_PARTY_DISCLOSURES.md). The disclosure covers runtime dependencies, development tooling, Twitch/OBS/Supabase/Vercel/provider status, data and asset boundaries, non-MVP platforms, and evidence-claim rules.
 
 No third-party datasets are bundled. Existing demo chat and gameplay events are synthetic and may be used only as test/diagnostic fixtures, not live-extraction evidence.
