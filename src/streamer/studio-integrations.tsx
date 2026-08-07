@@ -1,4 +1,5 @@
 import { demoStudioIntegrationHealthView } from "./demo-integration-health";
+import { DesignSystemRoot, Notice, Panel, StatusBadge } from "../design-system";
 import {
   countByStatus,
   isDemoReady,
@@ -16,7 +17,19 @@ export interface StudioIntegrationsHealthProps {
 }
 
 function statusClass(status: IntegrationStatus): string {
-  return `${styles.statusBadge} ${styles[status]}`;
+  return styles[status];
+}
+
+function statusTone(status: IntegrationStatus): "success" | "warning" | "danger" {
+  switch (status) {
+    case "configured":
+      return "success";
+    case "degraded":
+      return "warning";
+    case "not-configured":
+    case "not-ready":
+      return "danger";
+  }
 }
 
 function IntegrationRow({ item }: { readonly item: StudioIntegrationHealthItem }) {
@@ -25,7 +38,9 @@ function IntegrationRow({ item }: { readonly item: StudioIntegrationHealthItem }
       <div className={styles.integrationMain}>
         <div className={styles.rowHeader}>
           <h3>{item.name}</h3>
-          <span className={statusClass(item.status)}>{statusLabel(item.status)}</span>
+          <StatusBadge className={statusClass(item.status)} tone={statusTone(item.status)}>
+            {statusLabel(item.status)}
+          </StatusBadge>
         </div>
         <p>{item.purpose}</p>
         <dl>
@@ -53,7 +68,7 @@ export function StudioIntegrationsHealth({ view }: StudioIntegrationsHealthProps
   const ready = isDemoReady(view);
 
   return (
-    <main className={styles.studioShell}>
+    <DesignSystemRoot className={styles.studioShell} theme="twitch">
       <aside className={styles.sidebar} aria-label="Studio sections">
         <a className={styles.brand} href="/studio">
           <span className={styles.brandMark}>XP</span>
@@ -78,9 +93,9 @@ export function StudioIntegrationsHealth({ view }: StudioIntegrationsHealthProps
               Role 1 wires real health checks.
             </p>
           </div>
-          <span className={ready ? styles.readyPill : styles.blockedPill}>
+          <StatusBadge tone={ready ? "success" : "warning"}>
             {ready ? "Demo ready" : "Demo blocked"}
-          </span>
+          </StatusBadge>
         </header>
 
         <section className={styles.summaryGrid} aria-label="Integration status summary">
@@ -92,23 +107,33 @@ export function StudioIntegrationsHealth({ view }: StudioIntegrationsHealthProps
           ))}
         </section>
 
-        <section className={styles.healthPanel} aria-label="Integration health details">
+        <Panel className={styles.healthPanel} aria-label="Integration health details">
           <div className={styles.panelHeader}>
             <div>
               <p className={styles.eyebrow}>Configured / not configured</p>
               <h2>Runtime dependencies</h2>
             </div>
-            <span>{view.evidenceClass} view</span>
+            <StatusBadge tone={view.evidenceClass === "live" ? "success" : "diagnostic"}>
+              {`${view.evidenceClass} view`}
+            </StatusBadge>
           </div>
           <div className={styles.integrationList}>
             {view.items.map((item) => (
               <IntegrationRow item={item} key={item.id} />
             ))}
           </div>
-        </section>
+          <Notice title="Evidence boundary" tone={view.evidenceClass === "live" ? "success" : "warning"}>
+            This surface shows technical health supplied to Role 4. Fixture or diagnostic health does not prove real
+            Twitch, OBS, Supabase, AI, or extraction readiness.
+          </Notice>
+        </Panel>
       </section>
-    </main>
+    </DesignSystemRoot>
   );
+}
+
+export function StudioIntegrationHealthPanel(props: StudioIntegrationsHealthProps) {
+  return <StudioIntegrationsHealth {...props} />;
 }
 
 export function StudioIntegrationsHealthDemo() {

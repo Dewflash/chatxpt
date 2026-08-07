@@ -13,7 +13,12 @@ export type {
   StudioIntegrationHealthItem,
   StudioIntegrationHealthView,
 } from "./integration-health-model";
-export { StudioIntegrationsHealth, StudioIntegrationsHealthDemo } from "./studio-integrations";
+export {
+  StudioIntegrationHealthPanel,
+  StudioIntegrationsHealth,
+  StudioIntegrationsHealthDemo,
+} from "./studio-integrations";
+export type { StudioIntegrationsHealthProps } from "./studio-integrations";
 export {
   streamerQuestCommandSchema,
   streamerProfileSchema,
