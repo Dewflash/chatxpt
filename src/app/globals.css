@@ -97,6 +97,20 @@ input[type="range"] { accent-color: var(--violet); padding: 7px 0; background: t
 .hosted-board-panel dd { margin: 0; font-weight: 800; text-align: right; }
 .hosted-board-share { margin-top: 16px !important; padding: 10px 12px; border-radius: 8px; background: rgba(215,255,82,.07); color: var(--lime) !important; overflow-wrap: anywhere; font-size: 12px; }
 
+.twitch-extension-shell { min-height: 100vh; display: grid; place-items: center; padding: 20px; background: #0c0912; color: #f7f3ff; }
+.twitch-extension-panel { width: min(560px, 100%); padding: 22px; border: 1px solid var(--line); border-radius: 8px; background: rgba(16,12,24,.92); box-shadow: 0 20px 60px rgba(0,0,0,.28); }
+.twitch-extension-panel h1 { margin: 0; font: 700 26px/1.12 "Space Grotesk", sans-serif; letter-spacing: 0; }
+.twitch-extension-panel p { margin: 12px 0 18px; color: #d6d0e4; line-height: 1.5; }
+.twitch-extension-panel dl { display: grid; gap: 8px; margin: 0 0 16px; }
+.twitch-extension-panel dl div { min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.twitch-extension-panel dt { color: var(--muted); font-size: 12px; }
+.twitch-extension-panel dd { margin: 0; font-weight: 800; text-align: right; }
+.twitch-extension-services { display: grid; gap: 8px; margin-bottom: 14px; }
+.twitch-extension-services span { min-height: 32px; display: flex; align-items: center; padding: 7px 9px; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; color: #d6d0e4; background: rgba(255,255,255,.025); font-size: 12px; text-transform: capitalize; }
+.twitch-extension-services span[data-state="ready"] { border-color: rgba(215,255,82,.28); color: var(--lime); background: rgba(215,255,82,.06); }
+.twitch-extension-services span[data-state="misconfigured"] { border-color: rgba(255,111,97,.28); color: var(--coral); background: rgba(255,111,97,.06); }
+.twitch-extension-panel ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
 @media (max-width: 1000px) {
   .hero { grid-template-columns: 1fr; }.signal-orbit { display: none; }
   .workspace { grid-template-columns: 1fr; }.quest-panel { min-height: 460px; }
