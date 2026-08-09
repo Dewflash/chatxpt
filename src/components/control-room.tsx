@@ -708,15 +708,25 @@ export function ControlRoom() {
         <a className="ghost-button" href="/overlay" target="_blank" rel="noreferrer">Open overlay ↗</a>
       </header>
 
-      <section className="hero" id="top">
+      <section className="studio-strip" id="top">
         <div>
-          <p className="eyebrow">Viewer agency, generated live</p>
-          <h1>Turn the moment into a <em>sidequest.</em></h1>
-          <p className="hero-copy">Gameplay context, chat energy, and streamer style become three vote-ready challenges in seconds.</p>
+          <p className="eyebrow">Studio</p>
+          <h1>Demo controls</h1>
+          <p className="hero-copy">Capture game, connect chat, generate quests, publish to OBS.</p>
         </div>
-        <div className="signal-orbit" aria-label="Three engine inputs">
-          <span>GAME</span><span>CHAT</span><span>CREATOR</span>
-          <strong>AI</strong>
+        <div className="studio-strip-status" aria-label="Demo loop status">
+          <span data-state={analysis.status === "running" ? "ready" : "idle"}>
+            <b>Screen</b>{analysis.status === "running" ? "Live" : "Idle"}
+          </span>
+          <span data-state={chatStatus === "connected" ? "ready" : "idle"}>
+            <b>Chat</b>{chatStatus === "connected" ? "Connected" : "Idle"}
+          </span>
+          <span data-state={quests.length === 3 ? "ready" : "idle"}>
+            <b>Quests</b>{quests.length === 3 ? "Ready" : "Empty"}
+          </span>
+          <span data-state={activeQuest ? "ready" : "idle"}>
+            <b>Overlay</b>{activeQuest ? "Showing" : "Waiting"}
+          </span>
         </div>
       </section>
 
@@ -734,7 +744,7 @@ export function ControlRoom() {
             <button onClick={connectTwitchChat}>
               {chatStatus === "connected" ? "Reconnect chat" : "Connect chat"}
             </button>
-            <button onClick={generate} disabled={loading}>
+            <button className="primary-ribbon-action" onClick={generate} disabled={loading}>
               {loading ? "Reading..." : "Generate now"}
             </button>
             <a href="/overlay" target="_blank" rel="noreferrer">Open overlay</a>
