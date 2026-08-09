@@ -256,6 +256,14 @@ async function publishDemoParticipationQuests(quests: Sidequest[]) {
   });
 }
 
+async function clearDemoParticipation() {
+  await fetch("/api/demo-participation", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ type: "clear" }),
+  });
+}
+
 async function submitDemoParticipationVote(questId: string, voterKey: string) {
   await fetch("/api/demo-participation", {
     method: "POST",
@@ -310,7 +318,10 @@ export function ControlRoom() {
   const demoEventIdRef = useRef(0);
 
   useEffect(() => {
-    const initialClear = window.setTimeout(() => publishActiveQuest(null), 0);
+    const initialClear = window.setTimeout(() => {
+      publishActiveQuest(null);
+      void clearDemoParticipation();
+    }, 0);
     return () => window.clearTimeout(initialClear);
   }, []);
 
