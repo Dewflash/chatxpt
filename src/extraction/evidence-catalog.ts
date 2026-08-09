@@ -82,9 +82,21 @@ function uniqueUses(uses: readonly ExtractionAssetUse[]): ExtractionAssetUse[] {
   return [...new Set(uses)];
 }
 
+function isGameplayCaptureKind(asset: ExtractionEvidenceAsset): boolean {
+  return asset.kind === "gameplay-recording" || asset.kind === "gameplay-frame";
+}
+
+function isLiveObsGameplayCapture(asset: ExtractionEvidenceAsset): boolean {
+  return (
+    asset.acquisition === "live-obs" &&
+    asset.source === "obs-virtual-camera" &&
+    isGameplayCaptureKind(asset)
+  );
+}
+
 function deriveEvidenceClass(asset: ExtractionEvidenceAsset): z.infer<typeof evidenceClassSchema> {
   if (asset.acquisition === "synthetic-test-fixture") return "fixture";
-  if (asset.acquisition === "live-obs") return "live";
+  if (isLiveObsGameplayCapture(asset)) return "live";
   return "diagnostic";
 }
 
@@ -93,13 +105,14 @@ function deriveAllowedUses(asset: ExtractionEvidenceAsset): ExtractionAssetUse[]
 
   const uses: ExtractionAssetUse[] = ["diagnostic-spike"];
   if (
-    asset.acquisition === "recorded-owned-gameplay" ||
-    asset.acquisition === "recorded-authorized-gameplay" ||
+    ((asset.acquisition === "recorded-owned-gameplay" ||
+      asset.acquisition === "recorded-authorized-gameplay") &&
+      isGameplayCaptureKind(asset)) ||
     asset.acquisition === "sanitized-real-chat"
   ) {
     uses.push("real-extraction-evaluation");
   }
-  if (asset.acquisition === "live-obs") {
+  if (isLiveObsGameplayCapture(asset)) {
     uses.push("real-extraction-evaluation", "live-demo-proof");
   }
   return uniqueUses(uses);
@@ -118,6 +131,23 @@ function collectBlockers(asset: ExtractionEvidenceAsset): string[] {
 
   if (asset.kind === "chat-transcript" && asset.acquisition !== "sanitized-real-chat") {
     blockers.push("Chat transcripts must be sanitised before Role 2 can use them as real audience evidence.");
+  }
+
+  if (
+    asset.acquisition === "sanitized-real-chat" &&
+    (asset.kind !== "chat-transcript" || asset.source !== "twitch")
+  ) {
+    blockers.push("Sanitised real chat evidence must be a Twitch chat transcript.");
+  }
+
+  if (
+    asset.kind === "annotation" &&
+    (asset.acquisition === "live-obs" ||
+      asset.source === "obs-virtual-camera" ||
+      asset.acquisition === "recorded-owned-gameplay" ||
+      asset.acquisition === "recorded-authorized-gameplay")
+  ) {
+    blockers.push("Annotation-only assets cannot stand in for gameplay capture evidence.");
   }
 
   if (asset.containsRawPersonalData) {
@@ -139,6 +169,10 @@ function collectBlockers(asset: ExtractionEvidenceAsset): string[] {
     blockers.push("Live demo extraction proof must come through the OBS Virtual Camera source.");
   }
 
+  if (asset.acquisition === "live-obs" && !isGameplayCaptureKind(asset)) {
+    blockers.push("Live demo extraction proof requires gameplay-frame or gameplay-recording input.");
+  }
+
   return blockers;
 }
 
@@ -153,7 +187,7 @@ export function assessExtractionEvidenceAsset(
     evidenceClass === "live" &&
     allowedUses.includes("live-demo-proof") &&
     blockers.length === 0 &&
-    asset.acquisition === "live-obs";
+    isLiveObsGameplayCapture(asset);
 
   return extractionEvidenceAssessmentSchema.parse({
     asset,
