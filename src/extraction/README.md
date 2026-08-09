@@ -4,6 +4,8 @@ Role 2 owns real-frame and audience extraction behind the canonical types export
 
 `GameplayExtractionPipeline` adapts Role 1's ephemeral `FrameSource` into canonical gameplay snapshots. `AudienceExtractionPipeline` adapts normalised `AudienceEventSource` events into canonical audience snapshots. Implementations, sampling, OCR, calibration, and aggregation remain private to Role 2.
 
+`createAudienceSignalPipeline` provides the first credential-free audience implementation on main. It consumes normalised audience events, keeps only privacy-safe rolling-window categories, and emits audience energy, intent, repeated-request, chat-vote, and negative-pressure signals. It does not retain raw chat text or claim real Twitch evidence from fixtures.
+
 The current R2-P03/P03A boundary includes observation fusion, snapshot builders, bounded browser-canvas pixel sampling, a game-neutral frame-difference measurement stream, and selective-region OCR experiment plumbing. The measurement stream consumes the canonical `FrameSource`, copies only a capped downsample, and releases every ephemeral frame before yielding. It deliberately does not classify action, quiet, or transitions until D2-07 through D2-10 are settled.
 
 `assessExtractionEvidenceAsset` classifies Role 2 gameplay/chat assets before they are used as evidence. It lets team-owned recordings and sanitised chat support real extraction evaluation, keeps synthetic fixtures fixture-only, and only permits live demo claims for privacy-reviewed OBS Virtual Camera input with separated annotations.
