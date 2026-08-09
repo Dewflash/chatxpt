@@ -1,19 +1,21 @@
 # End-to-End Prototype Check
 
 **Checked:** 2026-08-09
-**Post-merge update:** PRs #124-#129 are merged into `main`; `npm run check` passes on merged `main` at commit `efd81ce`.
+**Post-merge update:** PRs #124-#131 are merged into `main`; `npm run check` passed on the merged branch before handoff.
 
 ## Current Verdict
 
-The repository contains a runnable local prototype that demonstrates the core idea with synthetic/fixture inputs:
+The repository contains a runnable local prototype that demonstrates the core idea with fixture inputs and a local live-demo bridge:
 
 1. streamer-facing signal controls;
 2. exactly three generated sidequests;
-3. manual viewer-vote simulation;
-4. streamer activation and result controls;
-5. OBS-style overlay output.
+3. local screen/window activity sampling when the browser is granted capture permission;
+4. anonymous Twitch-chat `1`/`2`/`3` vote ingestion for the configured broadcaster channel when Twitch chat is reachable;
+5. manual viewer-vote simulation as a diagnostic fallback;
+6. streamer activation and result controls;
+7. OBS-style overlay output through `http://localhost:3000/overlay`.
 
-That path is useful for a demo walkthrough and deterministic diagnostics, but it is not live end-to-end evidence. The accepted MVP evidence still needs real Twitch resources, real OBS Virtual Camera gameplay input, real viewer activity, and the same authoritative session/cycle revision across Studio, two viewer clients, persistence, and OBS overlay.
+That path is useful for a demo walkthrough and deterministic diagnostics. If the recording visibly exercises screen capture and Twitch chat, those individual inputs may be described as real local inputs. It is still not full golden end-to-end evidence. The accepted MVP evidence still needs the same authoritative session/cycle revision across Studio, two viewer clients, persistence, and OBS overlay, with every unavailable signal labelled honestly.
 
 For immediate recording, use `docs/submission/MANUAL_TEST_RECORDING_RUNBOOK.md`.
 
@@ -33,8 +35,8 @@ Local demo routes:
 
 | Route | Current use | Evidence class |
 | --- | --- | --- |
-| `/` | Legacy control room with synthetic gameplay/chat/profile controls, sidequest generation, simulated votes, activation, complete/fail/clear controls | fixture/diagnostic |
-| `/overlay` | Legacy browser overlay reading the active quest through browser storage and `BroadcastChannel` | fixture/diagnostic |
+| `/` | Legacy control room with Brawl Stars-safe defaults, live screen/window activity sampler, anonymous Twitch-chat vote connector, sidequest generation, simulated vote fallback, activation, complete/fail/clear controls | local prototype / diagnostic |
+| `/overlay` | Legacy browser overlay reading active quest state through the local overlay route/state bridge | local prototype / diagnostic |
 | `/diagnostics/ui-harness` | Fixture session showing shared Studio, Viewer, and OBS overlay view-model shape, revision, and command envelopes | fixture-only |
 | `/api/ui-gateway/fixture` | JSON fixture for the UI gateway view models | fixture-only |
 | `/api/ui-gateway/commands` | Validates fixture command envelopes and stale revisions without mutating authoritative runtime | fixture-only |
@@ -47,14 +49,15 @@ Local demo routes:
 
 1. Run `npm run dev`.
 2. Open `http://localhost:3000/`.
-3. Use the default golden scenario or adjust match phase, squad status, health, viewer mood, streamer style, and chat request.
-4. Click **Generate sidequests**.
-5. Confirm exactly three quest cards appear. With no `OPENAI_API_KEY`, this uses the safe mock/demo engine. If `OPENAI_API_KEY` is configured, the legacy API tries the optional OpenAI adapter and falls back to the mock engine on failure.
-6. Click `+ vote` on the three options to simulate viewer voting. This is not authoritative Twitch, hosted-board, or chat voting.
-7. Click **Activate** on the chosen quest.
-8. Open `http://localhost:3000/overlay` in another browser tab or OBS Browser Source to show the active quest, timer, status, and reward.
-9. Return to the control room and click **Complete**, **Fail**, or **Clear** to demonstrate terminal overlay updates.
-10. Open `http://localhost:3000/diagnostics/ui-harness` separately to show the newer canonical fixture shape: one session ID, one quest-cycle ID, one revision, exactly three options, streamer/viewer/overlay views, and example command envelopes.
+3. Click **Capture game window** and choose the game/phone/OBS preview window. Confirm the preview thumbnail and checksum are changing before claiming live screen sampling.
+4. Connect Twitch chat to the broadcaster channel, for example `dewflash`, if a test stream is available.
+5. Click **Generate sidequests**.
+6. Confirm exactly three Brawl Stars-safe quest cards appear. With no `OPENAI_API_KEY`, this uses the safe mock/demo engine. If `OPENAI_API_KEY` is configured, the legacy API tries the optional OpenAI adapter and falls back to the mock engine on failure. The accepted judged MVP path remains the credential-free algorithmic route recorded in D-055.
+7. Ask Role 2 or another viewer to type `1`, `2`, or `3` in Twitch chat. Confirm the vote increments in the app. If Twitch chat is unavailable, click `+ vote` and label it as simulated diagnostic voting.
+8. Click **Activate** on the winning quest or the chosen quest.
+9. Open `http://localhost:3000/overlay` in another browser tab or OBS Browser Source to show the active quest, timer, status, and reward.
+10. Return to the control room and click **Complete**, **Fail**, or **Clear** to demonstrate terminal overlay updates.
+11. Open `http://localhost:3000/diagnostics/ui-harness` separately to show the newer canonical fixture shape: one session ID, one quest-cycle ID, one revision, exactly three options, streamer/viewer/overlay views, and example command envelopes.
 
 ## AI Contribution Path
 
@@ -87,6 +90,8 @@ The accepted Role 2/Role 3 path is not yet wired into the visible `/` route as l
 - Invalid `/api/sidequests` JSON or signal shape returns a 400 response.
 - Missing `OPENAI_API_KEY` uses the deterministic mock engine.
 - Legacy OpenAI failure falls back to the mock engine and returns a warning.
+- Twitch chat connection failure leaves the local demo able to continue through labelled diagnostic votes.
+- Screen capture that is frozen, black, or incorrectly selected can be identified through the preview thumbnail and checksum before any live-analysis claim is made.
 - The mock engine filters boundary-matching quest text and fills with safe fallback quests to keep exactly three options.
 - `/api/ui-gateway/commands` rejects stale fixture revisions and malformed command envelopes.
 - Hosted board access has explicit invalid, not-found, expired, inactive, and unavailable states.
@@ -103,6 +108,8 @@ The local demo can produce an OBS-style overlay card with:
 - reward points;
 - completed/failed visual status after producer action.
 
+For the five-minute video, Role 2 should prepare the exact script and act as the viewer who joins the channel and votes within the short vote window. The intended story is: one-time OBS setup, future streams reuse the scene, the streamer plays, ChatXPT samples the selected screen/window and channel chat, three quests appear, the viewer votes, the winning quest reaches the OBS overlay, and the video closes with analytics plus quest-generator explanation under five minutes.
+
 The newer Role 5 fixture evidence also shows Twitch, hosted-board, and OBS overlay render states, but the evidence manifest labels that as fixture-only.
 
 ## Remaining Live Evidence Blockers
@@ -110,8 +117,7 @@ The newer Role 5 fixture evidence also shows Twitch, hosted-board, and OBS overl
 - Twitch broadcaster account/developer app/Extension test setup is still `owner-action-required`.
 - Two isolated viewer sessions are still `owner-action-required`.
 - OBS gameplay machine and real OBS Virtual Camera sampling are still `owner-action-required`.
-- Real Twitch chat/activity ingestion and outbound acknowledgement are not evidenced.
-- Real Twitch Extension identity/JWT validation is not evidenced.
+- Real Twitch Extension identity/JWT validation and outbound acknowledgement are not evidenced.
 - Real hosted-board two-client voting against an authoritative session is not evidenced.
 - Real Supabase cloud realtime/persistence and Vercel deployment evidence are still outstanding.
 - Role 2 real-frame extraction/OCR and real gameplay asset evaluation are still blocked or incomplete until the owner records a real OBS/gameplay run.

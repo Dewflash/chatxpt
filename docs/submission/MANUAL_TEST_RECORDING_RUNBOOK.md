@@ -25,6 +25,35 @@
 
 3. Start screen recording before the first page interaction.
 
+## Five-Minute Demo Plan
+
+Use this plan when the project owner and Role 2 record the final short video. Role 2 owns the narration/run-of-show draft and acts as the viewer during the live run-through.
+
+| Time | Segment | What to show | Role 2 action |
+| --- | --- | --- | --- |
+| 0:00-0:25 | Product promise | ChatXPT turns gameplay state, viewer activity, and streamer preferences into safe sidequests viewers choose in real time. | Keep this to one plain-language line; no architecture lecture. |
+| 0:25-0:55 | First setup | OBS has the game/screen source and ChatXPT Browser Source overlay at `http://localhost:3000/overlay`, with the overlay above gameplay in Sources. | Script the one-time setup line: once OBS is configured, future streams reuse the saved scene. |
+| 0:55-1:25 | Streamer Studio/control room | Open `http://localhost:3000/`, show live screen analysis, streamer settings/context, and exactly three generated quests. | Call out only the signals visible on screen, such as activity/delta/confidence/chat; unsupported gameplay facts stay unknown. |
+| 1:25-2:30 | Live run-through | Project owner plays the game while ChatXPT samples the selected screen/window, generates three Brawl Stars-safe sidequests, and starts a short vote. | Join the Twitch channel as viewer and type `1`, `2`, or `3` within the voting window. |
+| 2:30-3:15 | Viewer vote and overlay | Show the vote count update, activate or auto-show the winning quest, and show the OBS overlay updating for the broadcast. | Confirm the viewer action is the vote shown on screen; if chat cannot connect, label the fallback honestly. |
+| 3:15-4:15 | Analytics and quest generator | Explain that ChatXPT combines broad gameplay activity, audience signals, streamer boundaries, and deterministic safety/validation to choose appropriate quests. | Keep the analysis explanation practical: what changed, why the quest fits, what is still prototype-level. |
+| 4:15-5:00 | Outcome and close | Complete/fail the quest, show status/reward/history or the relevant local state, and close with the reusable workflow. | End with the future-stream line: open OBS, start stream, play, viewers vote, overlay updates. |
+
+### Role 2 Handoff Wording
+
+Role 2 should prepare the exact script and step-by-step capture process for the five-minute video. The required story is:
+
+1. Explain the app, OBS overlay, and Streamer Studio.
+2. Show first-time setup: open OBS, add/connect ChatXPT overlay/browser sources, and configure once.
+3. Show future-stream setup: OBS remembers the same sources, so the streamer opens OBS and starts.
+4. Run through the intended live loop: the streamer plays, ChatXPT silently assesses the selected screen/window and viewer activity, then generates sidequest options without constant streamer clicking.
+5. Start a short vote around 30 seconds into the run-through.
+6. Role 2 joins as the viewer and actually votes within that window.
+7. Show the winning quest on the OBS overlay.
+8. Finish with analytics and quest-generator discussion under the five-minute limit.
+
+The script must stay honest: real local screen sampling, real Twitch-chat messages, and real OBS Browser Source rendering may be shown when exercised; fixture, manual, local-only, or unavailable behaviour must be labelled as such.
+
 ## Recording Script
 
 1. Show the GitHub/repository state or terminal output:
@@ -60,11 +89,11 @@
    - Open `http://localhost:3000/`.
    - Generate sidequests.
    - Confirm exactly three options.
-   - Simulate votes.
+   - Connect Twitch chat to the broadcaster channel if available and ask a viewer to type `1`, `2`, or `3`; otherwise simulate votes and label them as diagnostic.
    - Activate a winning quest.
    - Show overlay updates.
    - Complete or fail the quest.
-   - Label this as local fixture/diagnostic proof, not real Twitch voting, real OBS frame extraction, real Supabase/Vercel, or golden workflow proof.
+   - Label this as local prototype proof. Only claim real Twitch voting or real screen sampling when the recording visibly exercises those live inputs.
 
 ## Claims This Recording Can Support
 
@@ -74,12 +103,13 @@
 - Browser-safe routes and deployment health endpoint respond.
 - Credential-free local persistence works for development.
 - The system distinguishes fixture/local evidence from live Twitch/OBS/cloud evidence.
+- If exercised on camera, the legacy local control room can sample a selected screen/window, connect to Twitch chat as an anonymous reader for `1`/`2`/`3` messages, and update the local OBS overlay route.
 
 ## Claims This Recording Cannot Support Alone
 
-- Real Twitch chat ingestion.
+- Real Twitch chat ingestion, unless the recording visibly connects to the broadcaster channel and shows live chat messages becoming votes.
 - Twitch Extension JWT identity verification.
-- Real OBS Virtual Camera frame extraction.
+- Real OBS Virtual Camera frame extraction. The visible local screen/window sampler is evidence only for the source actually selected and recorded.
 - Real Supabase cloud realtime/persistence.
 - Real Vercel deployment.
 - Two external viewer sessions voting against the same authoritative cloud revision.
