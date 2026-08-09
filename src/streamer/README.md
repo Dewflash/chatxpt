@@ -15,3 +15,7 @@ Role 1 created this additive boundary under the recorded integration override. N
 - explicit fixture/diagnostic, reconnecting, loading, and missing-snapshot states.
 
 The current merged contract does not yet provide an accepted setup-command result or overall readiness view. The shell therefore keeps connection, permission, profile-save, and session controls unavailable. Role 1 can mount the render-only module now and later supply validated gateway state without Role 4 importing integration internals.
+
+## Phase 3 status surface
+
+`StudioStatusSurface` is an additive Role 4-owned status module beside the accepted setup shell. It consumes `StreamerViewModel`, shows per-service integration health, gameplay/audience evidence status, quest state, and emergency pause without deriving an overall ready/demo verdict or creating backend authority.
