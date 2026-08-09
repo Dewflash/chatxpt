@@ -6,7 +6,7 @@
 
 **Evidence label legend:** `[real]` means proven by a manifest `real` entry. `[fixture]` means deterministic fixture/test or fixture screenshot evidence. `[diagnostic]` means source inspection, local fallback, static checks, or planning evidence only. `[unknown]` means the repo defines the intended behaviour, but no current manifest entry proves it.
 
-**Current evidence boundary:** `docs/evidence/manifest.json` currently records repository/process validation as inspection-only and Role 5 fixture-rendered viewer/overlay screenshots as fixture-only. It records no real Twitch, OBS, Supabase cloud, Vercel deployment, free-provider, real OCR, real gameplay, or end-to-end golden workflow evidence.
+**Current evidence boundary:** `docs/evidence/manifest.json` currently records repository/process validation as inspection-only and Role 5 fixture-rendered viewer/overlay screenshots as fixture-only. It records no real Twitch, OBS, Supabase cloud, Vercel deployment, external model-provider, real OCR, real gameplay, or end-to-end golden workflow evidence.
 
 ## Slide 1: ChatXPT Turns Livestream Chat Into Playable Sidequests
 
@@ -66,11 +66,11 @@
 - AI contribution is scoped to gameplay/audience intelligence and candidate generation.
 - The product never requires paid model usage for the MVP.
 - Provider output must be structured, validated, and routed through Role 3 before viewers see it.
-- If a provider is slow, unavailable, malformed, or refused, credential-free algorithms and deterministic fallback continue the workflow.
+- D-055 adopts no external model provider for the judged MVP; credential-free algorithms and deterministic fallback continue the workflow.
 
-**Evidence labels:** provider fallback tests and strategy `[diagnostic]`; live free-provider run `[unknown]`; algorithmic path on real inputs `[unknown]`.
+**Evidence labels:** provider decision and fallback strategy `[diagnostic]`; algorithmic path on real inputs `[unknown]`; external provider trial `[unknown/future]`.
 
-**Screenshots/assets needed:** Studio/provider status screenshot showing provider, algorithmic, and fallback labels after Role 1 promotes canonical UI-X09 fixtures or live evidence exists.
+**Screenshots/assets needed:** Studio intelligence status screenshot showing algorithmic and deterministic fallback labels after Role 1 promotes canonical UI-X09 fixtures or live evidence exists.
 
 ## Slide 7: Gameplay Understanding Is Honest About Confidence And Unknowns
 
@@ -153,7 +153,7 @@
 
 - Supabase Free is the accepted authoritative persistence/realtime target; credential-free memory mode remains a development fallback.
 - Vercel is the planned deployment host; deployment evidence is not yet recorded.
-- Server-only secrets protect Twitch, Supabase, and provider credentials.
+- Server-only secrets protect Twitch and Supabase credentials; any future provider trial would also remain server-side.
 - Raw frames are ephemeral; raw chat is processed in memory unless approved for short-lived debugging; rewards are session-scoped and non-monetary.
 - Third-party disclosures cover runtime dependencies, development tooling, Twitch, OBS, Supabase, Vercel, and provider status.
 
