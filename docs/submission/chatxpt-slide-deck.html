@@ -115,65 +115,6 @@
       background: #050408;
     }
 
-    .thanks-slide {
-      aspect-ratio: 16 / 9;
-      display: grid;
-      place-items: center;
-      padding: clamp(2rem, 6vw, 5rem);
-      overflow: hidden;
-      background:
-        radial-gradient(circle at 18% 18%, rgba(202, 255, 61, 0.18), transparent 24rem),
-        radial-gradient(circle at 82% 75%, rgba(139, 99, 255, 0.22), transparent 26rem),
-        #08070d;
-    }
-
-    .thanks-content {
-      width: min(900px, 100%);
-    }
-
-    .thanks-kicker {
-      margin: 0 0 1.2rem;
-      color: var(--accent);
-      font-size: clamp(0.95rem, 1.8vw, 1.3rem);
-      font-weight: 800;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-    }
-
-    .thanks-title {
-      margin: 0;
-      font-size: clamp(4rem, 13vw, 9rem);
-      line-height: 0.88;
-      letter-spacing: 0;
-    }
-
-    .thanks-brand {
-      margin: 1.4rem 0 2.4rem;
-      color: var(--muted);
-      font-size: clamp(1.3rem, 3vw, 2rem);
-      font-weight: 800;
-    }
-
-    .member-list {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 0.7rem;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .member-list li {
-      padding: 0.9rem;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.055);
-      color: var(--text);
-      font-size: clamp(0.95rem, 1.7vw, 1.25rem);
-      font-weight: 800;
-      text-align: center;
-    }
-
     footer {
       padding: 2rem;
       color: var(--muted);
@@ -212,9 +153,6 @@
         border-radius: 0;
       }
 
-      .thanks-slide {
-        border-radius: 0;
-      }
     }
   </style>
 </head>
@@ -237,7 +175,6 @@
       <a href="#slide-13">13</a>
       <a href="#slide-14">14</a>
       <a href="#slide-15">15</a>
-      <a href="#slide-16">16</a>
     </nav>
   </header>
 
@@ -301,20 +238,6 @@
     <section class="slide" id="slide-15">
       <h2><span>15</span> Future work</h2>
       <img src="chatxpt-slide-deck-html-assets/slide-15.png" alt="Slide 15: Future work beyond one Twitch MVP">
-    </section>
-    <section class="slide thanks-slide" id="slide-16">
-      <div class="thanks-content">
-        <p class="thanks-kicker">ChatXPT</p>
-        <p class="thanks-title">Thank you</p>
-        <p class="thanks-brand">Built by Team ChatXPT</p>
-        <ul class="member-list" aria-label="Team members">
-          <li>Kevin Yong</li>
-          <li>Joel Yap</li>
-          <li>Fred</li>
-          <li>Lim Jia Yin</li>
-          <li>Phua Jun Kai</li>
-        </ul>
-      </div>
     </section>
   </main>
 
