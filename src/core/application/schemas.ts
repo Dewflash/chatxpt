@@ -14,6 +14,13 @@ import {
 } from "../contracts";
 import { commandFingerprint } from "./fingerprint";
 
+export const recentQuestSummarySchema = z
+  .object({
+    title: z.string().trim().min(3).max(80),
+    occurredAt: timestampSchema,
+  })
+  .strict();
+
 export const authoritativeSessionStateSchema = z
   .object({
     session: streamSessionSchema,
@@ -24,6 +31,7 @@ export const authoritativeSessionStateSchema = z
     questCycle: questCycleStateSchema,
     emergencyPaused: z.boolean(),
     communityHype: z.number().int().nonnegative(),
+    recentQuests: z.array(recentQuestSummarySchema).max(20).optional(),
   })
   .strict()
   .superRefine((state, context) => {

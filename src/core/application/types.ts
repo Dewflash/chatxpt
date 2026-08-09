@@ -4,6 +4,7 @@ import type {
   DomainError,
   GameplaySnapshot,
   QuestCycleState,
+  RecentQuestSummary,
   QuestEngineEvent,
   RoleViewModels,
   ServiceHealth,
@@ -20,6 +21,7 @@ export interface AuthoritativeSessionState {
   readonly questCycle: QuestCycleState;
   readonly emergencyPaused: boolean;
   readonly communityHype: number;
+  readonly recentQuests?: readonly RecentQuestSummary[];
 }
 
 export interface ProjectionContext {

@@ -11,13 +11,9 @@ import {
   type ContractEnvelope,
   type DomainError,
   type IntelligenceSnapshot,
+  type RecentQuestSummary,
 } from "../contracts";
 import type { AuthoritativeSessionState, OrchestratorResult } from "./types";
-
-export interface RecentQuestSummary {
-  readonly title: string;
-  readonly occurredAt: number;
-}
 
 export interface InterventionPolicyInput {
   readonly currentState: AuthoritativeSessionState["questCycle"];

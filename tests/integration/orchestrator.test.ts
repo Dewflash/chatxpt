@@ -245,6 +245,7 @@ describe("Role 1 application orchestrator", () => {
     const base = initialState();
     const state: AuthoritativeSessionState = {
       ...base,
+      recentQuests: [{ title: "Hold Your Ground", occurredAt: ACCEPTED_AT - 1_000 }],
       questCycle: {
         ...base.questCycle,
         status: "voting",
@@ -322,6 +323,7 @@ describe("Role 1 application orchestrator", () => {
       session: { sessionId: state.session.sessionId },
       gameplay: { envelope: { messageId: state.gameplay?.envelope.messageId } },
       audience: { envelope: { messageId: state.audience?.envelope.messageId } },
+      recentQuests: [{ title: "Hold Your Ground", occurredAt: ACCEPTED_AT - 1_000 }],
     });
   });
 
@@ -459,6 +461,68 @@ describe("Role 1 application orchestrator", () => {
       completionRule: { mode: "signal", allowedSignalKinds: ["activity-intensity"] },
       gameplay: { envelope: { messageId: activeState.gameplay?.envelope.messageId } },
     });
+  });
+
+  it("stores terminal quest history summaries for later vote-close validation", async () => {
+    const base = initialState();
+    const state: AuthoritativeSessionState = {
+      ...base,
+      questCycle: {
+        ...base.questCycle,
+        status: "active",
+        options: structuredClone(contractFixtureCandidateBatch.candidates),
+        activeCandidateId: contractFixtureCandidateBatch.candidates[1].candidateId,
+        availableStreamerActions: ["cancel", "skip", "succeed", "fail", "emergency-pause"],
+        startsAt: ACCEPTED_AT - 15_000,
+        endsAt: ACCEPTED_AT + 30_000,
+        progress: {
+          value: 0,
+          updatedAt: ACCEPTED_AT - 15_000,
+          method: "unknown",
+          evidenceSignalIds: [],
+        },
+      },
+    };
+    const repository = new FixtureSessionStateRepository([state]);
+    const engine = new ScriptedFixtureQuestEngine((input) => ({
+      ok: true,
+      decision: {
+        nextState: structuredClone(input.currentState),
+        events: [
+          {
+            eventType: "quest-cycle.terminal",
+            attributes: {
+              outcome: "succeeded",
+              historyCandidateId: contractFixtureCandidateBatch.candidates[1].candidateId,
+            },
+          },
+        ],
+      },
+    }));
+    const succeed = streamerQuestCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: state.session.sessionId,
+      questCycleId: state.questCycle.envelope.questCycleId,
+      commandId: "fixture-terminal-history",
+      correlationId: "fixture-terminal-history-correlation",
+      expectedRevision: 0,
+      issuedAt: ACCEPTED_AT,
+      actor: { kind: "broadcaster", actorId: state.session.broadcasterId },
+      type: "streamer.quest",
+      action: "succeed",
+      candidateId: contractFixtureCandidateBatch.candidates[1].candidateId,
+    });
+    const orchestrator = new ChatXptOrchestrator(
+      dependencies(repository, new RecordingFixturePublisher(), engine),
+    );
+
+    const result = await orchestrator.execute(succeed);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.receipt.state.recentQuests).toEqual([
+      { title: contractFixtureCandidateBatch.candidates[1].title, occurredAt: ACCEPTED_AT },
+    ]);
   });
 
   it("returns the original receipt for an identical command without deciding or publishing twice", async () => {

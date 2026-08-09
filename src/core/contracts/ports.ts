@@ -84,6 +84,12 @@ export interface VoteCloseValidationContext {
   readonly session: StreamSession;
   readonly gameplay: GameplaySnapshot | null;
   readonly audience: AudienceSnapshot | null;
+  readonly recentQuests: readonly RecentQuestSummary[];
+}
+
+export interface RecentQuestSummary {
+  readonly title: string;
+  readonly occurredAt: number;
 }
 
 export interface QuestProgressValidationContext {

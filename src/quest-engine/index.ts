@@ -44,6 +44,7 @@ export {
   MAXIMUM_SIGNAL_AGE_MILLISECONDS,
   MINIMUM_CANDIDATE_CONFIDENCE,
   PREFERRED_MAXIMUM_DURATION_SECONDS,
+  validateCandidateAtVoteClose,
 } from "./validation";
 export type {
   CandidateAssemblyAudit,
@@ -53,6 +54,7 @@ export type {
   CandidateValidationContext,
   CandidateValidationIssue,
   CandidateValidationResult,
+  VoteCloseCandidateValidationContext,
 } from "./validation";
 export {
   commandEnvelopeSchema,
