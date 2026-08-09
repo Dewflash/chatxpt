@@ -87,6 +87,16 @@ input[type="range"] { accent-color: var(--violet); padding: 7px 0; background: t
 .status-completed { border-color: var(--lime); }.status-failed { border-color: var(--coral); }.status-failed .timer { color: var(--coral); }
 .overlay-waiting { margin: auto auto 4vh; padding: 10px 14px; color: rgba(255,255,255,.3); border: 1px dashed rgba(255,255,255,.18); border-radius: 9px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
 
+.hosted-board-shell { min-height: 100vh; display: grid; place-items: center; padding: 20px; background: #0c0912; color: var(--ink); }
+.hosted-board-panel { width: min(620px, 100%); padding: 24px; border: 1px solid var(--line); border-radius: 8px; background: rgba(25,20,38,.9); box-shadow: 0 24px 80px rgba(0,0,0,.28); }
+.hosted-board-panel h1 { margin: 8px 0 12px; font: 700 30px/1.08 "Space Grotesk", sans-serif; letter-spacing: 0; }
+.hosted-board-panel p { margin: 0 0 18px; color: #d6d0e4; line-height: 1.5; }
+.hosted-board-panel dl { display: grid; gap: 8px; margin: 0; }
+.hosted-board-panel dl div { min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.hosted-board-panel dt { color: var(--muted); font-size: 12px; }
+.hosted-board-panel dd { margin: 0; font-weight: 800; text-align: right; }
+.hosted-board-share { margin-top: 16px !important; padding: 10px 12px; border-radius: 8px; background: rgba(215,255,82,.07); color: var(--lime) !important; overflow-wrap: anywhere; font-size: 12px; }
+
 @media (max-width: 1000px) {
   .hero { grid-template-columns: 1fr; }.signal-orbit { display: none; }
   .workspace { grid-template-columns: 1fr; }.quest-panel { min-height: 460px; }
