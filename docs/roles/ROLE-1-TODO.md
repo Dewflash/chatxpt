@@ -68,6 +68,12 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 - Bounded poll-open, final-result, and acknowledgement templates exist for future outbound Twitch chat delivery.
 - Real Twitch inbound chat connection, outbound delivery, rate-limit handling, and live counted acknowledgement evidence remain open.
 
+## Current Role 4 profile settings command pass
+
+- `codex/role-1-profile-settings-current` adds the broadcaster-only `streamer.profile-settings` command for Studio-owned streamer preferences.
+- Role 1 persists the profile revision, stamps the unchanged quest-cycle revision for broadcast consistency, and publishes updated role views without invoking Role 3.
+- Empty nested patches such as `voting: {}` and `rewards: {}` are rejected so UI no-ops cannot create false revision history.
+
 ## Decisions Role 1 still owns
 
 - Shared contract acceptance and breaking changes
