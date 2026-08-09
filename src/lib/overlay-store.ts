@@ -25,4 +25,19 @@ export function publishActiveQuest(activeQuest: ActiveQuest | null) {
   const channel = new BroadcastChannel(OVERLAY_CHANNEL);
   channel.postMessage(activeQuest);
   channel.close();
+
+  void fetch("/api/overlay-state", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(activeQuest),
+  }).catch(() => {
+    // Local OBS Browser Source fallback is best-effort; browser storage still updates.
+  });
+}
+
+export async function readSharedActiveQuest(): Promise<ActiveQuest | null> {
+  const response = await fetch("/api/overlay-state", { cache: "no-store" });
+  if (!response.ok) return null;
+  const data = (await response.json()) as { activeQuest?: ActiveQuest | null };
+  return data.activeQuest ?? null;
 }

@@ -12,7 +12,7 @@ const contentSecurityPolicy = [
   "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://extension-files.twitch.tv",
   "worker-src 'self' blob:",
   "child-src 'self' blob:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.twitch.tv wss://pubsub-edge.twitch.tv",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.twitch.tv wss://pubsub-edge.twitch.tv wss://irc-ws.chat.twitch.tv",
   "media-src 'self' blob:",
 ].join("; ");
 

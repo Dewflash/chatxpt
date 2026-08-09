@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import type { ActiveQuest } from "@/lib/domain";
-import { OVERLAY_CHANNEL, OVERLAY_STORAGE_KEY, readActiveQuest } from "@/lib/overlay-store";
+import {
+  OVERLAY_CHANNEL,
+  OVERLAY_STORAGE_KEY,
+  readActiveQuest,
+  readSharedActiveQuest,
+} from "@/lib/overlay-store";
 
 export function OverlayStage() {
   const [active, setActive] = useState<ActiveQuest | null>(null);
@@ -14,6 +19,9 @@ export function OverlayStage() {
       setNow(Date.now());
     }, 0);
     const tick = window.setInterval(() => setNow(Date.now()), 250);
+    const pollShared = window.setInterval(() => {
+      void readSharedActiveQuest().then((next) => setActive(next));
+    }, 750);
     const onStorage = (event: StorageEvent) => {
       if (event.key === OVERLAY_STORAGE_KEY) setActive(readActiveQuest());
     };
@@ -22,6 +30,7 @@ export function OverlayStage() {
     channel.onmessage = (event: MessageEvent<ActiveQuest | null>) => setActive(event.data);
     return () => {
       window.clearInterval(tick);
+      window.clearInterval(pollShared);
       window.clearTimeout(initialRead);
       window.removeEventListener("storage", onStorage);
       channel.close();

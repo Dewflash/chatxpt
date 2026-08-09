@@ -11,9 +11,11 @@ describe("generateMockSidequests", () => {
     expect(quests.every((quest) => quest.rewardPoints >= 50)).toBe(true);
   });
 
-  it("reacts to a knocked teammate in the golden scenario", () => {
+  it("uses Brawl Stars-safe quests in the golden scenario", () => {
     const quests = generateMockSidequests(goldenScenario);
-    expect(quests.some((quest) => quest.title === "Guardian Protocol")).toBe(true);
+    const text = quests.map((quest) => `${quest.title} ${quest.instruction}`).join(" ");
+    expect(text).toContain("Brawl Stars");
+    expect(text).not.toMatch(/knocked|revive|loot|final circle/i);
   });
 
   it("filters challenge language named in streamer boundaries", () => {

@@ -42,6 +42,12 @@ export const sidequestBundleSchema = z.object({
   quests: z.array(sidequestSchema).length(3),
 });
 
+export const activeQuestSchema = z.object({
+  quest: sidequestSchema,
+  startedAt: z.number().int().min(0),
+  status: z.enum(["active", "completed", "failed", "skipped"]),
+});
+
 export type GameplayState = z.infer<typeof gameplayStateSchema>;
 export type ViewerSentiment = z.infer<typeof viewerSentimentSchema>;
 export type StreamerProfile = z.infer<typeof streamerProfileSchema>;
@@ -58,8 +64,4 @@ export type GenerationResponse = {
 
 export type QuestStatus = "active" | "completed" | "failed" | "skipped";
 
-export type ActiveQuest = {
-  quest: Sidequest;
-  startedAt: number;
-  status: QuestStatus;
-};
+export type ActiveQuest = z.infer<typeof activeQuestSchema>;
