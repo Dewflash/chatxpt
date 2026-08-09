@@ -26,6 +26,26 @@ export interface SelectiveOcrMeasurement extends OcrReading {
   readonly processingMs: number;
 }
 
+export interface OcrPreprocessOptions {
+  readonly scale?: number;
+  readonly contrast?: number;
+  readonly threshold?: number | null;
+}
+
+export type TemporalOcrConfirmation =
+  | {
+      readonly status: "known";
+      readonly text: string;
+      readonly confidence: number;
+      readonly matchingReadings: number;
+    }
+  | {
+      readonly status: "unknown";
+      readonly reason: "low-confidence" | "insufficient-confirmation" | "conflicting";
+      readonly confidence: number;
+      readonly matchingReadings: number;
+    };
+
 function throwIfAborted(signal?: AbortSignal): void {
   if (!signal?.aborted) return;
   if (signal.reason instanceof Error) throw signal.reason;
@@ -65,6 +85,56 @@ function assertFrame(frame: SampledPixelFrame): void {
   }
 }
 
+function clampByte(value: number): number {
+  return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+/**
+ * Applies local grayscale/contrast preprocessing and bounded nearest-neighbour
+ * scaling before an approved OCR adapter sees a named crop.
+ */
+export function preprocessOcrRegion(
+  frame: SampledPixelFrame,
+  options: OcrPreprocessOptions = {},
+): SampledPixelFrame {
+  assertFrame(frame);
+  const scale = options.scale ?? 2;
+  const contrast = options.contrast ?? 1.5;
+  const threshold = options.threshold ?? null;
+  if (!Number.isInteger(scale) || scale < 1 || scale > 4) {
+    throw new RangeError("OCR preprocess scale must be an integer from 1 to 4");
+  }
+  if (!Number.isFinite(contrast) || contrast < 0.5 || contrast > 4) {
+    throw new RangeError("OCR preprocess contrast must be between 0.5 and 4");
+  }
+  if (threshold !== null && (!Number.isInteger(threshold) || threshold < 0 || threshold > 255)) {
+    throw new RangeError("OCR preprocess threshold must be null or an integer from 0 to 255");
+  }
+
+  const width = frame.width * scale;
+  const height = frame.height * scale;
+  const rgba = new Uint8ClampedArray(width * height * 4);
+  for (let outputY = 0; outputY < height; outputY += 1) {
+    const sourceY = Math.floor(outputY / scale);
+    for (let outputX = 0; outputX < width; outputX += 1) {
+      const sourceX = Math.floor(outputX / scale);
+      const sourceOffset = (sourceY * frame.width + sourceX) * 4;
+      const outputOffset = (outputY * width + outputX) * 4;
+      const luma =
+        frame.rgba[sourceOffset] * 0.2126 +
+        frame.rgba[sourceOffset + 1] * 0.7152 +
+        frame.rgba[sourceOffset + 2] * 0.0722;
+      const contrasted = clampByte((luma - 127.5) * contrast + 127.5);
+      const processed = threshold === null ? contrasted : contrasted >= threshold ? 255 : 0;
+      rgba[outputOffset] = processed;
+      rgba[outputOffset + 1] = processed;
+      rgba[outputOffset + 2] = processed;
+      rgba[outputOffset + 3] = frame.rgba[sourceOffset + 3];
+    }
+  }
+  return { width, height, rgba };
+}
+
 export function extractPixelRegion(
   frame: SampledPixelFrame,
   region: PixelRegion,
@@ -88,6 +158,67 @@ function validateReading(reading: OcrReading): OcrReading {
     throw new RangeError("OCR confidence must be between 0 and 1");
   }
   return { text: reading.text, confidence: reading.confidence };
+}
+
+function normalizeOcrText(text: string): string {
+  return text.trim().replace(/\s+/g, " ").toLocaleLowerCase("en-US");
+}
+
+export function confirmTemporalOcr(
+  readings: readonly OcrReading[],
+  options: {
+    readonly windowSize?: number;
+    readonly requiredMatches?: number;
+    readonly minimumConfidence?: number;
+  } = {},
+): TemporalOcrConfirmation {
+  const windowSize = options.windowSize ?? 3;
+  const requiredMatches = options.requiredMatches ?? 2;
+  const minimumConfidence = options.minimumConfidence ?? 0.75;
+  if (!Number.isInteger(windowSize) || windowSize < 1 || windowSize > 10) {
+    throw new RangeError("OCR confirmation windowSize must be an integer from 1 to 10");
+  }
+  if (!Number.isInteger(requiredMatches) || requiredMatches < 1 || requiredMatches > windowSize) {
+    throw new RangeError("OCR requiredMatches must fit within windowSize");
+  }
+  if (!Number.isFinite(minimumConfidence) || minimumConfidence < 0 || minimumConfidence > 1) {
+    throw new RangeError("OCR minimumConfidence must be between 0 and 1");
+  }
+
+  const window = readings.slice(-windowSize).map(validateReading);
+  const eligible = window
+    .map((reading) => ({ ...reading, normalized: normalizeOcrText(reading.text) }))
+    .filter((reading) => reading.normalized !== "" && reading.confidence >= minimumConfidence);
+  if (eligible.length === 0) {
+    return { status: "unknown", reason: "low-confidence", confidence: 0, matchingReadings: 0 };
+  }
+
+  const grouped = new Map<string, OcrReading[]>();
+  for (const reading of eligible) {
+    const matches = grouped.get(reading.normalized) ?? [];
+    matches.push(reading);
+    grouped.set(reading.normalized, matches);
+  }
+  const ranked = [...grouped.entries()].sort(
+    (left, right) =>
+      right[1].length - left[1].length ||
+      right[1].reduce((sum, reading) => sum + reading.confidence, 0) / right[1].length -
+        left[1].reduce((sum, reading) => sum + reading.confidence, 0) / left[1].length,
+  );
+  const strongest = ranked[0];
+  const matchingReadings = strongest[1].length;
+  const confidence =
+    strongest[1].reduce((sum, reading) => sum + reading.confidence, 0) / matchingReadings;
+  if (matchingReadings >= requiredMatches) {
+    const latestMatching = [...strongest[1]].reverse()[0];
+    return { status: "known", text: latestMatching.text.trim(), confidence, matchingReadings };
+  }
+  return {
+    status: "unknown",
+    reason: ranked.length > 1 ? "conflicting" : "insufficient-confirmation",
+    confidence,
+    matchingReadings,
+  };
 }
 
 function defaultNow(): number {

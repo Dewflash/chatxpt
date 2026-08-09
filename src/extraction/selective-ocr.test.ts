@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  confirmTemporalOcr,
   extractPixelRegion,
+  preprocessOcrRegion,
   runSelectiveOcrExperiment,
   type SelectiveOcrAdapter,
 } from "./selective-ocr";
@@ -58,6 +60,46 @@ describe("selective OCR experiment plumbing", () => {
     expect(adapter.recognize).toHaveBeenCalledTimes(2);
   });
 
+  it("preprocesses a named crop with bounded grayscale scaling and thresholding", () => {
+    const source = indexedPixels(2, 1);
+    source.rgba.set([20, 20, 20, 255, 230, 230, 230, 255]);
+
+    const processed = preprocessOcrRegion(source, { scale: 2, contrast: 1, threshold: 128 });
+
+    expect(processed).toMatchObject({ width: 4, height: 2 });
+    expect(Array.from(processed.rgba)).toEqual([
+      0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+      0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    ]);
+  });
+
+  it("requires two matching high-confidence OCR readings out of three", () => {
+    expect(
+      confirmTemporalOcr([
+        { text: "01:23", confidence: 0.82 },
+        { text: "01:28", confidence: 0.91 },
+        { text: " 01:23 ", confidence: 0.88 },
+      ]),
+    ).toEqual({
+      status: "known",
+      text: "01:23",
+      confidence: 0.85,
+      matchingReadings: 2,
+    });
+    expect(
+      confirmTemporalOcr([
+        { text: "01:23", confidence: 0.82 },
+        { text: "01:24", confidence: 0.83 },
+      ]),
+    ).toMatchObject({ status: "unknown", reason: "conflicting", matchingReadings: 1 });
+    expect(confirmTemporalOcr([{ text: "01:23", confidence: 0.5 }])).toEqual({
+      status: "unknown",
+      reason: "low-confidence",
+      confidence: 0,
+      matchingReadings: 0,
+    });
+  });
+
   it("rejects invalid regions and malformed adapter confidence", async () => {
     const frame = indexedPixels(2, 2);
     const adapter: SelectiveOcrAdapter = { recognize: () => ({ text: "12", confidence: 2 }) };
@@ -76,6 +118,12 @@ describe("selective OCR experiment plumbing", () => {
         adapter,
       ),
     ).rejects.toThrow("confidence must be between 0 and 1");
+    expect(() => preprocessOcrRegion(frame, { scale: 5 })).toThrow(
+      "scale must be an integer from 1 to 4",
+    );
+    expect(() => confirmTemporalOcr([], { requiredMatches: 3, windowSize: 2 })).toThrow(
+      "requiredMatches must fit within windowSize",
+    );
   });
 
   it("honours cancellation before invoking an OCR adapter", async () => {
