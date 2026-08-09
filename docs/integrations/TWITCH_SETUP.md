@@ -14,7 +14,7 @@ Configuration:    /config.html
 Live Config:      /live-config.html
 ```
 
-The `.html` paths intentionally match Twitch Extension asset-hosting style paths. The Next routes currently render safe diagnostic setup shells until the reviewed Role 4 and Role 5 UI modules are mounted. The checked-in Twitch Asset Hosting package is the artefact that must prove final uploaded-path compliance.
+The `.html` paths intentionally match Twitch Extension asset-hosting style paths. The local Next `/viewer.html` route currently renders a local Extension-style demo voter connected to the demo participation bridge, while `/config.html` and `/live-config.html` remain safe diagnostic setup shells until the reviewed Role 4 UI modules are mounted. The checked-in Twitch Asset Hosting package is still the artefact that must prove final uploaded-path compliance; the local demo voter does not by itself prove a real uploaded Twitch Extension panel.
 
 ## Environment
 
@@ -36,12 +36,12 @@ Before claiming Twitch readiness:
 1. Confirm `/api/twitch/setup/readiness` reports the callback URL, Extension paths, missing variables, and setup limitations without returning secret values.
 2. Confirm an unauthorised OAuth callback request returns safe JSON and no Twitch secrets.
 3. Confirm the Twitch app has the deployed callback URL configured.
-4. Confirm the diagnostic shells include the Twitch Extension Helper script URL before their own shell markup.
-5. Confirm the Twitch Extension has `viewer.html`, `config.html`, and optional `live-config.html` configured from the checked static upload package.
+4. Confirm the local viewer route includes the Twitch Extension Helper script URL before its own shell markup.
+5. Confirm the Twitch Extension has `viewer.html`, `config.html`, and optional `live-config.html` configured from the checked static upload package before claiming real Twitch Extension Asset Hosting evidence.
 6. Run the focused setup tests:
 
 ```bash
 npm run test -- tests/integration/twitch-setup.test.ts
 ```
 
-Record real developer-console, Local Test, Hosted Test, allowlisted-account, chat, or Extension runtime evidence in `docs/evidence/manifest.json` before describing Twitch as live. These diagnostic route shells alone do not prove OAuth, EventSub, Extension JWT validation, Asset Hosting package compliance, chat delivery, or viewer voting.
+Record real developer-console, Local Test, Hosted Test, allowlisted-account, chat, or Extension runtime evidence in `docs/evidence/manifest.json` before describing Twitch as live. The local viewer bridge alone does not prove OAuth, EventSub, Extension JWT validation, Asset Hosting package compliance, chat delivery, or real in-Twitch viewer voting.

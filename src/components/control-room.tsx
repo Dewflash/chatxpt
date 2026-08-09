@@ -50,6 +50,13 @@ type DemoEvent = {
   timestamp: number;
 };
 
+type DemoParticipationSnapshot = {
+  quests: Sidequest[];
+  votes: Record<string, number>;
+  totalVotes: number;
+  updatedAt: number;
+};
+
 const MAX_ANALYSIS_SAMPLES = 24;
 const MAX_DEMO_EVENTS = 8;
 
@@ -117,6 +124,30 @@ function parseChatVote(text: string): 1 | 2 | 3 | null {
   return null;
 }
 
+async function publishDemoParticipationQuests(quests: Sidequest[]) {
+  await fetch("/api/demo-participation", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ type: "publish-quests", quests }),
+  });
+}
+
+async function submitDemoParticipationVote(questId: string, voterKey: string) {
+  await fetch("/api/demo-participation", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ type: "vote", questId, voterKey }),
+  });
+}
+
+function transientVoterKey(source: string) {
+  const random =
+    typeof window.crypto?.randomUUID === "function"
+      ? window.crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${source}:${random}`;
+}
+
 function displayNameFromIrcLine(line: string) {
   const taggedName = line.match(/display-name=([^;]*)/)?.[1];
   if (taggedName) return taggedName;
@@ -139,7 +170,7 @@ export function ControlRoom() {
   const [analysis, setAnalysis] = useState<LiveAnalysis>(initialAnalysis);
   const [twitchChannel, setTwitchChannel] = useState("dewflash");
   const [chatStatus, setChatStatus] = useState<TwitchChatStatus>("idle");
-  const [chatMessage, setChatMessage] = useState("Connect Twitch chat so 1 / 2 / 3 messages become votes.");
+  const [chatMessage, setChatMessage] = useState("Connect Twitch chat to show comments; 1 / 2 / 3 is only the fallback vote path.");
   const [liveChat, setLiveChat] = useState<TwitchChatLine[]>([]);
   const [autoDemoEnabled, setAutoDemoEnabled] = useState(true);
   const [autoOverlayEnabled, setAutoOverlayEnabled] = useState(true);
@@ -324,7 +355,11 @@ export function ControlRoom() {
       setProvider(data.provider);
       setWarning(data.warning || "");
       setVotes(Object.fromEntries(data.quests.map((quest) => [quest.id, 0])));
+      void publishDemoParticipationQuests(data.quests).catch(() => {
+        setWarning("Quests generated, but the local Extension voter bridge did not update.");
+      });
       logDemoEvent("Generated", `${data.quests.length} quests from current stream context.`);
+      logDemoEvent("Extension vote", "Published quests to /viewer.html for viewer voting.");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Generation failed");
     } finally {
@@ -334,6 +369,9 @@ export function ControlRoom() {
 
   function addVote(id: string) {
     setVotes((current) => ({ ...current, [id]: (current[id] || 0) + 1 }));
+    void submitDemoParticipationVote(id, transientVoterKey("studio")).catch(() => {
+      setWarning("Studio vote counted locally, but the Extension voter bridge did not update.");
+    });
   }
 
   const activate = useCallback((quest: Sidequest) => {
@@ -381,6 +419,34 @@ export function ControlRoom() {
     };
   }, [activate, leadingQuest, overlayAutoArmed]);
 
+  useEffect(() => {
+    if (quests.length !== 3) return;
+
+    let cancelled = false;
+    const questIds = new Set(quests.map((quest) => quest.id));
+
+    const syncVotes = async () => {
+      try {
+        const response = await fetch("/api/demo-participation", { cache: "no-store" });
+        if (!response.ok) return;
+        const snapshot = (await response.json()) as DemoParticipationSnapshot;
+        if (snapshot.quests.length !== 3) return;
+        const sameQuestSet = snapshot.quests.every((quest) => questIds.has(quest.id));
+        if (!sameQuestSet || cancelled) return;
+        setVotes(Object.fromEntries(quests.map((quest) => [quest.id, snapshot.votes[quest.id] ?? 0])));
+      } catch {
+        // Best-effort local demo bridge; Studio can still count fallback votes locally.
+      }
+    };
+
+    void syncVotes();
+    const interval = window.setInterval(() => void syncVotes(), 1_500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [quests]);
+
   function updateStatus(status: QuestStatus) {
     if (!activeQuest) return;
     const next = { ...activeQuest, status };
@@ -396,6 +462,9 @@ export function ControlRoom() {
       return;
     }
     setVotes((current) => ({ ...current, [quest.id]: (current[quest.id] || 0) + 1 }));
+    void submitDemoParticipationVote(quest.id, transientVoterKey("twitch-chat")).catch(() => {
+      setWarning("Chat fallback vote counted locally, but the Extension voter bridge did not update.");
+    });
     setChatMessage(`Twitch chat vote ${choice} counted for ${quest.title}.`);
     logDemoEvent("Viewer vote", `Vote ${choice} counted for ${quest.title}.`);
   }
@@ -422,7 +491,7 @@ export function ControlRoom() {
       socket.send(`NICK ${nick}`);
       socket.send(`JOIN #${channel}`);
       setChatStatus("connected");
-      setChatMessage(`Listening to #${channel}. Ask viewers to type 1, 2, or 3.`);
+      setChatMessage(`Listening to #${channel}. Use this to show comments; 1 / 2 / 3 remains fallback voting.`);
       logDemoEvent("Chat connected", `Listening to #${channel}.`);
     });
 
@@ -585,7 +654,10 @@ export function ControlRoom() {
     <div className="readiness-card">
       <div className="section-heading compact-heading">
         <div><p className="step">Demo readiness</p><h3>{activeQuest ? "Overlay live" : "Preflight"}</h3></div>
-        <a className="mini-link" href="/overlay" target="_blank" rel="noreferrer">View overlay</a>
+        <div className="mini-link-row">
+          <a className="mini-link" href="/viewer.html" target="_blank" rel="noreferrer">Viewer vote</a>
+          <a className="mini-link" href="/overlay" target="_blank" rel="noreferrer">View overlay</a>
+        </div>
       </div>
       <div className="readiness-grid">
         {readinessItems.map((item) => (
@@ -600,7 +672,7 @@ export function ControlRoom() {
           ? `${activeQuest.quest.title} is published to the stream overlay.`
           : leadingQuest
             ? `${leadingQuest.title} is leading; auto overlay will publish it, or publish now for recording.`
-            : "Start capture, generate quests, then ask Joel to vote 1/2/3."}
+            : "Start capture, generate quests, then ask Joel to vote from the Extension viewer screen."}
       </p>
       {leadingQuest && !activeQuest && (
         <button className="publish-button" onClick={() => activate(leadingQuest)}>
@@ -864,7 +936,7 @@ export function ControlRoom() {
 
           <div className="twitch-chat-card">
             <div className="section-heading compact-heading">
-              <div><p className="step">Twitch chat votes</p><h3>{chatStatus}</h3></div>
+              <div><p className="step">Twitch chat comments</p><h3>{chatStatus}</h3></div>
               <button className="analysis-button" onClick={connectTwitchChat}>
                 {chatStatus === "connected" ? "Reconnect chat" : "Connect chat"}
               </button>

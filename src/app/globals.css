@@ -136,6 +136,7 @@ input[type="range"] { accent-color: var(--violet); padding: 7px 0; background: t
 .vote-track { height: 3px; margin-top: 11px; background: rgba(255,255,255,.06); border-radius: 99px; overflow: hidden; }.vote-track i { display: block; height: 100%; background: var(--violet); transition: width .25s ease; }
 .quest-actions { display: grid; align-content: center; gap: 7px; }.quest-actions button { border: 1px solid var(--line); border-radius: 8px; padding: 8px; color: var(--muted); background: transparent; font-size: 10px; cursor: pointer; }.quest-actions button:hover { color: white; border-color: var(--violet); }.quest-actions .activate-button { color: #0c0912; border-color: var(--violet); background: var(--violet); font-weight: 700; }.quest-actions b { color: white; margin-left: 3px; }
 .readiness-card { display: grid; gap: 12px; margin: 14px 0; padding: 14px; border: 1px solid rgba(255,255,255,.12); border-radius: 12px; background: rgba(0,0,0,.18); }
+.mini-link-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .mini-link { align-self: center; color: var(--lime); font-size: 12px; font-weight: 800; text-decoration: none; }
 .readiness-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .readiness-grid div { min-height: 58px; display: grid; align-content: center; gap: 4px; position: relative; padding: 8px 8px 8px 24px; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; background: rgba(255,255,255,.025); }
@@ -201,6 +202,26 @@ input[type="range"] { accent-color: var(--violet); padding: 7px 0; background: t
 .twitch-extension-services span[data-state="ready"] { border-color: rgba(215,255,82,.28); color: var(--lime); background: rgba(215,255,82,.06); }
 .twitch-extension-services span[data-state="misconfigured"] { border-color: rgba(255,111,97,.28); color: var(--coral); background: rgba(255,111,97,.06); }
 .twitch-extension-panel ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+.extension-voter-shell { min-height: 100vh; display: grid; place-items: center; padding: 12px; background: #0c0912; color: #f7f3ff; }
+.extension-voter-panel { width: min(560px, 100%); display: grid; gap: 12px; padding: 16px; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; background: rgba(18,14,28,.94); box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.extension-voter-panel header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.extension-voter-panel h1 { margin: 3px 0 0; font: 700 24px/1.05 "Space Grotesk", sans-serif; letter-spacing: 0; }
+.extension-voter-panel header span { padding: 6px 8px; color: var(--lime); border: 1px solid rgba(215,255,82,.28); border-radius: 999px; background: rgba(215,255,82,.06); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
+.extension-vote-list { display: grid; gap: 8px; }
+.extension-vote-list button { display: grid; grid-template-columns: 30px 1fr; gap: 10px; width: 100%; padding: 10px; color: var(--ink); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; background: rgba(255,255,255,.035); text-align: left; cursor: pointer; }
+.extension-vote-list button:hover, .extension-vote-list button.selected { border-color: rgba(215,255,82,.52); background: rgba(215,255,82,.075); }
+.extension-vote-list button:disabled { cursor: default; opacity: .78; }
+.extension-vote-list b { display: grid; place-items: center; width: 30px; height: 30px; color: #0c0912; border-radius: 8px; background: var(--lime); font: 800 13px "Space Grotesk"; }
+.extension-vote-list span { display: grid; gap: 4px; }
+.extension-vote-list strong { font: 800 15px/1.1 "Space Grotesk"; }
+.extension-vote-list small { color: #d6d0e4; font-size: 12px; line-height: 1.35; }
+.extension-vote-list em { color: var(--muted); font-size: 10px; font-style: normal; text-transform: uppercase; letter-spacing: .08em; }
+.extension-submit { min-height: 42px; color: #0c0912; border: 1px solid var(--lime); border-radius: 9px; background: var(--lime); font-weight: 900; cursor: pointer; }
+.extension-submit:disabled { opacity: .55; cursor: not-allowed; }
+.extension-voter-panel > p { margin: 0; color: #d6d0e4; font-size: 12px; line-height: 1.45; }
+.extension-empty { display: grid; gap: 5px; padding: 18px; border: 1px dashed rgba(255,255,255,.2); border-radius: 8px; color: var(--muted); text-align: center; }
+.extension-empty strong { color: white; }
 
 @media (max-width: 1000px) {
   .studio-strip { grid-template-columns: 1fr; }
