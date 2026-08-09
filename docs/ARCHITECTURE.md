@@ -90,7 +90,7 @@ A developer Test Lab may analyse team-owned or explicitly authorised gameplay, i
 
 ## AI and deterministic fallback
 
-Roles 2 and 3 jointly recommend a free provider/model. Role 2 owns provider transport, signal context, reliability, and candidate generation. Role 3 owns quest objectives, quality, deterministic validation, replacement, and lifecycle use.
+The judged MVP does not adopt an external provider. Role 2 owns provider transport, signal context, reliability, and candidate generation, but the submitted build uses the credential-free algorithmic candidate route unless a later accepted decision adds a provider. Role 3 owns quest objectives, quality, deterministic validation, replacement, and lifecycle use.
 
 Provider failure must not stop the workflow:
 
