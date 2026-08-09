@@ -1,42 +1,34 @@
 # ChatXPT
 
-ChatXPT is an AI-powered livestream engagement engine. It combines gameplay state, viewer sentiment, and streamer preferences to generate short sidequests, lets viewers vote, and displays the winning challenge as a live overlay.
+ChatXPT is a Twitch-first AI stream director that turns gameplay context, audience activity, and streamer preferences into three safe, vote-ready sidequests. Viewers choose through a Twitch Extension-style surface, and the winning quest appears in an OBS browser overlay while the streamer keeps playing.
 
-The product is game-neutral and intended for game streamers across audience sizes, play styles, and genres. Twitch is the only platform implemented for the current MVP, but it is isolated behind adapters rather than embedded into the core product model.
+The current MVP supports Twitch-facing surfaces only. The core contracts are platform-neutral so future adapters can support other streaming services without rebuilding the quest system.
 
-## Team start here
+## Submission README
 
-Every contributor and their ChatGPT/Codex agent must read:
+This README directly covers the four repository requirements for the Garena submission:
 
-1. [`AGENTS.md`](AGENTS.md)
-2. [`docs/TEAM_PLAYBOOK.md`](docs/TEAM_PLAYBOOK.md)
-3. The assigned guide and TODO under [`docs/roles/`](docs/roles/)
-4. [`docs/build-plans/INTEGRATION-CONTRACT.md`](docs/build-plans/INTEGRATION-CONTRACT.md)
-5. The assigned execution plan under [`docs/build-plans/`](docs/build-plans/) for Roles 1-3, or the accepted Role 2-authored plan for Roles 4-5
-6. [`docs/DECISIONS.md`](docs/DECISIONS.md)
-7. [`docs/PROJECT_TODO.md`](docs/PROJECT_TODO.md)
+1. [Setup instructions](#1-setup-instructions)
+2. [Architecture overview](#2-architecture-overview)
+3. [Relevant prompts and agent configurations](#3-prompts-and-agent-configurations)
+4. [Third-party libraries, models, datasets, and APIs](#4-third-party-libraries-models-datasets-and-apis)
 
-The original merged foundation checkpoint is summarised in [`docs/FOUNDATION-HANDOFF-2026-08-03.md`](docs/FOUNDATION-HANDOFF-2026-08-03.md). Role 1's current persistence/realtime implementation and exact evidence boundary are in [`docs/SUPABASE-HANDOFF-2026-08-03.md`](docs/SUPABASE-HANDOFF-2026-08-03.md).
+Supporting product, evidence, slide, and recording documents are linked later, but they do not replace these four sections.
 
-The playbook includes first-time setup, safe daily Git commands, the required Codex start prompt, one-batch decision handling, verification, changelog fragments, pushing, and pull requests.
+## 1. Setup Instructions
 
-On the first pull in each clone, Codex follows [`docs/FIRST-PULL-WELCOME.md`](docs/FIRST-PULL-WELCOME.md): everyone sees the team map and their own decision areas, while Roles 4/5 also receive the one-time vibecoding guide. A local Git marker prevents the welcome from repeating on ordinary pulls.
+### Requirements
 
-Role 4 and Role 5 may simply tell Codex `I am Role 4. What do I need to do?` or `I am Role 5. What do I need to do?`. Codex selects their first ready pass, explains the design choices with recommendations, handles routine technical/Git decisions, and records answers in `docs/roles/ROLE-4-EXECUTION.md` or `docs/roles/ROLE-5-EXECUTION.md`.
+- Node.js 20.9 or newer; Node.js 22 is recommended.
+- npm, using the committed `package-lock.json`.
+- A current desktop browser.
+- OBS Studio for the broadcast-overlay workflow.
+- A Twitch developer account and locally installed Extension only when testing inside Twitch.
+- A Docker-compatible runtime only when running the optional local Supabase stack.
 
-The checked-in legacy prototype begins with one local diagnostic slice:
+### Install and run locally
 
-1. A producer changes simulated game and audience signals.
-2. ChatXPT produces three contextual sidequests.
-3. Viewers vote on the options.
-4. The winning quest is activated.
-5. A separate overlay route displays its timer, status, and reward.
-
-This simulated path is useful for deterministic tests and migration checks, but it is not accepted as live product evidence. The target MVP uses real gameplay captured through OBS Virtual Camera, real Twitch activity, credential-free algorithmic intelligence, and deterministic quest fallback. Unavailable real signals are reported as `unknown`.
-
-## Quick start
-
-Requirements: Node.js 20.9+ (Node 22 recommended) and npm.
+The judged MVP has a credential-free algorithmic path. A basic local run does not require an AI-provider key, Twitch secret, or Supabase project.
 
 ```bash
 cp .env.example .env.local
@@ -44,81 +36,297 @@ npm ci
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) for the control room and [http://localhost:3000/overlay](http://localhost:3000/overlay) for the browser-source overlay.
+Open [http://localhost:3000](http://localhost:3000). Next.js prints the active URL if port 3000 is already occupied.
 
-Run all checks:
+### Environment variables
+
+All values in `.env.example` are empty placeholders. Real credentials must remain in `.env.local` or deployment-secret storage and must never be committed.
+
+| Variable | Required for basic local demo | Purpose |
+| --- | --- | --- |
+| `OPENAI_API_KEY` | No | Enables the legacy optional server-side OpenAI adapter. It is not the accepted judged-MVP path. |
+| `OPENAI_MODEL` | No | Overrides the model used only by that legacy adapter. |
+| `NEXT_PUBLIC_SUPABASE_URL` | No | Public project URL for the accepted Supabase persistence/realtime target. Empty values select local memory mode. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | No | Publishable Supabase client key when a project is configured. |
+| `SUPABASE_SECRET_KEY` | No | Server-only Supabase secret for privileged operations. Never expose it through `NEXT_PUBLIC_*`. |
+| `TWITCH_CLIENT_ID` | No | Twitch application client identifier for real Twitch integration work. |
+| `TWITCH_CLIENT_SECRET` | No | Server-only Twitch application secret. |
+| `TWITCH_EXTENSION_CLIENT_ID` | No | Identifier for the registered Twitch Extension. |
+| `TWITCH_EXTENSION_SECRET` | No | Server-only secret used for Extension authentication/JWT work. |
+| `CHATXPT_OBS_OVERLAY_SETUP_KEY` | No | Server-only key for the streamer-controlled OBS overlay setup boundary. |
+| `NEXT_PUBLIC_APP_ENV` | No | Environment label; the example uses `local`. |
+
+Legacy Supabase projects may use the aliases documented in [.env.example](.env.example), but each environment should configure only one key pair.
+
+### Local product surfaces
+
+| Surface | URL | Purpose |
+| --- | --- | --- |
+| Streamer Studio / control room | [http://localhost:3000](http://localhost:3000) | Configure the session, inspect detected context, generate or review quests, control the vote, and inspect analytics. |
+| OBS overlay | [http://127.0.0.1:3000/overlay?obs=1](http://127.0.0.1:3000/overlay?obs=1) | Transparent browser-source output for vote and active-quest states. |
+| Viewer Extension-style panel | [http://localhost:3000/viewer.html](http://localhost:3000/viewer.html) | Local interactive viewer voting surface. |
+| Twitch configuration page | [http://localhost:3000/config.html](http://localhost:3000/config.html) | Local Twitch Extension configuration path. |
+| Twitch live controls | [http://localhost:3000/live-config.html](http://localhost:3000/live-config.html) | Compact broadcaster controls for Twitch's Live Config area. |
+| Hosted Quest Board fallback | `http://localhost:3000/quest-board/<roomCode>` | ChatXPT-hosted participation fallback when an Extension is unavailable. |
+| UI diagnostics | [http://localhost:3000/diagnostics/ui-harness](http://localhost:3000/diagnostics/ui-harness) | Clearly labelled fixture/diagnostic states for local testing, not live evidence. |
+
+### OBS browser-source setup
+
+1. Start ChatXPT with `npm run dev`.
+2. In OBS, add a **Browser** source to the scene that contains the game or screen capture.
+3. Set its URL to `http://127.0.0.1:3000/overlay?obs=1`.
+4. Use a 1280 by 720 browser-source canvas, or match the output resolution of the OBS scene.
+5. Place the ChatXPT browser source above the gameplay source in OBS's Sources list.
+6. Confirm that the browser source is visible, then publish a vote from Studio.
+7. Keep the source in the saved OBS scene. Future streams can reuse the scene without repeating this setup.
+
+The overlay is broadcast output, not the primary voting or configuration surface. Viewers vote through the Twitch Extension-style panel, the hosted Quest Board fallback, or `1`/`2`/`3` Twitch chat as the final fallback.
+
+### Twitch Extension local-test setup
+
+Run ChatXPT locally, then configure the registered Extension version in the Twitch Developer Console with:
+
+| Twitch setting | Value |
+| --- | --- |
+| Testing Base URI | `http://localhost:3000/` |
+| Configuration Path | `config.html` |
+| Live Configuration Path | `live-config.html` |
+| Panel Viewer Path | `viewer.html` |
+| Extension type | Panel; enable additional video placements only if they are intentionally being tested |
+
+Install and activate that Local Test version on the broadcaster's channel. The local viewer page and the Extension panel use the same demo participation endpoint, so a submitted vote can update the local tally and winner. The committed package under `twitch-extension/` and `release/chatxpt-twitch-extension-demo-v2.zip` is for Twitch Local Test or upload workflow; it is not evidence of public Twitch approval.
+
+### Optional local Supabase stack
+
+The product keeps a memory fallback when Supabase is not configured. To exercise the reproducible local database workflow, first start a Docker-compatible runtime, then follow [supabase/README.md](supabase/README.md):
+
+```bash
+npm run supabase:start
+npm run supabase:reset
+npm run supabase:lint
+npm run supabase:test
+```
+
+Source inspection and static migration tests do not prove a real Supabase cloud round trip. Any cloud claim must have a matching evidence-manifest entry.
+
+### Verify the repository
+
+Run the complete repository gate:
 
 ```bash
 npm run check
 ```
 
-Run the focused Role 1 persistence/realtime suite with `npm run test:persistence`. A fully empty local Supabase configuration intentionally selects the credential-free in-memory runtime. The pinned Supabase CLI and database workflow are documented in [`supabase/README.md`](supabase/README.md); local database execution additionally requires a Docker-compatible runtime.
+This runs linting, TypeScript checks, role-boundary enforcement, evidence and demo-runbook validation, secret-exposure tests, the Vitest suite, a production build, and a built-client secret scan. Focused commands such as `npm run test:integration`, `npm run test:persistence`, and `npm run test:contracts` are also available in [package.json](package.json).
 
-The full check includes an ownership-boundary scan. Role modules may consume approved public entrypoints, but cannot import another role's private files. The factual legacy split and its still-open migration decisions are recorded in [`docs/architecture/LEGACY-MIGRATION-INVENTORY.md`](docs/architecture/LEGACY-MIGRATION-INVENTORY.md).
+## 2. Architecture Overview
 
-## Legacy optional OpenAI adapter
-
-The prototype still contains an optional server-side OpenAI adapter while the role-owned migration is in progress. It is not the accepted MVP provider path, and no teammate is authorised to incur paid API usage for the project. ChatGPT Pro does not provide shared application API billing. Never expose any provider key through a `NEXT_PUBLIC_` variable.
-
-```dotenv
-OPENAI_API_KEY=your_key_here
-OPENAI_MODEL=gpt-5.6-terra
-```
-
-Roles 2 and 3 will jointly recommend a free provider/model path. If any provider is unavailable, invalid, or slow, the product must continue through credential-free algorithmic intelligence and deterministic quest fallback while showing clear provider status.
-
-## Repository map
-
-- `src/app` - Next.js routes, API, and overlay
-- `src/core` - versioned platform-neutral contracts, public ports, and explicitly non-live contract fixtures
-- `src/integrations` and `src/realtime` - Role 1 public adapter and authoritative-state boundaries
-- `supabase` - Role 1-owned reproducible schema, RLS, private realtime policy, and local CLI configuration
-- `src/ai` and `src/extraction` - Role 2 public intelligence and extraction boundaries
-- `src/quest-engine` - Role 3 pure engine boundary
-- `src/streamer` and `src/design-system` - Role 4 public streamer and shared-visual-system boundaries
-- `src/viewer` - Role 5 public participation and overlay boundary
-- `src/components` - interactive product UI
-- `src/lib` - schemas, domain types, mock engine, and model adapter
-- `docs` - product scope, architecture, decisions, shared team context, workflow, and submission checklist
-- `docs/roles` - mandatory per-role authority and to-do lists
-- `docs/build-plans` - authoritative integration contract plus phase, decision-gate, deadline, and acceptance plans
-- `docs/evidence` and `docs/research` - Role 1-owned truthful evidence manifest, test resources, and problem-solution/originality validation records
-- `changes` - role-owned changelog fragments compiled by Role 1
-- `.github` - code ownership and pull-request/cross-role issue templates
-- `.codex/skills/chatxpt-prototype` - shared project workflow for Codex
-- `AGENTS.md` - durable instructions for AI-assisted contributors
-
-## Current prototype architecture before role migration
+### End-to-end product flow
 
 ```text
-game signals + chat signals + streamer profile
-                    |
-                    v
-          POST /api/sidequests
-             /             \
-     OpenAI adapter     mock engine
-             \             /
-              3 quest options
-                    |
-             viewer voting
-                    |
-          activated overlay state
-                    |
-              /overlay route
+Twitch activity + OBS/gameplay frames + streamer profile
+                         |
+                         v
+        normalisation and signal extraction
+                         |
+                         v
+       gameplay snapshot + audience intelligence
+                         |
+                         v
+       exactly three sidequest candidates
+                         |
+                         v
+ deterministic validation, safety, and lifecycle rules
+                         |
+                         v
+ Twitch Extension / hosted board / chat fallback voting
+                         |
+                         v
+ authoritative winner -> OBS overlay -> result/history
 ```
 
-The checked-in legacy prototype still uses same-origin browser storage and `BroadcastChannel` to synchronize its control room and overlay. The new Role 1 runtime now implements Supabase-backed authoritative persistence/private snapshot broadcasting and a production-shaped in-memory fallback behind public ports, but the legacy routes are not silently rewired before their migration decisions. Twitch, OBS, AI providers, gameplay extraction, persistence, and viewer surfaces remain replaceable adapters around the core contracts.
+ChatXPT does not host livestream video. Twitch remains the video and channel surface; ChatXPT supplies stream intelligence, participation, and broadcast graphics around it.
 
-Role 1's application orchestrator will compose those adapters and Role 2/3 public ports, persist revisioned state, and broadcast role-specific view models. Cross-role work integrates after every wave through producer/consumer contract tests rather than being combined only after five separate builds finish.
+### Component boundaries
 
-The application orchestrator is implemented behind injected authorization, candidate-reader, engine, repository, projection, clock, ID, and publisher ports. The Role 1 persistence runtime now binds its repository, immutable candidate store, and sanitised snapshot publisher into that seam. Automated tests prove local idempotency, stale/concurrent-write rejection, lifecycle recovery, permission denial, persist-before-notify ordering, reconnect revision handling, and static migration/RLS requirements. They do not claim a real Supabase cloud round trip until project credentials and compatible database runtime evidence exist.
+| Layer | Responsibility | Main repository area |
+| --- | --- | --- |
+| Platform-neutral core | Versioned domain contracts for sessions, signals, candidates, votes, quest state, progress, results, and role-specific view models | `src/core/` |
+| Integrations and orchestration | Twitch/OBS boundaries, authentication, command deduplication, persistence, revisioning, and realtime projection | `src/integrations/`, `src/realtime/`, thin `src/app/` routes |
+| AI intelligence and extraction | OBS frame sampling, lightweight visual analysis, selective OCR boundary, noisy-signal aggregation, audience analysis, and candidate generation | `src/extraction/`, `src/ai/` |
+| Quest engine | Deterministic timing, validation, safety, veto, vote, activation, completion, scoring, and fallback rules | `src/quest-engine/` |
+| Streamer experience | Studio, Twitch configuration/live controls, status, preferences, automation, review, analytics, and recovery UI | `src/streamer/`, `src/design-system/` |
+| Viewer experience | Twitch Extension voting, hosted Quest Board, vote acknowledgement/tally, active quest, results, reconnect states, and OBS overlay visuals | `src/viewer/` |
+| Route composition | Next.js pages and API endpoints that mount role-owned modules | `src/app/` |
+| Persistence target | Supabase schema, row-level security, realtime policy, migrations, and local CLI workflow | `supabase/` |
 
-The version-one contract schemas and fixtures now live under `src/core/`. Legacy routes still use `src/lib/domain.ts` until the separately gated mechanical migration; the existence of new contracts does not imply the current UI or API is integrated with them yet.
+Role 1 owns shared contracts and orchestration. Role 2 analyses inputs and generates candidates. Role 3 remains the deterministic authority over quest validity and lifecycle. Roles 4 and 5 render streamer and viewer experiences. Public ports prevent one role from importing another role's private implementation.
 
-Each role also has an additive public `index.ts` in its owned source directory. These entrypoints expose only accepted shared seams; they are not placeholder product implementations, and the deliberately empty design-system entrypoint leaves visual decisions with Role 4.
+### Current runnable path versus production-shaped path
 
-## Third-party disclosure
+The repository intentionally distinguishes what can be shown locally today from what is implemented as a production boundary:
 
-Submission-facing third-party disclosures live in [`docs/THIRD_PARTY_DISCLOSURES.md`](docs/THIRD_PARTY_DISCLOSURES.md). The disclosure covers runtime dependencies, development tooling, Twitch/OBS/Supabase/Vercel/provider status, data and asset boundaries, non-MVP platforms, and evidence-claim rules.
+| Capability | Current runnable local behaviour | Production-shaped direction / evidence boundary |
+| --- | --- | --- |
+| Quest generation | `/api/sidequests` validates input and returns three credential-free algorithmic options. If a legacy server-side OpenAI key is configured, failure still falls back to the algorithmic route. | Role 2 exposes platform-neutral analysed signals and candidate-generation ports; Role 3 performs deterministic validation and replacement. No external model provider is adopted for the judged MVP. |
+| Viewer participation | `/viewer.html` and the local Twitch shell submit votes to `/api/demo-participation`, whose state is process-local. | All participation surfaces consume one private, platform-neutral service with authoritative revisioned state. Real Twitch identity/JWT evidence is not claimed by the local demo. |
+| Overlay state | The local overlay uses same-origin state, `BroadcastChannel`, and `/api/overlay-state` so Studio and OBS can reflect vote/quest changes. | OBS remains an output adapter driven by sanitised `OverlayViewModel` state from the orchestrator. |
+| Persistence and realtime | Blank Supabase configuration selects the credential-free memory runtime. | Role 1 includes Supabase-backed repository/realtime adapters and schema/RLS checks. A real cloud run is only claimed when recorded in `docs/evidence/manifest.json`. |
+| Gameplay understanding | The Studio can expose local screen-capture-derived activity signals and clearly labelled manual/diagnostic context where used. Unknown facts remain unknown. | Role 2's extraction boundary supports real OBS Virtual Camera frames, lightweight motion/visual algorithms, bounded OCR, timestamps, confidence, and provenance. A fixture is never presented as live extraction evidence. |
+| Twitch Extension | Local Test paths and an interactive Extension-style viewer are provided. | Public release, hosted-test approval, verified JWT identity, and real-channel evidence require Twitch-side configuration and recorded proof. |
 
-No third-party datasets are bundled. Existing demo chat and gameplay events are synthetic and may be used only as test/diagnostic fixtures, not live-extraction evidence.
+### State, safety, and failure handling
+
+- Command and state contracts carry session, cycle, revision, and provenance information so stale or duplicate actions can be rejected.
+- Persistence occurs before realtime publication in the production-shaped orchestrator boundary.
+- Gameplay and audience observations include timestamps and confidence. Stale, low-confidence, or unavailable facts are excluded or represented as `unknown`.
+- AI output is never authoritative. Role 3 rules enforce safety, feasibility, diversity, timing, streamer boundaries, and lifecycle transitions.
+- The system preserves a credential-free generator and deterministic fallback library so provider failure cannot stop the main workflow.
+- Secrets stay server-side; client bundles are scanned for configured secret values and forbidden environment names.
+- Synthetic gameplay/chat data is restricted to automated tests and clearly labelled diagnostics.
+
+The deeper architecture description, including contracts and migration state, is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/build-plans/INTEGRATION-CONTRACT.md](docs/build-plans/INTEGRATION-CONTRACT.md).
+
+## 3. Prompts and Agent Configurations
+
+ChatXPT uses two different kinds of instructions: runtime quest-generation policy and repository-development agent configuration. They are disclosed separately below.
+
+### Runtime quest-generation instructions
+
+The submitted judged path is credential-free and algorithmic. It does not require a model prompt. The repository nevertheless includes a legacy optional OpenAI adapter and the policy that constrains both model-generated and algorithmic candidates.
+
+| File | Role | Important constraints |
+| --- | --- | --- |
+| `src/lib/openai-engine.ts` | Legacy optional server-side model adapter | Requests exactly three structured quests; infers only a broad game family; avoids invented HUD/game facts; requires distinct play patterns, short readable wording, measurable completion, and safe boundaries; validates against a strict JSON schema. |
+| `.codex/skills/chatxpt-prototype/references/quest-policy.md` | Human-readable quest policy | Defines three distinct options, signal-aware adaptation, rejection conditions, and producer approval. |
+| `src/ai/algorithmic-candidates.ts` | Accepted credential-free Role 2 strategy | Produces exactly three game-neutral candidates, filters stale/low-confidence signals, avoids recent duplicate titles, records source signal IDs, confidence, method, and generation time. |
+| `src/lib/mock-engine.ts` | Legacy local `/api/sidequests` fallback | Supplies the currently mounted credential-free local candidate route. Despite the filename, its response is labelled `algorithmic`; fixtures remain separate from live evidence. |
+| `src/quest-engine/validation.ts` | Deterministic authority after generation | Validates candidate safety and quality before a candidate can enter the quest lifecycle. |
+| `src/ai/PROVIDER_EVALUATION.md` | Provider integration evaluation | Compares latency, privacy, cost, structured output, and reliability without declaring a provider live. |
+| `src/quest-engine/PROVIDER_QUALITY_RUBRIC.md` | Provider quest-quality evaluation | Defines quest quality and engine-fit criteria for any future controlled model evaluation. |
+
+The core runtime policy is:
+
+1. Use only supported gameplay, audience, and streamer-profile facts.
+2. Return exactly three choices that differ in actual play pattern.
+3. Keep titles glanceable and instructions easy to understand during gameplay.
+4. Give every quest a measurable duration or completion condition, difficulty, and reward.
+5. Reject unsafe, illegal, discriminatory, sexual, humiliating, monetary, wagering, real-world physical, griefing, or non-consensual team-sabotage requests.
+6. Fall back to safe game-neutral quests when context is unknown, stale, low-confidence, unsupported, or provider output is invalid.
+7. Treat deterministic validation and streamer veto rules as authoritative over any AI output.
+
+### Repository agent configurations
+
+| File | Purpose |
+| --- | --- |
+| `AGENTS.md` | Root authority for product scope, golden workflow, five-role ownership, safety, evidence, collaboration, and delivery rules followed by contributors and coding agents. |
+| `.codex/skills/chatxpt-prototype/SKILL.md` | Project-specific Codex workflow for implementing and validating ChatXPT changes. |
+| `.codex/skills/chatxpt-prototype/agents/openai.yaml` | Codex skill metadata and default invocation prompt: `Use $chatxpt-prototype to implement the next demo-ready ChatXPT feature.` |
+| `.codex/skills/chatxpt-prototype/references/quest-policy.md` | Shared sidequest policy loaded by the ChatXPT skill for generation-related work. |
+| `docs/TEAM_PLAYBOOK.md` | Human/agent setup, Git, task selection, verification, handoff, and pull-request procedure. |
+| `docs/roles/ROLE-*.md` | Role-specific authority, design and implementation responsibilities, and escalation boundaries. |
+| `docs/build-plans/*.md` | Phase gates, contracts, acceptance evidence, and implementation plans. |
+| `docs/DECISIONS.md` | Durable decisions, including the judged-MVP no-external-provider decision. |
+
+These agent files guide repository work; they are not hidden runtime prompts sent to viewers or Twitch. Provider credentials, raw model names, and prompt editing are also not exposed as normal streamer controls.
+
+### Model/provider status
+
+No external model provider is adopted or required for the judged MVP under decision D-055. The submitted flow uses credential-free algorithmic candidate generation plus deterministic Role 3 validation/replacement. The installed OpenAI SDK and `src/lib/openai-engine.ts` are a legacy optional server-side path, not proof of provider use. Groq `openai/gpt-oss-20b` is documented only as a future controlled evaluation candidate.
+
+## 4. Third-Party Libraries, Models, Datasets, and APIs
+
+### Runtime libraries
+
+Exact versions are pinned in [package.json](package.json) and `package-lock.json`.
+
+| Library | Version | Use in ChatXPT |
+| --- | --- | --- |
+| Next.js | 16.2.12 | Application framework, routes, API handlers, development server, and production build. |
+| React / React DOM | 19.2.8 | Streamer, viewer, Twitch-shell, diagnostics, and overlay interfaces. |
+| Zod | 4.4.3 | Runtime validation for domain contracts, requests, commands, view models, and structured provider output. |
+| Supabase JS | 2.111.0 | Persistence and realtime adapter for the accepted production target. Local memory remains available. |
+| `server-only` | 0.0.1 | Build-time protection for server-only integration modules and secrets. |
+| OpenAI SDK | 7.3.0 | Legacy optional server-side model adapter. Not required or adopted for the judged MVP. |
+| Tesseract.js | 7.0.0 | Optional bounded OCR adapter for named gameplay-frame crops. Installation alone is not live OCR evidence. |
+
+Development and test tooling includes TypeScript 5.9.3, ESLint 9.39.2, Vitest 4.1.10, the Supabase CLI 2.111.0, and the corresponding Node/React type packages.
+
+### Models
+
+| Model/provider | Submitted status | Data and credential boundary |
+| --- | --- | --- |
+| Credential-free algorithmic generation | Active judged-MVP path | Runs without an external model or provider credential. |
+| OpenAI model via `OPENAI_MODEL` | Legacy optional adapter only | Key remains server-side. No paid usage is authorised and its presence in source is not a claim that it was used. |
+| Groq `openai/gpt-oss-20b` | Future evaluation candidate only | Not adopted, configured, or required for the submitted path. |
+
+### External services and APIs
+
+| Service/API | Intended role | Current claim boundary |
+| --- | --- | --- |
+| Twitch | MVP streaming platform: application/Extension surfaces, chat activity, local/hosted test, and future authenticated viewer participation | Local Extension-style interaction is implemented. Public approval, JWT identity, and real-channel integration require separately recorded evidence. |
+| OBS Studio | Real gameplay/screen input and Browser Source broadcast output | The overlay URL is implemented. Real OBS/Virtual Camera extraction is claimed only when visibly recorded and entered in the evidence manifest. |
+| Supabase Free | Accepted persistence and realtime target | Memory fallback and adapters/schema exist. Real cloud operation is not claimed without a recorded cloud run. |
+| Vercel | Planned preview/production host | No deployment claim is made until a deployment artifact is recorded. |
+| OpenAI API | Legacy optional candidate-generation API | Not the accepted judged-MVP dependency. |
+
+YouTube, Discord, TikTok, Kick, and other streaming platforms are not implemented in the Twitch MVP. They may appear only as future or `Coming Soon` integrations.
+
+### Datasets and assets
+
+- No third-party datasets are bundled or used as a training dataset in this repository.
+- Synthetic gameplay, chat, audience, and UI data are test/diagnostic fixtures only.
+- Team-owned or explicitly authorised gameplay recordings may be used for evaluation after privacy review.
+- Raw OBS frames are ephemeral and must not be committed.
+- Private Twitch chat exports, viewer identifiers, account names, credentials, and unrestricted recordings must not be committed.
+- Twitch upload assets and screenshots demonstrate packaging or UI state only; they do not prove Twitch review or public release.
+
+The complete disclosure and claim rules are maintained in [docs/THIRD_PARTY_DISCLOSURES.md](docs/THIRD_PARTY_DISCLOSURES.md). An integration test checks that package dependencies remain covered by that disclosure.
+
+## Product Surfaces and Fallbacks
+
+The golden Twitch workflow is:
+
+```text
+streamer starts a session
+-> Twitch/gameplay adapters emit normalised events
+-> ChatXPT decides whether the moment is suitable
+-> exactly three validated sidequests are proposed
+-> streamer automation/veto rules are applied
+-> viewers vote through Extension, hosted board, or chat fallback
+-> the winner appears in the OBS overlay
+-> success, failure, cancellation, or skip updates history/rewards
+```
+
+The viewer-facing Twitch Extension is the primary participation surface. The hosted Quest Board is the first fallback, and `1`/`2`/`3` Twitch-chat voting is the final fallback. Chat messages may also inform audience analysis, but reading chat and casting an authoritative vote are separate responsibilities.
+
+## Repository Map
+
+| Path | Contents |
+| --- | --- |
+| `src/app/` | Thin Next.js pages and API composition. |
+| `src/core/` | Canonical platform-neutral contracts, ports, and test-only fixtures. |
+| `src/integrations/`, `src/realtime/` | Role 1 adapters, orchestration, persistence, and realtime boundaries. |
+| `src/ai/`, `src/extraction/` | Role 2 intelligence, candidate generation, gameplay extraction, and evaluation. |
+| `src/quest-engine/` | Role 3 deterministic validation, lifecycle, safety, scoring, and fallback logic. |
+| `src/streamer/`, `src/design-system/` | Role 4 streamer UI and shared visual system. |
+| `src/viewer/` | Role 5 viewer participation and OBS overlay UI. |
+| `supabase/` | Migrations, RLS/realtime policy, and local database workflow. |
+| `tests/integration/` | Cross-role contract and workflow tests. |
+| `docs/` | Architecture, decisions, team process, evidence, research, and submission documents. |
+| `.codex/skills/chatxpt-prototype/` | Project-specific coding-agent workflow and quest-policy reference. |
+| `twitch-extension/`, `release/` | Twitch Extension package source and local-test release artifact. |
+
+## Evidence and Limitations
+
+Passing source tests, fixture screenshots, and diagnostics do not prove real Twitch, OBS, cloud, or external-provider operation. Every runtime claim used as submission evidence must be recorded in [docs/evidence/manifest.json](docs/evidence/manifest.json) with the input, source revision, command or interaction, artifact, reviewer, and limitations.
+
+The current prototype truth table is [docs/submission/END_TO_END_PROTOTYPE_CHECK.md](docs/submission/END_TO_END_PROTOTYPE_CHECK.md). The repository readiness check is [docs/submission/REPOSITORY_SUBMISSION_CHECK.md](docs/submission/REPOSITORY_SUBMISSION_CHECK.md).
+
+## Contributor Workflow
+
+Every contributor and coding agent must read [AGENTS.md](AGENTS.md), [docs/TEAM_PLAYBOOK.md](docs/TEAM_PLAYBOOK.md), the assigned role guide/TODO, [docs/build-plans/INTEGRATION-CONTRACT.md](docs/build-plans/INTEGRATION-CONTRACT.md), the assigned build plan, and [docs/DECISIONS.md](docs/DECISIONS.md). Changes remain within role ownership, integrate through public ports, include focused tests, and add a role-owned fragment under `changes/`.
+
+## Submission Packet
+
+The owner-facing artifact map is [docs/submission/SUBMISSION_PACKET_STATUS.md](docs/submission/SUBMISSION_PACKET_STATUS.md). The deck, video runbook, prototype truth check, and readiness check support the submission process; this README is the repository artifact that directly contains setup, architecture, prompt/agent, and third-party disclosure sections.

@@ -1,9 +1,8 @@
 # Repository Submission Check
 
 **Date:** 2026-08-09  
-**Scope:** Sidecar inspection for submission repository completeness after PRs #124-#129 merged into `main`.
-**Allowed edit scope:** This file only.
-**Post-merge check fact:** `npm run check` passed on merged `main` at commit `efd81ce`.
+**Scope:** Submission repository completeness inspection plus root README requirement consolidation.
+**Baseline check fact:** `npm run check` passed on merged `main` at commit `efd81ce`; current-branch verification is recorded below.
 
 ## Files And Areas Inspected
 
@@ -30,10 +29,10 @@
 | Submission requirement | Status | Evidence | Missing items / limitations |
 | --- | --- | --- | --- |
 | Complete source code present | Warn | Tracked repository contains app source, role-owned source directories, tests, Supabase migrations, Twitch Extension static shell, `package-lock.json`, and configuration. PRs #124-#129 are merged into `main`. | Final product completeness cannot be certified from source inventory alone. Evidence records still show real Twitch, real OBS Virtual Camera extraction, real Supabase/Vercel deployment, two real viewer sessions, and golden-workflow proof as pending or owner-action-required. |
-| README setup instructions | Pass | `README.md` includes Node requirement, `.env.example` copy step, `npm ci`, `npm run dev`, local URLs, and `npm run check`. | Clean-clone setup evidence is still unchecked in `docs/SUBMISSION_CHECKLIST.md` and not recorded in `docs/evidence/manifest.json`. |
-| Architecture overview | Pass | `docs/ARCHITECTURE.md` describes MVP shape, surfaces, data flow, ownership, persistence/realtime, extraction, AI/fallback, safety/privacy, and current migration state. | No repository-documentation gap found. Runtime claims still require evidence entries before submission. |
-| Relevant prompts / agent configs | Pass | `AGENTS.md`, project Codex skill, `agents/openai.yaml`, and quest policy are committed and aligned with the role workflow. | No repository-documentation gap found. |
-| Third-party libraries, models, datasets, APIs disclosed | Pass | `docs/THIRD_PARTY_DISCLOSURES.md` covers runtime/dev dependencies, Twitch, OBS, Supabase, Vercel, AI provider status, data/assets, non-MVP platforms, and claim rules. `tests/integration/disclosures.test.ts` checks package coverage. D-055 closes the judged-MVP provider decision: no external model provider is adopted or configured. | Future Groq trial language remains evaluation-only; it is not judged-MVP provider evidence. |
+| README setup instructions | Pass | `README.md#1-setup-instructions` includes prerequisites, credential-free installation, environment-variable purposes, local routes, OBS setup, Twitch Extension Local Test settings, optional Supabase, and `npm run check`. | Clean-clone setup evidence is still unchecked in `docs/SUBMISSION_CHECKLIST.md` and not recorded in `docs/evidence/manifest.json`. |
+| Architecture overview | Pass | `README.md#2-architecture-overview` directly describes the end-to-end flow, component boundaries, current runnable path versus production-shaped path, state, safety, and failure handling. `docs/ARCHITECTURE.md` remains the deep dive. | Runtime claims still require evidence entries before submission. |
+| Relevant prompts / agent configs | Pass | `README.md#3-prompts-and-agent-configurations` discloses runtime quest policy and repository agent configuration. It links `AGENTS.md`, `.codex/skills/chatxpt-prototype/SKILL.md`, `.codex/skills/chatxpt-prototype/agents/openai.yaml`, the quest policy, runtime generation/validation files, role guides, plans, and decisions. | The optional model adapter is explicitly distinguished from the credential-free judged-MVP path. |
+| Third-party libraries, models, datasets, APIs disclosed | Pass | `README.md#4-third-party-libraries-models-datasets-and-apis` contains the submission-facing disclosure; `docs/THIRD_PARTY_DISCLOSURES.md` remains the full register. `tests/integration/disclosures.test.ts` checks package coverage. D-055 closes the judged-MVP provider decision: no external model provider is adopted or configured. | Future Groq trial language remains evaluation-only; it is not judged-MVP provider evidence. |
 | No passwords/API keys/confidential credentials in inspected repo paths | Pass | `.env.example` contains empty placeholders only. `.gitignore` excludes local env files. `npm run test:client-secrets`, `npm run check:client-secrets`, and a direct token-pattern `rg` scan found no common secret-token formats in inspected text files. | Untracked `twitch-upload-assets/` exists locally and should be reviewed, ignored, or deliberately added before final packaging; it is not part of the committed repository unless staged. |
 | Secret/client safety scripts exist | Pass | `scripts/check-client-secrets.mjs` scans `.next/static` for configured secret values and server-only secret env names; its tests pass. | This is a client-bundle guard, not a full historical Git secret scanner. |
 | Evidence and claim controls | Warn | `docs/evidence/README.md`, `manifest.json`, schema, and golden runbook exist; `npm run check:evidence` and `npm run check:demo-runbook` pass. | Manifest currently has 2 entries only: inspection-only repository control evidence and fixture-only Role 5 rendering evidence. Real Twitch, OBS Virtual Camera extraction, Supabase/Vercel deployment, two-viewer, and golden-run evidence is not present. |
@@ -42,6 +41,7 @@
 ## Commands Run
 
 ```bash
+npm run check
 npm run check:boundaries
 npm run check:evidence
 npm run check:demo-runbook
@@ -53,19 +53,22 @@ rg -n --hidden -g '!node_modules' -g '!.git' -g '!.next' -g '!package-lock.json'
 
 ## Results
 
-- Role boundary check passed: 142 files, 348 local imports.
+- Full current-branch `npm run check` passed after the README consolidation.
+- Role boundary check passed: 151 files, 367 local imports.
 - Evidence manifest check passed: 7 resources, 2 entries.
 - Golden rehearsal runbook check passed.
 - Client-secret scanner tests passed: 3 tests.
-- Existing built client bundle secret scan passed.
+- Vitest passed: 51 files, 379 tests.
+- Next.js production build passed.
+- Built client bundle secret scan passed.
 - `git diff --check` passed.
-- Separately from this sidecar command list, `npm run check` passed on merged `main` at `efd81ce` after PRs #124-#129 merged.
+- The earlier merged-`main` baseline also passed at `efd81ce` after PRs #124-#129 merged.
 - Direct token-pattern scan found no matches for the searched common key formats.
 
 ## Exact Missing Items Before Final Submission
 
 1. Clean-clone verification from the release commit is not recorded.
-2. Full `npm run check` passed on merged `main` at `efd81ce`; rerun it on the final release/docs commit if any post-check edits are included in the submitted revision.
+2. Full `npm run check` passes on the current branch; rerun it on the exact final release commit if any later edits are included in the submitted revision.
 3. Real Twitch developer/app/Extension readiness is still recorded as `owner-action-required` in the evidence resource matrix.
 4. Real OBS/gameplay capture readiness is still recorded as `owner-action-required` in the evidence resource matrix.
 5. Two isolated viewer sessions are still recorded as `owner-action-required` in the evidence resource matrix.
@@ -76,4 +79,4 @@ rg -n --hidden -g '!node_modules' -g '!.git' -g '!.next' -g '!package-lock.json'
 
 ## Overall Repository Readiness
 
-The repository is documentation-complete for source, setup, architecture, agent configuration, third-party disclosure, the judged-MVP no-provider decision, and current credential-safety checks. It is not final-submission-complete until release-commit clean-clone verification, final-commit checks, real golden workflow evidence, and repository/package access tasks are completed and recorded.
+The root `README.md` now contains four explicit, standalone submission sections for setup, architecture, prompts/agent configuration, and third-party libraries/models/datasets/APIs. The repository is documentation-complete for those criteria, the judged-MVP no-provider decision, and current credential-safety checks. It is not final-submission-complete until release-commit clean-clone verification, final-commit checks, real golden workflow evidence, and repository/package access tasks are completed and recorded.

@@ -1,8 +1,8 @@
-import { TwitchExtensionRouteShell } from "../twitch-extension-shell";
+import { DemoExtensionViewer } from "./demo-extension-viewer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default function TwitchViewerPage() {
-  return <TwitchExtensionRouteShell surface="viewer" />;
+  return <DemoExtensionViewer />;
 }

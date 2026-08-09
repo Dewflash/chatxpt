@@ -46,7 +46,7 @@ export function OverlayStage() {
     <main className="overlay-page">
       {active ? (
         <section className={`overlay-card status-${active.status}`}>
-          <div className="overlay-kicker"><span>CHAT SIDEQUEST</span><b>+{active.quest.rewardPoints} XP</b></div>
+          <div className="overlay-kicker"><span>LIVE VIEWER QUEST</span><b>+{active.quest.rewardPoints} XP</b></div>
           <h1>{active.quest.title}</h1>
           <p>{active.quest.instruction}</p>
           <div className="overlay-footer">
@@ -55,7 +55,7 @@ export function OverlayStage() {
           </div>
         </section>
       ) : (
-        <p className="overlay-waiting">ChatXPT overlay ready</p>
+        <p className="overlay-waiting">ChatXPT overlay ready · waiting for viewer quest</p>
       )}
     </main>
   );

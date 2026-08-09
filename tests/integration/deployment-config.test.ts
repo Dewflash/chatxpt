@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import nextConfig from "../../next.config";
+import nextConfig, { createContentSecurityPolicy } from "../../next.config";
 
 type HeaderRule = {
   readonly source: string;
@@ -12,6 +12,15 @@ function headerValue(rule: HeaderRule, key: string): string | null {
 }
 
 describe("deployment configuration", () => {
+  it("allows the loopback host used by the OBS browser source in development", () => {
+    expect(nextConfig.allowedDevOrigins).toContain("127.0.0.1");
+  });
+
+  it("allows Next development hydration without weakening the production policy", () => {
+    expect(createContentSecurityPolicy("development").split(/\s+/)).toContain("'unsafe-eval'");
+    expect(createContentSecurityPolicy("production").split(/\s+/)).not.toContain("'unsafe-eval'");
+  });
+
   it("sets safe global headers without blocking Twitch or OBS embedding", async () => {
     const rules = await nextConfig.headers?.();
     expect(rules).toBeDefined();
