@@ -1,0 +1,204 @@
+.surface {
+  min-width: 0;
+  color: inherit;
+}
+
+.shell {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.titleBlock {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.notice {
+  margin: 0;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.hosted .options {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+
+.option {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.optionButton {
+  appearance: none;
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+}
+
+.optionButton:disabled {
+  cursor: default;
+}
+
+.optionHeader {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.optionTitle {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.96rem;
+  line-height: 1.2;
+}
+
+.optionNumber {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  font-weight: 800;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.instruction {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.86rem;
+  line-height: 1.35;
+  opacity: 0.88;
+}
+
+.optionFooter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.actions {
+  display: grid;
+  gap: 8px;
+}
+
+.statusLine {
+  margin: 0;
+  min-height: 1.2em;
+  overflow-wrap: anywhere;
+  font-size: 0.82rem;
+  opacity: 0.78;
+}
+
+.chatList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chatItem {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.chatDigit {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  font-weight: 800;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.overlay {
+  display: grid;
+  align-items: end;
+  min-height: 100vh;
+  padding: clamp(12px, 2vw, 28px);
+  background: transparent;
+  pointer-events: none;
+}
+
+.overlayCard {
+  width: min(520px, 46vw);
+  min-width: 280px;
+}
+
+.overlayEmpty {
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+@media (max-width: 420px) {
+  .surface {
+    font-size: 0.94rem;
+  }
+
+  .header {
+    display: grid;
+  }
+
+  .optionFooter {
+    gap: 4px;
+  }
+}
+
+@media (max-width: 720px) {
+  .overlayCard {
+    width: min(100%, 420px);
+    min-width: 0;
+  }
+}

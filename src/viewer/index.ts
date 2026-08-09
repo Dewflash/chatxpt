@@ -25,3 +25,15 @@ export type {
   ViewerQuestOptionPresentation,
   ViewerSurfacePhase,
 } from "./presentation";
+export {
+  ChatFallbackInstructions,
+  HostedQuestBoardSurface,
+  ObsQuestOverlaySurface,
+  TwitchExtensionViewerSurface,
+} from "./surfaces";
+export type {
+  ChatFallbackInstructionsProps,
+  HostedBoardSurfaceProps,
+  ObsQuestOverlaySurfaceProps,
+  ViewerSurfaceProps,
+} from "./surfaces";

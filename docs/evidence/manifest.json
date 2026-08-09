@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-08-03",
+  "updatedAt": "2026-08-09",
   "resources": [
     {
       "id": "twitch-broadcaster",
@@ -118,6 +118,110 @@
       "limitations": [
         "This proves repository evidence controls only; it is not product-runtime or judged Twitch, OBS, cloud, AI, extraction, UI, or multi-client evidence.",
         "The manifest intentionally contains no judged product evidence yet."
+      ]
+    },
+    {
+      "id": "E-20260809-R5-001",
+      "capturedAt": "2026-08-09T12:44:11+08:00",
+      "owner": { "role": "role-5", "github": "drdexe" },
+      "reviewer": { "role": "role-1", "github": "Dewflash" },
+      "evidenceClass": "fixture-only",
+      "result": "passed",
+      "claim": "Role 5 fixture-rendered Twitch, hosted board, and OBS overlay surfaces render at required compact, mobile, desktop, active, and inactive viewports without horizontal overflow.",
+      "resourceIds": [],
+      "surfaces": [
+        {
+          "name": "Twitch Extension compact voting fixture",
+          "deviceClass": "mobile",
+          "viewport": "318x496"
+        },
+        {
+          "name": "Hosted Quest Board desktop fixture",
+          "deviceClass": "desktop",
+          "viewport": "1024x768"
+        },
+        {
+          "name": "Hosted Quest Board mobile fixture",
+          "deviceClass": "mobile",
+          "viewport": "390x720"
+        },
+        {
+          "name": "OBS overlay active fixture",
+          "deviceClass": "obs",
+          "viewport": "1280x720"
+        },
+        {
+          "name": "OBS overlay inactive fixture",
+          "deviceClass": "obs",
+          "viewport": "1280x720"
+        }
+      ],
+      "source": {
+        "gitCommit": "284b5bb",
+        "branch": "codex/role-5-viewer-next-slice",
+        "prNumber": 109
+      },
+      "authoritativeState": {
+        "sessionRef": "contract-fixture-session",
+        "questCycleRef": "contract-fixture-cycle",
+        "revision": 0
+      },
+      "inputs": [
+        {
+          "kind": "fixture",
+          "description": "Canonical contract viewer and overlay fixtures rendered through Role 5 public surfaces with temporary Playwright screenshot capture."
+        }
+      ],
+      "commands": [
+        "npm run test -- src/viewer/__visual-capture.test.ts"
+      ],
+      "artifacts": [
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-09-role-5-twitch-compact-voting-fixture-only.png",
+          "mediaType": "image/png",
+          "privacyReviewed": true,
+          "sha256": "42ce3ba7330035f5ebbf27303089b7bb4cf1614784b3f2a1e2da3a587da7bb53"
+        },
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-09-role-5-hosted-desktop-voting-fixture-only.png",
+          "mediaType": "image/png",
+          "privacyReviewed": true,
+          "sha256": "bed97a394baca96021352e0824c56f5bd3799aa69d11be4c27b600cc468bb463"
+        },
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-09-role-5-hosted-mobile-voting-fixture-only.png",
+          "mediaType": "image/png",
+          "privacyReviewed": true,
+          "sha256": "4cce2ccb82f18b5e0556f4bdab8ba767860a3eb022c064e3b349d3b31b6b0a8f"
+        },
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-09-role-5-overlay-active-fixture-only.png",
+          "mediaType": "image/png",
+          "privacyReviewed": true,
+          "sha256": "8578ed7f0af52a264ec8be6d55145b7587f5018fdce14423b7b4582f5a537aa3"
+        },
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-09-role-5-overlay-inactive-fixture-only.png",
+          "mediaType": "image/png",
+          "privacyReviewed": true,
+          "sha256": "a154b6531bd1abe834704c8194814602f200c87a2b7a97b594ebcf6959658e96"
+        },
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-09-role-5-fixture-screenshot-sha256.txt",
+          "mediaType": "text/plain",
+          "privacyReviewed": true,
+          "sha256": null
+        }
+      ],
+      "limitations": [
+        "This is fixture-only local browser evidence, not real Twitch Extension identity, live voting, hosted-board access, Supabase realtime, or OBS Browser Source proof.",
+        "The temporary capture test was removed after artifact generation; committed regression coverage remains in Role 5 presentation and surface tests."
       ]
     }
   ]
