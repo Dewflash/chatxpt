@@ -25,3 +25,4 @@ export type {
   ChatVoteReceiptPresentation,
   ChatVoteReceiptStatus,
 } from "./chat-fallback";
+export * from "./twitch";

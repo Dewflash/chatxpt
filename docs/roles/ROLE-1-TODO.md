@@ -59,6 +59,14 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 - The seam maps authoritative visible options to `1`/`2`/`3` only when exactly three options are in the voting state.
 - Real Twitch outbound sending, rate-limit handling, and live acknowledgement evidence remain open after this template/policy pass.
 
+## Current R1-016 Twitch chat vote adapter pass
+
+- `codex/role-1-twitch-chat-vote-adapter` adds the Role 1-owned strict `1`/`2`/`3` Twitch chat parser for fallback votes.
+- Exact numeric chat messages emit canonical `viewer.vote` commands with `sourceMode: "twitch-chat"` and deterministic duplicate-delivery command IDs.
+- Ordinary chat remains a raw-24h-max audience event, while chat-vote events retain only aggregate choice data.
+- Bounded poll-open, final-result, and acknowledgement templates exist for future outbound Twitch chat delivery.
+- Real Twitch inbound chat connection, outbound delivery, rate-limit handling, and live counted acknowledgement evidence remain open.
+
 ## Decisions Role 1 still owns
 
 - Shared contract acceptance and breaking changes
