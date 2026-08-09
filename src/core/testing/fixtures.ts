@@ -6,10 +6,16 @@ import {
   gameplaySnapshotSchema,
   overlayViewModelSchema,
   questCycleStateSchema,
+  serviceHealthSchema,
   streamSessionSchema,
+  streamerReadinessViewSchema,
   streamerViewModelSchema,
   streamerProfileSchema,
   viewerViewModelSchema,
+  type StreamerReadinessView,
+  type StreamerSetupAction,
+  type StreamerSetupService,
+  type StreamerSetupServiceId,
 } from "../contracts";
 
 const FIXTURE_TIME = 1_786_000_000_000;
@@ -175,6 +181,181 @@ export const contractFixtureQuestCycle = questCycleStateSchema.parse({
   progress: null,
   result: null,
 });
+
+function readinessHealth(
+  service: StreamerSetupServiceId,
+  status: "ready" | "degraded" | "unavailable" | "permission-denied" | "misconfigured",
+  message: string,
+) {
+  return serviceHealthSchema.parse({
+    service,
+    status,
+    checkedAt: FIXTURE_TIME,
+    message,
+    retryable: ["degraded", "unavailable", "permission-denied"].includes(status),
+  });
+}
+
+const readinessServiceOrder: readonly StreamerSetupServiceId[] = [
+  "twitch",
+  "obs-capture",
+  "realtime",
+  "intelligence",
+  "session",
+];
+
+const readyReadinessServices: Record<StreamerSetupServiceId, StreamerSetupService> = {
+  twitch: {
+    service: "twitch",
+    configured: true,
+    health: readinessHealth("twitch", "ready", "Fixture Twitch setup is ready."),
+    allowedActions: [],
+  },
+  "obs-capture": {
+    service: "obs-capture",
+    configured: true,
+    health: readinessHealth("obs-capture", "ready", "Fixture OBS capture is ready."),
+    allowedActions: [],
+  },
+  realtime: {
+    service: "realtime",
+    configured: true,
+    health: readinessHealth("realtime", "ready", "Fixture realtime transport is ready."),
+    allowedActions: [],
+  },
+  intelligence: {
+    service: "intelligence",
+    configured: true,
+    health: readinessHealth("intelligence", "ready", "Fixture intelligence path is ready."),
+    allowedActions: [],
+  },
+  session: {
+    service: "session",
+    configured: true,
+    health: readinessHealth("session", "ready", "Fixture session can start."),
+    allowedActions: ["start-session"],
+  },
+};
+
+function readinessServices(
+  patch: Partial<Record<StreamerSetupServiceId, StreamerSetupService>> = {},
+): StreamerSetupService[] {
+  const merged = { ...readyReadinessServices, ...patch };
+  return readinessServiceOrder.map((service) => merged[service]);
+}
+
+function readinessFixture(input: {
+  readonly status: StreamerReadinessView["status"];
+  readonly ready: boolean;
+  readonly liveInputsUsed?: boolean;
+  readonly services?: ReturnType<typeof readinessServices>;
+  readonly blockerCodes?: readonly string[];
+  readonly recommendedAction?: StreamerSetupAction | null;
+  readonly label: string;
+}) {
+  return streamerReadinessViewSchema.parse({
+    evidenceClass: "fixture",
+    liveInputsUsed: input.liveInputsUsed ?? false,
+    ready: input.ready,
+    status: input.status,
+    services: input.services ?? readinessServices(),
+    blockerCodes: input.blockerCodes ?? [],
+    recommendedAction: input.recommendedAction ?? null,
+    label: input.label,
+  });
+}
+
+export const contractFixtureUiX01ReadinessCatalog = {
+  "r4.setup.ready.v1": readinessFixture({
+    status: "ready",
+    ready: true,
+    label: "Fixture setup is ready to start a stream session.",
+    recommendedAction: "start-session",
+  }),
+  "r4.setup.permission-denied.v1": readinessFixture({
+    status: "blocked",
+    ready: false,
+    services: readinessServices({
+      "obs-capture": {
+        service: "obs-capture",
+        configured: false,
+        health: readinessHealth(
+          "obs-capture",
+          "permission-denied",
+          "Fixture browser cannot read the selected OBS Virtual Camera.",
+        ),
+        allowedActions: ["request-capture-permission", "select-capture-source"],
+      },
+      session: {
+        ...readyReadinessServices.session,
+        health: readinessHealth("session", "unavailable", "Capture permission is required before starting."),
+        allowedActions: [],
+      },
+    }),
+    blockerCodes: ["obs-capture-permission-denied"],
+    recommendedAction: "request-capture-permission",
+    label: "Fixture OBS capture permission is blocked.",
+  }),
+  "r4.setup.misconfigured.v1": readinessFixture({
+    status: "blocked",
+    ready: false,
+    services: readinessServices({
+      twitch: {
+        service: "twitch",
+        configured: false,
+        health: readinessHealth("twitch", "misconfigured", "Fixture Twitch setup is incomplete."),
+        allowedActions: ["connect-twitch", "install-extension"],
+      },
+      session: {
+        ...readyReadinessServices.session,
+        health: readinessHealth("session", "misconfigured", "Twitch setup is required before starting."),
+        allowedActions: [],
+      },
+    }),
+    blockerCodes: ["twitch-not-connected"],
+    recommendedAction: "connect-twitch",
+    label: "Fixture Twitch setup is incomplete.",
+  }),
+  "r4.setup.disconnected.v1": readinessFixture({
+    status: "blocked",
+    ready: false,
+    services: readinessServices({
+      realtime: {
+        service: "realtime",
+        configured: true,
+        health: readinessHealth("realtime", "unavailable", "Fixture realtime connection is disconnected."),
+        allowedActions: ["retry-service"],
+      },
+      session: {
+        ...readyReadinessServices.session,
+        health: readinessHealth("session", "unavailable", "Realtime must recover before starting."),
+        allowedActions: [],
+      },
+    }),
+    blockerCodes: ["realtime-disconnected"],
+    recommendedAction: "retry-service",
+    label: "Fixture realtime connection is disconnected.",
+  }),
+  "r4.setup.diagnostic.v1": readinessFixture({
+    status: "diagnostic",
+    ready: false,
+    services: readinessServices({
+      intelligence: {
+        service: "intelligence",
+        configured: true,
+        health: readinessHealth(
+          "intelligence",
+          "degraded",
+          "Fixture intelligence is using diagnostic examples only.",
+        ),
+        allowedActions: ["open-diagnostics"],
+      },
+    }),
+    blockerCodes: ["diagnostic-fixture-only"],
+    recommendedAction: "open-diagnostics",
+    label: "Fixture setup is diagnostic only and cannot be claimed as live readiness.",
+  }),
+} satisfies Record<string, StreamerReadinessView>;
 
 const contractFixtureConnection = {
   service: "fixture-realtime",

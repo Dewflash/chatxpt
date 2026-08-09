@@ -43,4 +43,26 @@ describe("UI gateway diagnostic routes", () => {
       status: "stale-revision",
     });
   });
+
+  it("validates a fixture setup command route without claiming real setup", async () => {
+    const fixtureResponse = await getUiGatewayFixture();
+    const fixture = await fixtureResponse.json();
+    const setupCommand = fixture.commands.streamer.find(
+      (route: { command: { type: string } }) => route.command.type === "streamer.setup",
+    ).command;
+
+    const response = await postUiGatewayCommand(
+      new Request("http://localhost/api/ui-gateway/commands", {
+        method: "POST",
+        body: JSON.stringify(setupCommand),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: true,
+      accepted: false,
+      status: "validated-fixture-only",
+    });
+  });
 });
