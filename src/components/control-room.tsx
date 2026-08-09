@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { goldenScenario, sampleChat } from "@/lib/demo-data";
+import { goldenScenario } from "@/lib/demo-data";
 import type {
   ActiveQuest,
   GenerationRequest,
@@ -58,6 +58,7 @@ type DemoParticipationSnapshot = {
 };
 
 type GamePhasePreset = "action" | "objective" | "battle-royale";
+type StudioView = "studio" | "analytics" | "game-signals" | "vote-overlay";
 
 const MAX_ANALYSIS_SAMPLES = 24;
 const MAX_DEMO_EVENTS = 8;
@@ -104,6 +105,13 @@ const styleLabels: Record<GenerationRequest["profile"]["style"], string> = {
   beginner: "Beginner",
   competitive: "Competitive",
 };
+
+const studioViews: Array<{ id: StudioView; label: string }> = [
+  { id: "studio", label: "Studio" },
+  { id: "analytics", label: "Stream analytics" },
+  { id: "game-signals", label: "Game signals" },
+  { id: "vote-overlay", label: "Vote / overlay" },
+];
 
 const initialAnalysis: LiveAnalysis = {
   status: "idle",
@@ -225,6 +233,7 @@ export function ControlRoom() {
   const [analysisSamples, setAnalysisSamples] = useState<AnalysisSample[]>([]);
   const [demoEvents, setDemoEvents] = useState<DemoEvent[]>([]);
   const [gamePhasePreset, setGamePhasePreset] = useState<GamePhasePreset>("action");
+  const [activeStudioView, setActiveStudioView] = useState<StudioView>("studio");
   const chatSocketRef = useRef<WebSocket | null>(null);
   const questsRef = useRef<Sidequest[]>([]);
   const demoEventIdRef = useRef(0);
@@ -421,6 +430,38 @@ export function ControlRoom() {
       ready: !!activeQuest,
     },
   ], [activeQuest, analysis.status, autoDemoEnabled, chatStatus, generationDelaySeconds, quests.length, totalVotes]);
+  const streamMetricItems = useMemo(() => [
+    {
+      label: "Mood",
+      value: moodLabels[signals.sentiment.mood],
+      ready: chatStatus === "connected" || signals.sentiment.mood !== "bored",
+    },
+    {
+      label: "Hype",
+      value: `${signals.sentiment.energy}/5`,
+      ready: signals.sentiment.energy >= 3,
+    },
+    {
+      label: "Tempo",
+      value: rollingAnalysis.dominantTempo,
+      ready: analysis.status === "running",
+    },
+    {
+      label: "Votes",
+      value: totalVotes > 0 ? `${totalVotes}` : "0",
+      ready: totalVotes > 0,
+    },
+    {
+      label: "Winner",
+      value: leadingQuest?.title ?? "None",
+      ready: !!leadingQuest,
+    },
+    {
+      label: "Quest fit",
+      value: rollingAnalysis.questReadiness,
+      ready: rollingAnalysis.questReadiness.startsWith("Enough"),
+    },
+  ], [analysis.status, chatStatus, leadingQuest, rollingAnalysis.dominantTempo, rollingAnalysis.questReadiness, signals.sentiment.energy, signals.sentiment.mood, totalVotes]);
 
   const generate = useCallback(async () => {
     setLoading(true);
@@ -750,13 +791,6 @@ export function ControlRoom() {
           </div>
         ))}
       </div>
-      <p>
-        {activeQuest
-          ? `${activeQuest.quest.title} is published to the stream overlay.`
-          : leadingQuest
-            ? `${leadingQuest.title} is leading; auto overlay will publish it, or publish now for recording.`
-            : "Start capture, generate quests, then ask Joel to vote from the Extension viewer screen."}
-      </p>
       {leadingQuest && !activeQuest && (
         <button className="publish-button" onClick={() => activate(leadingQuest)}>
           Publish leading quest now
@@ -785,10 +819,6 @@ export function ControlRoom() {
       <div>
         <p className="step">Stream automation settings</p>
         <h3>{autoDemoEnabled ? "Automatic quest flow" : "Manual producer review"}</h3>
-        <p>
-          Choose whether ChatXPT prepares quests while you play or waits for the streamer to stop
-          and review. Overlay publishing can also be automatic or manual.
-        </p>
       </div>
       <div className="mode-grid">
         <button
@@ -852,6 +882,277 @@ export function ControlRoom() {
     </div>
   );
 
+  const studioPanel = (
+    <section className="view-panel">
+      <div className="context-columns">
+        <section className="context-column" aria-label="Current game status">
+          <div className="section-heading compact-heading">
+            <div><p className="step">Game status</p><h3>Current read</h3></div>
+          </div>
+          <div className="context-list">
+            {gameStatusRead.map((item) => (
+              <div key={item.label}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <p>{item.detail}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="context-column" aria-label="Quest direction">
+          <div className="section-heading compact-heading">
+            <div><p className="step">Quest direction</p><h3>Streamer preference</h3></div>
+          </div>
+          <div className="context-list">
+            {questDirectionRead.map((item) => (
+              <div key={item.label}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <p>{item.detail}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <div className="studio-view-grid">
+        <div className="signal-mode-panel">
+          <div className="section-heading compact-heading">
+            <div><p className="step">Adjustments</p><h3>Streamer controls</h3></div>
+            <button className="text-button" onClick={() => setSignals(goldenScenario)}>Reset demo</button>
+          </div>
+          <div className="form-grid">
+            <label>Game phase set
+              <select value={gamePhasePreset} onChange={(event) => setGamePhasePreset(event.target.value as GamePhasePreset)}>
+                <option value="action">Action / arena</option>
+                <option value="objective">MOBA / objective</option>
+                <option value="battle-royale">Battle royale</option>
+              </select>
+            </label>
+            <label>Match phase
+              <select value={signals.gameplay.phase} onChange={(event) => setSignals((current) => ({ ...current, gameplay: { ...current.gameplay, phase: event.target.value as GenerationRequest["gameplay"]["phase"] } }))}>
+                <option value="looting">{gamePhasePresets[gamePhasePreset].looting}</option>
+                <option value="rotation">{gamePhasePresets[gamePhasePreset].rotation}</option>
+                <option value="combat">{gamePhasePresets[gamePhasePreset].combat}</option>
+                <option value="final-circle">{gamePhasePresets[gamePhasePreset]["final-circle"]}</option>
+              </select>
+            </label>
+            <label>Team pressure
+              <select value={signals.gameplay.squadStatus} onChange={(event) => setSignals((current) => ({ ...current, gameplay: { ...current.gameplay, squadStatus: event.target.value as GenerationRequest["gameplay"]["squadStatus"] } }))}>
+                <option value="all-up">{squadStatusLabels["all-up"]}</option>
+                <option value="teammate-knocked">{squadStatusLabels["teammate-knocked"]}</option>
+                <option value="last-alive">{squadStatusLabels["last-alive"]}</option>
+              </select>
+            </label>
+            <label className="range-label">Health <strong>{signals.gameplay.health}%</strong>
+              <input type="range" min="0" max="100" value={signals.gameplay.health} onChange={(event) => setSignals((current) => ({ ...current, gameplay: { ...current.gameplay, health: Number(event.target.value) } }))} />
+            </label>
+            <label>Viewer mood
+              <select value={signals.sentiment.mood} onChange={(event) => setSignals((current) => ({ ...current, sentiment: { ...current.sentiment, mood: event.target.value as GenerationRequest["sentiment"]["mood"] } }))}>
+                <option value="bored">{moodLabels.bored}</option>
+                <option value="hyped">{moodLabels.hyped}</option>
+                <option value="chaotic">{moodLabels.chaotic}</option>
+                <option value="supportive">{moodLabels.supportive}</option>
+                <option value="teasing">{moodLabels.teasing}</option>
+              </select>
+            </label>
+            <label>Streamer style
+              <select value={signals.profile.style} onChange={(event) => setSignals((current) => ({ ...current, profile: { ...current.profile, style: event.target.value as GenerationRequest["profile"]["style"] } }))}>
+                <option value="aggressive">{styleLabels.aggressive}</option>
+                <option value="supportive">{styleLabels.supportive}</option>
+                <option value="comedic">{styleLabels.comedic}</option>
+                <option value="beginner">{styleLabels.beginner}</option>
+                <option value="competitive">{styleLabels.competitive}</option>
+              </select>
+            </label>
+            <label>Chat request
+              <input value={signals.sentiment.request} onChange={(event) => setSignals((current) => ({ ...current, sentiment: { ...current.sentiment, request: event.target.value } }))} />
+            </label>
+          </div>
+        </div>
+        {automationPanel}
+      </div>
+    </section>
+  );
+
+  const streamAnalyticsPanel = (
+    <section className="view-panel">
+      <div className="section-heading">
+        <div><p className="step">Stream analytics</p><h2>Chat, hype, and vote pulse</h2></div>
+      </div>
+      <div className="analysis-insights">
+        {analysisSummary.map((item) => (
+          <div key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <p>{item.detail}</p>
+          </div>
+        ))}
+      </div>
+      <div className="analysis-history">
+        <div className="section-heading compact-heading">
+          <div><p className="step">Live signal trend</p><h3>{rollingAnalysis.dominantTempo}</h3></div>
+          <span>{rollingAnalysis.sampleCount} samples</span>
+        </div>
+        <div className="history-stats">
+          <div><span>Avg motion</span><strong>{rollingAnalysis.averageMotion === null ? "n/a" : `${Math.round(rollingAnalysis.averageMotion * 100)}%`}</strong></div>
+          <div><span>Peak motion</span><strong>{rollingAnalysis.peakMotion === null ? "n/a" : `${Math.round(rollingAnalysis.peakMotion * 100)}%`}</strong></div>
+          <div><span>Avg confidence</span><strong>{rollingAnalysis.averageConfidence === null ? "n/a" : `${Math.round(rollingAnalysis.averageConfidence * 100)}%`}</strong></div>
+        </div>
+        <div className="history-bars" aria-label="Recent motion samples">
+          {analysisSamples.length === 0 ? (
+            <p>No live samples yet.</p>
+          ) : analysisSamples.slice().reverse().map((sample) => (
+            <i
+              key={`${sample.timestamp}-${sample.checksum}`}
+              className={`bar-${sample.label}`}
+              title={`${sample.label}: ${sample.motion === null ? "n/a" : `${Math.round(sample.motion * 100)}%`} motion`}
+              style={{ height: `${Math.max(8, Math.round((sample.motion ?? 0.03) * 80))}px` }}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="twitch-chat-card">
+        <div className="section-heading compact-heading">
+          <div><p className="step">Twitch chat</p><h3>{chatStatus}</h3></div>
+          <button className="analysis-button" onClick={connectTwitchChat}>
+            {chatStatus === "connected" ? "Reconnect chat" : "Connect chat"}
+          </button>
+        </div>
+        <label>Channel name
+          <input value={twitchChannel} onChange={(event) => setTwitchChannel(event.target.value)} />
+        </label>
+        <p>{chatMessage}</p>
+        <div className="live-chat-lines">
+          {liveChat.length === 0 ? (
+            <span>No live chat messages received yet.</span>
+          ) : liveChat.map((line, index) => (
+            <span key={`${line.user}-${line.text}-${index}`}>
+              <b>{line.user}</b> {line.text}{line.vote ? ` -> vote ${line.vote}` : ""}
+            </span>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+
+  const gameSignalsPanel = (
+    <section className="view-panel">
+      <div className="section-heading">
+        <div><p className="step">Game signals</p><h2>Captured screen read</h2></div>
+      </div>
+      <div className="analysis-card">
+        <div>
+          <p className="step">Live screen analysis</p>
+          <h3>{analysis.label === "unknown" ? "Waiting for visual signal" : analysis.label}</h3>
+          <span>{analysis.sourceLabel}</span>
+        </div>
+        <button
+          className="analysis-button"
+          onClick={startScreenAnalysis}
+          disabled={analysis.status === "starting"}
+        >
+          {analysis.status === "running" ? "Restart capture" : analysis.status === "starting" ? "Opening picker..." : "Capture game window"}
+        </button>
+        <dl>
+          <div><dt>Frames</dt><dd>{analysis.frameCount}</dd></div>
+          <div><dt>Motion</dt><dd>{analysis.changedPixelRatio === null ? "n/a" : `${Math.round(analysis.changedPixelRatio * 100)}%`}</dd></div>
+          <div><dt>Visual change</dt><dd>{analysis.meanLumaDelta === null ? "n/a" : `${Math.round(analysis.meanLumaDelta * 100)}%`}</dd></div>
+          <div><dt>Confidence</dt><dd>{Math.round(analysis.confidence * 100)}%</dd></div>
+        </dl>
+        <div className="analysis-preview">
+          {analysis.previewDataUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={analysis.previewDataUrl} alt="Live sampled game window preview" />
+          ) : (
+            <span>No sampled preview yet</span>
+          )}
+          <b>checksum {analysis.visualChecksum ?? "n/a"}</b>
+        </div>
+      </div>
+      <div className="context-columns">
+        <section className="context-column" aria-label="Captured game status">
+          <div className="section-heading compact-heading">
+            <div><p className="step">Game status</p><h3>Current read</h3></div>
+          </div>
+          <div className="context-list">
+            {gameStatusRead.map((item) => (
+              <div key={item.label}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <p>{item.detail}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="context-column" aria-label="Game phase model">
+          <div className="section-heading compact-heading">
+            <div><p className="step">Phase model</p><h3>{gamePhasePreset.replace("-", " ")}</h3></div>
+          </div>
+          <div className="context-list">
+            {Object.entries(gamePhasePresets[gamePhasePreset]).map(([phase, label]) => (
+              <div key={phase}>
+                <span>{phase}</span>
+                <strong>{label}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </section>
+  );
+
+  const voteOverlayPanel = (
+    <section className="view-panel vote-overlay-grid">
+      <div className="quest-panel panel">
+        <div className="section-heading">
+          <div><p className="step">Vote</p><h2>Viewer choices</h2></div>
+          {provider && <span className="provider">{provider === "openai" ? "Live AI" : "Safe demo engine"}</span>}
+        </div>
+
+        {quests.length === 0 ? (
+          <div className="empty-state"><span>✦</span><p>Generate three audience-ready quests.</p></div>
+        ) : (
+          <div className="quest-list">
+            {quests.map((quest, index) => {
+              const count = votes[quest.id] || 0;
+              const share = totalVotes ? Math.round((count / totalVotes) * 100) : 0;
+              return (
+                <article className="quest-card" key={quest.id}>
+                  <div className="quest-number">0{index + 1}</div>
+                  <div className="quest-copy">
+                    <div className="quest-title-row">
+                      <h3>{quest.title}</h3>
+                      <span className={`difficulty ${quest.difficulty}`}>{quest.difficulty}</span>
+                      {leadingQuest?.id === quest.id && <span className="leading-badge">Leading</span>}
+                    </div>
+                    <p>{quest.instruction}</p>
+                    <small>{quest.durationSeconds}s · {quest.rewardPoints} XP · {quest.rationale}</small>
+                    <div className="vote-track"><i style={{ width: `${share}%` }} /></div>
+                  </div>
+                  <div className="quest-actions">
+                    <button onClick={() => addVote(quest.id)}>+ vote <b>{count}</b></button>
+                    <button className="activate-button" onClick={() => activate(quest)}>Activate</button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      {readinessPanel}
+    </section>
+  );
+
+  const activeViewPanel = activeStudioView === "studio"
+    ? studioPanel
+    : activeStudioView === "analytics"
+      ? streamAnalyticsPanel
+      : activeStudioView === "game-signals"
+        ? gameSignalsPanel
+        : voteOverlayPanel;
+
   return (
     <main className="shell">
       <header className="topbar">
@@ -863,35 +1164,25 @@ export function ControlRoom() {
         <a className="ghost-button" href="/overlay" target="_blank" rel="noreferrer">Open overlay ↗</a>
       </header>
 
-      <section className="studio-strip" id="top">
-        <div>
-          <p className="eyebrow">Studio</p>
-          <h1>Demo controls</h1>
-          <p className="hero-copy">Capture game, connect chat, generate quests, publish to OBS.</p>
-        </div>
-        <div className="studio-strip-status" aria-label="Demo loop status">
-          <span data-state={analysis.status === "running" ? "ready" : "idle"}>
-            <b>Screen</b>{analysis.status === "running" ? "Live" : "Idle"}
-          </span>
-          <span data-state={chatStatus === "connected" ? "ready" : "idle"}>
-            <b>Chat</b>{chatStatus === "connected" ? "Connected" : "Idle"}
-          </span>
-          <span data-state={quests.length === 3 ? "ready" : "idle"}>
-            <b>Quests</b>{quests.length === 3 ? "Ready" : "Empty"}
-          </span>
-          <span data-state={activeQuest ? "ready" : "idle"}>
-            <b>Overlay</b>{activeQuest ? "Showing" : "Waiting"}
-          </span>
-        </div>
-      </section>
-
-      <section className="recording-cockpit">
-        <div className="recording-ribbon panel">
-          <div>
-            <p className="step">Recording cockpit</p>
-            <h2>Run the demo from here.</h2>
-            <p>Start capture, connect chat, generate quests, then confirm the overlay mirror before going live on camera.</p>
+      <section className="recording-cockpit" id="top">
+        <div className="status-bars">
+          <div className="status-bar" aria-label="System status">
+            {readinessItems.map((item) => (
+              <span data-state={item.ready ? "ready" : "idle"} key={item.label}>
+                <b>{item.label}</b>{item.value}
+              </span>
+            ))}
           </div>
+          <div className="status-bar secondary" aria-label="Stream analytics summary">
+            {streamMetricItems.map((item) => (
+              <span data-state={item.ready ? "ready" : "idle"} key={item.label}>
+                <b>{item.label}</b>{item.value}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="recording-ribbon panel">
           <div className="ribbon-actions">
             <button onClick={startScreenAnalysis} disabled={analysis.status === "starting"}>
               {analysis.status === "running" ? "Restart capture" : "Capture game"}
@@ -904,241 +1195,32 @@ export function ControlRoom() {
             </button>
             <a href="/overlay" target="_blank" rel="noreferrer">Open overlay</a>
           </div>
-        </div>
-        <div className="cockpit-grid">
-          {readinessPanel}
-          {automationPanel}
-        </div>
-      </section>
-
-      <section className="workspace">
-        <div className="signal-panel panel">
-          <div className="section-heading">
-            <div><p className="step">01 · Signals</p><h2>Read the room</h2></div>
-            <button className="text-button" onClick={() => setSignals(goldenScenario)}>Reset demo</button>
-          </div>
-
-          <div className="analysis-card">
-            <div>
-              <p className="step">Live screen analysis</p>
-              <h3>{analysis.label === "unknown" ? "Waiting for visual signal" : analysis.label}</h3>
-              <span>{analysis.sourceLabel}</span>
-            </div>
-            <button
-              className="analysis-button"
-              onClick={startScreenAnalysis}
-              disabled={analysis.status === "starting"}
-            >
-              {analysis.status === "running" ? "Restart capture" : analysis.status === "starting" ? "Opening picker..." : "Capture game window"}
-            </button>
-            <dl>
-              <div><dt>Frames</dt><dd>{analysis.frameCount}</dd></div>
-              <div><dt>Motion</dt><dd>{analysis.changedPixelRatio === null ? "n/a" : `${Math.round(analysis.changedPixelRatio * 100)}%`}</dd></div>
-              <div><dt>Visual change</dt><dd>{analysis.meanLumaDelta === null ? "n/a" : `${Math.round(analysis.meanLumaDelta * 100)}%`}</dd></div>
-              <div><dt>Confidence</dt><dd>{Math.round(analysis.confidence * 100)}%</dd></div>
-            </dl>
-            <div className="analysis-preview">
-              {analysis.previewDataUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={analysis.previewDataUrl} alt="Live sampled game window preview" />
-              ) : (
-                <span>No sampled preview yet</span>
-              )}
-              <b>checksum {analysis.visualChecksum ?? "n/a"}</b>
-            </div>
-            <p>{analysis.message}</p>
-          </div>
-
-          <div className="analysis-insights">
-            {analysisSummary.map((item) => (
-              <div key={item.label}>
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-                <p>{item.detail}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="analysis-history">
-            <div className="section-heading compact-heading">
-              <div><p className="step">Rolling live analysis</p><h3>{rollingAnalysis.dominantTempo}</h3></div>
-              <span>{rollingAnalysis.sampleCount} samples</span>
-            </div>
-            <div className="history-stats">
-              <div><span>Avg motion</span><strong>{rollingAnalysis.averageMotion === null ? "n/a" : `${Math.round(rollingAnalysis.averageMotion * 100)}%`}</strong></div>
-              <div><span>Peak motion</span><strong>{rollingAnalysis.peakMotion === null ? "n/a" : `${Math.round(rollingAnalysis.peakMotion * 100)}%`}</strong></div>
-              <div><span>Avg confidence</span><strong>{rollingAnalysis.averageConfidence === null ? "n/a" : `${Math.round(rollingAnalysis.averageConfidence * 100)}%`}</strong></div>
-            </div>
-            <div className="history-bars" aria-label="Recent motion samples">
-              {analysisSamples.length === 0 ? (
-                <p>No live samples yet.</p>
-              ) : analysisSamples.slice().reverse().map((sample) => (
-                <i
-                  key={`${sample.timestamp}-${sample.checksum}`}
-                  className={`bar-${sample.label}`}
-                  title={`${sample.label}: ${sample.motion === null ? "n/a" : `${Math.round(sample.motion * 100)}%`} motion`}
-                  style={{ height: `${Math.max(8, Math.round((sample.motion ?? 0.03) * 80))}px` }}
-                />
-              ))}
-            </div>
-            <p>{rollingAnalysis.questReadiness}</p>
-          </div>
-
-          <div className="context-columns">
-            <section className="context-column" aria-label="Current game status">
-              <div className="section-heading compact-heading">
-                <div><p className="step">Game status</p><h3>Current read</h3></div>
-              </div>
-              <div className="context-list">
-                {gameStatusRead.map((item) => (
-                  <div key={item.label}>
-                    <span>{item.label}</span>
-                    <strong>{item.value}</strong>
-                    <p>{item.detail}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="context-column" aria-label="Quest direction">
-              <div className="section-heading compact-heading">
-                <div><p className="step">Quest direction</p><h3>Streamer preference</h3></div>
-              </div>
-              <div className="context-list">
-                {questDirectionRead.map((item) => (
-                  <div key={item.label}>
-                    <span>{item.label}</span>
-                    <strong>{item.value}</strong>
-                    <p>{item.detail}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </div>
-
-          <div className="signal-mode-panel">
-            <div className="section-heading compact-heading">
-              <div><p className="step">Adjustments</p><h3>Streamer controls</h3></div>
-            </div>
-            <div className="form-grid">
-              <label>Game phase set
-                <select value={gamePhasePreset} onChange={(event) => setGamePhasePreset(event.target.value as GamePhasePreset)}>
-                  <option value="action">Action / arena</option>
-                  <option value="objective">MOBA / objective</option>
-                  <option value="battle-royale">Battle royale</option>
-                </select>
-              </label>
-              <label>Match phase
-                <select value={signals.gameplay.phase} onChange={(event) => setSignals((current) => ({ ...current, gameplay: { ...current.gameplay, phase: event.target.value as GenerationRequest["gameplay"]["phase"] } }))}>
-                  <option value="looting">{gamePhasePresets[gamePhasePreset].looting}</option>
-                  <option value="rotation">{gamePhasePresets[gamePhasePreset].rotation}</option>
-                  <option value="combat">{gamePhasePresets[gamePhasePreset].combat}</option>
-                  <option value="final-circle">{gamePhasePresets[gamePhasePreset]["final-circle"]}</option>
-                </select>
-              </label>
-              <label>Team pressure
-                <select value={signals.gameplay.squadStatus} onChange={(event) => setSignals((current) => ({ ...current, gameplay: { ...current.gameplay, squadStatus: event.target.value as GenerationRequest["gameplay"]["squadStatus"] } }))}>
-                  <option value="all-up">{squadStatusLabels["all-up"]}</option>
-                  <option value="teammate-knocked">{squadStatusLabels["teammate-knocked"]}</option>
-                  <option value="last-alive">{squadStatusLabels["last-alive"]}</option>
-                </select>
-              </label>
-              <label className="range-label">Health <strong>{signals.gameplay.health}%</strong>
-                <input type="range" min="0" max="100" value={signals.gameplay.health} onChange={(event) => setSignals((current) => ({ ...current, gameplay: { ...current.gameplay, health: Number(event.target.value) } }))} />
-              </label>
-              <label>Viewer mood
-                <select value={signals.sentiment.mood} onChange={(event) => setSignals((current) => ({ ...current, sentiment: { ...current.sentiment, mood: event.target.value as GenerationRequest["sentiment"]["mood"] } }))}>
-                  <option value="bored">{moodLabels.bored}</option>
-                  <option value="hyped">{moodLabels.hyped}</option>
-                  <option value="chaotic">{moodLabels.chaotic}</option>
-                  <option value="supportive">{moodLabels.supportive}</option>
-                  <option value="teasing">{moodLabels.teasing}</option>
-                </select>
-              </label>
-              <label>Streamer style
-                <select value={signals.profile.style} onChange={(event) => setSignals((current) => ({ ...current, profile: { ...current.profile, style: event.target.value as GenerationRequest["profile"]["style"] } }))}>
-                  <option value="aggressive">{styleLabels.aggressive}</option>
-                  <option value="supportive">{styleLabels.supportive}</option>
-                  <option value="comedic">{styleLabels.comedic}</option>
-                  <option value="beginner">{styleLabels.beginner}</option>
-                  <option value="competitive">{styleLabels.competitive}</option>
-                </select>
-              </label>
-              <label>Chat request
-                <input value={signals.sentiment.request} onChange={(event) => setSignals((current) => ({ ...current, sentiment: { ...current.sentiment, request: event.target.value } }))} />
-              </label>
-            </div>
-          </div>
-
-          <div className="chat-strip">
-            {sampleChat.slice(0, 3).map((chat) => <p key={chat.name}><b>{chat.name}</b> {chat.message}</p>)}
-          </div>
-
-          <div className="twitch-chat-card">
-            <div className="section-heading compact-heading">
-              <div><p className="step">Twitch chat comments</p><h3>{chatStatus}</h3></div>
-              <button className="analysis-button" onClick={connectTwitchChat}>
-                {chatStatus === "connected" ? "Reconnect chat" : "Connect chat"}
-              </button>
-            </div>
-            <p className="viewer-instruction">Viewer instruction: type exactly 1, 2, or 3 in Twitch chat.</p>
-            <label>Channel name
-              <input value={twitchChannel} onChange={(event) => setTwitchChannel(event.target.value)} />
-            </label>
-            <p>{chatMessage}</p>
-            <div className="live-chat-lines">
-              {liveChat.length === 0 ? (
-                <span>No live chat messages received yet.</span>
-              ) : liveChat.map((line, index) => (
-                <span key={`${line.user}-${line.text}-${index}`}>
-                  <b>{line.user}</b> {line.text}{line.vote ? ` -> vote ${line.vote}` : ""}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <button className="primary-button" onClick={generate} disabled={loading}>{loading ? "Reading the moment…" : "Generate now"}</button>
-          {error && <p className="notice error">{error}</p>}
-          {warning && <p className="notice">{warning}</p>}
-        </div>
-
-        <div className="quest-panel panel">
-          <div className="section-heading">
-            <div><p className="step">02 · Vote</p><h2>Choose the chaos</h2></div>
-            {provider && <span className="provider">{provider === "openai" ? "Live AI" : "Safe demo engine"}</span>}
-          </div>
-
-          {quests.length === 0 ? (
-            <div className="empty-state"><span>✦</span><p>Set the moment, then generate three audience-ready quests.</p></div>
-          ) : (
-            <div className="quest-list">
-              {quests.map((quest, index) => {
-                const count = votes[quest.id] || 0;
-                const share = totalVotes ? Math.round((count / totalVotes) * 100) : 0;
-                return (
-                  <article className="quest-card" key={quest.id}>
-                    <div className="quest-number">0{index + 1}</div>
-                    <div className="quest-copy">
-                      <div className="quest-title-row">
-                        <h3>{quest.title}</h3>
-                        <span className={`difficulty ${quest.difficulty}`}>{quest.difficulty}</span>
-                        {leadingQuest?.id === quest.id && <span className="leading-badge">Leading</span>}
-                      </div>
-                      <p>{quest.instruction}</p>
-                      <small>{quest.durationSeconds}s · {quest.rewardPoints} XP · {quest.rationale}</small>
-                      <div className="vote-track"><i style={{ width: `${share}%` }} /></div>
-                    </div>
-                    <div className="quest-actions">
-                      <button onClick={() => addVote(quest.id)}>+ vote <b>{count}</b></button>
-                      <button className="activate-button" onClick={() => activate(quest)}>Activate</button>
-                    </div>
-                  </article>
-                );
-              })}
+          {(error || warning) && (
+            <div className="cockpit-notice">
+              {error && <span className="notice error">{error}</span>}
+              {warning && <span className="notice">{warning}</span>}
             </div>
           )}
         </div>
+
+        <nav className="view-ribbon" aria-label="Studio views">
+          {studioViews.map((view) => (
+            <button
+              aria-pressed={activeStudioView === view.id}
+              className={activeStudioView === view.id ? "selected" : ""}
+              key={view.id}
+              onClick={() => setActiveStudioView(view.id)}
+              type="button"
+            >
+              {view.label}
+            </button>
+          ))}
+          <a href="/viewer.html" target="_blank" rel="noreferrer">Viewer</a>
+          <a href="/overlay" target="_blank" rel="noreferrer">Overlay</a>
+        </nav>
       </section>
+
+      {activeViewPanel}
 
       {activeQuest && (
         <section className="active-bar">
