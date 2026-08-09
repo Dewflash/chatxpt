@@ -11,7 +11,7 @@ The repository contains a runnable local prototype that demonstrates the core id
 2. exactly three generated sidequests;
 3. local screen/window activity sampling when the browser is granted capture permission, with visible motion, visual-change, tempo, confidence, rolling sample history, preview, and checksum signals;
 4. anonymous Twitch-chat `1`/`2`/`3` vote ingestion for the configured broadcaster channel when Twitch chat is reachable;
-5. visible Studio automation settings for automatic quest generation versus manual producer review, automatic overlay publishing versus streamer-approved activation, readiness state, recent flow events, and an embedded OBS output mirror;
+5. a top Studio recording cockpit with quick capture/chat/generate/overlay actions, visible automation settings for automatic quest generation versus manual producer review, automatic overlay publishing versus streamer-approved activation, readiness state, recent flow events, and an embedded OBS output mirror;
 6. manual viewer-vote simulation as a diagnostic fallback;
 7. streamer activation and result controls;
 8. OBS-style overlay output through `http://localhost:3000/overlay`.

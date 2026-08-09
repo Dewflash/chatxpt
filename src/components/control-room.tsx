@@ -581,6 +581,122 @@ export function ControlRoom() {
     }
   }
 
+  const readinessPanel = (
+    <div className="readiness-card">
+      <div className="section-heading compact-heading">
+        <div><p className="step">Demo readiness</p><h3>{activeQuest ? "Overlay live" : "Preflight"}</h3></div>
+        <a className="mini-link" href="/overlay" target="_blank" rel="noreferrer">View overlay</a>
+      </div>
+      <div className="readiness-grid">
+        {readinessItems.map((item) => (
+          <div className={item.ready ? "ready" : ""} key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+          </div>
+        ))}
+      </div>
+      <p>
+        {activeQuest
+          ? `${activeQuest.quest.title} is published to the stream overlay.`
+          : leadingQuest
+            ? `${leadingQuest.title} is leading; auto overlay will publish it, or publish now for recording.`
+            : "Start capture, generate quests, then ask Joel to vote 1/2/3."}
+      </p>
+      {leadingQuest && !activeQuest && (
+        <button className="publish-button" onClick={() => activate(leadingQuest)}>
+          Publish leading quest now
+        </button>
+      )}
+      <div className="obs-preview">
+        <div><span>OBS output mirror</span><b>{activeQuest ? activeQuest.quest.title : "Waiting for active quest"}</b></div>
+        <iframe src="/overlay" title="OBS overlay preview" />
+      </div>
+      <div className="event-timeline">
+        <span>Recent flow</span>
+        {demoEvents.length === 0 ? (
+          <p>No demo events yet.</p>
+        ) : demoEvents.map((event) => (
+          <p key={event.id}>
+            <b>{event.label}</b>
+            {event.detail}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+
+  const automationPanel = (
+    <div className="automation-card">
+      <div>
+        <p className="step">Stream automation settings</p>
+        <h3>{autoDemoEnabled ? "Automatic quest flow" : "Manual producer review"}</h3>
+        <p>
+          Choose whether ChatXPT prepares quests while you play or waits for the streamer to stop
+          and review. Overlay publishing can also be automatic or manual.
+        </p>
+      </div>
+      <div className="mode-grid">
+        <button
+          type="button"
+          className={autoDemoEnabled ? "selected" : ""}
+          onClick={() => setAutoDemoEnabled(true)}
+        >
+          <b>Auto generate</b>
+          <span>{generationDelaySeconds}s after live capture starts</span>
+        </button>
+        <button
+          type="button"
+          className={!autoDemoEnabled ? "selected" : ""}
+          onClick={() => setAutoDemoEnabled(false)}
+        >
+          <b>Manual review</b>
+          <span>Streamer clicks Generate now</span>
+        </button>
+      </div>
+      <label>Quest timing
+        <select
+          value={generationDelaySeconds}
+          onChange={(event) => setGenerationDelaySeconds(Number(event.target.value))}
+          disabled={!autoDemoEnabled}
+        >
+          <option value={15}>15 seconds</option>
+          <option value={30}>30 seconds</option>
+          <option value={45}>45 seconds</option>
+        </select>
+      </label>
+      <div className="mode-grid">
+        <button
+          type="button"
+          className={autoOverlayEnabled ? "selected" : ""}
+          onClick={() => setAutoOverlayEnabled(true)}
+        >
+          <b>Auto overlay</b>
+          <span>Winner appears for viewers after vote</span>
+        </button>
+        <button
+          type="button"
+          className={!autoOverlayEnabled ? "selected" : ""}
+          onClick={() => setAutoOverlayEnabled(false)}
+        >
+          <b>Streamer approves</b>
+          <span>Click Activate before overlay shows</span>
+        </button>
+      </div>
+      <div className="automation-status">
+        <span>
+          {!questAutoArmed
+            ? "Quest timer waits for live capture"
+            : `Generating in ${autoQuestCountdown}s`}
+        </span>
+        <span>
+          {!overlayAutoArmed
+            ? "Overlay waits for a viewer vote"
+            : `Overlay in ${autoOverlayCountdown}s`}
+        </span>
+      </div>
+    </div>
+  );
+
   return (
     <main className="shell">
       <header className="topbar">
@@ -601,6 +717,32 @@ export function ControlRoom() {
         <div className="signal-orbit" aria-label="Three engine inputs">
           <span>GAME</span><span>CHAT</span><span>CREATOR</span>
           <strong>AI</strong>
+        </div>
+      </section>
+
+      <section className="recording-cockpit">
+        <div className="recording-ribbon panel">
+          <div>
+            <p className="step">Recording cockpit</p>
+            <h2>Run the demo from here.</h2>
+            <p>Start capture, connect chat, generate quests, then confirm the overlay mirror before going live on camera.</p>
+          </div>
+          <div className="ribbon-actions">
+            <button onClick={startScreenAnalysis} disabled={analysis.status === "starting"}>
+              {analysis.status === "running" ? "Restart capture" : "Capture game"}
+            </button>
+            <button onClick={connectTwitchChat}>
+              {chatStatus === "connected" ? "Reconnect chat" : "Connect chat"}
+            </button>
+            <button onClick={generate} disabled={loading}>
+              {loading ? "Reading..." : "Generate now"}
+            </button>
+            <a href="/overlay" target="_blank" rel="noreferrer">Open overlay</a>
+          </div>
+        </div>
+        <div className="cockpit-grid">
+          {readinessPanel}
+          {automationPanel}
         </div>
       </section>
 
@@ -730,118 +872,6 @@ export function ControlRoom() {
                   <b>{line.user}</b> {line.text}{line.vote ? ` -> vote ${line.vote}` : ""}
                 </span>
               ))}
-            </div>
-          </div>
-
-          <div className="readiness-card">
-            <div className="section-heading compact-heading">
-              <div><p className="step">Demo readiness</p><h3>{activeQuest ? "Overlay live" : "Preflight"}</h3></div>
-              <a className="mini-link" href="/overlay" target="_blank" rel="noreferrer">View overlay</a>
-            </div>
-            <div className="readiness-grid">
-              {readinessItems.map((item) => (
-                <div className={item.ready ? "ready" : ""} key={item.label}>
-                  <span>{item.label}</span>
-                  <strong>{item.value}</strong>
-                </div>
-              ))}
-            </div>
-            <p>
-              {activeQuest
-                ? `${activeQuest.quest.title} is published to the stream overlay.`
-                : leadingQuest
-                  ? `${leadingQuest.title} is leading; auto overlay will publish it, or publish now for recording.`
-                  : "Start capture, generate quests, then ask Joel to vote 1/2/3."}
-            </p>
-            {leadingQuest && !activeQuest && (
-              <button className="publish-button" onClick={() => activate(leadingQuest)}>
-                Publish leading quest now
-              </button>
-            )}
-            <div className="obs-preview">
-              <div><span>OBS output mirror</span><b>{activeQuest ? activeQuest.quest.title : "Waiting for active quest"}</b></div>
-              <iframe src="/overlay" title="OBS overlay preview" />
-            </div>
-            <div className="event-timeline">
-              <span>Recent flow</span>
-              {demoEvents.length === 0 ? (
-                <p>No demo events yet.</p>
-              ) : demoEvents.map((event) => (
-                <p key={event.id}>
-                  <b>{event.label}</b>
-                  {event.detail}
-                </p>
-              ))}
-            </div>
-          </div>
-
-          <div className="automation-card">
-            <div>
-              <p className="step">Stream automation settings</p>
-              <h3>{autoDemoEnabled ? "Automatic quest flow" : "Manual producer review"}</h3>
-              <p>
-                Choose whether ChatXPT prepares quests while you play or waits for the streamer to stop
-                and review. Overlay publishing can also be automatic or manual.
-              </p>
-            </div>
-            <div className="mode-grid">
-              <button
-                type="button"
-                className={autoDemoEnabled ? "selected" : ""}
-                onClick={() => setAutoDemoEnabled(true)}
-              >
-                <b>Auto generate</b>
-                <span>{generationDelaySeconds}s after live capture starts</span>
-              </button>
-              <button
-                type="button"
-                className={!autoDemoEnabled ? "selected" : ""}
-                onClick={() => setAutoDemoEnabled(false)}
-              >
-                <b>Manual review</b>
-                <span>Streamer clicks Generate now</span>
-              </button>
-            </div>
-            <label>Quest timing
-              <select
-                value={generationDelaySeconds}
-                onChange={(event) => setGenerationDelaySeconds(Number(event.target.value))}
-                disabled={!autoDemoEnabled}
-              >
-                <option value={15}>15 seconds</option>
-                <option value={30}>30 seconds</option>
-                <option value={45}>45 seconds</option>
-              </select>
-            </label>
-            <div className="mode-grid">
-              <button
-                type="button"
-                className={autoOverlayEnabled ? "selected" : ""}
-                onClick={() => setAutoOverlayEnabled(true)}
-              >
-                <b>Auto overlay</b>
-                <span>Winner appears for viewers after vote</span>
-              </button>
-              <button
-                type="button"
-                className={!autoOverlayEnabled ? "selected" : ""}
-                onClick={() => setAutoOverlayEnabled(false)}
-              >
-                <b>Streamer approves</b>
-                <span>Click Activate before overlay shows</span>
-              </button>
-            </div>
-            <div className="automation-status">
-              <span>
-                {!questAutoArmed
-                  ? "Quest timer waits for live capture"
-                  : `Generating in ${autoQuestCountdown}s`}
-              </span>
-              <span>
-                {!overlayAutoArmed
-                  ? "Overlay waits for a viewer vote"
-                  : `Overlay in ${autoOverlayCountdown}s`}
-              </span>
             </div>
           </div>
 

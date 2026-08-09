@@ -49,6 +49,17 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .signal-orbit span { position: absolute; z-index: 2; padding: 6px 10px; background: #171121; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 10px; letter-spacing: .14em; }
 .signal-orbit span:nth-child(1) { top: -10px; left: 52px; }.signal-orbit span:nth-child(2) { right: -26px; bottom: 40px; }.signal-orbit span:nth-child(3) { left: -35px; bottom: 27px; }
 
+.recording-cockpit { display: grid; gap: 14px; margin-bottom: 16px; }
+.recording-ribbon { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(520px, 1.2fr); align-items: center; gap: 18px; padding: 18px 20px; border-color: rgba(215,255,82,.26); background: linear-gradient(120deg, rgba(215,255,82,.075), rgba(141,99,255,.06)); }
+.recording-ribbon h2 { margin: 0 0 6px; font: 700 26px "Space Grotesk"; letter-spacing: 0; }
+.recording-ribbon p:not(.step) { margin: 0; color: #d6d0e4; font-size: 13px; line-height: 1.45; }
+.ribbon-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.ribbon-actions button, .ribbon-actions a { min-height: 42px; display: grid; place-items: center; padding: 9px; border: 1px solid rgba(255,255,255,.12); border-radius: 9px; color: var(--ink); background: rgba(0,0,0,.18); text-align: center; text-decoration: none; font-size: 12px; font-weight: 800; cursor: pointer; }
+.ribbon-actions button:hover, .ribbon-actions a:hover { border-color: var(--lime); }
+.ribbon-actions button:disabled { opacity: .55; cursor: wait; }
+.cockpit-grid { display: grid; grid-template-columns: minmax(500px, 1.1fr) minmax(420px, .9fr); gap: 14px; align-items: start; }
+.cockpit-grid .readiness-card, .cockpit-grid .automation-card { margin: 0; min-height: 100%; }
+
 .workspace { display: grid; grid-template-columns: minmax(420px, .85fr) minmax(560px, 1.15fr); gap: 16px; align-items: start; }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 26px; box-shadow: 0 24px 80px rgba(0,0,0,.24); backdrop-filter: blur(14px); }
 .section-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 22px; }
@@ -186,12 +197,13 @@ input[type="range"] { accent-color: var(--violet); padding: 7px 0; background: t
 
 @media (max-width: 1000px) {
   .hero { grid-template-columns: 1fr; }.signal-orbit { display: none; }
-  .workspace { grid-template-columns: 1fr; }.quest-panel { min-height: 460px; }
+  .recording-ribbon, .cockpit-grid, .workspace { grid-template-columns: 1fr; }.quest-panel { min-height: 460px; }
+  .ribbon-actions { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 640px) {
   .shell { width: min(100% - 20px, 1480px); }.topbar { gap: 10px; }.live-pill { display: none; }.ghost-button { margin-left: auto; font-size: 11px; }
   .hero { min-height: 260px; padding: 40px 8px 25px; }.form-grid { grid-template-columns: 1fr; }
   .analysis-card dl { grid-template-columns: 1fr 1fr; }
-  .panel { padding: 18px; border-radius: 16px; }.analysis-insights, .mode-grid, .readiness-grid, .history-stats { grid-template-columns: 1fr 1fr; }.quest-card { grid-template-columns: 30px 1fr; }.quest-actions { grid-column: 2; grid-template-columns: 1fr 1fr; }.automation-status { grid-template-columns: 1fr; }
+  .panel { padding: 18px; border-radius: 16px; }.analysis-insights, .mode-grid, .readiness-grid, .history-stats, .ribbon-actions { grid-template-columns: 1fr 1fr; }.quest-card { grid-template-columns: 30px 1fr; }.quest-actions { grid-column: 2; grid-template-columns: 1fr 1fr; }.automation-status { grid-template-columns: 1fr; }
   .active-bar { align-items: flex-start; }.active-bar p { display: block; margin: 4px 0 0; }.active-actions { flex-direction: column; }
 }
