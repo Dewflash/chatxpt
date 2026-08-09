@@ -14,6 +14,7 @@ import {
   streamerViewModelSchema,
   viewerRecoveryStateSchema,
   viewerViewModelSchema,
+  type SessionHistorySnapshot,
   type AcceptedCommandReceipt,
   type AcceptedVoteTallyReadInput,
   type AcceptedVoteTallyReader,
@@ -43,6 +44,8 @@ import {
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
   type RealtimeAccessGrantStore,
+  type SessionHistoryReadInput,
+  type SessionHistoryReader,
   type SessionLifecycleCommitResult,
   type SessionLifecycleStore,
   type SessionPresenceAction,
@@ -50,6 +53,7 @@ import {
   type SnapshotRole,
 } from "./types";
 import { sanitizeRoleViewsForBroadcast } from "./sanitization";
+import { buildSessionHistoryFromReceipts } from "./session-history";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -188,6 +192,17 @@ export class SupabaseChatXptDataApi {
       .maybeSingle();
     throwIfError(error);
     return data === null ? null : rowJson(data, "receipt");
+  }
+
+  async loadReceiptsForBroadcaster(broadcasterId: string, limit: number): Promise<readonly unknown[]> {
+    const { data, error } = await this.client
+      .from("command_receipts")
+      .select("receipt, stream_sessions!inner(broadcaster_id)")
+      .eq("stream_sessions.broadcaster_id", broadcasterId)
+      .order("committed_revision", { ascending: false })
+      .limit(limit);
+    throwIfError(error);
+    return (data ?? []).map((row) => rowJson(row, "receipt"));
   }
 
   async loadLifecycleOperation(operationId: string): Promise<unknown | null> {
@@ -555,6 +570,25 @@ export class SupabaseViewerRecoveryReader implements ViewerRecoveryReader {
   }
 }
 
+export class SupabaseSessionHistoryReader implements SessionHistoryReader {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async readSessionHistory(input: SessionHistoryReadInput): Promise<SessionHistorySnapshot> {
+    const limit = input.limit === undefined ? 25 : Math.min(100, Math.max(1, Math.trunc(input.limit)));
+    const receipts = z
+      .array(acceptedCommandReceiptSchema)
+      .parse(await this.api.loadReceiptsForBroadcaster(input.broadcasterId, limit * 4));
+    return buildSessionHistoryFromReceipts({
+      broadcasterId: input.broadcasterId,
+      receipts,
+      generatedAt: input.at,
+      limit,
+      source: "orchestrator",
+      evidenceClass: "live",
+    });
+  }
+}
+
 export class SupabaseDueVoteCycleReader implements DueVoteCycleReader {
   constructor(private readonly api: SupabaseChatXptDataApi) {}
 
@@ -765,6 +799,7 @@ export function createSupabasePersistenceRuntime(
   const sessions = new SupabaseSessionStateRepository(api);
   const acceptedVotes = new SupabaseAcceptedVoteTallyReader(api);
   const viewerRecovery = new SupabaseViewerRecoveryReader(api);
+  const sessionHistory = new SupabaseSessionHistoryReader(api);
   const snapshots = new SupabaseRoleSnapshotPublisher(api);
   const hostedBoardSessions = new SupabaseHostedBoardSessionDirectory(api);
   const dueVotes = new SupabaseDueVoteCycleReader(api);
@@ -780,6 +815,7 @@ export function createSupabasePersistenceRuntime(
     accessGrants: new SupabaseRealtimeAccessGrantStore(api),
     dueVotes,
     viewerRecovery,
+    sessionHistory,
     probe: (checkedAt) => api.probe(checkedAt),
   };
 }

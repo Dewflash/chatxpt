@@ -4,6 +4,7 @@ import type {
   CandidateBatch,
   CandidateBatchReader,
   RoleViewModels,
+  SessionHistorySnapshot,
   SessionStateRepository,
   StatePublisher,
   ViewerRecoveryReader,
@@ -154,6 +155,16 @@ export interface DueVoteCycleReader {
   dueVoteCycles(at: number): Promise<readonly AuthoritativeSessionState[]>;
 }
 
+export interface SessionHistoryReadInput {
+  readonly broadcasterId: string;
+  readonly at: number;
+  readonly limit?: number;
+}
+
+export interface SessionHistoryReader {
+  readSessionHistory(input: SessionHistoryReadInput): Promise<SessionHistorySnapshot>;
+}
+
 export interface ChatXptPersistenceRuntime {
   readonly mode: "memory" | "supabase";
   readonly sessions: SessionStateRepository;
@@ -165,6 +176,7 @@ export interface ChatXptPersistenceRuntime {
   readonly accessGrants: RealtimeAccessGrantStore;
   readonly dueVotes: DueVoteCycleReader;
   readonly viewerRecovery: ViewerRecoveryReader;
+  readonly sessionHistory: SessionHistoryReader;
 }
 
 export class PersistenceConflictError extends Error {

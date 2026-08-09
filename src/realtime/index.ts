@@ -39,6 +39,10 @@ export {
   HostedBoardAccessService,
 } from "./hosted-access";
 export {
+  buildSessionHistoryFromReceipts,
+  type BuildSessionHistoryInput,
+} from "./session-history";
+export {
   FALLBACK_ROOM_CODE_LENGTH,
   PREPARING_SESSION_EXPIRY_MS,
   SESSION_RECONNECT_GRACE_MS,
@@ -60,6 +64,8 @@ export {
   type SessionLifecycleAction,
   type SessionLifecycleCommitResult,
   type SessionLifecycleStore,
+  type SessionHistoryReadInput,
+  type SessionHistoryReader,
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,

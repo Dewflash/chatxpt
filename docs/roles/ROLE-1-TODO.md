@@ -86,6 +86,12 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 - The fixture catalog covers proposed, voting zero-vote, voting tie, active manual/automatic progress, terminal result/reward states, and cooldown.
 - The zero-vote fixture keeps `acceptedCandidateId: null`; private viewer receipts are never fabricated from public tallies.
 
+## Current session history read-model pass
+
+- `codex/role-1-session-history-current` adds privacy-safe session history snapshots for terminal quest outcomes and aggregate engagement.
+- Memory and Supabase readers derive history from accepted command receipts; they exclude raw chat, viewer identifiers, and private vote receipts.
+- Mixed/non-live receipt evidence downgrades the snapshot to `diagnostic` rather than claiming live history.
+
 ## Decisions Role 1 still owns
 
 - Shared contract acceptance and breaking changes

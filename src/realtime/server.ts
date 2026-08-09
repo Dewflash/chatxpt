@@ -23,6 +23,7 @@ export {
   SupabaseHostedBoardSessionDirectory,
   SupabaseRoleSnapshotPublisher,
   SupabaseRealtimeAccessGrantStore,
+  SupabaseSessionHistoryReader,
   SupabaseSessionLifecycleStore,
   SupabaseSessionStateRepository,
   SupabaseViewerRecoveryReader,
