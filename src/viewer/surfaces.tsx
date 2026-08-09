@@ -11,7 +11,7 @@ import {
   StatusBadge,
   VisuallyHidden,
 } from "../design-system";
-import type { OverlayViewModel, ViewerViewModel } from "../core";
+import type { DomainError, OverlayViewModel, ViewerViewModel } from "../core";
 import { presentOverlay, presentViewer, type ViewerQuestOptionPresentation } from "./presentation";
 import styles from "./surfaces.module.css";
 
@@ -19,6 +19,7 @@ export interface ViewerSurfaceProps {
   readonly view: ViewerViewModel | null;
   readonly selectedCandidateId?: string | null;
   readonly pendingCandidateId?: string | null;
+  readonly commandError?: DomainError | null;
   readonly now?: number;
   readonly onSelectCandidate?: (candidateId: string) => void;
   readonly onVoteCandidate?: (candidateId: string) => void;
@@ -93,6 +94,70 @@ function connectionRecoveryCopy(status: string | undefined) {
   }
 }
 
+function commandErrorCopy(error: DomainError): {
+  readonly title: string;
+  readonly body: string;
+  readonly tone: "info" | "warning" | "danger";
+} {
+  switch (error.code) {
+    case "unauthenticated":
+      return {
+        title: "Sign in to keep voting",
+        body: error.message,
+        tone: "warning",
+      };
+    case "forbidden":
+    case "unavailable-capability":
+      return {
+        title: "Voting is unavailable here",
+        body: error.message,
+        tone: "warning",
+      };
+    case "stale-revision":
+      return {
+        title: "The quest changed",
+        body: `${error.message} Your selection is preserved while ChatXPT refreshes.`,
+        tone: "warning",
+      };
+    case "duplicate":
+      return {
+        title: "Vote already received",
+        body: error.message,
+        tone: "info",
+      };
+    case "expired":
+      return {
+        title: "Voting has closed",
+        body: error.message,
+        tone: "warning",
+      };
+    case "rate-limited":
+      return {
+        title: "Please wait a moment",
+        body: error.message,
+        tone: "warning",
+      };
+    case "dependency-unavailable":
+      return {
+        title: "Connection interrupted",
+        body: error.message,
+        tone: "warning",
+      };
+    case "validation":
+      return {
+        title: "Vote not sent",
+        body: error.message,
+        tone: "warning",
+      };
+    case "internal":
+      return {
+        title: "Something went wrong",
+        body: error.message,
+        tone: "danger",
+      };
+  }
+}
+
 function phaseTitle(phase: ReturnType<typeof presentViewer>["phase"]): string {
   switch (phase) {
     case "loading":
@@ -131,6 +196,7 @@ function QuestOptionCard({
   selectedCandidateId,
   pending,
   canSelect,
+  revealWinner,
   onSelectCandidate,
 }: {
   readonly option: ViewerQuestOptionPresentation;
@@ -138,12 +204,18 @@ function QuestOptionCard({
   readonly selectedCandidateId: string | null;
   readonly pending: boolean;
   readonly canSelect: boolean;
+  readonly revealWinner: boolean;
   readonly onSelectCandidate?: (candidateId: string) => void;
 }) {
   const selected = option.candidateId === selectedCandidateId || option.acceptedByViewer;
+  const cardClass = `${styles.option} ${revealWinner ? styles.winnerReveal : ""}`;
 
   return (
-    <Card ribbon={optionRibbon(option, selectedCandidateId)} className={styles.option}>
+    <Card
+      ribbon={optionRibbon(option, selectedCandidateId)}
+      className={cardClass}
+      data-active={option.active || undefined}
+    >
       <button
         type="button"
         className={styles.optionButton}
@@ -183,6 +255,7 @@ function ViewerShell({
   roomCode = null,
   selectedCandidateId = null,
   pendingCandidateId = null,
+  commandError = null,
   now,
   onSelectCandidate,
   onVoteCandidate,
@@ -190,20 +263,51 @@ function ViewerShell({
 }: ViewerSurfaceProps & { readonly surface: "extension" | "hosted"; readonly roomCode?: string | null }) {
   const presentation = presentViewer(view);
   const remaining = formatRemaining(presentation.endsAt, now);
+  const accepted = presentation.acceptedCandidateId !== null;
+  const pending = pendingCandidateId !== null;
+  const effectiveSelectedCandidateId = presentation.acceptedCandidateId ?? selectedCandidateId;
   const selectedOption = presentation.options.find(
     (option) => option.candidateId === selectedCandidateId,
   );
-  const canSelect = presentation.canVote && onSelectCandidate !== undefined;
+  const activeOption = presentation.options.find((option) => option.active);
+  const visibleOptions =
+    (presentation.phase === "active" || presentation.phase === "result") && activeOption
+      ? [activeOption]
+      : presentation.phase === "result"
+        ? []
+        : presentation.options;
+  const canSelect =
+    presentation.canVote &&
+    !accepted &&
+    !pending &&
+    onSelectCandidate !== undefined;
   const canSubmit =
     presentation.canVote &&
+    !accepted &&
     onVoteCandidate !== undefined &&
     selectedOption !== undefined &&
-    pendingCandidateId === null;
+    !pending;
   const canReact = presentation.canReact && onReact !== undefined;
-  const rootClass = `${styles.surface} ${surface === "hosted" ? styles.hosted : ""}`;
+  const rootClass = `${styles.surface} ${surface === "hosted" ? styles.hosted : styles.extension}`;
+  const errorCopy = commandError ? commandErrorCopy(commandError) : null;
+  const voteStatus = (() => {
+    if (presentation.phase === "active") return "Winner confirmed. The quest is now active.";
+    if (presentation.phase === "result") return "The authoritative quest result is shown above.";
+    if (accepted) return "Vote accepted. Live tallies are now visible.";
+    if (pending) return "Sending your vote. Keep this panel open for confirmation.";
+    if (presentation.canVote && onVoteCandidate !== undefined) {
+      return "Select one option, then vote.";
+    }
+    return "Voting is closed or unavailable.";
+  })();
 
   return (
-    <DesignSystemRoot theme="twitch" density="compact" className={rootClass}>
+    <DesignSystemRoot
+      theme="twitch"
+      density="compact"
+      className={rootClass}
+      data-phase={presentation.phase}
+    >
       <Panel className={styles.shell}>
         <header className={styles.header}>
           <div className={styles.titleBlock}>
@@ -221,84 +325,107 @@ function ViewerShell({
           </div>
         </header>
 
-        {presentation.connection?.status && presentation.connection.status !== "ready" ? (
-          <Notice
-            tone={presentation.connection.status === "degraded" ? "warning" : "danger"}
-            title={connectionLabel(presentation.connection.status)}
-            politeness="polite"
-            className={styles.notice}
-          >
-            {connectionRecoveryCopy(presentation.connection.status)}
-          </Notice>
-        ) : null}
+        <div className={styles.content}>
+          {presentation.connection?.status && presentation.connection.status !== "ready" ? (
+            <Notice
+              tone={presentation.connection.status === "degraded" ? "warning" : "danger"}
+              title={connectionLabel(presentation.connection.status)}
+              politeness="polite"
+              className={styles.notice}
+            >
+              {connectionRecoveryCopy(presentation.connection.status)}
+            </Notice>
+          ) : null}
 
-        {presentation.options.length === 0 ? (
-          <Notice title={phaseTitle(presentation.phase)} className={styles.notice}>
-            No vote is open right now.
-          </Notice>
-        ) : (
-          <CardGrid className={styles.options}>
-            {presentation.options.map((option, index) => (
-              <QuestOptionCard
-                key={option.candidateId}
-                option={option}
-                index={index}
-                selectedCandidateId={selectedCandidateId}
-                pending={option.candidateId === pendingCandidateId}
-                canSelect={canSelect}
-                onSelectCandidate={onSelectCandidate}
-              />
-            ))}
-          </CardGrid>
-        )}
+          {errorCopy ? (
+            <Notice
+              tone={errorCopy.tone}
+              title={errorCopy.title}
+              politeness="polite"
+              className={styles.notice}
+            >
+              {errorCopy.body}
+            </Notice>
+          ) : null}
 
-        {presentation.progress ? (
-          <Progress
-            label="Quest progress"
-            value={presentation.progress.value}
-            max={1}
-            valueLabel={`${Math.round(presentation.progress.value * 100)}%`}
-          />
-        ) : null}
+          {visibleOptions.length === 0 && presentation.result === null ? (
+            <Notice title={phaseTitle(presentation.phase)} className={styles.notice}>
+              No vote is open right now.
+            </Notice>
+          ) : visibleOptions.length > 0 ? (
+            <CardGrid className={styles.options}>
+              {visibleOptions.map((option) => {
+                const optionIndex = presentation.options.findIndex(
+                  (candidate) => candidate.candidateId === option.candidateId,
+                );
+                return (
+                  <QuestOptionCard
+                    key={option.candidateId}
+                    option={option}
+                    index={optionIndex}
+                    selectedCandidateId={effectiveSelectedCandidateId}
+                    pending={option.candidateId === pendingCandidateId}
+                    canSelect={canSelect}
+                    revealWinner={presentation.phase === "active" && option.active}
+                    onSelectCandidate={onSelectCandidate}
+                  />
+                );
+              })}
+            </CardGrid>
+          ) : null}
 
-        {presentation.result ? (
-          <Notice
-            tone={presentation.result.outcome === "succeeded" ? "success" : "warning"}
-            title={presentation.result.outcome}
-            politeness="polite"
-          >
-            {presentation.result.reason} Awarded {formatReward(presentation.result.rewardPointsAwarded)}.
-          </Notice>
-        ) : null}
+          {presentation.progress ? (
+            <Progress
+              label="Quest progress"
+              value={presentation.progress.value}
+              max={1}
+              valueLabel={`${Math.round(presentation.progress.value * 100)}%`}
+            />
+          ) : null}
+
+          {presentation.result ? (
+            <Notice
+              tone={presentation.result.outcome === "succeeded" ? "success" : "warning"}
+              title={`Quest ${presentation.result.outcome}`}
+              politeness="polite"
+            >
+              {presentation.result.reason} Awarded {formatReward(presentation.result.rewardPointsAwarded)}.
+            </Notice>
+          ) : null}
+        </div>
 
         <div className={styles.actions}>
           {presentation.phase === "voting" ? (
             <Button
-              disabled={!canSubmit}
-              loading={pendingCandidateId !== null}
+              className={styles.voteButton}
+              disabled={!accepted && !canSubmit}
+              aria-disabled={accepted || undefined}
+              loading={pending}
               onClick={() => {
-                if (selectedOption) onVoteCandidate?.(selectedOption.candidateId);
+                if (canSubmit && selectedOption) onVoteCandidate?.(selectedOption.candidateId);
               }}
             >
-              Vote
+              {accepted ? "Vote accepted" : pending ? "Sending vote" : "Vote"}
             </Button>
           ) : null}
           <p className={styles.statusLine} aria-live="polite">
-            {presentation.acceptedCandidateId
-              ? "Vote accepted."
-              : presentation.canVote && onVoteCandidate !== undefined
-                ? "Select one option, then vote."
-                : "Voting is closed or unavailable."}
+            {voteStatus}
           </p>
+          <div className={styles.engagement} aria-label="Viewer engagement">
+            <div className={`${styles.engagementMetric} ${styles.engagementPrimary}`}>
+              <span className={styles.metricLabel}>Community hype</span>
+              <strong className={styles.metricValue}>{presentation.communityHype}</strong>
+            </div>
+            <div className={styles.engagementMetric}>
+              <span className={styles.metricLabel}>Your session points</span>
+              <strong>{presentation.sessionPoints}</strong>
+            </div>
+          </div>
           {canReact ? (
             <Button variant="secondary" onClick={() => onReact?.("hype")}>
               Send hype
             </Button>
           ) : null}
-          <div className={styles.metaRow}>
-            <StatusBadge tone="info">{`Hype ${presentation.communityHype}`}</StatusBadge>
-            <StatusBadge tone="success">{`You ${formatReward(presentation.sessionPoints)}`}</StatusBadge>
-          </div>
         </div>
       </Panel>
     </DesignSystemRoot>

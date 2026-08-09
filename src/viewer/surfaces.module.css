@@ -3,10 +3,35 @@
   color: inherit;
 }
 
+.extension {
+  height: 100dvh;
+  overflow: hidden;
+}
+
 .shell {
   display: grid;
   gap: 12px;
   min-width: 0;
+}
+
+.extension .shell {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
+  overflow: hidden;
+}
+
+.content {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.extension .content {
+  min-height: 0;
+  padding: 2px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .header {
@@ -66,6 +91,10 @@
   min-width: 0;
 }
 
+.winnerReveal {
+  animation: winner-reveal 600ms var(--cx-motion-easing) both;
+}
+
 .optionButton {
   appearance: none;
   display: grid;
@@ -82,6 +111,12 @@
 
 .optionButton:disabled {
   cursor: default;
+}
+
+.optionButton:focus-visible {
+  outline: none;
+  border-radius: 8px;
+  box-shadow: var(--cx-focus-ring);
 }
 
 .optionHeader {
@@ -128,12 +163,66 @@
   gap: 8px;
 }
 
+.extension .actions {
+  position: sticky;
+  z-index: 2;
+  bottom: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--cx-color-border);
+  background: var(--cx-color-surface);
+  box-shadow: 0 -10px 20px color-mix(in srgb, var(--cx-color-canvas) 72%, transparent);
+}
+
+.voteButton {
+  width: 100%;
+}
+
+.voteButton[aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.78;
+}
+
 .statusLine {
   margin: 0;
   min-height: 1.2em;
   overflow-wrap: anywhere;
   font-size: 0.82rem;
   opacity: 0.78;
+}
+
+.engagement {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  gap: 8px;
+  min-width: 0;
+}
+
+.engagementMetric {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--cx-color-border);
+  border-radius: 10px;
+  background: var(--cx-color-surface-raised);
+  font-size: 0.82rem;
+}
+
+.engagementPrimary {
+  border-color: var(--cx-color-info);
+  color: var(--cx-color-info);
+  background: var(--cx-color-info-soft);
+}
+
+.metricLabel {
+  overflow-wrap: anywhere;
+  color: var(--cx-color-text-muted);
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.metricValue {
+  font-size: 1.05rem;
 }
 
 .chatList {
@@ -182,6 +271,18 @@
   opacity: 0;
 }
 
+@keyframes winner-reveal {
+  from {
+    opacity: 0.72;
+    transform: translateY(6px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (max-width: 420px) {
   .surface {
     font-size: 0.94rem;
@@ -200,5 +301,11 @@
   .overlayCard {
     width: min(100%, 420px);
     min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .winnerReveal {
+    animation: none;
   }
 }
