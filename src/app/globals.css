@@ -203,6 +203,15 @@ input[type="range"] { accent-color: var(--violet); padding: 7px 0; background: t
 .overlay-page { min-height: 100vh; display: flex; align-items: flex-end; justify-content: center; padding: 5vh 4vw; background: transparent; }
 .overlay-card { width: min(920px, 94vw); padding: 28px 32px 24px; color: white; background: linear-gradient(120deg, rgba(9,7,14,.98), rgba(28,18,43,.97)); border: 3px solid var(--violet); border-radius: 18px; box-shadow: 0 24px 90px rgba(0,0,0,.7), 0 0 52px rgba(141,99,255,.28); }
 .overlay-kicker { display: flex; justify-content: space-between; color: var(--lime); font-size: 13px; letter-spacing: .12em; }.overlay-card h1 { margin: 12px 0 8px; font: 700 clamp(36px, 6vw, 68px)/.95 "Space Grotesk"; letter-spacing: 0; }.overlay-card p { margin: 0 0 22px; color: #f2edff; font-size: clamp(18px, 2.4vw, 28px); line-height: 1.22; }.overlay-footer { display: flex; align-items: center; gap: 20px; }.timer { min-width: 112px; color: var(--lime); font: 700 32px "Space Grotesk"; }.overlay-track { flex: 1; height: 10px; background: rgba(255,255,255,.1); border-radius: 99px; overflow: hidden; }.overlay-track i { display: block; height: 100%; background: linear-gradient(90deg, var(--violet), var(--lime)); transition: width .25s linear; }
+.overlay-vote-card { width: min(980px, 96vw); padding: 22px 24px; }
+.overlay-vote-options { display: grid; gap: 10px; margin-top: 14px; }
+.overlay-vote-option { display: grid; grid-template-columns: 58px 1fr 54px; align-items: center; gap: 16px; min-height: 86px; padding: 12px 14px; border: 1px solid rgba(255,255,255,.16); border-radius: 10px; background: rgba(255,255,255,.08); }
+.overlay-vote-option > strong { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 8px; color: #120d1c; background: var(--lime); font: 800 28px/1 "Space Grotesk"; }
+.overlay-vote-option h2 { margin: 0 0 4px; color: white; font: 700 28px/1.05 "Space Grotesk"; letter-spacing: 0; }
+.overlay-vote-option p { margin: 0 0 10px; color: #e8e0ff; font-size: 17px; line-height: 1.22; }
+.overlay-vote-option > b { color: var(--lime); font: 800 30px/1 "Space Grotesk"; text-align: right; }
+.overlay-vote-track { height: 6px; border-radius: 99px; overflow: hidden; background: rgba(255,255,255,.13); }
+.overlay-vote-track i { display: block; height: 100%; background: linear-gradient(90deg, var(--violet), var(--lime)); transition: width .25s ease; }
 .status-completed { border-color: var(--lime); }.status-failed { border-color: var(--coral); }.status-failed .timer { color: var(--coral); }
 .overlay-waiting { margin: auto auto 4vh; padding: 12px 16px; color: rgba(255,255,255,.72); background: rgba(9,7,14,.62); border: 1px dashed rgba(255,255,255,.32); border-radius: 9px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
 

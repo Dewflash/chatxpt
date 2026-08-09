@@ -23,7 +23,13 @@ const voteRequestSchema = z
   })
   .strict();
 
-const requestSchema = z.discriminatedUnion("type", [publishRequestSchema, voteRequestSchema]);
+const clearRequestSchema = z
+  .object({
+    type: z.literal("clear"),
+  })
+  .strict();
+
+const requestSchema = z.discriminatedUnion("type", [publishRequestSchema, voteRequestSchema, clearRequestSchema]);
 
 type DemoParticipationState = {
   quests: Sidequest[];
@@ -95,6 +101,14 @@ export async function POST(request: Request) {
 
   const command = parsed.data;
   const current = store();
+
+  if (command.type === "clear") {
+    current.quests = [];
+    current.votes = {};
+    current.voterChoices = {};
+    current.updatedAt = Date.now();
+    return NextResponse.json({ ok: true, accepted: true, ...snapshot(current) }, { headers: corsHeaders });
+  }
 
   if (command.type === "publish-quests") {
     current.quests = command.quests;
