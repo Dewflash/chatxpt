@@ -1,10 +1,11 @@
 # End-to-End Prototype Check
 
 **Checked:** 2026-08-09
+**Post-merge update:** PRs #124-#129 are merged into `main`; `npm run check` passes on merged `main` at commit `efd81ce`.
 
 ## Current Verdict
 
-The repository contains a runnable local prototype that demonstrates the core idea with synthetic inputs:
+The repository contains a runnable local prototype that demonstrates the core idea with synthetic/fixture inputs:
 
 1. streamer-facing signal controls;
 2. exactly three generated sidequests;
@@ -14,12 +15,15 @@ The repository contains a runnable local prototype that demonstrates the core id
 
 That path is useful for a demo walkthrough and deterministic diagnostics, but it is not live end-to-end evidence. The accepted MVP evidence still needs real Twitch resources, real OBS Virtual Camera gameplay input, real viewer activity, and the same authoritative session/cycle revision across Studio, two viewer clients, persistence, and OBS overlay.
 
+For immediate recording, use `docs/submission/MANUAL_TEST_RECORDING_RUNBOOK.md`.
+
 ## Runnable Today
 
 Fast local commands:
 
 ```bash
 npm run dev
+npm run check
 npm run check:evidence
 npm run check:demo-runbook
 npm run test:integration
@@ -57,8 +61,9 @@ Local demo routes:
 Current runnable UI path:
 
 - `/api/sidequests` validates the legacy `GenerationRequest`.
-- If `OPENAI_API_KEY` exists, it calls the server-side legacy OpenAI adapter with structured JSON output requirements.
-- If the key is absent or the provider call fails, it returns exactly three deterministic mock quests and, on provider failure, a warning.
+- The judged MVP does not adopt an external provider. D-055 records the accepted provider decision: use credential-free algorithmic candidates plus Role 3 deterministic validation/replacement for the MVP.
+- The legacy `/api/sidequests` path still contains an optional server-side OpenAI adapter if `OPENAI_API_KEY` is configured; this is not the accepted judged-provider path and should not be presented as MVP provider evidence.
+- If the key is absent or the legacy provider call fails, it returns exactly three deterministic mock quests and, on provider failure, a warning.
 
 Accepted MVP path present as component code/tests:
 
@@ -109,7 +114,7 @@ The newer Role 5 fixture evidence also shows Twitch, hosted-board, and OBS overl
 - Real Twitch Extension identity/JWT validation is not evidenced.
 - Real hosted-board two-client voting against an authoritative session is not evidenced.
 - Real Supabase cloud realtime/persistence and Vercel deployment evidence are still outstanding.
-- Role 2 real-frame extraction/OCR and real gameplay asset evaluation are still blocked or incomplete.
-- Joint Role 2/Role 3 free provider/model recommendation and real provider trial evidence remain open.
+- Role 2 real-frame extraction/OCR and real gameplay asset evaluation are still blocked or incomplete until the owner records a real OBS/gameplay run.
+- External model-provider adoption is closed for the judged MVP by D-055: no provider is adopted or configured. Future Groq trial evidence remains optional/future, not a blocker for the credential-free MVP route.
 - The accepted Role 2 algorithmic/provider path and Role 3 deterministic engine are component-tested but not fully wired into the visible end-to-end UI route.
 - The integration completion rule is not met until the same authoritative session and quest-cycle revision is observable across orchestrator, Studio, two viewers, persistence, and OBS overlay.
