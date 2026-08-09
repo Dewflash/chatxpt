@@ -45,14 +45,24 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .step { color: var(--lime); text-transform: uppercase; letter-spacing: .18em; font-size: 11px; font-weight: 700; }
 .recording-cockpit { display: grid; gap: 10px; margin: 16px 0; }
 .status-bars { display: grid; gap: 8px; }
-.status-bar { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.status-bar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.status-bar.grouped { align-items: stretch; }
+.status-group { display: grid; align-content: start; gap: 6px; min-width: 0; padding: 8px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; background: rgba(0,0,0,.12); }
+.status-group h2 { margin: 0; color: var(--lime); font: 800 10px/1 "Space Grotesk"; text-transform: uppercase; letter-spacing: .12em; }
+.status-group > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.status-group:first-child > div, .status-group:nth-child(2) > div { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .status-bar span { min-height: 48px; display: grid; align-content: center; gap: 2px; position: relative; padding: 8px 9px 8px 24px; color: var(--muted); border: 1px solid rgba(255,255,255,.09); border-radius: 9px; background: rgba(0,0,0,.18); font-size: 11px; line-height: 1.2; overflow: hidden; }
 .status-bar span::before { content: ""; position: absolute; left: 9px; top: 13px; width: 7px; height: 7px; border-radius: 50%; background: rgba(167,160,189,.58); }
 .status-bar span[data-state="ready"] { color: #f7f3ff; border-color: rgba(215,255,82,.3); background: rgba(215,255,82,.06); }
 .status-bar span[data-state="ready"]::before { background: var(--lime); box-shadow: 0 0 12px rgba(215,255,82,.5); }
 .status-bar b { color: white; font: 800 12px/1.1 "Space Grotesk"; overflow-wrap: anywhere; }
 .status-bar.secondary span { min-height: 42px; border-color: rgba(141,99,255,.14); background: rgba(141,99,255,.055); }
-.recording-ribbon { display: grid; gap: 10px; padding: 12px; border-color: rgba(215,255,82,.24); background: linear-gradient(120deg, rgba(215,255,82,.075), rgba(141,99,255,.06)); }
+.status-bar.secondary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.status-bar.secondary .status-group > div { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.recording-ribbon { display: grid; grid-template-columns: minmax(160px, .24fr) minmax(0, 1fr); align-items: center; gap: 10px; padding: 12px; border-color: rgba(215,255,82,.24); background: linear-gradient(120deg, rgba(215,255,82,.075), rgba(141,99,255,.06)); }
+.cockpit-heading { display: grid; gap: 3px; min-width: 0; padding: 0 4px; }
+.cockpit-heading span { color: var(--lime); font: 800 10px/1 "Space Grotesk"; text-transform: uppercase; letter-spacing: .14em; }
+.cockpit-heading b { color: white; font: 800 14px/1.1 "Space Grotesk"; }
 .ribbon-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .ribbon-actions button, .ribbon-actions a { min-height: 42px; display: grid; place-items: center; padding: 9px; border: 1px solid rgba(255,255,255,.12); border-radius: 9px; color: var(--ink); background: rgba(0,0,0,.18); text-align: center; text-decoration: none; font-size: 12px; font-weight: 800; cursor: pointer; transition: transform .16s ease, border-color .16s ease, background .16s ease, color .16s ease, box-shadow .16s ease; }
 .ribbon-actions button:hover, .ribbon-actions a:hover { border-color: var(--lime); transform: translateY(-1px); }
@@ -73,11 +83,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .section-heading p { margin: 0 0 6px; }.section-heading h2 { margin: 0; font: 600 27px "Space Grotesk"; letter-spacing: -.03em; }
 .text-button { color: var(--muted); font-size: 12px; padding: 8px; }.text-button:hover { color: white; }
 .provider { padding: 7px 10px; border-radius: 8px; background: rgba(215,255,82,.1); color: var(--lime); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
-.analysis-card { display: grid; gap: 14px; margin-bottom: 18px; padding: 16px; border: 1px solid rgba(215,255,82,.18); border-radius: 14px; background: rgba(215,255,82,.055); }
+.analysis-card { display: grid; gap: 14px; margin-bottom: 0; padding: 16px; border: 1px solid rgba(215,255,82,.18); border-radius: 14px; background: rgba(215,255,82,.055); }
 .analysis-card h3 { margin: 3px 0 2px; text-transform: capitalize; font: 700 21px "Space Grotesk"; letter-spacing: 0; }
 .analysis-card span { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
 .analysis-card p:last-child { margin: 0; color: #d6d0e4; font-size: 12px; line-height: 1.45; }
 .analysis-button { width: 100%; padding: 11px 12px; border: 1px solid rgba(215,255,82,.32); border-radius: 10px; color: #0c0912; background: var(--lime); font-weight: 800; cursor: pointer; }
+.compact-action { width: fit-content; min-width: 160px; max-width: 100%; justify-self: start; }
 .analysis-button:disabled { opacity: .65; cursor: wait; }
 .analysis-card dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
 .analysis-card dl div { min-height: 56px; padding: 9px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; background: rgba(0,0,0,.16); }
@@ -87,12 +98,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .analysis-preview img { width: 96px; height: 54px; object-fit: cover; border-radius: 7px; border: 1px solid rgba(255,255,255,.1); }
 .analysis-preview span { color: var(--muted); font-size: 11px; }
 .analysis-preview b { color: var(--lime); font-size: 11px; overflow-wrap: anywhere; }
-.analysis-insights { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 12px 0 18px; }
+.analytics-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr); gap: 12px; align-items: start; }
+.analytics-main, .analytics-side, .game-context-stack { display: grid; gap: 12px; min-width: 0; }
+.analysis-insights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
 .analysis-insights div { min-height: 92px; padding: 10px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; background: rgba(0,0,0,.16); }
 .analysis-insights span { display: block; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
 .analysis-insights strong { display: block; margin: 5px 0 4px; color: var(--ink); font: 700 18px "Space Grotesk"; }
 .analysis-insights p { margin: 0; color: #a9a1b8; font-size: 11px; line-height: 1.35; }
-.analysis-history { display: grid; gap: 10px; margin: 0 0 18px; padding: 12px; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; background: rgba(0,0,0,.16); }
+.analysis-history { display: grid; gap: 10px; margin: 0; padding: 12px; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; background: rgba(0,0,0,.16); }
 .analysis-history > p { margin: 0; color: #d6d0e4; font-size: 12px; }
 .analysis-history .compact-heading > span { color: var(--lime); font-size: 11px; font-weight: 800; }
 .history-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
@@ -108,12 +121,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .history-bars .bar-unknown { background: #ffbd59; }
 .context-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
 .context-column, .signal-mode-panel { display: grid; gap: 12px; padding: 14px; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; background: rgba(0,0,0,.14); }
+.game-signals-layout { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(340px, .95fr); gap: 12px; align-items: start; }
+.game-context-stack .context-column { min-height: 0; }
 .context-list { display: grid; gap: 8px; }
 .context-list div { min-height: 64px; display: grid; align-content: start; gap: 3px; padding: 9px; border: 1px solid rgba(255,255,255,.08); border-radius: 9px; background: rgba(255,255,255,.025); }
 .context-list span { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
 .context-list strong { color: var(--ink); font: 800 15px/1.12 "Space Grotesk"; overflow-wrap: anywhere; }
 .context-list p { margin: 0; color: #a9a1b8; font-size: 11px; line-height: 1.3; }
-.twitch-chat-card { display: grid; gap: 12px; margin-bottom: 18px; padding: 16px; border: 1px solid rgba(141,99,255,.22); border-radius: 14px; background: rgba(141,99,255,.06); }
+.twitch-chat-card { display: grid; gap: 12px; margin-bottom: 0; padding: 16px; border: 1px solid rgba(141,99,255,.22); border-radius: 14px; background: rgba(141,99,255,.06); }
 .compact-heading { margin-bottom: 0; align-items: center; }
 .compact-heading h3 { margin: 0; text-transform: capitalize; font: 700 20px "Space Grotesk"; }
 .twitch-chat-card p { margin: 0; color: #d6d0e4; font-size: 12px; line-height: 1.45; }
@@ -231,14 +246,16 @@ input[type="range"] { accent-color: var(--violet); padding: 7px 0; background: t
 .extension-empty strong { color: white; }
 
 @media (max-width: 1000px) {
-  .status-bar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .studio-view-grid, .vote-overlay-grid { grid-template-columns: 1fr; }.quest-panel { min-height: 460px; }
+  .status-bar, .status-bar.secondary { grid-template-columns: 1fr 1fr; }
+  .recording-ribbon, .analytics-layout, .game-signals-layout, .studio-view-grid, .vote-overlay-grid { grid-template-columns: 1fr; }.quest-panel { min-height: 460px; }
+  .cockpit-heading { grid-template-columns: auto 1fr; align-items: center; gap: 8px; }
   .ribbon-actions { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 640px) {
   .shell { width: min(100% - 20px, 1480px); }.topbar { gap: 10px; }.live-pill { display: none; }.ghost-button { margin-left: auto; font-size: 11px; }
   .form-grid { grid-template-columns: 1fr; }
-  .status-bar { grid-template-columns: 1fr 1fr; }
+  .status-bar, .status-bar.secondary { grid-template-columns: 1fr; }
+  .status-group > div, .status-group:first-child > div, .status-group:nth-child(2) > div, .status-bar.secondary .status-group > div { grid-template-columns: 1fr 1fr; }
   .status-bar span { min-height: 44px; }
   .view-ribbon button, .view-ribbon a { flex: 1 1 130px; }
   .analysis-card dl { grid-template-columns: 1fr 1fr; }

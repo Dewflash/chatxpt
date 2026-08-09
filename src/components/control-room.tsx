@@ -34,6 +34,17 @@ type TwitchChatLine = {
   vote: 1 | 2 | 3 | null;
 };
 
+type StatusItem = {
+  label: string;
+  value: string;
+  ready: boolean;
+};
+
+type StatusGroup = {
+  title: string;
+  items: StatusItem[];
+};
+
 type AnalysisSample = {
   timestamp: number;
   label: LiveAnalysis["label"];
@@ -430,6 +441,50 @@ export function ControlRoom() {
       ready: !!activeQuest,
     },
   ], [activeQuest, analysis.status, autoDemoEnabled, chatStatus, generationDelaySeconds, quests.length, totalVotes]);
+
+  const statusGroups = useMemo<StatusGroup[]>(() => [
+    {
+      title: "Game",
+      items: [
+        readinessItems[0],
+        {
+          label: "Phase",
+          value: gamePhasePresets[gamePhasePreset][signals.gameplay.phase],
+          ready: analysis.status === "running",
+        },
+        {
+          label: "Health",
+          value: `${signals.gameplay.health}%`,
+          ready: signals.gameplay.health > 0,
+        },
+      ],
+    },
+    {
+      title: "Chat",
+      items: [
+        readinessItems[1],
+        {
+          label: "Mood",
+          value: moodLabels[signals.sentiment.mood],
+          ready: chatStatus === "connected" || signals.sentiment.mood !== "bored",
+        },
+        {
+          label: "Hype",
+          value: `${signals.sentiment.energy}/5`,
+          ready: signals.sentiment.energy >= 3,
+        },
+      ],
+    },
+    {
+      title: "Quest",
+      items: [readinessItems[2], readinessItems[3]],
+    },
+    {
+      title: "Broadcast",
+      items: [readinessItems[4], readinessItems[5]],
+    },
+  ], [analysis.status, chatStatus, gamePhasePreset, readinessItems, signals.gameplay.health, signals.gameplay.phase, signals.sentiment.energy, signals.sentiment.mood]);
+
   const streamMetricItems = useMemo(() => [
     {
       label: "Mood",
@@ -462,6 +517,17 @@ export function ControlRoom() {
       ready: rollingAnalysis.questReadiness.startsWith("Enough"),
     },
   ], [analysis.status, chatStatus, leadingQuest, rollingAnalysis.dominantTempo, rollingAnalysis.questReadiness, signals.sentiment.energy, signals.sentiment.mood, totalVotes]);
+
+  const streamStatusGroups = useMemo<StatusGroup[]>(() => [
+    {
+      title: "Analytics",
+      items: [streamMetricItems[0], streamMetricItems[1], streamMetricItems[2]],
+    },
+    {
+      title: "Voting",
+      items: [streamMetricItems[3], streamMetricItems[4], streamMetricItems[5]],
+    },
+  ], [streamMetricItems]);
 
   const generate = useCallback(async () => {
     setLoading(true);
@@ -981,57 +1047,63 @@ export function ControlRoom() {
       <div className="section-heading">
         <div><p className="step">Stream analytics</p><h2>Chat, hype, and vote pulse</h2></div>
       </div>
-      <div className="analysis-insights">
-        {analysisSummary.map((item) => (
-          <div key={item.label}>
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-            <p>{item.detail}</p>
+      <div className="analytics-layout">
+        <div className="analytics-main">
+          <div className="analysis-insights">
+            {analysisSummary.map((item) => (
+              <div key={item.label}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <p>{item.detail}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      <div className="analysis-history">
-        <div className="section-heading compact-heading">
-          <div><p className="step">Live signal trend</p><h3>{rollingAnalysis.dominantTempo}</h3></div>
-          <span>{rollingAnalysis.sampleCount} samples</span>
+          <div className="analysis-history">
+            <div className="section-heading compact-heading">
+              <div><p className="step">Live signal trend</p><h3>{rollingAnalysis.dominantTempo}</h3></div>
+              <span>{rollingAnalysis.sampleCount} samples</span>
+            </div>
+            <div className="history-stats">
+              <div><span>Avg motion</span><strong>{rollingAnalysis.averageMotion === null ? "n/a" : `${Math.round(rollingAnalysis.averageMotion * 100)}%`}</strong></div>
+              <div><span>Peak motion</span><strong>{rollingAnalysis.peakMotion === null ? "n/a" : `${Math.round(rollingAnalysis.peakMotion * 100)}%`}</strong></div>
+              <div><span>Avg confidence</span><strong>{rollingAnalysis.averageConfidence === null ? "n/a" : `${Math.round(rollingAnalysis.averageConfidence * 100)}%`}</strong></div>
+            </div>
+            <div className="history-bars" aria-label="Recent motion samples">
+              {analysisSamples.length === 0 ? (
+                <p>No live samples yet.</p>
+              ) : analysisSamples.slice().reverse().map((sample) => (
+                <i
+                  key={`${sample.timestamp}-${sample.checksum}`}
+                  className={`bar-${sample.label}`}
+                  title={`${sample.label}: ${sample.motion === null ? "n/a" : `${Math.round(sample.motion * 100)}%`} motion`}
+                  style={{ height: `${Math.max(8, Math.round((sample.motion ?? 0.03) * 80))}px` }}
+                />
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="history-stats">
-          <div><span>Avg motion</span><strong>{rollingAnalysis.averageMotion === null ? "n/a" : `${Math.round(rollingAnalysis.averageMotion * 100)}%`}</strong></div>
-          <div><span>Peak motion</span><strong>{rollingAnalysis.peakMotion === null ? "n/a" : `${Math.round(rollingAnalysis.peakMotion * 100)}%`}</strong></div>
-          <div><span>Avg confidence</span><strong>{rollingAnalysis.averageConfidence === null ? "n/a" : `${Math.round(rollingAnalysis.averageConfidence * 100)}%`}</strong></div>
-        </div>
-        <div className="history-bars" aria-label="Recent motion samples">
-          {analysisSamples.length === 0 ? (
-            <p>No live samples yet.</p>
-          ) : analysisSamples.slice().reverse().map((sample) => (
-            <i
-              key={`${sample.timestamp}-${sample.checksum}`}
-              className={`bar-${sample.label}`}
-              title={`${sample.label}: ${sample.motion === null ? "n/a" : `${Math.round(sample.motion * 100)}%`} motion`}
-              style={{ height: `${Math.max(8, Math.round((sample.motion ?? 0.03) * 80))}px` }}
-            />
-          ))}
-        </div>
-      </div>
-      <div className="twitch-chat-card">
-        <div className="section-heading compact-heading">
-          <div><p className="step">Twitch chat</p><h3>{chatStatus}</h3></div>
-          <button className="analysis-button" onClick={connectTwitchChat}>
-            {chatStatus === "connected" ? "Reconnect chat" : "Connect chat"}
-          </button>
-        </div>
-        <label>Channel name
-          <input value={twitchChannel} onChange={(event) => setTwitchChannel(event.target.value)} />
-        </label>
-        <p>{chatMessage}</p>
-        <div className="live-chat-lines">
-          {liveChat.length === 0 ? (
-            <span>No live chat messages received yet.</span>
-          ) : liveChat.map((line, index) => (
-            <span key={`${line.user}-${line.text}-${index}`}>
-              <b>{line.user}</b> {line.text}{line.vote ? ` -> vote ${line.vote}` : ""}
-            </span>
-          ))}
+        <div className="analytics-side">
+          <div className="twitch-chat-card">
+            <div className="section-heading compact-heading">
+              <div><p className="step">Twitch chat</p><h3>{chatStatus}</h3></div>
+            </div>
+            <button className="analysis-button compact-action" onClick={connectTwitchChat}>
+              {chatStatus === "connected" ? "Reconnect chat" : "Connect chat"}
+            </button>
+            <label>Channel name
+              <input value={twitchChannel} onChange={(event) => setTwitchChannel(event.target.value)} />
+            </label>
+            <p>{chatMessage}</p>
+            <div className="live-chat-lines">
+              {liveChat.length === 0 ? (
+                <span>No live chat messages received yet.</span>
+              ) : liveChat.map((line, index) => (
+                <span key={`${line.user}-${line.text}-${index}`}>
+                  <b>{line.user}</b> {line.text}{line.vote ? ` -> vote ${line.vote}` : ""}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -1042,63 +1114,65 @@ export function ControlRoom() {
       <div className="section-heading">
         <div><p className="step">Game signals</p><h2>Captured screen read</h2></div>
       </div>
-      <div className="analysis-card">
-        <div>
-          <p className="step">Live screen analysis</p>
-          <h3>{analysis.label === "unknown" ? "Waiting for visual signal" : analysis.label}</h3>
-          <span>{analysis.sourceLabel}</span>
+      <div className="game-signals-layout">
+        <div className="analysis-card">
+          <div>
+            <p className="step">Live screen analysis</p>
+            <h3>{analysis.label === "unknown" ? "Waiting for visual signal" : analysis.label}</h3>
+            <span>{analysis.sourceLabel}</span>
+          </div>
+          <button
+            className="analysis-button compact-action"
+            onClick={startScreenAnalysis}
+            disabled={analysis.status === "starting"}
+          >
+            {analysis.status === "running" ? "Restart capture" : analysis.status === "starting" ? "Opening picker..." : "Capture game window"}
+          </button>
+          <dl>
+            <div><dt>Frames</dt><dd>{analysis.frameCount}</dd></div>
+            <div><dt>Motion</dt><dd>{analysis.changedPixelRatio === null ? "n/a" : `${Math.round(analysis.changedPixelRatio * 100)}%`}</dd></div>
+            <div><dt>Visual change</dt><dd>{analysis.meanLumaDelta === null ? "n/a" : `${Math.round(analysis.meanLumaDelta * 100)}%`}</dd></div>
+            <div><dt>Confidence</dt><dd>{Math.round(analysis.confidence * 100)}%</dd></div>
+          </dl>
+          <div className="analysis-preview">
+            {analysis.previewDataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={analysis.previewDataUrl} alt="Live sampled game window preview" />
+            ) : (
+              <span>No sampled preview yet</span>
+            )}
+            <b>checksum {analysis.visualChecksum ?? "n/a"}</b>
+          </div>
         </div>
-        <button
-          className="analysis-button"
-          onClick={startScreenAnalysis}
-          disabled={analysis.status === "starting"}
-        >
-          {analysis.status === "running" ? "Restart capture" : analysis.status === "starting" ? "Opening picker..." : "Capture game window"}
-        </button>
-        <dl>
-          <div><dt>Frames</dt><dd>{analysis.frameCount}</dd></div>
-          <div><dt>Motion</dt><dd>{analysis.changedPixelRatio === null ? "n/a" : `${Math.round(analysis.changedPixelRatio * 100)}%`}</dd></div>
-          <div><dt>Visual change</dt><dd>{analysis.meanLumaDelta === null ? "n/a" : `${Math.round(analysis.meanLumaDelta * 100)}%`}</dd></div>
-          <div><dt>Confidence</dt><dd>{Math.round(analysis.confidence * 100)}%</dd></div>
-        </dl>
-        <div className="analysis-preview">
-          {analysis.previewDataUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={analysis.previewDataUrl} alt="Live sampled game window preview" />
-          ) : (
-            <span>No sampled preview yet</span>
-          )}
-          <b>checksum {analysis.visualChecksum ?? "n/a"}</b>
+        <div className="game-context-stack">
+          <section className="context-column" aria-label="Captured game status">
+            <div className="section-heading compact-heading">
+              <div><p className="step">Game status</p><h3>Current read</h3></div>
+            </div>
+            <div className="context-list">
+              {gameStatusRead.map((item) => (
+                <div key={item.label}>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                  <p>{item.detail}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="context-column" aria-label="Game phase model">
+            <div className="section-heading compact-heading">
+              <div><p className="step">Phase model</p><h3>{gamePhasePreset.replace("-", " ")}</h3></div>
+            </div>
+            <div className="context-list">
+              {Object.entries(gamePhasePresets[gamePhasePreset]).map(([phase, label]) => (
+                <div key={phase}>
+                  <span>{phase}</span>
+                  <strong>{label}</strong>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
-      </div>
-      <div className="context-columns">
-        <section className="context-column" aria-label="Captured game status">
-          <div className="section-heading compact-heading">
-            <div><p className="step">Game status</p><h3>Current read</h3></div>
-          </div>
-          <div className="context-list">
-            {gameStatusRead.map((item) => (
-              <div key={item.label}>
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-                <p>{item.detail}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-        <section className="context-column" aria-label="Game phase model">
-          <div className="section-heading compact-heading">
-            <div><p className="step">Phase model</p><h3>{gamePhasePreset.replace("-", " ")}</h3></div>
-          </div>
-          <div className="context-list">
-            {Object.entries(gamePhasePresets[gamePhasePreset]).map(([phase, label]) => (
-              <div key={phase}>
-                <span>{phase}</span>
-                <strong>{label}</strong>
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
     </section>
   );
@@ -1166,23 +1240,41 @@ export function ControlRoom() {
 
       <section className="recording-cockpit" id="top">
         <div className="status-bars">
-          <div className="status-bar" aria-label="System status">
-            {readinessItems.map((item) => (
-              <span data-state={item.ready ? "ready" : "idle"} key={item.label}>
-                <b>{item.label}</b>{item.value}
-              </span>
+          <div className="status-bar grouped" aria-label="System status">
+            {statusGroups.map((group) => (
+              <section className="status-group" key={group.title}>
+                <h2>{group.title}</h2>
+                <div>
+                  {group.items.map((item) => (
+                    <span data-state={item.ready ? "ready" : "idle"} key={`${group.title}-${item.label}`}>
+                      <b>{item.label}</b>{item.value}
+                    </span>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
-          <div className="status-bar secondary" aria-label="Stream analytics summary">
-            {streamMetricItems.map((item) => (
-              <span data-state={item.ready ? "ready" : "idle"} key={item.label}>
-                <b>{item.label}</b>{item.value}
-              </span>
+          <div className="status-bar secondary grouped" aria-label="Stream analytics summary">
+            {streamStatusGroups.map((group) => (
+              <section className="status-group" key={group.title}>
+                <h2>{group.title}</h2>
+                <div>
+                  {group.items.map((item) => (
+                    <span data-state={item.ready ? "ready" : "idle"} key={`${group.title}-${item.label}`}>
+                      <b>{item.label}</b>{item.value}
+                    </span>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         </div>
 
         <div className="recording-ribbon panel">
+          <div className="cockpit-heading">
+            <span>Action cockpit</span>
+            <b>Run the recording from here</b>
+          </div>
           <div className="ribbon-actions">
             <button onClick={startScreenAnalysis} disabled={analysis.status === "starting"}>
               {analysis.status === "running" ? "Restart capture" : "Capture game"}
