@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   contractFixtureCandidateBatch,
   contractFixtureOverlayView,
+  contractFixtureUiX06RoleViewCatalog,
   contractFixtureViewerView,
 } from "../core/testing";
 import { overlayViewModelSchema, viewerViewModelSchema } from "../core";
@@ -94,9 +95,91 @@ describe("Role 5 viewer surfaces", () => {
       }),
     );
 
-    expect(html).toContain("Vote accepted.");
+    expect(html).toContain("Vote accepted. Live tallies are now visible.");
+    expect(html).toContain('aria-disabled="true"');
     expect(html).toContain("4 votes");
     expect(html).toContain("2 votes");
+  });
+
+  it("locks every option and the confirmation action while a vote is pending", () => {
+    const html = renderToStaticMarkup(
+      h(TwitchExtensionViewerSurface, {
+        view: votingView(),
+        selectedCandidateId: options[1].candidateId,
+        pendingCandidateId: options[1].candidateId,
+        now: NOW,
+        onSelectCandidate: () => undefined,
+        onVoteCandidate: () => undefined,
+      }),
+    );
+
+    expect(html.match(/disabled=""/g)).toHaveLength(4);
+    expect(html).toContain('aria-busy="true"');
+    expect(html).toContain("Sending your vote. Keep this panel open for confirmation.");
+    expect(html).not.toContain("4 votes");
+  });
+
+  it("presents typed command recovery without discarding the selected quest", () => {
+    const html = renderToStaticMarkup(
+      h(TwitchExtensionViewerSurface, {
+        view: votingView(),
+        selectedCandidateId: options[2].candidateId,
+        commandError: {
+          code: "stale-revision",
+          message: "A newer quest revision is available.",
+          retryable: true,
+        },
+        onSelectCandidate: () => undefined,
+        onVoteCandidate: () => undefined,
+      }),
+    );
+
+    expect(html).toContain("The quest changed");
+    expect(html).toContain("Your selection is preserved while ChatXPT refreshes.");
+    expect(html).toContain("Selected");
+  });
+
+  it("collapses the resolved vote into one authoritative active quest", () => {
+    const view = contractFixtureUiX06RoleViewCatalog["r5.quest.active-automatic-progress.v1"].viewer;
+    const active = view.questCycle.options.find(
+      (option) => option.candidateId === view.questCycle.activeCandidateId,
+    );
+    const inactive = view.questCycle.options.find(
+      (option) => option.candidateId !== view.questCycle.activeCandidateId,
+    );
+    const html = renderToStaticMarkup(
+      h(TwitchExtensionViewerSurface, {
+        view,
+        now: NOW,
+        onReact: () => undefined,
+      }),
+    );
+
+    expect(active).toBeDefined();
+    expect(inactive).toBeDefined();
+    expect(html).toContain("Quest active");
+    expect(html).toContain("Winner");
+    expect(html).toContain(active?.title);
+    expect(html).not.toContain(inactive?.title);
+    expect(html).toContain("Winner confirmed. The quest is now active.");
+    expect(html).toContain("75%");
+    expect(html).toContain("Send hype");
+  });
+
+  it("uses explicit community and private labels in the authoritative result state", () => {
+    const view = contractFixtureUiX06RoleViewCatalog["r5.quest.succeeded-reward.v1"].viewer;
+    const html = renderToStaticMarkup(
+      h(TwitchExtensionViewerSurface, {
+        view,
+        now: NOW,
+      }),
+    );
+
+    expect(html).toContain("Quest result");
+    expect(html).toContain("Quest succeeded");
+    expect(html).toContain("Community hype");
+    expect(html).toContain("Your session points");
+    expect(html).toContain("The authoritative quest result is shown above.");
   });
 
   it("keeps the hosted board wider-layout wrapper separate from Twitch copy", () => {

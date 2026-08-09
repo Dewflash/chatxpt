@@ -7,6 +7,7 @@ export {
   voteSchema,
 } from "../core";
 export type {
+  DomainError,
   OverlayViewModel,
   ViewerReactionCommand,
   ViewerViewModel,
