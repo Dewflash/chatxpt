@@ -80,6 +80,12 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 - Setup action validation is service-specific, so Twitch-only actions cannot validate against OBS, realtime, intelligence, or session controls.
 - The diagnostic UI gateway now publishes fixture-only setup/session command examples for Role 4 without claiming real Twitch, OBS, or deployment setup.
 
+## Current UI-X06 quest-state fixture pass
+
+- `codex/role-1-ui-x06-fixtures-current` adds canonical fixture quest states and matching role views for Role 4/5 rendering.
+- The fixture catalog covers proposed, voting zero-vote, voting tie, active manual/automatic progress, terminal result/reward states, and cooldown.
+- The zero-vote fixture keeps `acceptedCandidateId: null`; private viewer receipts are never fabricated from public tallies.
+
 ## Decisions Role 1 still owns
 
 - Shared contract acceptance and breaking changes
