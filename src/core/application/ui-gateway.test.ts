@@ -34,6 +34,29 @@ describe("fixture UI gateway", () => {
     }
   });
 
+  it("validates supported setup commands and rejects mismatched setup actions", () => {
+    const snapshot = createFixtureUiGatewaySnapshot();
+    const setupRoute = snapshot.commands.streamer.find(
+      (route) => route.command.type === "streamer.setup" && route.command.service === "twitch",
+    );
+    if (setupRoute === undefined || setupRoute.command.type !== "streamer.setup") {
+      throw new Error("missing setup route");
+    }
+
+    const accepted = validateFixtureUiGatewayCommand(setupRoute.command);
+    const invalid = validateFixtureUiGatewayCommand({
+      ...setupRoute.command,
+      service: "obs-capture",
+    });
+
+    expect(accepted.ok).toBe(true);
+    expect(invalid.ok).toBe(false);
+    if (!invalid.ok) {
+      expect(invalid.status).toBe("invalid");
+      expect(invalid.httpStatus).toBe(400);
+    }
+  });
+
   it("rejects stale fixture revisions", () => {
     const snapshot = createFixtureUiGatewaySnapshot();
     const result = validateFixtureUiGatewayCommand({

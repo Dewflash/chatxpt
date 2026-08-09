@@ -74,6 +74,12 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 - Role 1 persists the profile revision, stamps the unchanged quest-cycle revision for broadcast consistency, and publishes updated role views without invoking Role 3.
 - Empty nested patches such as `voting: {}` and `rewards: {}` are rejected so UI no-ops cannot create false revision history.
 
+## Current Role 4 setup/session command pass
+
+- `codex/role-1-setup-session-current` adds the broadcaster-only `streamer.setup` and `streamer.session` contracts for Studio setup controls.
+- Setup action validation is service-specific, so Twitch-only actions cannot validate against OBS, realtime, intelligence, or session controls.
+- The diagnostic UI gateway now publishes fixture-only setup/session command examples for Role 4 without claiming real Twitch, OBS, or deployment setup.
+
 ## Decisions Role 1 still owns
 
 - Shared contract acceptance and breaking changes

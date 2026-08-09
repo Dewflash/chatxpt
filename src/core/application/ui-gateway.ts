@@ -8,6 +8,7 @@ import {
   gameplaySnapshotSchema,
   overlayViewModelSchema,
   streamerProfileSchema,
+  streamerServiceCommandSchema,
   streamerViewModelSchema,
   viewerViewModelSchema,
   type CommandEnvelope,
@@ -21,6 +22,7 @@ import {
   type ServiceHealth,
   type StreamSession,
   type StreamerProfile,
+  type StreamerServiceCommand,
   type StreamerViewModel,
   type ViewerViewModel,
 } from "../contracts";
@@ -37,7 +39,7 @@ export const uiGatewayCommandRouteSchema = z
   .object({
     method: z.literal("POST"),
     href: z.string().trim().min(1).max(160),
-    command: commandEnvelopeSchema,
+    command: z.union([commandEnvelopeSchema, streamerServiceCommandSchema]),
     allowed: z.boolean(),
     boundary: z.string().trim().min(1).max(240),
   })
@@ -89,6 +91,7 @@ export const uiGatewaySnapshotSchema = z
 
 export type UiGatewayCommandRoute = z.infer<typeof uiGatewayCommandRouteSchema>;
 export type UiGatewaySnapshot = z.infer<typeof uiGatewaySnapshotSchema>;
+type UiGatewayRoutableCommand = CommandEnvelope | StreamerServiceCommand;
 
 function envelope(messageId: string, source: ContractEnvelope["source"]): ContractEnvelope {
   return contractEnvelopeSchema.parse({
@@ -119,6 +122,19 @@ function command(
     expectedRevision: GATEWAY_REVISION,
     issuedAt: GATEWAY_TIME,
     actor,
+    ...body,
+  });
+}
+
+function serviceCommand(commandId: string, body: Record<string, unknown>): StreamerServiceCommand {
+  return streamerServiceCommandSchema.parse({
+    contractVersion: CONTRACT_VERSION,
+    sessionId: GATEWAY_SESSION_ID,
+    commandId,
+    correlationId: "ui-gateway-correlation",
+    expectedRevision: GATEWAY_REVISION,
+    issuedAt: GATEWAY_TIME,
+    actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
     ...body,
   });
 }
@@ -389,6 +405,38 @@ function gatewayCommands(views: RoleViewModels): UiGatewaySnapshot["commands"] {
         allowed: true,
         boundary: "Emergency pause latches inside Role 1 authoritative state; UI only emits the command.",
       },
+      {
+        method: "POST",
+        href: "/api/ui-gateway/commands",
+        command: serviceCommand("ui-gateway-connect-twitch", {
+          type: "streamer.setup",
+          service: "twitch",
+          action: "connect-twitch",
+        }),
+        allowed: true,
+        boundary: "Setup commands are broadcaster-only Role 1 commands; UI never stores Twitch credentials.",
+      },
+      {
+        method: "POST",
+        href: "/api/ui-gateway/commands",
+        command: serviceCommand("ui-gateway-request-capture", {
+          type: "streamer.setup",
+          service: "obs-capture",
+          action: "request-capture-permission",
+        }),
+        allowed: true,
+        boundary: "OBS capture permission is requested by the browser/setup surface and reported as health, not fabricated live evidence.",
+      },
+      {
+        method: "POST",
+        href: "/api/ui-gateway/commands",
+        command: serviceCommand("ui-gateway-start-session", {
+          type: "streamer.session",
+          action: "start",
+        }),
+        allowed: true,
+        boundary: "Session start is a Role 1 lifecycle command; readiness must come from current integration health.",
+      },
     ],
     viewer: [
       {
@@ -453,7 +501,7 @@ export type UiGatewayCommandValidationResult =
       readonly ok: true;
       readonly accepted: false;
       readonly status: "validated-fixture-only";
-      readonly command: CommandEnvelope;
+      readonly command: UiGatewayRoutableCommand;
       readonly boundary: string;
     }
   | {
@@ -464,7 +512,7 @@ export type UiGatewayCommandValidationResult =
     };
 
 export function validateFixtureUiGatewayCommand(input: unknown): UiGatewayCommandValidationResult {
-  const parsed = commandEnvelopeSchema.safeParse(input);
+  const parsed = z.union([commandEnvelopeSchema, streamerServiceCommandSchema]).safeParse(input);
   if (!parsed.success) {
     return {
       ok: false,
@@ -485,7 +533,7 @@ export function validateFixtureUiGatewayCommand(input: unknown): UiGatewayComman
     };
   }
   if (
-    commandToValidate.questCycleId !== snapshot.questCycleId ||
+    ("questCycleId" in commandToValidate && commandToValidate.questCycleId !== snapshot.questCycleId) ||
     commandToValidate.expectedRevision !== snapshot.revision
   ) {
     return {
@@ -497,7 +545,7 @@ export function validateFixtureUiGatewayCommand(input: unknown): UiGatewayComman
   }
 
   const supported = [...snapshot.commands.streamer, ...snapshot.commands.viewer].find(
-    (route) => route.command.type === commandToValidate.type,
+    (route) => commandRouteMatches(route.command, commandToValidate),
   );
   if (supported === undefined) {
     return {
@@ -516,4 +564,15 @@ export function validateFixtureUiGatewayCommand(input: unknown): UiGatewayComman
     boundary:
       "The diagnostic gateway validates browser-safe command shape only; real acceptance still requires Role 1 authorization, persistence, and broadcast.",
   };
+}
+
+function commandRouteMatches(routeCommand: UiGatewayRoutableCommand, commandToValidate: UiGatewayRoutableCommand): boolean {
+  if (routeCommand.type !== commandToValidate.type) return false;
+  if (routeCommand.type === "streamer.setup" && commandToValidate.type === "streamer.setup") {
+    return routeCommand.service === commandToValidate.service && routeCommand.action === commandToValidate.action;
+  }
+  if (routeCommand.type === "streamer.session" && commandToValidate.type === "streamer.session") {
+    return routeCommand.action === commandToValidate.action;
+  }
+  return true;
 }

@@ -5,5 +5,6 @@ export * from "./participation";
 export * from "./profile";
 export * from "./quests";
 export * from "./session";
+export * from "./setup";
 export * from "./signals";
 export * from "./views";

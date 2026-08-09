@@ -13,6 +13,9 @@ import {
   questCycleStateSchema,
   signalObservationSchema,
   streamSessionSchema,
+  streamerReadinessViewSchema,
+  streamerServiceCommandSchema,
+  streamerSetupServiceSchema,
   streamerProfileSettingsCommandSchema,
   streamerProfileSchema,
   streamerViewModelSchema,
@@ -29,6 +32,7 @@ import {
   contractFixtureQuestCycle,
   contractFixtureSession,
   contractFixtureStreamerView,
+  contractFixtureUiX01ReadinessCatalog,
   contractFixtureViewerView,
   invalidCalibratedCapabilitiesWithoutAdapter,
   invalidLiveFixtureEnvelope,
@@ -316,6 +320,64 @@ describe("identity and command permissions", () => {
     ).toBe(false);
   });
 
+  it("accepts broadcaster-only setup/session commands and rejects invalid service action pairs", () => {
+    const base = {
+      contractVersion: CONTRACT_VERSION,
+      sessionId: "fixture-session",
+      commandId: "fixture-setup-command",
+      correlationId: "fixture-setup-correlation",
+      expectedRevision: 4,
+      issuedAt: 10,
+      actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+    };
+
+    expect(
+      streamerServiceCommandSchema.safeParse({
+        ...base,
+        type: "streamer.setup",
+        service: "obs-capture",
+        action: "request-capture-permission",
+      }).success,
+    ).toBe(true);
+    expect(
+      streamerServiceCommandSchema.safeParse({
+        ...base,
+        type: "streamer.session",
+        action: "start",
+      }).success,
+    ).toBe(true);
+    expect(
+      streamerServiceCommandSchema.safeParse({
+        ...base,
+        actor: { kind: "moderator", actorId: "fixture-moderator" },
+        type: "streamer.setup",
+        service: "twitch",
+        action: "connect-twitch",
+      }).success,
+    ).toBe(false);
+    expect(
+      streamerServiceCommandSchema.safeParse({
+        ...base,
+        type: "streamer.setup",
+        service: "obs-capture",
+        action: "connect-twitch",
+      }).success,
+    ).toBe(false);
+    expect(
+      streamerSetupServiceSchema.safeParse({
+        service: "realtime",
+        configured: false,
+        health: {
+          service: "realtime",
+          status: "unavailable",
+          checkedAt: 10,
+          retryable: true,
+        },
+        allowedActions: ["connect-twitch"],
+      }).success,
+    ).toBe(false);
+  });
+
   it("accepts an anonymous fixture vote and rejects a broadcaster vote", () => {
     const vote = {
       envelope: contractFixtureEnvelope,
@@ -375,6 +437,43 @@ describe("streamer profile boundary", () => {
         },
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("streamer setup readiness boundary", () => {
+  it("publishes UI-X01 setup readiness examples for Studio consumers", () => {
+    expect(Object.keys(contractFixtureUiX01ReadinessCatalog)).toEqual(
+      expect.arrayContaining([
+        "r4.setup.ready.v1",
+        "r4.setup.permission-denied.v1",
+        "r4.setup.misconfigured.v1",
+        "r4.setup.disconnected.v1",
+        "r4.setup.diagnostic.v1",
+      ]),
+    );
+
+    for (const readiness of Object.values(contractFixtureUiX01ReadinessCatalog)) {
+      expect(streamerReadinessViewSchema.safeParse(readiness).success).toBe(true);
+      expect(readiness.evidenceClass).toBe("fixture");
+      expect(readiness.liveInputsUsed).toBe(false);
+      expect(readiness.services.map(({ service }) => service).sort()).toEqual([
+        "intelligence",
+        "obs-capture",
+        "realtime",
+        "session",
+        "twitch",
+      ]);
+    }
+
+    expect(contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"].ready).toBe(true);
+    expect(
+      contractFixtureUiX01ReadinessCatalog["r4.setup.permission-denied.v1"].services.find(
+        (service) => service.service === "obs-capture",
+      )?.health.status,
+    ).toBe("permission-denied");
+    expect(
+      contractFixtureUiX01ReadinessCatalog["r4.setup.misconfigured.v1"].recommendedAction,
+    ).toBe("connect-twitch");
   });
 });
 
