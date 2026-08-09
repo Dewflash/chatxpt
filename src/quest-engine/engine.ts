@@ -607,6 +607,8 @@ export class DefaultQuestEngine implements QuestEngine {
         return error("unavailable-capability", "Viewer reactions do not change Phase 1 quest state");
       case "streamer.emergency-clear":
         return error("unavailable-capability", "Emergency clear is handled by the Role 1 latch");
+      case "streamer.profile-settings":
+        return error("unavailable-capability", "Profile settings are handled by the Role 1 state seam");
     }
   }
 }

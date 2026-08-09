@@ -211,6 +211,70 @@ function updatedRecentQuestSummaries(
   return nextSummaries.slice(0, MAX_RECENT_QUEST_SUMMARIES);
 }
 
+function authoritativeProfileSettingsUpdate(
+  dependencies: OrchestratorDependencies,
+  command: Extract<CommandEnvelope, { type: "streamer.profile-settings" }>,
+  current: AuthoritativeSessionState,
+  acceptedAt: number,
+): { state: AuthoritativeSessionState; events: AcceptedCommandReceipt["events"] } | DomainError {
+  const votingChangeCount = Object.keys(command.voting ?? {}).length;
+  const rewardChangeCount = Object.keys(command.rewards ?? {}).length;
+  const revision = current.session.revision + 1;
+  const profile = streamerProfileSchema.safeParse({
+    ...current.profile,
+    revision: current.profile.revision + 1,
+    experience: {
+      ...current.profile.experience,
+      ...command.experiencePatch,
+    },
+    voting: {
+      ...current.profile.voting,
+      ...command.voting,
+    },
+    rewards: {
+      ...current.profile.rewards,
+      ...command.rewards,
+    },
+  });
+  if (!profile.success) {
+    return error("validation", "Profile settings update is invalid");
+  }
+
+  const questCycle = questCycleStateSchema.parse({
+    ...current.questCycle,
+    envelope: authoritativeEnvelope(
+      dependencies,
+      command,
+      current,
+      current.questCycle.envelope.questCycleId,
+      revision,
+      acceptedAt,
+      "quest-state",
+    ),
+  });
+  const state: AuthoritativeSessionState = {
+    ...current,
+    session: { ...current.session, revision },
+    profile: profile.data,
+    questCycle,
+  };
+  const event = questEngineEventSchema.safeParse({
+    envelope: authoritativeEnvelope(dependencies, command, state, null, revision, acceptedAt, "quest-event"),
+    event: {
+      eventType: "profile.settings-updated",
+      attributes: {
+        experienceKeysChanged: Object.keys(command.experiencePatch).length,
+        votingChanged: votingChangeCount > 0,
+        rewardsChanged: rewardChangeCount > 0,
+      },
+    },
+  });
+  if (!event.success) {
+    return error("internal", "Authoritative profile event stamping produced invalid state", true);
+  }
+  return { state, events: [event.data] };
+}
+
 function projectionInput(
   dependencies: OrchestratorDependencies,
   command: CommandEnvelope,
@@ -469,73 +533,81 @@ export class ChatXptOrchestrator {
         completionRule: current.questCycle.completionRule,
       };
     }
-    let untrustedEngineResult: unknown;
-    if (command.type === "streamer.emergency-clear") {
-      untrustedEngineResult = {
-        ok: true,
-        decision: {
-          nextState: current.questCycle,
-          events: [{ eventType: "session.emergency-cleared", attributes: {} }],
-        },
-      } satisfies QuestEngineResult;
-    } else if (command.type === "viewer.react") {
-      untrustedEngineResult = {
-        ok: true,
-        decision: {
-          nextState: current.questCycle,
-          events: [
-            {
-              eventType: "viewer.reaction-recorded",
-              attributes: { reaction: command.reaction, hypeDelta: 1 },
-            },
-          ],
-        },
-      } satisfies QuestEngineResult;
-    } else {
-      try {
-        untrustedEngineResult = await this.dependencies.engine.decide({
-          currentState: current.questCycle,
-          command,
-          candidateBatch,
-          acceptedVoteTally,
-          voteCloseValidationContext,
-          questProgressValidationContext,
-          now: acceptedAt,
-        });
-      } catch {
-        return { ok: false, error: error("internal", "Quest engine failed unexpectedly", true) };
-      }
-    }
-    if (
-      typeof untrustedEngineResult !== "object" ||
-      untrustedEngineResult === null ||
-      !("ok" in untrustedEngineResult) ||
-      typeof untrustedEngineResult.ok !== "boolean"
-    ) {
-      return { ok: false, error: error("internal", "Quest engine returned an invalid result") };
-    }
-    const engineResult = untrustedEngineResult as QuestEngineResult;
-    if (!engineResult.ok) {
-      const parsedError = domainErrorSchema.safeParse(engineResult.error);
-      return {
-        ok: false,
-        error: parsedError.success
-          ? parsedError.data
-          : error("internal", "Quest engine returned an invalid error"),
-      };
-    }
-
     let authoritative: ReturnType<typeof authoritativeDecision>;
-    try {
-      authoritative = authoritativeDecision(
-        this.dependencies,
-        command,
-        current,
-        engineResult.decision,
-        acceptedAt,
-      );
-    } catch {
-      return { ok: false, error: error("internal", "Authoritative state stamping failed", true) };
+    if (command.type === "streamer.profile-settings") {
+      try {
+        authoritative = authoritativeProfileSettingsUpdate(this.dependencies, command, current, acceptedAt);
+      } catch {
+        return { ok: false, error: error("internal", "Authoritative profile update failed", true) };
+      }
+    } else {
+      let untrustedEngineResult: unknown;
+      if (command.type === "streamer.emergency-clear") {
+        untrustedEngineResult = {
+          ok: true,
+          decision: {
+            nextState: current.questCycle,
+            events: [{ eventType: "session.emergency-cleared", attributes: {} }],
+          },
+        } satisfies QuestEngineResult;
+      } else if (command.type === "viewer.react") {
+        untrustedEngineResult = {
+          ok: true,
+          decision: {
+            nextState: current.questCycle,
+            events: [
+              {
+                eventType: "viewer.reaction-recorded",
+                attributes: { reaction: command.reaction, hypeDelta: 1 },
+              },
+            ],
+          },
+        } satisfies QuestEngineResult;
+      } else {
+        try {
+          untrustedEngineResult = await this.dependencies.engine.decide({
+            currentState: current.questCycle,
+            command,
+            candidateBatch,
+            acceptedVoteTally,
+            voteCloseValidationContext,
+            questProgressValidationContext,
+            now: acceptedAt,
+          });
+        } catch {
+          return { ok: false, error: error("internal", "Quest engine failed unexpectedly", true) };
+        }
+      }
+      if (
+        typeof untrustedEngineResult !== "object" ||
+        untrustedEngineResult === null ||
+        !("ok" in untrustedEngineResult) ||
+        typeof untrustedEngineResult.ok !== "boolean"
+      ) {
+        return { ok: false, error: error("internal", "Quest engine returned an invalid result") };
+      }
+      const engineResult = untrustedEngineResult as QuestEngineResult;
+      if (!engineResult.ok) {
+        const parsedError = domainErrorSchema.safeParse(engineResult.error);
+        return {
+          ok: false,
+          error: parsedError.success
+            ? parsedError.data
+            : error("internal", "Quest engine returned an invalid error"),
+        };
+      }
+
+      try {
+        authoritative = authoritativeDecision(
+          this.dependencies,
+          command,
+          current,
+          engineResult.decision,
+          acceptedAt,
+        );
+      } catch {
+        return { ok: false, error: error("internal", "Authoritative state stamping failed", true) };
+      }
     }
     if ("code" in authoritative) {
       return { ok: false, error: authoritative };
