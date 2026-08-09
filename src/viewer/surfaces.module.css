@@ -87,7 +87,6 @@
 .optionHeader {
   display: flex;
   align-items: start;
-  justify-content: space-between;
   gap: 8px;
   min-width: 0;
 }

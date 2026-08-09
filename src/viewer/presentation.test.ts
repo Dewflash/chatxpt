@@ -47,13 +47,13 @@ describe("Role 5 presentation boundary", () => {
     });
   });
 
-  it("keeps exactly three options and authoritative tallies distinct", () => {
+  it("keeps exactly three options while hiding influential tallies before acknowledgement", () => {
     const presentation = presentViewer(votingViewer());
 
     expect(presentation.phase).toBe("voting");
     expect(presentation.canVote).toBe(true);
     expect(presentation.options).toHaveLength(3);
-    expect(presentation.options.map((option) => option.votes)).toEqual([4, 2, null]);
+    expect(presentation.options.map((option) => option.votes)).toEqual([null, null, null]);
     expect(presentation.options.every((option) => option.acceptedByViewer === false)).toBe(true);
     expect(presentation.options[0]).not.toHaveProperty("rationale");
     expect(presentation.options[0]).not.toHaveProperty("generation");

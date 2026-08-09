@@ -51,6 +51,8 @@ describe("Role 5 viewer surfaces", () => {
         view: votingView(),
         selectedCandidateId: options[1].candidateId,
         now: NOW,
+        onSelectCandidate: () => undefined,
+        onVoteCandidate: () => undefined,
       }),
     );
 
@@ -59,7 +61,42 @@ describe("Role 5 viewer surfaces", () => {
     expect(html.match(/Option [123]\./g)).toHaveLength(3);
     expect(html.match(/<button/g)).toHaveLength(4);
     expect(html).toContain("Vote");
+    expect(html).not.toContain("4 votes");
+    expect(html).not.toContain("2 votes");
+    expect(html).not.toContain("rev ");
+    expect(html).not.toContain("ready");
     expect(html).not.toContain("Unknown-safe contract fixture");
+  });
+
+  it("disables render-only controls when authorised handlers are absent", () => {
+    const html = renderToStaticMarkup(
+      h(TwitchExtensionViewerSurface, {
+        view: votingView({ canReact: true }),
+        selectedCandidateId: options[1].candidateId,
+        now: NOW,
+      }),
+    );
+
+    expect(html.match(/disabled=""/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
+    expect(html).toContain("Voting is closed or unavailable.");
+    expect(html).not.toContain("Send hype");
+  });
+
+  it("reveals tallies only after authoritative personal vote acknowledgement", () => {
+    const html = renderToStaticMarkup(
+      h(TwitchExtensionViewerSurface, {
+        view: votingView({
+          canVote: false,
+          acceptedCandidateId: options[0].candidateId,
+        }),
+        selectedCandidateId: options[0].candidateId,
+        now: NOW,
+      }),
+    );
+
+    expect(html).toContain("Vote accepted.");
+    expect(html).toContain("4 votes");
+    expect(html).toContain("2 votes");
   });
 
   it("keeps the hosted board wider-layout wrapper separate from Twitch copy", () => {
@@ -93,9 +130,10 @@ describe("Role 5 viewer surfaces", () => {
     );
 
     expect(html).toContain("Reconnecting");
-    expect(html).toContain("Commands are disabled until authority returns.");
+    expect(html).toContain("voting and reactions are paused");
     expect(html).toContain("disabled");
     expect(html).not.toContain("Send hype");
+    expect(html).not.toContain("degraded");
   });
 
   it("maps the same three visible choices into chat-only instructions", () => {

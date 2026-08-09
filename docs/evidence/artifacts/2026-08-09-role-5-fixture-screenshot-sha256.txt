@@ -1,0 +1,5 @@
+2026-08-09-role-5-twitch-compact-voting-fixture-only.png 42ce3ba7330035f5ebbf27303089b7bb4cf1614784b3f2a1e2da3a587da7bb53
+2026-08-09-role-5-hosted-desktop-voting-fixture-only.png bed97a394baca96021352e0824c56f5bd3799aa69d11be4c27b600cc468bb463
+2026-08-09-role-5-hosted-mobile-voting-fixture-only.png 4cce2ccb82f18b5e0556f4bdab8ba767860a3eb022c064e3b349d3b31b6b0a8f
+2026-08-09-role-5-overlay-active-fixture-only.png 8578ed7f0af52a264ec8be6d55145b7587f5018fdce14423b7b4582f5a537aa3
+2026-08-09-role-5-overlay-inactive-fixture-only.png a154b6531bd1abe834704c8194814602f200c87a2b7a97b594ebcf6959658e96

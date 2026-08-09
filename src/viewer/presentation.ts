@@ -141,6 +141,7 @@ function resultPresentation(
 function optionPresentations(
   questCycle: ViewerViewModel["questCycle"],
   acceptedCandidateId: string | null,
+  revealTallies: boolean,
 ): ViewerQuestOptionPresentation[] {
   const tallies = new Map(
     questCycle.voteTallies.map((tally) => [tally.candidateId, tally.votes] as const),
@@ -153,7 +154,7 @@ function optionPresentations(
     durationSeconds: candidate.durationSeconds,
     difficulty: candidate.difficulty,
     rewardPoints: candidate.rewardPoints,
-    votes: tallies.get(candidate.candidateId) ?? null,
+    votes: revealTallies ? (tallies.get(candidate.candidateId) ?? null) : null,
     acceptedByViewer: candidate.candidateId === acceptedCandidateId,
     active: candidate.candidateId === questCycle.activeCandidateId,
   }));
@@ -183,6 +184,8 @@ export function presentViewer(view: ViewerViewModel | null): ViewerPresentation 
 
   const phase = viewerPhase(view);
   const connectionReady = view.connection.status === "ready";
+  const revealTallies =
+    view.acceptedCandidateId !== null || phase === "active" || phase === "result";
 
   return {
     phase,
@@ -190,7 +193,7 @@ export function presentViewer(view: ViewerViewModel | null): ViewerPresentation 
     revision: view.envelope.revision,
     participationMode: view.participationMode,
     connection: view.connection,
-    options: optionPresentations(view.questCycle, view.acceptedCandidateId),
+    options: optionPresentations(view.questCycle, view.acceptedCandidateId, revealTallies),
     acceptedCandidateId: view.acceptedCandidateId,
     activeCandidateId: view.questCycle.activeCandidateId,
     canVote: phase === "voting" && view.canVote && connectionReady,
@@ -221,7 +224,7 @@ export function presentOverlay(view: OverlayViewModel | null): OverlayPresentati
     };
   }
 
-  const options = optionPresentations(view.questCycle, null);
+  const options = optionPresentations(view.questCycle, null, true);
 
   return {
     readOnly: true,

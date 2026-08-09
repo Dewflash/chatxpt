@@ -52,17 +52,45 @@ function formatRemaining(endsAt: number | null, now: number | undefined): string
   return `${remainingSeconds}s left`;
 }
 
-function statusTone(status: string | undefined) {
+function difficultyTone(difficulty: ViewerQuestOptionPresentation["difficulty"]) {
+  if (difficulty === "hard") return "danger" as const;
+  if (difficulty === "medium") return "warning" as const;
+  return "success" as const;
+}
+
+function connectionTone(status: string | undefined) {
   if (status === "ready") return "success" as const;
   if (status === "degraded") return "warning" as const;
   if (status === "permission-denied" || status === "unavailable") return "danger" as const;
   return "neutral" as const;
 }
 
-function difficultyTone(difficulty: ViewerQuestOptionPresentation["difficulty"]) {
-  if (difficulty === "hard") return "danger" as const;
-  if (difficulty === "medium") return "warning" as const;
-  return "success" as const;
+function connectionLabel(status: string | undefined) {
+  switch (status) {
+    case "ready":
+      return "Connected";
+    case "degraded":
+      return "Reconnecting";
+    case "permission-denied":
+      return "Access needed";
+    case "unavailable":
+      return "Temporarily unavailable";
+    default:
+      return "Loading";
+  }
+}
+
+function connectionRecoveryCopy(status: string | undefined) {
+  switch (status) {
+    case "degraded":
+      return "We are reconnecting. Your latest safe quest stays visible, but voting and reactions are paused.";
+    case "permission-denied":
+      return "ChatXPT needs permission before this panel can send votes or reactions.";
+    case "unavailable":
+      return "Voting is temporarily unavailable. The latest safe quest stays visible while ChatXPT recovers.";
+    default:
+      return "Voting is paused while ChatXPT reconnects.";
+  }
 }
 
 function phaseTitle(phase: ReturnType<typeof presentViewer>["phase"]): string {
@@ -113,7 +141,6 @@ function QuestOptionCard({
   readonly onSelectCandidate?: (candidateId: string) => void;
 }) {
   const selected = option.candidateId === selectedCandidateId || option.acceptedByViewer;
-  const tallyLabel = option.votes === null ? "Tally hidden" : `${option.votes} votes`;
 
   return (
     <Card ribbon={optionRibbon(option, selectedCandidateId)} className={styles.option}>
@@ -124,26 +151,28 @@ function QuestOptionCard({
         disabled={!canSelect || pending}
         onClick={() => onSelectCandidate?.(option.candidateId)}
       >
-        <span className={styles.optionHeader}>
-          <span>
-            <span className={styles.optionNumber} aria-hidden="true">{index + 1}</span>
-            <VisuallyHidden>Option {index + 1}. </VisuallyHidden>
+        <span className={styles.optionBody}>
+          <span className={styles.optionHeader}>
+            <span>
+              <span className={styles.optionNumber} aria-hidden="true">{index + 1}</span>
+              <VisuallyHidden>Option {index + 1}. </VisuallyHidden>
+            </span>
+            <strong className={styles.optionTitle}>{option.title}</strong>
           </span>
-          <strong className={styles.optionTitle}>{option.title}</strong>
+          <span className={styles.instruction}>{option.instruction}</span>
+          <span className={styles.optionFooter}>
+            <StatusBadge tone={difficultyTone(option.difficulty)}>{option.difficulty}</StatusBadge>
+            <StatusBadge tone="info">{formatSeconds(option.durationSeconds)}</StatusBadge>
+            <StatusBadge tone="success">{formatReward(option.rewardPoints)}</StatusBadge>
+            {option.votes === null ? null : (
+              <StatusBadge tone={option.acceptedByViewer || option.active ? "success" : "neutral"}>
+                {`${option.votes} votes`}
+              </StatusBadge>
+            )}
+            {pending ? <StatusBadge tone="info">Sending</StatusBadge> : null}
+          </span>
         </span>
-        <span className={styles.instruction}>{option.instruction}</span>
       </button>
-      <div className={styles.optionFooter}>
-        <StatusBadge tone={difficultyTone(option.difficulty)}>{option.difficulty}</StatusBadge>
-        <StatusBadge tone="info">{formatSeconds(option.durationSeconds)}</StatusBadge>
-        <StatusBadge tone="success">{formatReward(option.rewardPoints)}</StatusBadge>
-        {option.acceptedByViewer || option.active ? (
-          <StatusBadge tone="success">{tallyLabel}</StatusBadge>
-        ) : (
-          <StatusBadge tone="neutral">{tallyLabel}</StatusBadge>
-        )}
-        {pending ? <StatusBadge tone="info">Sending</StatusBadge> : null}
-      </div>
     </Card>
   );
 }
@@ -151,19 +180,26 @@ function QuestOptionCard({
 function ViewerShell({
   surface,
   view,
+  roomCode = null,
   selectedCandidateId = null,
   pendingCandidateId = null,
   now,
   onSelectCandidate,
   onVoteCandidate,
   onReact,
-}: ViewerSurfaceProps & { readonly surface: "extension" | "hosted" }) {
+}: ViewerSurfaceProps & { readonly surface: "extension" | "hosted"; readonly roomCode?: string | null }) {
   const presentation = presentViewer(view);
   const remaining = formatRemaining(presentation.endsAt, now);
   const selectedOption = presentation.options.find(
     (option) => option.candidateId === selectedCandidateId,
   );
-  const canSubmit = presentation.canVote && selectedOption !== undefined && pendingCandidateId === null;
+  const canSelect = presentation.canVote && onSelectCandidate !== undefined;
+  const canSubmit =
+    presentation.canVote &&
+    onVoteCandidate !== undefined &&
+    selectedOption !== undefined &&
+    pendingCandidateId === null;
+  const canReact = presentation.canReact && onReact !== undefined;
   const rootClass = `${styles.surface} ${surface === "hosted" ? styles.hosted : ""}`;
 
   return (
@@ -177,11 +213,9 @@ function ViewerShell({
             <h2 className={styles.title}>{phaseTitle(presentation.phase)}</h2>
           </div>
           <div className={styles.metaRow}>
-            {presentation.revision !== null ? (
-              <StatusBadge tone="diagnostic">{`rev ${presentation.revision}`}</StatusBadge>
-            ) : null}
-            <StatusBadge tone={statusTone(presentation.connection?.status)}>
-              {presentation.connection?.status ?? "loading"}
+            {roomCode ? <StatusBadge tone="info">{`Room ${roomCode}`}</StatusBadge> : null}
+            <StatusBadge tone={connectionTone(presentation.connection?.status)}>
+              {connectionLabel(presentation.connection?.status)}
             </StatusBadge>
             {remaining ? <StatusBadge tone="info">{remaining}</StatusBadge> : null}
           </div>
@@ -190,11 +224,11 @@ function ViewerShell({
         {presentation.connection?.status && presentation.connection.status !== "ready" ? (
           <Notice
             tone={presentation.connection.status === "degraded" ? "warning" : "danger"}
-            title={presentation.connection.message ?? "Connection not ready"}
+            title={connectionLabel(presentation.connection.status)}
             politeness="polite"
             className={styles.notice}
           >
-            Latest safe quest is kept visible. Commands are disabled until authority returns.
+            {connectionRecoveryCopy(presentation.connection.status)}
           </Notice>
         ) : null}
 
@@ -211,7 +245,7 @@ function ViewerShell({
                 index={index}
                 selectedCandidateId={selectedCandidateId}
                 pending={option.candidateId === pendingCandidateId}
-                canSelect={presentation.canVote}
+                canSelect={canSelect}
                 onSelectCandidate={onSelectCandidate}
               />
             ))}
@@ -252,11 +286,11 @@ function ViewerShell({
           <p className={styles.statusLine} aria-live="polite">
             {presentation.acceptedCandidateId
               ? "Vote accepted."
-              : presentation.canVote
+              : presentation.canVote && onVoteCandidate !== undefined
                 ? "Select one option, then vote."
                 : "Voting is closed or unavailable."}
           </p>
-          {presentation.canReact ? (
+          {canReact ? (
             <Button variant="secondary" onClick={() => onReact?.("hype")}>
               Send hype
             </Button>
@@ -276,12 +310,7 @@ export function TwitchExtensionViewerSurface(props: ViewerSurfaceProps) {
 }
 
 export function HostedQuestBoardSurface({ roomCode, ...props }: HostedBoardSurfaceProps) {
-  return (
-    <div className={styles.shell}>
-      {roomCode ? <StatusBadge tone="info">{`Room ${roomCode}`}</StatusBadge> : null}
-      <ViewerShell surface="hosted" {...props} />
-    </div>
-  );
+  return <ViewerShell surface="hosted" roomCode={roomCode} {...props} />;
 }
 
 export function ChatFallbackInstructions({ view }: ChatFallbackInstructionsProps) {
@@ -346,8 +375,8 @@ export function ObsQuestOverlaySurface({ view, now }: ObsQuestOverlaySurfaceProp
             </div>
             <div className={styles.metaRow}>
               {remaining ? <StatusBadge tone="info">{remaining}</StatusBadge> : null}
-              <StatusBadge tone={statusTone(presentation.connection?.status)}>
-                {presentation.connection?.status ?? "loading"}
+              <StatusBadge tone={connectionTone(presentation.connection?.status)}>
+                {connectionLabel(presentation.connection?.status)}
               </StatusBadge>
             </div>
           </header>
