@@ -33,6 +33,8 @@ import {
   contractFixtureSession,
   contractFixtureStreamerView,
   contractFixtureUiX01ReadinessCatalog,
+  contractFixtureUiX06QuestStateCatalog,
+  contractFixtureUiX06RoleViewCatalog,
   contractFixtureViewerView,
   invalidCalibratedCapabilitiesWithoutAdapter,
   invalidLiveFixtureEnvelope,
@@ -146,6 +148,56 @@ describe("candidate and lifecycle boundaries", () => {
         activeCandidateId: null,
       }).success,
     ).toBe(false);
+  });
+
+  it("publishes UI-X06 quest-state and role-view examples for UI consumers", () => {
+    expect(Object.keys(contractFixtureUiX06QuestStateCatalog)).toEqual(
+      expect.arrayContaining([
+        "r5.quest.idle.v1",
+        "r4.quest.proposed.v1",
+        "r5.vote.zero-vote.v1",
+        "r5.vote.tie.v1",
+        "r5.quest.active-manual-progress.v1",
+        "r5.quest.active-automatic-progress.v1",
+        "r5.quest.succeeded-reward.v1",
+        "r5.quest.failed.v1",
+        "r5.quest.cancelled.v1",
+        "r5.quest.skipped.v1",
+        "r5.quest.expired.v1",
+        "r4.quest.cooldown.v1",
+      ]),
+    );
+
+    for (const [fixtureId, questState] of Object.entries(contractFixtureUiX06QuestStateCatalog)) {
+      expect(questCycleStateSchema.safeParse(questState).success).toBe(true);
+      expect(questState.envelope.evidenceClass).toBe("fixture");
+      expect(
+        contractFixtureUiX06RoleViewCatalog[
+          fixtureId as keyof typeof contractFixtureUiX06RoleViewCatalog
+        ],
+      ).toBeDefined();
+    }
+
+    const zeroVote = contractFixtureUiX06QuestStateCatalog["r5.vote.zero-vote.v1"];
+    expect(zeroVote.voteTallies.every((tally) => tally.votes === 0)).toBe(true);
+    expect(
+      contractFixtureUiX06RoleViewCatalog["r5.vote.zero-vote.v1"].viewer.acceptedCandidateId,
+    ).toBeNull();
+
+    const tie = contractFixtureUiX06QuestStateCatalog["r5.vote.tie.v1"];
+    expect(tie.voteTallies.map((tally) => tally.votes)).toEqual([2, 2, 1]);
+    expect(contractFixtureUiX06RoleViewCatalog["r5.vote.tie.v1"].viewer.acceptedCandidateId).not.toBeNull();
+
+    expect(contractFixtureUiX06QuestStateCatalog["r5.quest.active-manual-progress.v1"].progress?.method).toBe(
+      "manual",
+    );
+    expect(
+      contractFixtureUiX06QuestStateCatalog["r5.quest.active-automatic-progress.v1"].progress?.method,
+    ).toBe("automatic");
+    expect(contractFixtureUiX06QuestStateCatalog["r5.quest.succeeded-reward.v1"].result).toMatchObject({
+      outcome: "succeeded",
+      rewardPointsAwarded: 100,
+    });
   });
 });
 
