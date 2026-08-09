@@ -11,11 +11,11 @@ This is the Role 4-owned working record. Codex updates it after the owner answer
 | Field | Current value |
 | --- | --- |
 | Plan | `docs/build-plans/ROLE-4-BUILD-PLAN.md` plus the shared delivery matrix |
-| Current phase | R4-P02 shared visual-system foundation |
-| Current TODO | R4-002 (`IN PROGRESS`) |
-| Source editing allowed now | Yes, on `role-4/design-system-foundation`; remain inside `src/design-system` and the accepted Role 4 boundary |
-| Persistent handoff | [GitHub issue #15](https://github.com/Dewflash/chatxpt/issues/15) and [PR #30](https://github.com/Dewflash/chatxpt/pull/30) |
-| Next implementation branch | `role-4/design-system-foundation` |
+| Current phase | R4-P03 Studio setup, persistence, intelligence, and readiness |
+| Current TODO | R4-003 (`IN PROGRESS`) |
+| Source editing allowed now | Yes, on `role-4/studio-setup-shell`; remain inside `src/streamer`, Role 4 records, and the accepted fixture-only interim boundary |
+| Persistent handoff | [PR #43](https://github.com/Dewflash/chatxpt/pull/43), UI-X01 [#17](https://github.com/Dewflash/chatxpt/issues/17), UI-X02 [#18](https://github.com/Dewflash/chatxpt/issues/18), UI-X05 [#21](https://github.com/Dewflash/chatxpt/issues/21), and UI-X09 [#25](https://github.com/Dewflash/chatxpt/issues/25) |
+| Next implementation branch | `role-4/studio-setup-shell` |
 
 ## Owner decision record
 
@@ -31,6 +31,10 @@ Codex uses the current phase's open decisions as starting points, then adds only
 | D4-06 | R4-P02 | Use badges for status, notices for recovery, one ribbon only for a selected or winning item, and progress only for authoritative completion. | Accepted | 2026-08-05 |
 | D4-07 | R4-P02 | Keep feedback motion subtle at 150–180 ms, avoid continuous decorative animation, and provide a complete reduced-motion mode. | Accepted | 2026-08-05 |
 | D4-08 | R4-P02 | Use medium rounding and high contrast across dark, light, and Twitch contexts, with visible focus rings, at least 44 px controls, and text or symbols alongside status colour. | Accepted | 2026-08-05 |
+| D4-09 | R4-P03 | Use a short guided first-time setup sequence, then a reusable readiness dashboard for returning streamers. | Accepted | 2026-08-07 |
+| D4-10 | R4-P03 | Group settings as Game, Streamer Style, Quest Intensity, Safety/Restrictions, and Accessibility, with advanced details kept secondary. | Accepted | 2026-08-07 |
+| D4-11 | R4-P03 | Show individual Twitch, capture, intelligence, realtime, and session checks with one authoritative next action; never replace blockers with a readiness percentage. | Accepted | 2026-08-07 |
+| D4-12 | R4-P03 | Lead with plain intelligence status and confidence, then expose method, source, and observation time in expandable detail. | Accepted | 2026-08-07 |
 
 ## Pass record
 
@@ -40,7 +44,8 @@ Codex appends one row per completed pass.
 | --- | --- | --- | --- | --- | --- |
 | R4-P01 feasibility submission | `role-4/feasibility-review` / [issue #15 comment](https://github.com/Dewflash/chatxpt/issues/15#issuecomment-5164904061) | Owner decisions settled and consolidated technical review submitted; no UI source implementation started. | `git diff --check`; full `npm run check` | Source/document inspection plus fixture/memory verification only | Cleared on 2026-08-04 by Role 1 acknowledgement and Role 1/Role 2 approval of [PR #30](https://github.com/Dewflash/chatxpt/pull/30) |
 | R4-P01 acceptance | `role-4/feasibility-review` / [PR #30](https://github.com/Dewflash/chatxpt/pull/30) | Role 2 accepted the plan with no scope revision, Role 1 approved the handoff, R4-001 moved to `DONE`, and R4-002 moved to `READY`. | GitHub review records; documentation `git diff --check`; full repository check before final push | Coordination and documentation evidence only; no Role 4 UI source implementation | Merge PR #30, branch from current `main`, then begin R4-P02 |
-| R4-P02 implementation candidate | `role-4/design-system-foundation` / PR pending | D4-05 through D4-08 are implemented as an additive `@/design-system` token, theme, layout, control, status, progress, notice, and accessibility contract. | Focused 8-test contract suite; WCAG contrast calculations; dark/focus, light/long-text, narrow Twitch, and reduced-motion evidence; full lint, TypeScript, boundary (58 files / 144 imports), 12 files / 81 tests, and production build | Real source and production-CSS rendering in an isolated local fixture; no app-route integration, real Twitch/OBS, or live backend behavior is claimed | Owner approval to commit, push, and open the draft PR; R4-002 stays `IN PROGRESS` until the public handoff merges |
+| R4-P02 shared foundation accepted | `role-4/design-system-foundation` / [PR #43](https://github.com/Dewflash/chatxpt/pull/43) | D4-05 through D4-08 shipped through the stable `@/design-system` entry, and Role 5 can consume the additive visual contract without copying Role 4 files. | Focused 8-test contract suite; WCAG contrast calculations; dark/focus, light/long-text, narrow Twitch, and reduced-motion evidence; full lint, TypeScript, boundary, test, and production build checks | Real source and production-CSS rendering in an isolated local fixture; no app-route integration, real Twitch/OBS, or live backend behaviour was claimed | Merged after Role 1 and Role 5 approval; R4-002 is `DONE` and R4-P03 may begin |
+| R4-P03 Studio setup shell candidate | `role-4/studio-setup-shell` / [PR #98](https://github.com/Dewflash/chatxpt/pull/98) | Added the guided first-time and returning Studio shell, authoritative service-health cards, grouped saved-profile summary, expandable signal provenance, and explicit loading, reconnecting, and fixture-evidence states. | Focused 8-test render-contract suite; lint; TypeScript; role boundaries; evidence manifest and its 3 tests; full 243-test repository suite; optimized Next.js production build; desktop and narrow reconnect fixture screenshots | Real Role 4 source rendered from canonical fixture data; no live Twitch, OBS, AI, persistence, authenticated gateway, profile-update, or session-start behaviour is claimed | Role 1 integration review requested; UI-X01/UI-X02/UI-X05 still block authoritative actions |
 
 ## Codex instruction
 
