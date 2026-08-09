@@ -196,6 +196,38 @@ export function ControlRoom() {
     && !loading
     && !activeQuest;
   const overlayAutoArmed = autoOverlayEnabled && !!leadingQuest && !activeQuest;
+  const readinessItems = useMemo(() => [
+    {
+      label: "Capture",
+      value: analysis.status === "running" ? "Running" : analysis.status,
+      ready: analysis.status === "running",
+    },
+    {
+      label: "Chat",
+      value: chatStatus === "connected" ? "Connected" : chatStatus,
+      ready: chatStatus === "connected",
+    },
+    {
+      label: "Quest mode",
+      value: autoDemoEnabled ? `Auto ${generationDelaySeconds}s` : "Manual",
+      ready: true,
+    },
+    {
+      label: "Quests",
+      value: quests.length === 3 ? "3 ready" : `${quests.length}/3`,
+      ready: quests.length === 3,
+    },
+    {
+      label: "Viewer vote",
+      value: totalVotes > 0 ? `${totalVotes} counted` : "Waiting",
+      ready: totalVotes > 0,
+    },
+    {
+      label: "Overlay",
+      value: activeQuest ? "Published" : "Ready",
+      ready: !!activeQuest,
+    },
+  ], [activeQuest, analysis.status, autoDemoEnabled, chatStatus, generationDelaySeconds, quests.length, totalVotes]);
 
   const generate = useCallback(async () => {
     setLoading(true);
@@ -563,6 +595,7 @@ export function ControlRoom() {
                 {chatStatus === "connected" ? "Reconnect chat" : "Connect chat"}
               </button>
             </div>
+            <p className="viewer-instruction">Viewer instruction: type exactly 1, 2, or 3 in Twitch chat.</p>
             <label>Channel name
               <input value={twitchChannel} onChange={(event) => setTwitchChannel(event.target.value)} />
             </label>
@@ -576,6 +609,33 @@ export function ControlRoom() {
                 </span>
               ))}
             </div>
+          </div>
+
+          <div className="readiness-card">
+            <div className="section-heading compact-heading">
+              <div><p className="step">Demo readiness</p><h3>{activeQuest ? "Overlay live" : "Preflight"}</h3></div>
+              <a className="mini-link" href="/overlay" target="_blank" rel="noreferrer">View overlay</a>
+            </div>
+            <div className="readiness-grid">
+              {readinessItems.map((item) => (
+                <div className={item.ready ? "ready" : ""} key={item.label}>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
+              ))}
+            </div>
+            <p>
+              {activeQuest
+                ? `${activeQuest.quest.title} is published to the stream overlay.`
+                : leadingQuest
+                  ? `${leadingQuest.title} is leading; auto overlay will publish it, or publish now for recording.`
+                  : "Start capture, generate quests, then ask Joel to vote 1/2/3."}
+            </p>
+            {leadingQuest && !activeQuest && (
+              <button className="publish-button" onClick={() => activate(leadingQuest)}>
+                Publish leading quest now
+              </button>
+            )}
           </div>
 
           <div className="automation-card">
@@ -670,7 +730,11 @@ export function ControlRoom() {
                   <article className="quest-card" key={quest.id}>
                     <div className="quest-number">0{index + 1}</div>
                     <div className="quest-copy">
-                      <div className="quest-title-row"><h3>{quest.title}</h3><span className={`difficulty ${quest.difficulty}`}>{quest.difficulty}</span></div>
+                      <div className="quest-title-row">
+                        <h3>{quest.title}</h3>
+                        <span className={`difficulty ${quest.difficulty}`}>{quest.difficulty}</span>
+                        {leadingQuest?.id === quest.id && <span className="leading-badge">Leading</span>}
+                      </div>
                       <p>{quest.instruction}</p>
                       <small>{quest.durationSeconds}s · {quest.rewardPoints} XP · {quest.rationale}</small>
                       <div className="vote-track"><i style={{ width: `${share}%` }} /></div>

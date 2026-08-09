@@ -78,6 +78,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .compact-heading { margin-bottom: 0; align-items: center; }
 .compact-heading h3 { margin: 0; text-transform: capitalize; font: 700 20px "Space Grotesk"; }
 .twitch-chat-card p { margin: 0; color: #d6d0e4; font-size: 12px; line-height: 1.45; }
+.viewer-instruction { padding: 8px 10px; border: 1px solid rgba(215,255,82,.22); border-radius: 8px; color: var(--lime) !important; background: rgba(215,255,82,.055); font-weight: 700; }
 .live-chat-lines { display: grid; gap: 6px; min-height: 34px; padding: 9px; border-radius: 10px; background: rgba(0,0,0,.18); }
 .live-chat-lines span { color: var(--muted); font-size: 12px; line-height: 1.35; }
 .live-chat-lines b { color: var(--violet); margin-right: 5px; }
@@ -99,10 +100,20 @@ input[type="range"] { accent-color: var(--violet); padding: 7px 0; background: t
 .quest-card { display: grid; grid-template-columns: 42px 1fr 92px; gap: 14px; padding: 18px; background: rgba(255,255,255,.025); border: 1px solid var(--line); border-radius: 15px; transition: .2s ease; }
 .quest-card:hover { border-color: rgba(141,99,255,.55); background: rgba(141,99,255,.05); }
 .quest-number { color: rgba(255,255,255,.18); font: 700 22px "Space Grotesk"; }
-.quest-title-row { display: flex; align-items: center; gap: 9px; }.quest-card h3 { margin: 0; font: 600 18px "Space Grotesk"; }.quest-card p { margin: 7px 0; color: #d6d0e4; font-size: 13px; line-height: 1.45; }.quest-card small { color: #746e82; font-size: 10px; line-height: 1.4; display: block; }
+.quest-title-row { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }.quest-card h3 { margin: 0; font: 600 18px "Space Grotesk"; }.quest-card p { margin: 7px 0; color: #d6d0e4; font-size: 13px; line-height: 1.45; }.quest-card small { color: #746e82; font-size: 10px; line-height: 1.4; display: block; }
 .difficulty { padding: 3px 7px; border-radius: 999px; text-transform: uppercase; letter-spacing: .08em; font-size: 8px; font-weight: 700; }.difficulty.easy { color: var(--lime); background: rgba(215,255,82,.08); }.difficulty.medium { color: #ffbd59; background: rgba(255,189,89,.08); }.difficulty.hard { color: var(--coral); background: rgba(255,111,97,.08); }
+.leading-badge { padding: 3px 7px; border-radius: 999px; color: #0c0912; background: var(--lime); text-transform: uppercase; letter-spacing: .08em; font-size: 8px; font-weight: 800; }
 .vote-track { height: 3px; margin-top: 11px; background: rgba(255,255,255,.06); border-radius: 99px; overflow: hidden; }.vote-track i { display: block; height: 100%; background: var(--violet); transition: width .25s ease; }
 .quest-actions { display: grid; align-content: center; gap: 7px; }.quest-actions button { border: 1px solid var(--line); border-radius: 8px; padding: 8px; color: var(--muted); background: transparent; font-size: 10px; cursor: pointer; }.quest-actions button:hover { color: white; border-color: var(--violet); }.quest-actions .activate-button { color: #0c0912; border-color: var(--violet); background: var(--violet); font-weight: 700; }.quest-actions b { color: white; margin-left: 3px; }
+.readiness-card { display: grid; gap: 12px; margin: 14px 0; padding: 14px; border: 1px solid rgba(255,255,255,.12); border-radius: 12px; background: rgba(0,0,0,.18); }
+.mini-link { align-self: center; color: var(--lime); font-size: 12px; font-weight: 800; text-decoration: none; }
+.readiness-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.readiness-grid div { min-height: 58px; display: grid; align-content: center; gap: 4px; padding: 8px; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; background: rgba(255,255,255,.025); }
+.readiness-grid div.ready { border-color: rgba(215,255,82,.32); background: rgba(215,255,82,.065); }
+.readiness-grid span { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.readiness-grid strong { color: var(--ink); font: 700 13px "Space Grotesk"; }
+.readiness-card p { margin: 0; color: #d6d0e4; font-size: 12px; line-height: 1.45; }
+.publish-button { width: 100%; min-height: 38px; border: 1px solid var(--lime); border-radius: 9px; color: #0c0912; background: var(--lime); font-weight: 800; cursor: pointer; }
 .automation-card { display: grid; gap: 12px; margin-top: 14px; padding: 14px; border: 1px solid rgba(215,255,82,.26); border-radius: 12px; background: rgba(215,255,82,.055); }
 .automation-card h3 { margin: 2px 0 6px; font: 700 18px "Space Grotesk"; }
 .automation-card p { margin: 0; color: #d6d0e4; font-size: 12px; line-height: 1.5; }
@@ -158,6 +169,6 @@ input[type="range"] { accent-color: var(--violet); padding: 7px 0; background: t
   .shell { width: min(100% - 20px, 1480px); }.topbar { gap: 10px; }.live-pill { display: none; }.ghost-button { margin-left: auto; font-size: 11px; }
   .hero { min-height: 260px; padding: 40px 8px 25px; }.form-grid { grid-template-columns: 1fr; }
   .analysis-card dl { grid-template-columns: 1fr 1fr; }
-  .panel { padding: 18px; border-radius: 16px; }.analysis-insights, .mode-grid { grid-template-columns: 1fr 1fr; }.quest-card { grid-template-columns: 30px 1fr; }.quest-actions { grid-column: 2; grid-template-columns: 1fr 1fr; }.automation-status { grid-template-columns: 1fr; }
+  .panel { padding: 18px; border-radius: 16px; }.analysis-insights, .mode-grid, .readiness-grid { grid-template-columns: 1fr 1fr; }.quest-card { grid-template-columns: 30px 1fr; }.quest-actions { grid-column: 2; grid-template-columns: 1fr 1fr; }.automation-status { grid-template-columns: 1fr; }
   .active-bar { align-items: flex-start; }.active-bar p { display: block; margin: 4px 0 0; }.active-actions { flex-direction: column; }
 }
