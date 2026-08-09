@@ -51,6 +51,8 @@ The app is now moving toward Broadcast control room:
 
 ## Research notes used
 
+- [Vercel v0 prompting documentation](https://v0.dev/docs) frames good UI generation around concrete product context, target surface, constraints, and iteration rather than vague restyling; that supports writing a specific Broadcast control room style spec before the final CSS pass.
+- [Vercel v0](https://v0.dev/) is strongest when prompts describe the exact app type and expected components; that supports naming operational modules like status, action cockpit, engine stack, automation, analytics, and overlay preview instead of asking for a generic AI dashboard.
 - [Apple Human Interface Guidelines: Layout](https://developer.apple.com/design/human-interface-guidelines/layout) emphasise visual hierarchy, alignment, and distinguishing controls from content; that supports the grouped status bars plus separate Action cockpit.
 - [Apple Human Interface Guidelines: Color](https://developer.apple.com/design/human-interface-guidelines/color) warns against using the same colour for different meanings and recommends reserving colour for status and primary actions; that supports signal green/amber/red plus fewer decorative purple glows.
 - [Refactoring UI: Building your color palette](https://www.refactoringui.com/previews/building-your-color-palette) recommends building mostly from greys, one or two primary colours, and sparse semantic accents; that supports the Broadcast control room direction.

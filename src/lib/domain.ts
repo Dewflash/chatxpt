@@ -54,7 +54,7 @@ export type StreamerProfile = z.infer<typeof streamerProfileSchema>;
 export type GenerationRequest = z.infer<typeof generationRequestSchema>;
 export type Sidequest = z.infer<typeof sidequestSchema>;
 
-export type GenerationProvider = "mock" | "openai";
+export type GenerationProvider = "algorithmic" | "mock" | "openai";
 
 export type GenerationResponse = {
   quests: Sidequest[];

@@ -3,11 +3,14 @@
 - Surfaced the judged MVP generator decision in Studio: no external model provider, credential-free algorithmic candidates, deterministic validation/replacement, and safe-library fallback.
 - Expanded the demo Studio game model from three loose presets into explicit game categories, current game text, and category-specific phase labels.
 - Strengthened the no-credential sidequest fallback with genre-aware quest patterns for racing, strategy, platformer, tactical, MOBA, battle royale, arena, and unknown game streams.
+- Aligned `/api/sidequests` with the accepted D-055 wording by labelling the credential-free route as `algorithmic` instead of `mock`.
+- Added direct route coverage for `/api/sidequests` and aligned Vitest's alias config with the app's `@` imports.
 - Added a Studio style-direction note for the final CSS pass, recommending a Broadcast control room direction over generic AI-dashboard visuals.
 
 Verification:
 
 - `npm run test -- src/lib/mock-engine.test.ts`
+- `npm run test -- tests/integration/sidequests-route.test.ts`
 - `npm run check`
 - `curl -I http://localhost:3000/`
 - `curl -I "http://localhost:3000/overlay?obs=1"`

@@ -1319,7 +1319,11 @@ export function ControlRoom() {
       <div className="quest-panel panel">
         <div className="section-heading">
           <div><p className="step">Vote</p><h2>Viewer choices</h2></div>
-          {provider && <span className="provider">{provider === "openai" ? "Live AI" : "Safe demo engine"}</span>}
+          {provider && (
+            <span className="provider">
+              {provider === "openai" ? "Live AI" : provider === "algorithmic" ? "Algorithmic engine" : "Safe demo engine"}
+            </span>
+          )}
         </div>
 
         {quests.length === 0 ? (

@@ -55,7 +55,7 @@ Local demo routes:
 4. Confirm the **Stream automation settings** are set to **Auto generate** and **Auto overlay**, or switch to **Manual review** / **Streamer approves** if the recording should show manual control.
 5. Connect Twitch chat to the broadcaster channel, for example `dewflash`, if a test stream is available.
 6. Wait for auto-generation or click **Generate sidequests** if the recording needs to move faster. If clicked manually, label that as prototype/demo control.
-7. Confirm exactly three Brawl Stars-safe quest cards appear. With no `OPENAI_API_KEY`, this uses the safe mock/demo engine. If `OPENAI_API_KEY` is configured, the legacy API tries the optional OpenAI adapter and falls back to the mock engine on failure. The accepted judged MVP path remains the credential-free algorithmic route recorded in D-055.
+7. Confirm exactly three Brawl Stars-safe quest cards appear. With no `OPENAI_API_KEY`, this uses the credential-free algorithmic/demo engine. If `OPENAI_API_KEY` is configured, the legacy API tries the optional OpenAI adapter and falls back to the algorithmic engine on failure. The accepted judged MVP path remains the credential-free algorithmic route recorded in D-055.
 8. Ask Joel or another viewer to open `http://localhost:3000/viewer.html`, select one of the three quests, and submit the vote. Confirm the vote increments in Studio and the leading voted quest auto-publishes to the overlay. Use Twitch chat `1`/`2`/`3` only as the fallback/comment-ingestion proof; if the viewer route is unavailable, click `+ vote` and label it as simulated diagnostic voting.
 9. Open `http://localhost:3000/overlay` in another browser tab or OBS Browser Source to show the active quest, timer, status, and reward. If the automation is disabled, click **Activate** on the chosen quest.
 10. Return to the control room and click **Complete**, **Fail**, or **Clear** to demonstrate terminal overlay updates.
@@ -68,7 +68,7 @@ Current runnable UI path:
 - `/api/sidequests` validates the legacy `GenerationRequest`.
 - The judged MVP does not adopt an external provider. D-055 records the accepted provider decision: use credential-free algorithmic candidates plus Role 3 deterministic validation/replacement for the MVP.
 - The legacy `/api/sidequests` path still contains an optional server-side OpenAI adapter if `OPENAI_API_KEY` is configured; this is not the accepted judged-provider path and should not be presented as MVP provider evidence.
-- If the key is absent or the legacy provider call fails, it returns exactly three deterministic mock quests and, on provider failure, a warning.
+- If the key is absent or the legacy provider call fails, it returns exactly three credential-free algorithmic/demo quests and, on provider failure, a warning.
 
 Accepted MVP path present as component code/tests:
 
@@ -90,11 +90,11 @@ The accepted Role 2/Role 3 path is not yet wired into the visible `/` route as l
 ## Exception Handling Visible Today
 
 - Invalid `/api/sidequests` JSON or signal shape returns a 400 response.
-- Missing `OPENAI_API_KEY` uses the deterministic mock engine.
-- Legacy OpenAI failure falls back to the mock engine and returns a warning.
+- Missing `OPENAI_API_KEY` uses the credential-free algorithmic/demo engine.
+- Legacy OpenAI failure falls back to the credential-free algorithmic/demo engine and returns a warning.
 - Extension viewer or Twitch chat connection failure leaves the local demo able to continue through labelled diagnostic votes.
 - Screen capture that is frozen, black, or incorrectly selected can be identified through the preview thumbnail and checksum before any live-analysis claim is made.
-- The mock engine filters boundary-matching quest text and fills with safe fallback quests to keep exactly three options.
+- The algorithmic/demo engine filters boundary-matching quest text and fills with safe fallback quests to keep exactly three options.
 - `/api/ui-gateway/commands` rejects stale fixture revisions and malformed command envelopes.
 - Hosted board access has explicit invalid, not-found, expired, inactive, and unavailable states.
 - The documented real runbook requires unknown gameplay facts to remain `unknown`, provider failure to continue through algorithmic/deterministic fallback, and fixture/live claims to be split.

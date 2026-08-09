@@ -29,11 +29,11 @@ export async function POST(request: Request) {
       };
       return NextResponse.json(result);
     } catch (error) {
-      console.error("OpenAI generation failed; using mock fallback", error instanceof Error ? error.message : error);
+      console.error("OpenAI generation failed; using algorithmic fallback", error instanceof Error ? error.message : error);
       const fallback: GenerationResponse = {
         quests: generateMockSidequests(parsed.data),
-        provider: "mock",
-        warning: "Live AI was unavailable, so ChatXPT used its safe fallback engine.",
+        provider: "algorithmic",
+        warning: "Live AI was unavailable, so ChatXPT used its credential-free algorithmic engine.",
       };
       return NextResponse.json(fallback);
     }
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
   const result: GenerationResponse = {
     quests: generateMockSidequests(parsed.data),
-    provider: "mock",
+    provider: "algorithmic",
   };
   return NextResponse.json(result);
 }
