@@ -221,10 +221,12 @@ Universal features may run across action games. Colour bars, icons, text regions
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D2-12 | Audience-signal taxonomy and aggregation windows | Open | — |
-| D2-13 | Rule-based versus free-model classification boundary | Open | — |
-| D2-14 | Sarcasm, spam, repeated-request, low-volume, and conflicting-chat handling | Open | — |
-| D2-15 | Whether any raw chat is stored within the 24-hour maximum or processed in memory only | Open | — |
+| D2-12 | Audience-signal taxonomy and aggregation windows | Resolved by Joelyrk | Use a 30-second rolling window for P0 live audience state. Every output carries sample size, observed/received time, freshness/expiry, and confidence; sparse windows remain unknown rather than being treated as neutral. |
+| D2-13 | Rule-based versus free-model classification boundary | Resolved by Joelyrk | Use credential-free, explainable rules as the mandatory P0 classifier. A genuinely free model may assist ambiguous classification later only behind the same validated port and cannot be required for the live or fallback path. |
+| D2-14 | Sarcasm, spam, repeated-request, low-volume, and conflicting-chat handling | Resolved by Joelyrk | Rate-limit and deduplicate spam per viewer in memory; repeated requests require multiple qualifying events rather than repeated tokens in one message. Sparse, sarcastic, multilingual or unrecognised, and similarly credible conflicting signals become low-confidence or unknown. Unsafe or toxic intent is high-recall suppression evidence only and is never used to create provocative quests. |
+| D2-15 | Whether any raw chat is stored within the 24-hour maximum or processed in memory only | Resolved by Joelyrk | Process raw Twitch chat in memory only for the MVP and do not persist raw messages. Retain bounded aggregates plus separately privacy-reviewed sanitised evidence fixtures with viewer identifiers removed. |
+
+**Decision batch accepted (8 August 2026):** Joelyrk approved D2-12 through D2-15 together. PR #111 must preserve evidence-class boundaries so fixture or diagnostic events never contribute to a live-labelled aggregate, and must add sparse, spam, repeated-request, sarcasm/conflict, unsafe, and multilingual/unknown regressions before approval.
 
 ### R2-P08 — Audience aggregation and behavioural signals
 
