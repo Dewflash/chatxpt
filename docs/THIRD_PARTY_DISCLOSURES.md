@@ -35,7 +35,7 @@ This document is the source for submission disclosures. It describes what is cur
 | OBS | Real gameplay input via OBS Virtual Camera and broadcast output via Browser Source overlay | No credentials expected; recordings/screenshots must be privacy-reviewed | Local setup evidence remains separate from source inspection. |
 | Supabase Free | Accepted persistence/realtime target | Service role keys and project URLs/secrets remain private environment values | Code supports memory fallback; real cloud evidence must be recorded separately. |
 | Vercel | Planned deployment host for production/preview | Project tokens and environment values stay outside Git | Deployment evidence is not claimed until a deployment run is recorded. |
-| AI provider | Roles 2 and 3 must jointly recommend a genuinely free provider/model, if any | Provider keys stay server-side and are not required for the credential-free path | No provider is selected by this disclosure. Current accepted fallback is credential-free algorithmic generation plus deterministic Role 3 validation/fallback. |
+| AI provider | No external provider is adopted for the judged MVP under D-055 | Provider keys stay server-side and are not required for the credential-free path | No provider is selected for external adoption in the submitted path; it uses credential-free algorithmic generation plus deterministic Role 3 validation/fallback. Groq `openai/gpt-oss-20b` is evaluation-only for a future controlled trial, not an MVP dependency. |
 
 ## Data And Asset Disclosures
 
