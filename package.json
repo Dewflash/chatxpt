@@ -26,7 +26,9 @@
     "check:boundaries": "node scripts/check-role-boundaries.mjs",
     "check:evidence": "node scripts/check-evidence-manifest.mjs",
     "check:demo-runbook": "node scripts/check-demo-runbook.mjs",
-    "check": "npm run lint && npm run typecheck && npm run check:boundaries && npm run check:evidence && npm run check:demo-runbook && npm run test:evidence && npm test && npm run build"
+    "check:client-secrets": "node scripts/check-client-secrets.mjs",
+    "test:client-secrets": "node --test scripts/check-client-secrets.test.mjs",
+    "check": "npm run lint && npm run typecheck && npm run check:boundaries && npm run check:evidence && npm run check:demo-runbook && npm run test:evidence && npm run test:client-secrets && npm test && npm run build && npm run check:client-secrets"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.111.0",

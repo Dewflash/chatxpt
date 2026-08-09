@@ -2,6 +2,11 @@ import "server-only";
 
 /** Server-only composition entrypoint. Never import this file from a client component. */
 export {
+  deploymentHealthReportSchema,
+  resolveDeploymentHealthReport,
+  type DeploymentHealthReport,
+} from "./deployment-health";
+export {
   publicRealtimeEnvironment,
   resolveServerPersistenceEnvironment,
   type MemoryPersistenceEnvironment,
