@@ -14,6 +14,7 @@ This document is the source for submission disclosures. It describes what is cur
 | `@supabase/supabase-js` | `package.json` / `package-lock.json` | Planned/implemented Role 1 persistence and realtime adapter | Server-side product writes; browser access only through authorised public rules | Local/static adapter evidence until a real Supabase Free project run is recorded. |
 | `server-only` | `package.json` / `package-lock.json` | Build-time guard for server-only integration modules | Not a product feature | Build-time/source evidence. |
 | `openai` | `package.json` / `package-lock.json` | Legacy optional server-side adapter during migration | Server only; no `NEXT_PUBLIC` provider key allowed | Not the accepted MVP provider and no paid usage is authorised. |
+| `tesseract.js` | `package.json` / `package-lock.json` | Free local selective OCR engine for Role 2's bounded named-crop evidence path | Client/runtime worker exposure only where Role 2 mounts the injected OCR adapter | Installed dependency and fixture plumbing only; live OCR requires deployed worker/CSP/language-data evidence and real OBS input evidence. |
 
 ## Development And Test Dependencies
 
