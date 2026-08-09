@@ -1,4 +1,5 @@
 /** Role 2 public boundary for analysed intelligence and quest-candidate production. */
+export { createAlgorithmicCandidateStrategy } from "./algorithmic-candidates";
 export {
   createValidatingCandidateProvider,
   createValidatingIntelligenceProvider,
