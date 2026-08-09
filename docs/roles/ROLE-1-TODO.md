@@ -6,7 +6,7 @@ Update this file at the start and end of each Role 1 pass. Do not mark `DONE` wi
 
 Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan defines phase order, owner decisions, deadlines, and pass-level evidence.
 
-**Next:** run R1-015 (browser-safe UI gateway/harness) concurrently with activation of the team-owned Supabase Free preview. Continue coordinating open feasibility handoffs and keep ambiguous legacy moves deferred; AI/extraction, quest mechanics, and detailed UI implementation remain with their owners.
+**Next:** finish R1-015 (browser-safe UI gateway/harness) and keep activating the team-owned Supabase Free preview. Continue coordinating open feasibility handoffs and keep ambiguous legacy moves deferred; AI/extraction, quest mechanics, and detailed UI implementation remain with their owners.
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
@@ -16,19 +16,81 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 | R1-002 | P0 | IN PROGRESS | Perform the one-time public-entry ownership migration. | R1-003 skeleton; open legacy mapping decisions | Public paths, compatibility tests, dependency enforcement, and a factual legacy inventory exist; ambiguous moves remain deferred until D1-01/D1-03 are settled. |
 | R1-003 | P0 | DONE | Freeze version 1 contracts, public ports, orchestrator skeleton, and capability model. | R1-001; input from Roles 2-5 | Versioned schemas/ports, non-live fixtures, all-role consumer tests, and the candidate -> engine -> atomic commit -> validated view/broadcast fixture cycle pass, including duplicate, stale, concurrent, denial, and recovery cases. |
 | R1-004 | P0 | IN PROGRESS | Create Supabase Free project and minimal revisioned schema/realtime channels. | R1-003; D-037 through D-041 | Committed migrations/RLS/env validation; profiles, sessions, quests, accepted participation, events/results, and sanitised snapshots use atomic revisions, reconnect recovery, server-only writes, and an in-memory fallback. Cloud/two-browser evidence is recorded separately from local execution. |
-| R1-005 | P0 | READY | Connect Vercel deployment and safe environment variables. | R1-004 | Role 1 deployment succeeds; preview/production URLs documented; no secrets in client or Git. |
-| R1-006 | P0 | BLOCKED | Register Twitch app and Extension test version. | R1-011 | OAuth callback, test channel/allowlist, Viewer/Config/Live Config paths, Local or Hosted Test documented. |
-| R1-007 | P0 | READY | Run the early OBS capture spike, then define/test capture and Browser Source integration. | R1-003 provisional port | Target browser selects OBS Virtual Camera and samples real frames; Browser Source contract securely supplies Role 5 visuals, hides when inactive, and reconnects. |
+| R1-005 | P0 | IN PROGRESS | Connect Vercel deployment and safe environment variables. | R1-004 | Server-only deployment health route and local client-bundle secret scan are implemented; outstanding evidence still requires real Vercel preview deployment and configured environment values. |
+| R1-006 | P0 | BLOCKED | Register Twitch app and Extension test version. | R1-011 | OAuth callback placeholder, server-safe setup readiness API, exact Viewer/Config/Live Config diagnostic shells, and static Twitch Asset Hosting package with root-level paths/helper-script tests are implemented without enabling token exchange. Remaining: real Twitch developer-console registration evidence, test channel/allowlist, Local or Hosted Test evidence, Extension JWT validation, EventSub/chat wiring, and recorded live runtime proof. |
+| R1-007 | P0 | IN PROGRESS | Run the early OBS capture spike, then define/test capture and Browser Source integration. | R1-003 provisional port | Browser-side OBS Virtual Camera `FrameSource` adapter and read-only Browser Source descriptor are fixture-tested; outstanding evidence still requires target browser permission, real OBS frame sampling, Role 2 consumption, and Browser Source overlay verification. |
 | R1-008 | P0 | BLOCKED | Integrate Roles 2-5 after every wave and complete the golden workflow. | R1-003 through R1-007; role deliverables | Same authoritative revision reaches Studio, two viewers, persistence, and OBS; contract ladder plus failure/fallback runs pass. |
 | R1-009 | P1 | READY | Maintain GitHub issues, decisions, changelog compilation, and integration notes. | Ongoing | Every merged PR has owner review, fragment, verification, and recorded cross-role outcomes. |
 | R1-010 | P1 | BLOCKED | Assemble submission artifacts and invite Garena collaborator. | R1-008 and explicit project-owner product-readiness declaration | Required README/disclosures, deck, video, private repo access, and final checklist. Evidence collection may continue, but final narrative/deck/video assembly does not begin before that declaration. |
 | R1-011 | P0 | READY | Create the Role 1-controlled Twitch account and enable 2FA for developer application and Extension registration. | None | Role 1 can access the Twitch developer console and begin app/Extension setup without committing credentials. |
 | R1-014 | P0 | DONE | Make Role 4/5 planning beginner-safe and convert every missing UI dependency into persistent work. | PR #14; D-042/D-043 | PR #27 merged guided mode, adaptive design coaching, role-owned execution records, corrected P0/P1 tasks, feasibility issues #15/#16, UI-X issues #17-#26, owner notification, and green repository checks. Role 1 explicitly waived the pending reviewer requests before merge. |
-| R1-015 | P0 | READY | Implement the browser-safe UI gateway, authorised command client, local multi-surface harness, and shared UI verification stack. | R1-003; UI-X01/UI-X02/UI-X05 | Thin Role 1 mounts exercise Role 4/5 public modules, typed commands/revisions/auth failures, canonical fixtures, component interaction tests, and real-browser screenshots without exposing secrets or diagnostic state as live. |
-| R1-016 | P0 | READY | Implement private per-viewer recovery plus hosted-board discovery and Twitch-chat delivery seams. | R1-003/R1-004; UI-X07/UI-X08/UI-X10; D1-06D/D1-06E | Each viewer restores only their accepted vote/points, shared broadcasts remain sanitised, direct-link/code/optional QR entry works, and real chat delivery never overclaims acknowledgement. |
+| R1-015 | P0 | IN PROGRESS | Implement the browser-safe UI gateway, authorised command client, local multi-surface harness, and shared UI verification stack. | R1-003; UI-X01/UI-X02/UI-X05 | `codex/role-1-ui-gateway-harness` adds fixture-only gateway views, JSON/command-validation routes, `/diagnostics/ui-harness`, stale-revision coverage, and public-entry tests. Focused tests, full `npm run check`, and local 200 route checks pass; PR review and optional screenshot evidence remain before marking done. |
+| R1-016 | P0 | IN PROGRESS | Implement private per-viewer recovery plus hosted-board discovery, Twitch-chat delivery, and authorised viewer reaction seams. | R1-003/R1-004; UI-X07/UI-X08/UI-X10; D1-06D/D1-06E | Each viewer restores only their accepted vote/points, shared broadcasts remain sanitised, direct-link/code/optional QR entry works, reactions update server-owned community hype, and real chat delivery never overclaims acknowledgement. |
 | R1-017 | P0 | DONE | Establish the evidence manifest and real-test resource matrix for every role. | R1-014 / PR #27 merge | PR #32 merged the versioned manifest/schema, privacy and evidence-class validator, validator tests, PR/agent workflow hooks, and assigned broadcaster/two-viewer/OBS/desktop/mobile/recording resources. `docs/evidence/manifest.json` records the R1-017 validation entry, and `npm run check:evidence` plus `npm run test:evidence` pass. |
-| R1-018 | P0 | READY | Gather problem-solution-fit, originality, usability, and expected-impact evidence while the build proceeds. | None | At least two relevant conversations or one streamer plus viewer observations, a truthful alternatives comparison, measurable hypotheses, and recorded product changes/limitations support the deck. |
+| R1-018 | P0 | IN PROGRESS | Gather problem-solution-fit, originality, usability, and expected-impact evidence while the build proceeds. | None | At least two relevant conversations or one streamer plus viewer observations, a truthful alternatives comparison, measurable hypotheses, and recorded product changes/limitations support the deck. |
 | R1-019 | P0 | BLOCKED | Execute exact submission operations and freeze the immutable package. | R1-008/R1-010 | Team-named Drive folder contains all three deliverables and repository link; access is tested; email is sent to the brief's recipient; post-submission mutation is prohibited and recorded. |
+| R1-020 | P0 | DONE | Implement accepted quest runtime seams for #36, #37, #38, recovered #48 scheduler, and #50 progress commands. | D-044 through D-047; accepted #50 command decision | Canonical tick/progress/emergency-clear commands, durable emergency latch, intervention-before-generation coordinator, vote-close scheduler, memory/Supabase due-cycle readers, migration, focused tests, and `npm run check` pass. |
+
+## Current R1-018 evidence
+
+- `codex/role-1-demo-runbook` adds `docs/evidence/GOLDEN_REHEARSAL_RUNBOOK.md`, a privacy-safe rehearsal path for memory-backed and real Twitch/OBS runs.
+- `npm run check:demo-runbook` verifies the runbook keeps the required evidence resources, phases, fixture-vs-live warning, unknown-handling rule, authoritative revision gate, and secret/link guardrails.
+
+## Current R1-010/R1-018 disclosure evidence
+
+- `codex/role-1-third-party-disclosures` adds `docs/THIRD_PARTY_DISCLOSURES.md` and links it from the README.
+- `tests/integration/disclosures.test.ts` checks the disclosure covers all current runtime/dev package dependencies and preserves explicit Twitch/OBS/cloud/provider/evidence limitations.
+
+## Current R1-016 private viewer recovery pass
+
+- `codex/role-1-viewer-recovery` adds the UI-X10 server-side `ViewerRecoveryReader` seam for session-scoped accepted-vote reconnect.
+- Memory and Supabase readers return only the requesting viewer's accepted candidate/source/time plus `sessionPoints: 0` until the reward read model is persisted.
+- Hosted-board discovery (UI-X08) and Twitch-chat delivery/acknowledgement (UI-X07) remain open under R1-016 after this pass.
+
+## Current R1-016 hosted-board access pass
+
+- `codex/role-1-hosted-access` adds the UI-X08 server-side `HostedBoardAccessService` for room-code lookup, viewer access grants, direct path/share data, and typed invalid/not-found/inactive/unavailable states.
+- Memory and Supabase adapters expose a hosted-board session directory backed by the existing session room-code records.
+- `codex/role-1-hosted-board-access` adds the thin `/quest-board/[roomCode]` route shell over the accepted hosted-board access service, including the direct viewer path and QR payload display.
+- Twitch-chat delivery/acknowledgement (UI-X07) and real multi-client hosted-board evidence remain open under R1-016 after this pass.
+
+## Current R1-016 chat fallback policy pass
+
+- `codex/role-1-chat-fallback-policy` adds the UI-X07 chat fallback formatting and receipt-policy seam for poll-open, final-result, and counted/duplicate/rejected/late/unavailable presentation.
+- The seam maps authoritative visible options to `1`/`2`/`3` only when exactly three options are in the voting state.
+- Real Twitch outbound sending, rate-limit handling, and live acknowledgement evidence remain open after this template/policy pass.
+
+## Current R1-016 Twitch chat vote adapter pass
+
+- `codex/role-1-twitch-chat-vote-adapter` adds the Role 1-owned strict `1`/`2`/`3` Twitch chat parser for fallback votes.
+- Exact numeric chat messages emit canonical `viewer.vote` commands with `sourceMode: "twitch-chat"` and deterministic duplicate-delivery command IDs.
+- Ordinary chat remains a raw-24h-max audience event, while chat-vote events retain only aggregate choice data.
+- Bounded poll-open, final-result, and acknowledgement templates exist for future outbound Twitch chat delivery.
+- Real Twitch inbound chat connection, outbound delivery, rate-limit handling, and live counted acknowledgement evidence remain open.
+
+## Current Role 4 profile settings command pass
+
+- `codex/role-1-profile-settings-current` adds the broadcaster-only `streamer.profile-settings` command for Studio-owned streamer preferences.
+- Role 1 persists the profile revision, stamps the unchanged quest-cycle revision for broadcast consistency, and publishes updated role views without invoking Role 3.
+- Empty nested patches such as `voting: {}` and `rewards: {}` are rejected so UI no-ops cannot create false revision history.
+
+## Current Role 4 setup/session command pass
+
+- `codex/role-1-setup-session-current` adds the broadcaster-only `streamer.setup` and `streamer.session` contracts for Studio setup controls.
+- Setup action validation is service-specific, so Twitch-only actions cannot validate against OBS, realtime, intelligence, or session controls.
+- The diagnostic UI gateway now publishes fixture-only setup/session command examples for Role 4 without claiming real Twitch, OBS, or deployment setup.
+
+## Current UI-X06 quest-state fixture pass
+
+- `codex/role-1-ui-x06-fixtures-current` adds canonical fixture quest states and matching role views for Role 4/5 rendering.
+- The fixture catalog covers proposed, voting zero-vote, voting tie, active manual/automatic progress, terminal result/reward states, and cooldown.
+- The zero-vote fixture keeps `acceptedCandidateId: null`; private viewer receipts are never fabricated from public tallies.
+
+## Current session history read-model pass
+
+- `codex/role-1-session-history-current` adds privacy-safe session history snapshots for terminal quest outcomes and aggregate engagement.
+- Memory and Supabase readers derive history from accepted command receipts; they exclude raw chat, viewer identifiers, and private vote receipts.
+- Mixed/non-live receipt evidence downgrades the snapshot to `diagnostic` rather than claiming live history.
 
 ## Decisions Role 1 still owns
 

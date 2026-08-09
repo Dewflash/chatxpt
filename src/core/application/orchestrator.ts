@@ -24,6 +24,7 @@ import {
   type RoleViewModels,
   type ViewModelProjectionInput,
   type AcceptedVoteTallySnapshot,
+  type QuestProgressValidationContext,
   type VoteCloseValidationContext,
 } from "../contracts";
 import type { OrchestratorDependencies } from "./ports";
@@ -34,6 +35,8 @@ import type {
   OrchestratorResult,
   ProjectionContext,
 } from "./types";
+
+const MAX_RECENT_QUEST_SUMMARIES = 20;
 
 function error(code: DomainError["code"], message: string, retryable = false): DomainError {
   return domainErrorSchema.parse({ code, message, retryable });
@@ -68,6 +71,7 @@ function stateInvariantError(state: AuthoritativeSessionState): DomainError | nu
     (state.gameplay !== null && !gameplaySnapshotSchema.safeParse(state.gameplay).success) ||
     (state.audience !== null && !audienceSnapshotSchema.safeParse(state.audience).success) ||
     state.services.some((service) => !serviceHealthSchema.safeParse(service).success) ||
+    typeof state.emergencyPaused !== "boolean" ||
     !Number.isSafeInteger(state.communityHype) ||
     state.communityHype < 0
   ) {
@@ -156,6 +160,13 @@ function authoritativeDecision(
     ...current,
     session: { ...current.session, revision },
     questCycle,
+    emergencyPaused:
+      command.type === "streamer.quest" && command.action === "emergency-pause"
+        ? true
+        : command.type === "streamer.emergency-clear"
+          ? false
+          : current.emergencyPaused,
+    recentQuests: updatedRecentQuestSummaries(current, parsedEvents.data, acceptedAt),
   };
   const events = [];
   for (const event of parsedEvents.data) {
@@ -177,6 +188,91 @@ function authoritativeDecision(
     events.push(parsedEvent.data);
   }
   return { state, events };
+}
+
+function updatedRecentQuestSummaries(
+  current: AuthoritativeSessionState,
+  events: readonly QuestEngineDecision["events"][number][],
+  acceptedAt: number,
+): AuthoritativeSessionState["recentQuests"] {
+  const nextSummaries = [...(current.recentQuests ?? [])];
+  for (const event of events) {
+    const historyCandidateId = event.attributes.historyCandidateId;
+    if (typeof historyCandidateId !== "string") continue;
+    const candidate = current.questCycle.options.find(
+      (option) => option.candidateId === historyCandidateId,
+    );
+    if (candidate === undefined) continue;
+    nextSummaries.unshift({
+      title: candidate.title,
+      occurredAt: acceptedAt,
+    });
+  }
+  return nextSummaries.slice(0, MAX_RECENT_QUEST_SUMMARIES);
+}
+
+function authoritativeProfileSettingsUpdate(
+  dependencies: OrchestratorDependencies,
+  command: Extract<CommandEnvelope, { type: "streamer.profile-settings" }>,
+  current: AuthoritativeSessionState,
+  acceptedAt: number,
+): { state: AuthoritativeSessionState; events: AcceptedCommandReceipt["events"] } | DomainError {
+  const votingChangeCount = Object.keys(command.voting ?? {}).length;
+  const rewardChangeCount = Object.keys(command.rewards ?? {}).length;
+  const revision = current.session.revision + 1;
+  const profile = streamerProfileSchema.safeParse({
+    ...current.profile,
+    revision: current.profile.revision + 1,
+    experience: {
+      ...current.profile.experience,
+      ...command.experiencePatch,
+    },
+    voting: {
+      ...current.profile.voting,
+      ...command.voting,
+    },
+    rewards: {
+      ...current.profile.rewards,
+      ...command.rewards,
+    },
+  });
+  if (!profile.success) {
+    return error("validation", "Profile settings update is invalid");
+  }
+
+  const questCycle = questCycleStateSchema.parse({
+    ...current.questCycle,
+    envelope: authoritativeEnvelope(
+      dependencies,
+      command,
+      current,
+      current.questCycle.envelope.questCycleId,
+      revision,
+      acceptedAt,
+      "quest-state",
+    ),
+  });
+  const state: AuthoritativeSessionState = {
+    ...current,
+    session: { ...current.session, revision },
+    profile: profile.data,
+    questCycle,
+  };
+  const event = questEngineEventSchema.safeParse({
+    envelope: authoritativeEnvelope(dependencies, command, state, null, revision, acceptedAt, "quest-event"),
+    event: {
+      eventType: "profile.settings-updated",
+      attributes: {
+        experienceKeysChanged: Object.keys(command.experiencePatch).length,
+        votingChanged: votingChangeCount > 0,
+        rewardsChanged: rewardChangeCount > 0,
+      },
+    },
+  });
+  if (!event.success) {
+    return error("internal", "Authoritative profile event stamping produced invalid state", true);
+  }
+  return { state, events: [event.data] };
 }
 
 function projectionInput(
@@ -202,6 +298,7 @@ function projectionInput(
     gameplay: state.gameplay,
     audience: state.audience,
     questCycle: state.questCycle,
+    emergencyPaused: state.emergencyPaused,
     participationMode: context.participationMode,
     capabilities: state.session.capabilities,
     viewerId: context.viewerId,
@@ -331,6 +428,13 @@ export class ChatXptOrchestrator {
       return { ok: false, error: error("stale-revision", "Command expected a stale session revision") };
     }
 
+    if (command.type === "system.intelligence-ready" && current.emergencyPaused) {
+      return {
+        ok: false,
+        error: error("forbidden", "Emergency pause is active; clear it before proposing new quests"),
+      };
+    }
+
     let candidateBatch = null;
     if (command.type === "system.intelligence-ready") {
       try {
@@ -416,54 +520,110 @@ export class ChatXptOrchestrator {
         session: current.session,
         gameplay: current.gameplay,
         audience: current.audience,
+        recentQuests: current.recentQuests ?? [],
       };
     }
-    let untrustedEngineResult: unknown;
-    try {
-      untrustedEngineResult = await this.dependencies.engine.decide({
-        currentState: current.questCycle,
-        command,
-        candidateBatch,
-        acceptedVoteTally,
-        voteCloseValidationContext,
-        now: acceptedAt,
-      });
-    } catch {
-      return { ok: false, error: error("internal", "Quest engine failed unexpectedly", true) };
-    }
-    if (
-      typeof untrustedEngineResult !== "object" ||
-      untrustedEngineResult === null ||
-      !("ok" in untrustedEngineResult) ||
-      typeof untrustedEngineResult.ok !== "boolean"
-    ) {
-      return { ok: false, error: error("internal", "Quest engine returned an invalid result") };
-    }
-    const engineResult = untrustedEngineResult as QuestEngineResult;
-    if (!engineResult.ok) {
-      const parsedError = domainErrorSchema.safeParse(engineResult.error);
-      return {
-        ok: false,
-        error: parsedError.success
-          ? parsedError.data
-          : error("internal", "Quest engine returned an invalid error"),
+    let questProgressValidationContext: QuestProgressValidationContext | null = null;
+    if (command.type === "streamer.quest-progress" || command.type === "system.quest-progress") {
+      questProgressValidationContext = {
+        profile: current.profile,
+        session: current.session,
+        gameplay: current.gameplay,
+        audience: current.audience,
+        completionRule: current.questCycle.completionRule,
       };
     }
-
     let authoritative: ReturnType<typeof authoritativeDecision>;
-    try {
-      authoritative = authoritativeDecision(
-        this.dependencies,
-        command,
-        current,
-        engineResult.decision,
-        acceptedAt,
-      );
-    } catch {
-      return { ok: false, error: error("internal", "Authoritative state stamping failed", true) };
+    if (command.type === "streamer.profile-settings") {
+      try {
+        authoritative = authoritativeProfileSettingsUpdate(this.dependencies, command, current, acceptedAt);
+      } catch {
+        return { ok: false, error: error("internal", "Authoritative profile update failed", true) };
+      }
+    } else {
+      let untrustedEngineResult: unknown;
+      if (command.type === "streamer.emergency-clear") {
+        untrustedEngineResult = {
+          ok: true,
+          decision: {
+            nextState: current.questCycle,
+            events: [{ eventType: "session.emergency-cleared", attributes: {} }],
+          },
+        } satisfies QuestEngineResult;
+      } else if (command.type === "viewer.react") {
+        untrustedEngineResult = {
+          ok: true,
+          decision: {
+            nextState: current.questCycle,
+            events: [
+              {
+                eventType: "viewer.reaction-recorded",
+                attributes: { reaction: command.reaction, hypeDelta: 1 },
+              },
+            ],
+          },
+        } satisfies QuestEngineResult;
+      } else {
+        try {
+          untrustedEngineResult = await this.dependencies.engine.decide({
+            currentState: current.questCycle,
+            command,
+            candidateBatch,
+            acceptedVoteTally,
+            voteCloseValidationContext,
+            questProgressValidationContext,
+            now: acceptedAt,
+          });
+        } catch {
+          return { ok: false, error: error("internal", "Quest engine failed unexpectedly", true) };
+        }
+      }
+      if (
+        typeof untrustedEngineResult !== "object" ||
+        untrustedEngineResult === null ||
+        !("ok" in untrustedEngineResult) ||
+        typeof untrustedEngineResult.ok !== "boolean"
+      ) {
+        return { ok: false, error: error("internal", "Quest engine returned an invalid result") };
+      }
+      const engineResult = untrustedEngineResult as QuestEngineResult;
+      if (!engineResult.ok) {
+        const parsedError = domainErrorSchema.safeParse(engineResult.error);
+        return {
+          ok: false,
+          error: parsedError.success
+            ? parsedError.data
+            : error("internal", "Quest engine returned an invalid error"),
+        };
+      }
+
+      try {
+        authoritative = authoritativeDecision(
+          this.dependencies,
+          command,
+          current,
+          engineResult.decision,
+          acceptedAt,
+        );
+      } catch {
+        return { ok: false, error: error("internal", "Authoritative state stamping failed", true) };
+      }
     }
     if ("code" in authoritative) {
       return { ok: false, error: authoritative };
+    }
+    if (command.type === "viewer.react") {
+      const communityHype = authoritative.state.communityHype + 1;
+      if (!Number.isSafeInteger(communityHype)) {
+        return { ok: false, error: error("validation", "Community hype limit has been reached") };
+      }
+      authoritative = {
+        ...authoritative,
+        state: {
+          ...authoritative.state,
+          communityHype,
+        },
+      };
     }
 
     let untrustedCommitResult: unknown;

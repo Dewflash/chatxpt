@@ -1,8 +1,14 @@
 import {
+  acceptedVoteTallySnapshotSchema,
+  audienceSnapshotSchema,
   candidateBatchSchema,
   commandEnvelopeSchema,
   domainErrorSchema,
+  gameplaySnapshotSchema,
+  intelligenceSnapshotSchema,
   questCycleStateSchema,
+  streamerProfileSchema,
+  streamSessionSchema,
   type CommandEnvelope,
   type DomainError,
   type QuestCycleState,
@@ -13,7 +19,8 @@ import {
   type QuestEngineResult,
   type StreamerQuestAction,
 } from "../core";
-import { decideManualProgress, decideQuestOutcome } from "./outcomes";
+import { decideAutomaticProgress, decideManualProgress, decideQuestOutcome } from "./outcomes";
+import { validateCandidateAtVoteClose } from "./validation";
 
 export const DEFAULT_VOTING_MILLISECONDS = 30_000;
 
@@ -100,6 +107,12 @@ function validateBoundary(input: QuestEngineInput): QuestEngineResult | null {
   if (command.data.type !== "system.intelligence-ready" && input.candidateBatch !== null) {
     return error("validation", "Only an intelligence-ready command may include candidates");
   }
+  if (
+    command.data.type !== "system.vote-close" &&
+    (input.acceptedVoteTally != null || input.voteCloseValidationContext != null)
+  ) {
+    return error("validation", "Only a vote-close command may include final tally context");
+  }
   return null;
 }
 
@@ -124,6 +137,80 @@ function validateCandidateBatch(input: QuestEngineInput): QuestEngineResult | nu
   return null;
 }
 
+function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
+  if (input.command.type !== "streamer.quest-progress" && input.command.type !== "system.quest-progress") {
+    return error("internal", "Progress transition received another command type");
+  }
+  if (input.currentState.status !== "active") return illegalCommand(input.currentState, input.command);
+
+  const progressDecision =
+    input.command.type === "streamer.quest-progress"
+      ? decideManualProgress(input.currentState.progress, input.command.requestedValue, input.now)
+      : (() => {
+          const context = input.questProgressValidationContext;
+          const completionRule = context?.completionRule ?? null;
+          if (
+            context === null ||
+            context === undefined ||
+            context.gameplay === null ||
+            completionRule?.mode !== "signal"
+          ) {
+            return {
+              accepted: false as const,
+              reason: "missing-evidence" as const,
+            };
+          }
+          const intelligence = intelligenceSnapshotSchema.safeParse({
+            envelope: {
+              ...input.currentState.envelope,
+              messageId: `${input.command.commandId}-progress-context`,
+              source: "orchestrator",
+            },
+            gameplay: context.gameplay,
+            audience: context.audience ?? {
+              envelope: {
+                ...input.currentState.envelope,
+                messageId: `${input.command.commandId}-progress-audience-unavailable`,
+                source: "orchestrator",
+              },
+              sampleSize: 0,
+              signals: [],
+            },
+          });
+          if (!intelligence.success) {
+            return {
+              accepted: false as const,
+              reason: "unknown-evidence" as const,
+            };
+          }
+          return decideAutomaticProgress({
+            currentProgress: input.currentState.progress,
+            requestedValue: input.command.requestedValue,
+            evidenceSignalIds: input.command.evidenceSignalIds,
+            allowedSignalKinds: completionRule.allowedSignalKinds,
+            intelligence: intelligence.data,
+            now: input.now,
+          });
+        })();
+
+  if (!progressDecision.accepted) {
+    return error("validation", "Quest progress update was rejected", {
+      reason: progressDecision.reason,
+    });
+  }
+
+  return accept(
+    input.currentState,
+    { progress: progressDecision.progress },
+    [
+      event("quest-cycle.progress-updated", {
+        method: progressDecision.progress.method,
+        value: progressDecision.progress.value,
+      }),
+    ],
+  );
+}
+
 function transitionIntelligenceReady(input: QuestEngineInput): QuestEngineResult {
   if (input.command.type !== "system.intelligence-ready" || input.candidateBatch === null) {
     return error("internal", "Intelligence transition received inconsistent input");
@@ -143,6 +230,7 @@ function transitionIntelligenceReady(input: QuestEngineInput): QuestEngineResult
       startsAt: null,
       endsAt: null,
       progress: null,
+      completionRule: null,
       result: null,
     },
     [event("quest-cycle.proposed", { candidateCount: input.candidateBatch.candidates.length })],
@@ -154,6 +242,8 @@ function terminalTransition(
   outcome: "succeeded" | "failed" | "cancelled" | "skipped",
   reasonOverride?: string,
   eventType = "quest-cycle.terminal",
+  eventAttributes: QuestEngineEventDraft["attributes"] = {},
+  statePatch: Omit<Partial<QuestCycleState>, "envelope"> = {},
 ): QuestEngineResult {
   const activeCandidate = input.currentState.options.find(
     (candidate) => candidate.candidateId === input.currentState.activeCandidateId,
@@ -183,6 +273,7 @@ function terminalTransition(
   return accept(
     input.currentState,
     {
+      ...statePatch,
       status: outcome,
       availableStreamerActions: [...actionsByStatus[outcome]],
       endsAt: input.now,
@@ -190,6 +281,7 @@ function terminalTransition(
         completedProgress?.accepted === true
           ? completedProgress.progress
           : input.currentState.progress,
+      completionRule: null,
       result: {
         outcome,
         occurredAt: input.now,
@@ -204,6 +296,200 @@ function terminalTransition(
         hypeDelta: outcomeDecision.hypeDelta,
         historyCandidateId: outcomeDecision.historyCandidateId,
         cooldownEndsAt: outcomeDecision.cooldownEndsAt,
+        ...eventAttributes,
+      }),
+    ],
+  );
+}
+
+function stableHash(value: string): number {
+  let hash = 2_166_136_261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return hash >>> 0;
+}
+
+function noActivation(
+  input: QuestEngineInput,
+  voteTallies: QuestCycleState["voteTallies"],
+  reasonCode: "zero-votes" | "session-not-live" | "winner-invalid",
+  reason: string,
+  details: QuestEngineEventDraft["attributes"] = {},
+): QuestEngineResult {
+  return terminalTransition(
+    input,
+    "cancelled",
+    reason,
+    "quest-cycle.vote-closed-no-activation",
+    { reasonCode, ...details },
+    { voteTallies: [...voteTallies] },
+  );
+}
+
+function transitionVoteClose(input: QuestEngineInput): QuestEngineResult {
+  if (input.command.type !== "system.vote-close") {
+    return error("internal", "Vote-close transition received another command type");
+  }
+  if (input.currentState.status !== "voting") return illegalCommand(input.currentState, input.command);
+  if (input.currentState.endsAt === null) {
+    return error("validation", "Voting cycle has no authoritative deadline");
+  }
+  if (input.now < input.currentState.endsAt) {
+    return error("forbidden", "Voting cannot close before its authoritative deadline", {
+      endsAt: input.currentState.endsAt,
+      now: input.now,
+    });
+  }
+  if (input.acceptedVoteTally == null || input.voteCloseValidationContext == null) {
+    return error("dependency-unavailable", "Vote-close requires an accepted tally and current validation context");
+  }
+
+  const tally = acceptedVoteTallySnapshotSchema.safeParse(input.acceptedVoteTally);
+  const profile = streamerProfileSchema.safeParse(input.voteCloseValidationContext.profile);
+  const session = streamSessionSchema.safeParse(input.voteCloseValidationContext.session);
+  const gameplay =
+    input.voteCloseValidationContext.gameplay === null
+      ? null
+      : gameplaySnapshotSchema.safeParse(input.voteCloseValidationContext.gameplay);
+  const audience =
+    input.voteCloseValidationContext.audience === null
+      ? null
+      : audienceSnapshotSchema.safeParse(input.voteCloseValidationContext.audience);
+  const recentQuests = input.voteCloseValidationContext.recentQuests;
+  if (
+    !tally.success ||
+    !profile.success ||
+    !session.success ||
+    gameplay?.success === false ||
+    audience?.success === false ||
+    !Array.isArray(recentQuests) ||
+    recentQuests.some(
+      (quest) =>
+        typeof quest.title !== "string" ||
+        quest.title.trim().length < 3 ||
+        quest.title.trim().length > 80 ||
+        !Number.isSafeInteger(quest.occurredAt) ||
+        quest.occurredAt < 0,
+    )
+  ) {
+    return error("validation", "Vote-close tally or validation context is malformed");
+  }
+
+  const optionIds = input.currentState.options.map(({ candidateId }) => candidateId);
+  const tallyIds = tally.data.tallies.map(({ candidateId }) => candidateId);
+  const contextSnapshots = [
+    gameplay === null ? null : gameplay.data,
+    audience === null ? null : audience.data,
+  ];
+  if (
+    tally.data.sessionId !== input.currentState.envelope.sessionId ||
+    tally.data.questCycleId !== input.currentState.envelope.questCycleId ||
+    tally.data.revision !== input.currentState.envelope.revision ||
+    tally.data.closedAt !== input.now ||
+    tally.data.closedAt < input.currentState.endsAt ||
+    optionIds.some((candidateId, index) => tallyIds[index] !== candidateId) ||
+    session.data.sessionId !== input.currentState.envelope.sessionId ||
+    profile.data.streamerId !== session.data.broadcasterId ||
+    contextSnapshots.some(
+      (snapshot) =>
+        snapshot !== null &&
+        (snapshot.envelope.sessionId !== input.currentState.envelope.sessionId ||
+          (snapshot.envelope.questCycleId !== null &&
+            snapshot.envelope.questCycleId !== input.currentState.envelope.questCycleId)),
+    )
+  ) {
+    return error("validation", "Vote-close tally or context does not belong to the current cycle");
+  }
+
+  if (tally.data.acceptedVoteCount === 0) {
+    return noActivation(
+      input,
+      tally.data.tallies,
+      "zero-votes",
+      "Voting closed without an accepted vote; no quest was activated.",
+      { acceptedVoteCount: 0 },
+    );
+  }
+
+  const highestVotes = Math.max(...tally.data.tallies.map(({ votes }) => votes));
+  const tiedCandidateIds = tally.data.tallies
+    .filter(({ votes }) => votes === highestVotes)
+    .map(({ candidateId }) => candidateId)
+    .sort();
+  const tieBreakUsed = tiedCandidateIds.length > 1;
+  const winnerId = tieBreakUsed
+    ? tiedCandidateIds[
+        stableHash(
+          [tally.data.sessionId, tally.data.questCycleId, ...tiedCandidateIds].join(":"),
+        ) % tiedCandidateIds.length
+      ]
+    : tiedCandidateIds[0];
+  const winner = input.currentState.options.find(({ candidateId }) => candidateId === winnerId);
+  if (winner === undefined) {
+    return error("internal", "Resolved vote winner is absent from the current options");
+  }
+
+  if (session.data.status !== "live") {
+    return noActivation(
+      input,
+      tally.data.tallies,
+      "session-not-live",
+      "Voting closed after the stream session stopped being live; no quest was activated.",
+      { candidateId: winner.candidateId, sessionStatus: session.data.status },
+    );
+  }
+
+  const winnerValidation = validateCandidateAtVoteClose(winner, {
+    audience: audience === null ? null : audience.data,
+    profile: profile.data,
+    gameplay: gameplay === null ? null : gameplay.data,
+    currentState: input.currentState,
+    recentQuests,
+    now: input.now,
+  });
+  if (!winnerValidation.accepted) {
+    return noActivation(
+      input,
+      tally.data.tallies,
+      "winner-invalid",
+      "The winning quest failed close-time safety or feasibility validation; no quest was activated.",
+      {
+        candidateId: winner.candidateId,
+        validationCodes: winnerValidation.issues.map(({ code }) => code).join(","),
+      },
+    );
+  }
+
+  const questEndsAt = input.now + winner.durationSeconds * 1_000;
+  if (!Number.isSafeInteger(questEndsAt)) {
+    return error("validation", "Winning quest end time exceeds supported range");
+  }
+  return accept(
+    input.currentState,
+    {
+      status: "active",
+      activeCandidateId: winner.candidateId,
+      availableStreamerActions: [...actionsByStatus.active],
+      voteTallies: [...tally.data.tallies],
+      startsAt: input.now,
+      endsAt: questEndsAt,
+      progress: {
+        value: 0,
+        updatedAt: input.now,
+        method: "unknown",
+        evidenceSignalIds: [],
+      },
+      result: null,
+    },
+    [
+      event("quest-cycle.activated", {
+        candidateId: winner.candidateId,
+        winningVotes: highestVotes,
+        acceptedVoteCount: tally.data.acceptedVoteCount,
+        tiedCandidateCount: tiedCandidateIds.length,
+        tieBreakUsed,
       }),
     ],
   );
@@ -304,16 +590,25 @@ export class DefaultQuestEngine implements QuestEngine {
       case "system.intelligence-ready":
         return transitionIntelligenceReady(input);
       case "system.vote-close":
+        return transitionVoteClose(input);
+      case "system.quest-tick":
         return error(
           "unavailable-capability",
-          "Vote-close winner, tie, and no-vote policy awaits the Role 3 implementation",
+          "Quest tick expiry and cooldown policy awaits the Role 3 implementation",
         );
+      case "streamer.quest-progress":
+      case "system.quest-progress":
+        return transitionQuestProgress(input);
       case "streamer.quest":
         return transitionStreamerCommand(input);
       case "viewer.vote":
         return transitionVote(input);
       case "viewer.react":
         return error("unavailable-capability", "Viewer reactions do not change Phase 1 quest state");
+      case "streamer.emergency-clear":
+        return error("unavailable-capability", "Emergency clear is handled by the Role 1 latch");
+      case "streamer.profile-settings":
+        return error("unavailable-capability", "Profile settings are handled by the Role 1 state seam");
     }
   }
 }

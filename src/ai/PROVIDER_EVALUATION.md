@@ -54,4 +54,4 @@ Role 3 scores each canonical batch for feasibility, clarity, diversity, novelty,
 - `evaluation only`
 - `do not adopt`
 
-D23-01 through D23-03 and D2-16 through D2-18 remain open. Fixture tests establish the evaluation and recovery plumbing only; they do not prove provider availability, model quality, real-input candidate generation, or end-to-end integration.
+D23-01 through D23-03 and D2-16 through D2-17 remain open. D2-18 is resolved by the credential-free algorithmic candidate strategy. Fixture tests establish the evaluation and recovery plumbing only; they do not prove provider availability, model quality, real-input candidate generation, or end-to-end integration.

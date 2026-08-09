@@ -61,14 +61,19 @@ export class ServerCommandAuthorizer implements CommandAuthorizer {
     }
 
     if (verified.kind === "moderator") {
-      return command.type === "streamer.quest" &&
+      return (command.type === "streamer.quest" ||
+        command.type === "streamer.quest-progress" ||
+        command.type === "streamer.emergency-clear") &&
         verified.moderatorForBroadcasterIds.includes(state.session.broadcasterId)
         ? null
         : denial("forbidden", "Moderator is not authorised for this stream-time control");
     }
 
     if (verified.kind === "system") {
-      return command.type === "system.intelligence-ready" || command.type === "system.vote-close"
+      return command.type === "system.intelligence-ready" ||
+        command.type === "system.vote-close" ||
+        command.type === "system.quest-tick" ||
+        command.type === "system.quest-progress"
         ? null
         : denial("forbidden", "System identity may only submit trusted lifecycle commands");
     }

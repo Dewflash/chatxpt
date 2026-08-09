@@ -9,6 +9,7 @@ import {
   contractFixtureStreamerView,
   contractFixtureViewerView,
 } from "../../src/core/testing";
+import { createFixtureUiGatewaySnapshot } from "../../src/core";
 import { candidateBatchSchema, intelligenceSnapshotSchema } from "../../src/ai";
 import "../../src/design-system";
 import { audienceSnapshotSchema, gameplaySnapshotSchema } from "../../src/extraction";
@@ -58,5 +59,15 @@ describe("role-owned public entrypoints", () => {
     expect(typeof gameplayFrameObservationSchema.safeParse).toBe("function");
     expect(viewerViewModelSchema.safeParse(contractFixtureViewerView).success).toBe(true);
     expect(overlayViewModelSchema.safeParse(contractFixtureOverlayView).success).toBe(true);
+  });
+
+  it("lets Role 1 publish a browser-safe UI gateway snapshot", () => {
+    const snapshot = createFixtureUiGatewaySnapshot();
+
+    expect(snapshot.evidenceClass).toBe("fixture");
+    expect(snapshot.views.streamer.envelope.revision).toBe(snapshot.revision);
+    expect(snapshot.views.viewer.envelope.revision).toBe(snapshot.revision);
+    expect(snapshot.views.overlay.envelope.revision).toBe(snapshot.revision);
+    expect(snapshot.views.viewer.questCycle.options).toHaveLength(3);
   });
 });

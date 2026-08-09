@@ -3,6 +3,25 @@ export type {
   AudienceExtractionPipeline,
   GameplayExtractionPipeline,
 } from "./ports";
+export { createAudienceSignalPipeline } from "./audience-pipeline";
+export type { AudienceSignalPipelineOptions } from "./audience-pipeline";
+export {
+  assessExtractionEvidenceAsset,
+  extractionAssetAcquisitionSchema,
+  extractionAssetKindSchema,
+  extractionAssetStorageSchema,
+  extractionAssetUseSchema,
+  extractionEvidenceAssessmentSchema,
+  extractionEvidenceAssetSchema,
+} from "./evidence-catalog";
+export type {
+  ExtractionAssetAcquisition,
+  ExtractionAssetKind,
+  ExtractionAssetStorage,
+  ExtractionAssetUse,
+  ExtractionEvidenceAssessment,
+  ExtractionEvidenceAsset,
+} from "./evidence-catalog";
 export {
   createBrowserCanvasPixelSampler,
   measurePixelChange,

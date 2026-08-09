@@ -5,6 +5,8 @@ import {
   commandFingerprint,
   streamerQuestCommandSchema,
   viewerVoteCommandSchema,
+  type AcceptedCommandReceipt,
+  type AuthoritativeSessionState,
   type OrchestratorDependencies,
   type StatePublisher,
 } from "../../src/core";
@@ -21,6 +23,7 @@ import {
 } from "../../src/core/testing";
 import {
   bindPersistenceRuntime,
+  buildSessionHistoryFromReceipts,
   createMemoryPersistenceRuntime,
   sanitizeRoleViewsForBroadcast,
 } from "../../src/realtime";
@@ -149,6 +152,26 @@ describe("production-shaped memory persistence integration", () => {
     const repeated = await orchestrator.execute(voteCommand("second-vote", 1, "twitch-chat"));
 
     expect(first.ok).toBe(true);
+    const restored = await runtime.viewerRecovery.readViewerRecovery({
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: contractFixtureQuestCycle.envelope.questCycleId ?? "missing-cycle",
+      voterKey: "fixture-session-scoped-voter",
+    });
+    expect(restored).toEqual({
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: contractFixtureQuestCycle.envelope.questCycleId,
+      acceptedCandidateId: contractFixtureCandidateBatch.candidates[0].candidateId,
+      acceptedAt: FIXTURE_NOW + 1_000,
+      sessionPoints: 0,
+      sourceMode: "twitch-extension",
+    });
+    const otherViewer = await runtime.viewerRecovery.readViewerRecovery({
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: contractFixtureQuestCycle.envelope.questCycleId ?? "missing-cycle",
+      voterKey: "another-session-scoped-voter",
+    });
+    expect(otherViewer.acceptedCandidateId).toBeNull();
+    expect(otherViewer.sessionPoints).toBe(0);
     expect(repeated.ok).toBe(false);
     if (repeated.ok) return;
     expect(repeated.error.code).toBe("duplicate");
@@ -231,6 +254,156 @@ describe("production-shaped memory persistence integration", () => {
       ),
     };
     await expect(runtime.candidates.store(reused)).rejects.toThrow("Candidate batch ID was reused");
+  });
+
+  it("derives privacy-safe session history from terminal authoritative receipts", async () => {
+    const runtime = await preparedRuntime();
+    const acceptedAt = FIXTURE_NOW + 30_000;
+    const base = persistenceState();
+    const terminal: AuthoritativeSessionState = {
+      ...base,
+      session: {
+        ...base.session,
+        revision: 1,
+      },
+      questCycle: {
+        ...base.questCycle,
+        envelope: {
+          ...base.questCycle.envelope,
+          revision: 1,
+        },
+        status: "succeeded",
+        options: structuredClone(contractFixtureCandidateBatch.candidates),
+        activeCandidateId: contractFixtureCandidateBatch.candidates[0].candidateId,
+        availableStreamerActions: [],
+        voteTallies: [
+          { candidateId: contractFixtureCandidateBatch.candidates[0].candidateId, votes: 2 },
+          { candidateId: contractFixtureCandidateBatch.candidates[1].candidateId, votes: 1 },
+          { candidateId: contractFixtureCandidateBatch.candidates[2].candidateId, votes: 0 },
+        ],
+        startsAt: FIXTURE_NOW + 10_000,
+        endsAt: null,
+        progress: {
+          value: 1,
+          updatedAt: acceptedAt,
+          method: "manual",
+          evidenceSignalIds: [],
+        },
+        completionRule: { mode: "manual", allowedSignalKinds: [] },
+        result: {
+          outcome: "succeeded",
+          occurredAt: acceptedAt,
+          reason: "Fixture terminal history result.",
+          rewardPointsAwarded: 100,
+        },
+      },
+    };
+    const historyCommand = command("history-success");
+    await runtime.sessions.commit({
+      command: historyCommand,
+      commandFingerprint: commandFingerprint(historyCommand),
+      expectedRevision: 0,
+      nextState: terminal,
+      events: [],
+      acceptedAt,
+    });
+
+    const history = await runtime.sessionHistory.readSessionHistory({
+      broadcasterId: contractFixtureSession.broadcasterId,
+      at: acceptedAt + 1,
+      limit: 10,
+    });
+
+    expect(history).toMatchObject({
+      broadcasterId: contractFixtureSession.broadcasterId,
+      evidenceClass: "diagnostic",
+      summary: {
+        totalQuestCycles: 1,
+        succeeded: 1,
+        totalAcceptedVotes: 3,
+        totalRewardPointsAwarded: 100,
+      },
+      privacy: {
+        rawChatHistoryRetained: false,
+        viewerIdentifiersIncluded: false,
+        privateVoteReceiptsIncluded: false,
+      },
+    });
+    expect(history.entries[0]).toMatchObject({
+      title: "Hold Your Ground",
+      outcome: "succeeded",
+      acceptedVoteCount: 3,
+      rewardPointsAwarded: 100,
+    });
+    expect(history.entries[0]).not.toHaveProperty("viewerId");
+    expect(history.entries[0]).not.toHaveProperty("rawChat");
+  });
+
+  it("downgrades mixed history evidence to diagnostic instead of overclaiming live", () => {
+    const base = persistenceState();
+    const terminal: AuthoritativeSessionState = {
+      ...base,
+      session: { ...base.session, revision: 1 },
+      gameplay: null,
+      audience: null,
+      questCycle: {
+        ...base.questCycle,
+        envelope: { ...base.questCycle.envelope, revision: 1, evidenceClass: "live" },
+        status: "succeeded",
+        options: structuredClone(contractFixtureCandidateBatch.candidates),
+        activeCandidateId: contractFixtureCandidateBatch.candidates[0].candidateId,
+        voteTallies: [
+          { candidateId: contractFixtureCandidateBatch.candidates[0].candidateId, votes: 1 },
+        ],
+        startsAt: FIXTURE_NOW,
+        result: {
+          outcome: "succeeded",
+          occurredAt: FIXTURE_NOW + 1_000,
+          reason: "Live-like receipt for evidence downgrade test.",
+          rewardPointsAwarded: 100,
+        },
+      },
+    };
+    const diagnostic: AuthoritativeSessionState = {
+      ...terminal,
+      session: { ...terminal.session, sessionId: "diagnostic-session", revision: 1 },
+      questCycle: {
+        ...terminal.questCycle,
+        envelope: {
+          ...terminal.questCycle.envelope,
+          sessionId: "diagnostic-session",
+          questCycleId: "diagnostic-cycle",
+          evidenceClass: "diagnostic",
+        },
+      },
+    };
+    const liveCommand = command("history-live");
+    const diagnosticCommand = command("history-diagnostic");
+    const receipt: AcceptedCommandReceipt = {
+      command: liveCommand,
+      commandFingerprint: commandFingerprint(liveCommand),
+      state: terminal,
+      events: [],
+      acceptedAt: FIXTURE_NOW + 1_000,
+    };
+    const diagnosticReceipt: AcceptedCommandReceipt = {
+      command: diagnosticCommand,
+      commandFingerprint: commandFingerprint(diagnosticCommand),
+      state: diagnostic,
+      events: [],
+      acceptedAt: FIXTURE_NOW + 1_000,
+    };
+
+    const history = buildSessionHistoryFromReceipts({
+      broadcasterId: contractFixtureSession.broadcasterId,
+      receipts: [receipt, diagnosticReceipt],
+      generatedAt: FIXTURE_NOW + 2_000,
+      source: "orchestrator",
+      evidenceClass: "live",
+    });
+
+    expect(history.evidenceClass).toBe("diagnostic");
+    expect(history.entries.map((entry) => entry.evidenceClass).sort()).toEqual(["diagnostic", "live"]);
   });
 
   it("scopes realtime read grants by principal, session, role, expiry, and revocation", async () => {

@@ -4,6 +4,7 @@ import type {
   DomainError,
   GameplaySnapshot,
   QuestCycleState,
+  RecentQuestSummary,
   QuestEngineEvent,
   RoleViewModels,
   ServiceHealth,
@@ -18,7 +19,9 @@ export interface AuthoritativeSessionState {
   readonly gameplay: GameplaySnapshot | null;
   readonly audience: AudienceSnapshot | null;
   readonly questCycle: QuestCycleState;
+  readonly emergencyPaused: boolean;
   readonly communityHype: number;
+  readonly recentQuests?: readonly RecentQuestSummary[];
 }
 
 export interface ProjectionContext {
@@ -27,6 +30,15 @@ export interface ProjectionContext {
   readonly sessionPoints: number;
   readonly acceptedCandidateId: string | null;
   readonly connection: ServiceHealth;
+}
+
+export interface ViewerRecoveryState {
+  readonly sessionId: string;
+  readonly questCycleId: string;
+  readonly acceptedCandidateId: string | null;
+  readonly acceptedAt: number | null;
+  readonly sessionPoints: number;
+  readonly sourceMode: "twitch-extension" | "hosted-board" | "twitch-chat" | null;
 }
 
 export interface AcceptedCommandReceipt {

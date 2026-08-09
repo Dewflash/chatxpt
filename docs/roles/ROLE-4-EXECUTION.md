@@ -11,11 +11,11 @@ This is the Role 4-owned working record. Codex updates it after the owner answer
 | Field | Current value |
 | --- | --- |
 | Plan | `docs/build-plans/ROLE-4-BUILD-PLAN.md` plus the shared delivery matrix |
-| Current phase | R4-P02 shared visual-system foundation |
-| Current TODO | R4-002 (`READY`) |
-| Source editing allowed now | Yes, on a fresh branch after [PR #30](https://github.com/Dewflash/chatxpt/pull/30) merges; remain inside `src/design-system` and the accepted Role 4 boundary |
-| Persistent handoff | [GitHub issue #15](https://github.com/Dewflash/chatxpt/issues/15) and [PR #30](https://github.com/Dewflash/chatxpt/pull/30) |
-| Next implementation branch | `role-4/design-system-foundation` |
+| Current phase | R4-P03 Studio setup, persistence, intelligence, and readiness |
+| Current TODO | R4-003 (`IN PROGRESS`) |
+| Source editing allowed now | Yes, inside `src/streamer`, Role 4 records, and the accepted fixture-only interim boundary; route mounting and backend setup authority remain Role 1 work |
+| Persistent handoff | [PR #43](https://github.com/Dewflash/chatxpt/pull/43), [PR #98](https://github.com/Dewflash/chatxpt/pull/98), UI-X01 [#17](https://github.com/Dewflash/chatxpt/issues/17), UI-X02 [#18](https://github.com/Dewflash/chatxpt/issues/18), UI-X05 [#21](https://github.com/Dewflash/chatxpt/issues/21), and UI-X09 [#25](https://github.com/Dewflash/chatxpt/issues/25) |
+| Current implementation branch | `codex/role-4-studio-health-next` |
 
 ## Owner decision record
 
@@ -27,6 +27,14 @@ Codex uses the current phase's open decisions as starting points, then adds only
 | D4-02 | R4-P01 | Desktop sidebar for Setup, Profile, Live Quests, and Test Lab; compact narrow-screen navigation; guided first-time Setup; History only after approved P1 work. | Accepted | 2026-08-03 |
 | D4-03 | R4-P01 | Spacious and explanatory before streaming; compact and status-dense during a live session. | Accepted | 2026-08-03 |
 | D4-04 | R4-P01 | Existing violet/lime prototype is a loose reference only; use reversible accessible dark/light tokens, CSP-safe system/local fonts, and allow later brand assets without blocking P0. | Accepted | 2026-08-03 |
+| D4-05 | R4-P02 | Use responsive card grids for larger sections, compact horizontal control/status rows, and a single-column layout in narrow or Twitch-hosted contexts. | Accepted | 2026-08-05 |
+| D4-06 | R4-P02 | Use badges for status, notices for recovery, one ribbon only for a selected or winning item, and progress only for authoritative completion. | Accepted | 2026-08-05 |
+| D4-07 | R4-P02 | Keep feedback motion subtle at 150–180 ms, avoid continuous decorative animation, and provide a complete reduced-motion mode. | Accepted | 2026-08-05 |
+| D4-08 | R4-P02 | Use medium rounding and high contrast across dark, light, and Twitch contexts, with visible focus rings, at least 44 px controls, and text or symbols alongside status colour. | Accepted | 2026-08-05 |
+| D4-09 | R4-P03 | Use a short guided first-time setup sequence, then a reusable readiness dashboard for returning streamers. | Accepted | 2026-08-07 |
+| D4-10 | R4-P03 | Group settings as Game, Streamer Style, Quest Intensity, Safety/Restrictions, and Accessibility, with advanced details kept secondary. | Accepted | 2026-08-07 |
+| D4-11 | R4-P03 | Show individual Twitch, capture, intelligence, realtime, and session checks with one authoritative next action; never replace blockers with a readiness percentage. | Accepted | 2026-08-07 |
+| D4-12 | R4-P03 | Lead with plain intelligence status and confidence, then expose method, source, and observation time in expandable detail. | Accepted | 2026-08-07 |
 
 ## Pass record
 
@@ -36,6 +44,9 @@ Codex appends one row per completed pass.
 | --- | --- | --- | --- | --- | --- |
 | R4-P01 feasibility submission | `role-4/feasibility-review` / [issue #15 comment](https://github.com/Dewflash/chatxpt/issues/15#issuecomment-5164904061) | Owner decisions settled and consolidated technical review submitted; no UI source implementation started. | `git diff --check`; full `npm run check` | Source/document inspection plus fixture/memory verification only | Cleared on 2026-08-04 by Role 1 acknowledgement and Role 1/Role 2 approval of [PR #30](https://github.com/Dewflash/chatxpt/pull/30) |
 | R4-P01 acceptance | `role-4/feasibility-review` / [PR #30](https://github.com/Dewflash/chatxpt/pull/30) | Role 2 accepted the plan with no scope revision, Role 1 approved the handoff, R4-001 moved to `DONE`, and R4-002 moved to `READY`. | GitHub review records; documentation `git diff --check`; full repository check before final push | Coordination and documentation evidence only; no Role 4 UI source implementation | Merge PR #30, branch from current `main`, then begin R4-P02 |
+| R4-P02 shared foundation accepted | `role-4/design-system-foundation` / [PR #43](https://github.com/Dewflash/chatxpt/pull/43) | D4-05 through D4-08 shipped through the stable `@/design-system` entry, and Role 5 can consume the additive visual contract without copying Role 4 files. | Focused 8-test contract suite; WCAG contrast calculations; dark/focus, light/long-text, narrow Twitch, and reduced-motion evidence; full lint, TypeScript, boundary, test, and production build checks | Real source and production-CSS rendering in an isolated local fixture; no app-route integration, real Twitch/OBS, or live backend behaviour was claimed | Merged after Role 1 and Role 5 approval; R4-002 is `DONE` and R4-P03 may begin |
+| R4-P03 Studio setup shell candidate | `role-4/studio-setup-shell` / [PR #98](https://github.com/Dewflash/chatxpt/pull/98) | Added the guided first-time and returning Studio shell, authoritative service-health cards, grouped saved-profile summary, expandable signal provenance, and explicit loading, reconnecting, and fixture-evidence states. | Focused 8-test render-contract suite; lint; TypeScript; role boundaries; evidence manifest and its 3 tests; full 243-test repository suite; optimized Next.js production build; desktop and narrow reconnect fixture screenshots | Real Role 4 source rendered from canonical fixture data; no live Twitch, OBS, AI, persistence, authenticated gateway, profile-update, or session-start behaviour is claimed | Role 1 integration review requested; UI-X01/UI-X02/UI-X05 still block authoritative actions |
+| R4-P03 status surface slice | `codex/role-4-studio-health-next` / PR #110 | Added a public `StudioStatusSurface` alongside the accepted setup shell. It renders canonical streamer snapshots through the shared design system, lists service health individually, summarises gameplay/audience evidence, shows quest options/actions, and highlights emergency pause without deriving a global ready/demo verdict. | Focused `npm run test -- src/streamer/studio-setup-shell.test.ts src/streamer/studio-status.test.ts src/design-system/design-system.test.ts tests/integration/role-entrypoints.test.ts` passed 4 files / 26 tests; full `npm run check` passed on the rebased branch with 33 test files / 268 tests and production build | Fixture-only source/render evidence; no route mounting, persisted setup, real Twitch/OBS/Supabase/Vercel, or setup-to-live walkthrough claim | Role 4 re-review remains required before merge; UI-X01/UI-X02/UI-X05 still block authoritative actions |
 
 ## Codex instruction
 

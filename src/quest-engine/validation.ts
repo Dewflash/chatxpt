@@ -1,12 +1,16 @@
 import {
+  audienceSnapshotSchema,
   candidateBatchSchema,
   contractEnvelopeSchema,
+  gameplaySnapshotSchema,
   intelligenceSnapshotSchema,
   questCandidateSchema,
   questCycleStateSchema,
   streamerProfileSchema,
+  type AudienceSnapshot,
   type CandidateBatch,
   type ContractEnvelope,
+  type GameplaySnapshot,
   type IntelligenceSnapshot,
   type QuestCandidate,
   type QuestCycleState,
@@ -51,6 +55,15 @@ export interface CandidateValidationContext {
   readonly currentState: QuestCycleState;
   readonly recentQuests: readonly RecentQuestSummary[];
   readonly acceptedCandidates: readonly QuestCandidate[];
+  readonly now: number;
+}
+
+export interface VoteCloseCandidateValidationContext {
+  readonly audience: AudienceSnapshot | null;
+  readonly gameplay: GameplaySnapshot | null;
+  readonly profile: StreamerProfile;
+  readonly currentState: QuestCycleState;
+  readonly recentQuests: readonly RecentQuestSummary[];
   readonly now: number;
 }
 
@@ -306,12 +319,12 @@ function matchesBoundary(candidateText: string, boundary: string): boolean {
 }
 
 function knownSignalIdsByKind(
-  intelligence: IntelligenceSnapshot,
+  gameplay: GameplaySnapshot,
   now: number,
 ): ReadonlyMap<string, readonly string[]> {
   const result = new Map<string, string[]>();
-  const supported = new Set(intelligence.gameplay.capabilities.supportedSignals);
-  for (const signal of intelligence.gameplay.signals) {
+  const supported = new Set(gameplay.capabilities.supportedSignals);
+  for (const signal of gameplay.signals) {
     if (signal.observation.status !== "known" || !supported.has(signal.kind)) continue;
     const age = now - signal.observation.provenance.observedAt;
     if (
@@ -326,14 +339,162 @@ function knownSignalIdsByKind(
   return result;
 }
 
-function freshKnownEvidenceIds(
-  intelligence: IntelligenceSnapshot,
+function safetyAndBoundaryIssues(
+  candidate: QuestCandidate,
+  profile: StreamerProfile,
+): readonly CandidateValidationIssue[] {
+  const issues: CandidateValidationIssue[] = [];
+  const text = `${candidate.title} ${candidate.instruction} ${candidate.rationale}`;
+  const matchedSafetyCategories = safetyRules
+    .filter(({ patterns }) => patterns.some((pattern) => pattern.test(text)))
+    .map(({ category }) => category);
+  if (matchedSafetyCategories.length > 0) {
+    issues.push(
+      issue(
+        "unsafe",
+        "reject",
+        "Candidate violates the legal, non-harmful, non-wagering, or no-physical-dare safety boundary.",
+        matchedSafetyCategories,
+      ),
+    );
+  }
+
+  const restrictions = [...profile.restrictions, ...profile.forbiddenQuestTypes];
+  const matchedRestriction = restrictions.find((boundary) => matchesBoundary(text, boundary));
+  if (matchedRestriction !== undefined) {
+    issues.push(
+      issue(
+        "streamer-restricted",
+        "reject",
+        "Candidate conflicts with a saved streamer restriction.",
+        [matchedRestriction],
+      ),
+    );
+  }
+  const matchedAccessibilityNeed = profile.accessibilityNeeds.find((need) =>
+    matchesBoundary(text, need),
+  );
+  if (matchedAccessibilityNeed !== undefined) {
+    issues.push(
+      issue(
+        "accessibility-conflict",
+        "reject",
+        "Candidate conflicts with a saved accessibility need.",
+        [matchedAccessibilityNeed],
+      ),
+    );
+  }
+  return issues;
+}
+
+export function validateCandidateAtVoteClose(
+  candidateInput: unknown,
+  context: VoteCloseCandidateValidationContext,
+): CandidateValidationResult {
+  const candidate = questCandidateSchema.safeParse(candidateInput);
+  const profile = streamerProfileSchema.safeParse(context.profile);
+  const currentState = questCycleStateSchema.safeParse(context.currentState);
+  if (
+    !candidate.success ||
+    !profile.success ||
+    !currentState.success ||
+    !Number.isSafeInteger(context.now) ||
+    context.now < 0
+  ) {
+    return {
+      accepted: false,
+      candidate: candidate.success ? candidate.data : null,
+      issues: [issue("malformed", "reject", "Vote-close candidate or validation context is invalid.")],
+    };
+  }
+
+  const envelope = {
+    ...currentState.data.envelope,
+    messageId: `${currentState.data.envelope.messageId}-vote-close-validation`,
+    source: "quest-engine" as const,
+  };
+  const gameplay = gameplaySnapshotSchema.safeParse(
+    context.gameplay === null
+      ? {
+          envelope,
+          capabilities: {
+            tier: "universal-visual",
+            gameId: null,
+            adapterId: null,
+            supportedSignals: [],
+          },
+          signals: [],
+        }
+      : {
+          ...context.gameplay,
+          envelope: {
+            ...context.gameplay.envelope,
+            questCycleId:
+              context.gameplay.envelope.questCycleId ?? currentState.data.envelope.questCycleId,
+          },
+        },
+  );
+  const audience = audienceSnapshotSchema.safeParse(
+    context.audience === null
+      ? {
+          envelope,
+          sampleSize: 0,
+          signals: [],
+        }
+      : {
+          ...context.audience,
+          envelope: {
+            ...context.audience.envelope,
+            questCycleId:
+              context.audience.envelope.questCycleId ?? currentState.data.envelope.questCycleId,
+          },
+        },
+  );
+  const intelligence = intelligenceSnapshotSchema.safeParse({
+    envelope,
+    gameplay: gameplay.success ? gameplay.data : null,
+    audience: audience.success ? audience.data : null,
+  });
+  if (!gameplay.success || !audience.success || !intelligence.success) {
+    return {
+      accepted: false,
+      candidate: candidate.data,
+      issues: [issue("malformed", "reject", "Vote-close intelligence context is invalid.")],
+    };
+  }
+
+  const validationState = questCycleStateSchema.parse({
+    ...currentState.data,
+    status: "idle",
+    activeCandidateId: null,
+    availableStreamerActions: [],
+    voteTallies: [],
+    startsAt: null,
+    endsAt: null,
+    progress: null,
+    result: null,
+  });
+  return new DefaultCandidateValidator().validate(candidate.data, {
+    intelligence: intelligence.data,
+    profile: profile.data,
+    currentState: validationState,
+    recentQuests: context.recentQuests,
+    acceptedCandidates: currentState.data.options.filter(
+      ({ candidateId }) => candidateId !== candidate.data.candidateId,
+    ),
+    now: context.now,
+  });
+}
+
+function freshKnownEvidenceIdsFromSnapshots(
+  gameplay: GameplaySnapshot | null,
+  audience: AudienceSnapshot | null,
   now: number,
 ): ReadonlySet<string> {
   const result = new Set<string>();
   for (const [signals, maximumAge] of [
-    [intelligence.gameplay.signals, MAXIMUM_SIGNAL_AGE_MILLISECONDS],
-    [intelligence.audience.signals, MAXIMUM_AUDIENCE_SIGNAL_AGE_MILLISECONDS],
+    [gameplay?.signals ?? [], MAXIMUM_SIGNAL_AGE_MILLISECONDS],
+    [audience?.signals ?? [], MAXIMUM_AUDIENCE_SIGNAL_AGE_MILLISECONDS],
   ] as const) {
     for (const signal of signals) {
       if (signal.observation.status !== "known") continue;
@@ -350,6 +511,17 @@ function freshKnownEvidenceIds(
   return result;
 }
 
+function freshKnownEvidenceIds(
+  intelligence: IntelligenceSnapshot,
+  now: number,
+): ReadonlySet<string> {
+  return freshKnownEvidenceIdsFromSnapshots(
+    intelligence.gameplay,
+    intelligence.audience,
+    now,
+  );
+}
+
 export class DefaultCandidateValidator {
   validate(candidateInput: unknown, context: CandidateValidationContext): CandidateValidationResult {
     const parsed = questCandidateSchema.safeParse(candidateInput);
@@ -361,34 +533,12 @@ export class DefaultCandidateValidator {
       };
     }
     const candidate = parsed.data;
-    const issues: CandidateValidationIssue[] = [];
+    const issues: CandidateValidationIssue[] = [
+      ...safetyAndBoundaryIssues(candidate, context.profile),
+    ];
     const text = `${candidate.title} ${candidate.instruction} ${candidate.rationale}`;
 
-    const matchedSafetyCategories = safetyRules
-      .filter(({ patterns }) => patterns.some((pattern) => pattern.test(text)))
-      .map(({ category }) => category);
-    if (matchedSafetyCategories.length > 0) {
-      issues.push(
-        issue(
-          "unsafe",
-          "reject",
-          "Candidate violates the legal, non-harmful, non-wagering, or no-physical-dare safety boundary.",
-          matchedSafetyCategories,
-        ),
-      );
-    }
-
-    const restrictions = [...context.profile.restrictions, ...context.profile.forbiddenQuestTypes];
-    const matchedRestriction = restrictions.find((boundary) => matchesBoundary(text, boundary));
-    if (matchedRestriction !== undefined) {
-      issues.push(issue("streamer-restricted", "reject", "Candidate conflicts with a saved streamer restriction.", [matchedRestriction]));
-    }
-    const matchedAccessibilityNeed = context.profile.accessibilityNeeds.find((need) => matchesBoundary(text, need));
-    if (matchedAccessibilityNeed !== undefined) {
-      issues.push(issue("accessibility-conflict", "reject", "Candidate conflicts with a saved accessibility need.", [matchedAccessibilityNeed]));
-    }
-
-    const knownGameplaySignals = knownSignalIdsByKind(context.intelligence, context.now);
+    const knownGameplaySignals = knownSignalIdsByKind(context.intelligence.gameplay, context.now);
     const knownEvidenceIds = freshKnownEvidenceIds(context.intelligence, context.now);
     const unsupportedIds = candidate.sourceSignalIds.filter(
       (signalId) => !knownEvidenceIds.has(signalId),

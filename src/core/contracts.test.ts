@@ -11,8 +11,13 @@ import {
   intelligenceSnapshotSchema,
   overlayViewModelSchema,
   questCycleStateSchema,
+  sessionHistorySnapshotSchema,
   signalObservationSchema,
   streamSessionSchema,
+  streamerReadinessViewSchema,
+  streamerServiceCommandSchema,
+  streamerSetupServiceSchema,
+  streamerProfileSettingsCommandSchema,
   streamerProfileSchema,
   streamerViewModelSchema,
   viewerViewModelSchema,
@@ -28,6 +33,10 @@ import {
   contractFixtureQuestCycle,
   contractFixtureSession,
   contractFixtureStreamerView,
+  contractFixtureUiX01ReadinessCatalog,
+  contractFixtureUiX04SessionHistory,
+  contractFixtureUiX06QuestStateCatalog,
+  contractFixtureUiX06RoleViewCatalog,
   contractFixtureViewerView,
   invalidCalibratedCapabilitiesWithoutAdapter,
   invalidLiveFixtureEnvelope,
@@ -142,6 +151,56 @@ describe("candidate and lifecycle boundaries", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("publishes UI-X06 quest-state and role-view examples for UI consumers", () => {
+    expect(Object.keys(contractFixtureUiX06QuestStateCatalog)).toEqual(
+      expect.arrayContaining([
+        "r5.quest.idle.v1",
+        "r4.quest.proposed.v1",
+        "r5.vote.zero-vote.v1",
+        "r5.vote.tie.v1",
+        "r5.quest.active-manual-progress.v1",
+        "r5.quest.active-automatic-progress.v1",
+        "r5.quest.succeeded-reward.v1",
+        "r5.quest.failed.v1",
+        "r5.quest.cancelled.v1",
+        "r5.quest.skipped.v1",
+        "r5.quest.expired.v1",
+        "r4.quest.cooldown.v1",
+      ]),
+    );
+
+    for (const [fixtureId, questState] of Object.entries(contractFixtureUiX06QuestStateCatalog)) {
+      expect(questCycleStateSchema.safeParse(questState).success).toBe(true);
+      expect(questState.envelope.evidenceClass).toBe("fixture");
+      expect(
+        contractFixtureUiX06RoleViewCatalog[
+          fixtureId as keyof typeof contractFixtureUiX06RoleViewCatalog
+        ],
+      ).toBeDefined();
+    }
+
+    const zeroVote = contractFixtureUiX06QuestStateCatalog["r5.vote.zero-vote.v1"];
+    expect(zeroVote.voteTallies.every((tally) => tally.votes === 0)).toBe(true);
+    expect(
+      contractFixtureUiX06RoleViewCatalog["r5.vote.zero-vote.v1"].viewer.acceptedCandidateId,
+    ).toBeNull();
+
+    const tie = contractFixtureUiX06QuestStateCatalog["r5.vote.tie.v1"];
+    expect(tie.voteTallies.map((tally) => tally.votes)).toEqual([2, 2, 1]);
+    expect(contractFixtureUiX06RoleViewCatalog["r5.vote.tie.v1"].viewer.acceptedCandidateId).not.toBeNull();
+
+    expect(contractFixtureUiX06QuestStateCatalog["r5.quest.active-manual-progress.v1"].progress?.method).toBe(
+      "manual",
+    );
+    expect(
+      contractFixtureUiX06QuestStateCatalog["r5.quest.active-automatic-progress.v1"].progress?.method,
+    ).toBe("automatic");
+    expect(contractFixtureUiX06QuestStateCatalog["r5.quest.succeeded-reward.v1"].result).toMatchObject({
+      outcome: "succeeded",
+      rewardPointsAwarded: 100,
+    });
+  });
 });
 
 describe("identity and command permissions", () => {
@@ -222,6 +281,157 @@ describe("identity and command permissions", () => {
     ).toBe(false);
   });
 
+  it("accepts neutral timer/progress commands without lifecycle or reward authority", () => {
+    const base = {
+      contractVersion: CONTRACT_VERSION,
+      sessionId: "fixture-session",
+      questCycleId: "fixture-cycle",
+      commandId: "fixture-command",
+      correlationId: "fixture-correlation",
+      expectedRevision: 4,
+      issuedAt: 10,
+    };
+
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...base,
+        type: "system.quest-tick",
+        actor: { kind: "system", actorId: "fixture-orchestrator" },
+      }).success,
+    ).toBe(true);
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...base,
+        type: "system.quest-progress",
+        actor: { kind: "system", actorId: "fixture-orchestrator" },
+        requestedValue: 0.5,
+        evidenceSignalIds: ["fixture-signal"],
+        outcome: "succeeded",
+      }).success,
+    ).toBe(false);
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...base,
+        type: "streamer.quest-progress",
+        actor: { kind: "moderator", actorId: "fixture-moderator" },
+        requestedValue: 0.5,
+      }).success,
+    ).toBe(true);
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...base,
+        questCycleId: null,
+        type: "streamer.emergency-clear",
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts broadcaster profile settings commands and rejects moderator or no-op profile edits", () => {
+    const base = {
+      contractVersion: CONTRACT_VERSION,
+      sessionId: "fixture-session",
+      questCycleId: null,
+      commandId: "fixture-profile-settings",
+      correlationId: "fixture-profile-settings-correlation",
+      expectedRevision: 4,
+      issuedAt: 10,
+      type: "streamer.profile-settings",
+      experiencePatch: { intensity: 0.8 },
+      voting: { voteVisibility: "hidden-until-close" },
+      rewards: { rewardDisplay: "session-points" },
+    };
+
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...base,
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+      }).success,
+    ).toBe(true);
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...base,
+        actor: { kind: "moderator", actorId: "fixture-moderator" },
+      }).success,
+    ).toBe(false);
+    expect(
+      streamerProfileSettingsCommandSchema.safeParse({
+        ...base,
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+        experiencePatch: {},
+        voting: {},
+        rewards: {},
+      }).success,
+    ).toBe(false);
+    expect(
+      streamerProfileSettingsCommandSchema.safeParse({
+        ...base,
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+        experiencePatch: {},
+        voting: undefined,
+        rewards: undefined,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts broadcaster-only setup/session commands and rejects invalid service action pairs", () => {
+    const base = {
+      contractVersion: CONTRACT_VERSION,
+      sessionId: "fixture-session",
+      commandId: "fixture-setup-command",
+      correlationId: "fixture-setup-correlation",
+      expectedRevision: 4,
+      issuedAt: 10,
+      actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+    };
+
+    expect(
+      streamerServiceCommandSchema.safeParse({
+        ...base,
+        type: "streamer.setup",
+        service: "obs-capture",
+        action: "request-capture-permission",
+      }).success,
+    ).toBe(true);
+    expect(
+      streamerServiceCommandSchema.safeParse({
+        ...base,
+        type: "streamer.session",
+        action: "start",
+      }).success,
+    ).toBe(true);
+    expect(
+      streamerServiceCommandSchema.safeParse({
+        ...base,
+        actor: { kind: "moderator", actorId: "fixture-moderator" },
+        type: "streamer.setup",
+        service: "twitch",
+        action: "connect-twitch",
+      }).success,
+    ).toBe(false);
+    expect(
+      streamerServiceCommandSchema.safeParse({
+        ...base,
+        type: "streamer.setup",
+        service: "obs-capture",
+        action: "connect-twitch",
+      }).success,
+    ).toBe(false);
+    expect(
+      streamerSetupServiceSchema.safeParse({
+        service: "realtime",
+        configured: false,
+        health: {
+          service: "realtime",
+          status: "unavailable",
+          checkedAt: 10,
+          retryable: true,
+        },
+        allowedActions: ["connect-twitch"],
+      }).success,
+    ).toBe(false);
+  });
+
   it("accepts an anonymous fixture vote and rejects a broadcaster vote", () => {
     const vote = {
       envelope: contractFixtureEnvelope,
@@ -245,6 +455,14 @@ describe("identity and command permissions", () => {
 describe("streamer profile boundary", () => {
   it("accepts the neutral profile fixture and rejects partial game identity", () => {
     expect(streamerProfileSchema.parse(contractFixtureProfile).gameId).toBeNull();
+    expect(streamerProfileSchema.parse(contractFixtureProfile).voting).toMatchObject({
+      voteDurationSeconds: 30,
+      voteChangesAllowed: false,
+    });
+    expect(streamerProfileSchema.parse(contractFixtureProfile).rewards).toMatchObject({
+      persistentEconomy: false,
+      monetaryRewards: false,
+    });
     expect(
       streamerProfileSchema.safeParse({
         ...contractFixtureProfile,
@@ -252,6 +470,84 @@ describe("streamer profile boundary", () => {
         gameName: null,
       }).success,
     ).toBe(false);
+  });
+
+  it("rejects profile preferences that change accepted vote or reward mechanics", () => {
+    expect(
+      streamerProfileSchema.safeParse({
+        ...contractFixtureProfile,
+        voting: {
+          ...contractFixtureProfile.voting,
+          voteDurationSeconds: 45,
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      streamerProfileSchema.safeParse({
+        ...contractFixtureProfile,
+        rewards: {
+          ...contractFixtureProfile.rewards,
+          persistentEconomy: true,
+        },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("streamer setup readiness boundary", () => {
+  it("publishes UI-X01 setup readiness examples for Studio consumers", () => {
+    expect(Object.keys(contractFixtureUiX01ReadinessCatalog)).toEqual(
+      expect.arrayContaining([
+        "r4.setup.ready.v1",
+        "r4.setup.permission-denied.v1",
+        "r4.setup.misconfigured.v1",
+        "r4.setup.disconnected.v1",
+        "r4.setup.diagnostic.v1",
+      ]),
+    );
+
+    for (const readiness of Object.values(contractFixtureUiX01ReadinessCatalog)) {
+      expect(streamerReadinessViewSchema.safeParse(readiness).success).toBe(true);
+      expect(readiness.evidenceClass).toBe("fixture");
+      expect(readiness.liveInputsUsed).toBe(false);
+      expect(readiness.services.map(({ service }) => service).sort()).toEqual([
+        "intelligence",
+        "obs-capture",
+        "realtime",
+        "session",
+        "twitch",
+      ]);
+    }
+
+    expect(contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"].ready).toBe(true);
+    expect(
+      contractFixtureUiX01ReadinessCatalog["r4.setup.permission-denied.v1"].services.find(
+        (service) => service.service === "obs-capture",
+      )?.health.status,
+    ).toBe("permission-denied");
+    expect(
+      contractFixtureUiX01ReadinessCatalog["r4.setup.misconfigured.v1"].recommendedAction,
+    ).toBe("connect-twitch");
+  });
+});
+
+describe("session history boundary", () => {
+  it("publishes a privacy-safe session history fixture", () => {
+    expect(sessionHistorySnapshotSchema.safeParse(contractFixtureUiX04SessionHistory).success).toBe(true);
+    expect(contractFixtureUiX04SessionHistory.evidenceClass).toBe("fixture");
+    expect(contractFixtureUiX04SessionHistory.summary).toMatchObject({
+      totalQuestCycles: 2,
+      succeeded: 1,
+      skipped: 1,
+      totalAcceptedVotes: 3,
+    });
+    expect(contractFixtureUiX04SessionHistory.privacy).toMatchObject({
+      rawChatHistoryRetained: false,
+      viewerIdentifiersIncluded: false,
+      privateVoteReceiptsIncluded: false,
+    });
+    expect(contractFixtureUiX04SessionHistory.entries[0]).not.toHaveProperty("viewerId");
+    expect(contractFixtureUiX04SessionHistory.entries[0]).not.toHaveProperty("rawChat");
   });
 });
 

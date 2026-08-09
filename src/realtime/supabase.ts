@@ -12,7 +12,9 @@ import {
   overlayViewModelSchema,
   serviceHealthSchema,
   streamerViewModelSchema,
+  viewerRecoveryStateSchema,
   viewerViewModelSchema,
+  type SessionHistorySnapshot,
   type AcceptedCommandReceipt,
   type AcceptedVoteTallyReadInput,
   type AcceptedVoteTallyReader,
@@ -23,6 +25,9 @@ import {
   type CommitAuthoritativeStateResult,
   type RoleViewModels,
   type ServiceHealth,
+  type ViewerRecoveryReadInput,
+  type ViewerRecoveryReader,
+  type ViewerRecoveryState,
 } from "../core";
 import type { SupabasePersistenceEnvironment } from "./environment";
 import {
@@ -32,10 +37,15 @@ import {
   type CandidateBatchRepository,
   type ChatXptPersistenceRuntime,
   type CommitSessionLifecycleInput,
+  type DueVoteCycleReader,
+  type HostedBoardSessionDirectory,
+  type HostedBoardSessionRecord,
   type LifecycleStoreCommitResult,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
   type RealtimeAccessGrantStore,
+  type SessionHistoryReadInput,
+  type SessionHistoryReader,
   type SessionLifecycleCommitResult,
   type SessionLifecycleStore,
   type SessionPresenceAction,
@@ -43,6 +53,7 @@ import {
   type SnapshotRole,
 } from "./types";
 import { sanitizeRoleViewsForBroadcast } from "./sanitization";
+import { buildSessionHistoryFromReceipts } from "./session-history";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -59,6 +70,25 @@ const commitResultSchema = z.discriminatedUnion("status", [
 ]);
 
 const acceptedVoteRowSchema = z.object({ candidate_id: z.string().min(1).max(128) }).passthrough();
+const acceptedVoteRecoveryRowSchema = z
+  .object({
+    candidate_id: z.string().min(1).max(128),
+    accepted_at: z.iso.datetime({ offset: true }),
+    payload: z
+      .object({
+        sourceMode: z.enum(["twitch-extension", "hosted-board", "twitch-chat"]),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+const hostedBoardSessionRowSchema = z
+  .object({
+    session_id: z.string().min(1).max(128),
+    room_code: z.string().regex(/^[A-HJ-NP-Z2-9]{8}$/),
+    status: z.enum(["offline", "preparing", "live", "ended"]),
+    revision: z.number().int().nonnegative(),
+  })
+  .passthrough();
 
 const lifecycleCommitResultSchema = z.discriminatedUnion("status", [
   z
@@ -164,6 +194,17 @@ export class SupabaseChatXptDataApi {
     return data === null ? null : rowJson(data, "receipt");
   }
 
+  async loadReceiptsForBroadcaster(broadcasterId: string, limit: number): Promise<readonly unknown[]> {
+    const { data, error } = await this.client
+      .from("command_receipts")
+      .select("receipt, stream_sessions!inner(broadcaster_id)")
+      .eq("stream_sessions.broadcaster_id", broadcasterId)
+      .order("committed_revision", { ascending: false })
+      .limit(limit);
+    throwIfError(error);
+    return (data ?? []).map((row) => rowJson(row, "receipt"));
+  }
+
   async loadLifecycleOperation(operationId: string): Promise<unknown | null> {
     const { data, error } = await this.client
       .from("session_operations")
@@ -231,6 +272,23 @@ export class SupabaseChatXptDataApi {
     return data ?? [];
   }
 
+  async loadViewerAcceptedVote(
+    sessionId: string,
+    questCycleId: string,
+    voterKey: string,
+  ): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("accepted_participation")
+      .select("candidate_id, accepted_at, payload")
+      .eq("session_id", sessionId)
+      .eq("quest_cycle_id", questCycleId)
+      .eq("participation_type", "vote")
+      .eq("payload->>voterKey", voterKey)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
+  }
+
   async persistRoleSnapshots(views: RoleViewModels): Promise<void> {
     const { error } = await this.client.rpc("persist_role_snapshots", {
       p_session_id: views.streamer.envelope.sessionId,
@@ -250,6 +308,16 @@ export class SupabaseChatXptDataApi {
       .maybeSingle();
     throwIfError(error);
     return data === null ? null : rowJson(data, "snapshot");
+  }
+
+  async loadHostedBoardSession(roomCode: string): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("stream_sessions")
+      .select("session_id, room_code, status, revision")
+      .eq("room_code", roomCode)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
   }
 
   async grantRealtimeAccess(
@@ -369,6 +437,14 @@ export class SupabaseChatXptDataApi {
     );
   }
 
+  async loadDueVoteCycleStates(at: number): Promise<readonly unknown[]> {
+    const { data, error } = await this.client.rpc("due_vote_cycle_states", {
+      p_due_at_ms: at,
+    });
+    throwIfError(error);
+    return data ?? [];
+  }
+
   async probe(checkedAt = Date.now()): Promise<ServiceHealth> {
     const { error } = await this.client
       .from("stream_sessions")
@@ -463,6 +539,66 @@ export class SupabaseAcceptedVoteTallyReader implements AcceptedVoteTallyReader 
   }
 }
 
+export class SupabaseViewerRecoveryReader implements ViewerRecoveryReader {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async readViewerRecovery(input: ViewerRecoveryReadInput): Promise<ViewerRecoveryState> {
+    const raw = await this.api.loadViewerAcceptedVote(
+      input.sessionId,
+      input.questCycleId,
+      input.voterKey,
+    );
+    if (raw === null) {
+      return viewerRecoveryStateSchema.parse({
+        sessionId: input.sessionId,
+        questCycleId: input.questCycleId,
+        acceptedCandidateId: null,
+        acceptedAt: null,
+        sessionPoints: 0,
+        sourceMode: null,
+      });
+    }
+    const row = acceptedVoteRecoveryRowSchema.parse(raw);
+    return viewerRecoveryStateSchema.parse({
+      sessionId: input.sessionId,
+      questCycleId: input.questCycleId,
+      acceptedCandidateId: row.candidate_id,
+      acceptedAt: Date.parse(row.accepted_at),
+      sessionPoints: 0,
+      sourceMode: row.payload.sourceMode,
+    });
+  }
+}
+
+export class SupabaseSessionHistoryReader implements SessionHistoryReader {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async readSessionHistory(input: SessionHistoryReadInput): Promise<SessionHistorySnapshot> {
+    const limit = input.limit === undefined ? 25 : Math.min(100, Math.max(1, Math.trunc(input.limit)));
+    const receipts = z
+      .array(acceptedCommandReceiptSchema)
+      .parse(await this.api.loadReceiptsForBroadcaster(input.broadcasterId, limit * 4));
+    return buildSessionHistoryFromReceipts({
+      broadcasterId: input.broadcasterId,
+      receipts,
+      generatedAt: input.at,
+      limit,
+      source: "orchestrator",
+      evidenceClass: "live",
+    });
+  }
+}
+
+export class SupabaseDueVoteCycleReader implements DueVoteCycleReader {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async dueVoteCycles(at: number): Promise<readonly AuthoritativeSessionState[]> {
+    return (await this.api.loadDueVoteCycleStates(at)).map((state) =>
+      authoritativeSessionStateSchema.parse(state),
+    );
+  }
+}
+
 export class SupabaseCandidateBatchRepository implements CandidateBatchRepository {
   constructor(private readonly api: SupabaseChatXptDataApi) {}
 
@@ -510,6 +646,22 @@ export class SupabaseRoleSnapshotPublisher implements RoleSnapshotPublisher {
   ): Promise<RoleViewModels[Role] | null> {
     const raw = await this.api.loadRoleSnapshot(sessionId, role);
     return raw === null ? null : parseRoleSnapshot(role, raw);
+  }
+}
+
+export class SupabaseHostedBoardSessionDirectory implements HostedBoardSessionDirectory {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async findHostedBoardSession(roomCode: string): Promise<HostedBoardSessionRecord | null> {
+    const raw = await this.api.loadHostedBoardSession(roomCode);
+    if (raw === null) return null;
+    const row = hostedBoardSessionRowSchema.parse(raw);
+    return {
+      sessionId: row.session_id,
+      roomCode: row.room_code,
+      status: row.status,
+      revision: row.revision,
+    };
   }
 }
 
@@ -646,16 +798,24 @@ export function createSupabasePersistenceRuntime(
   const api = new SupabaseChatXptDataApi(createSupabaseServerClient(environment));
   const sessions = new SupabaseSessionStateRepository(api);
   const acceptedVotes = new SupabaseAcceptedVoteTallyReader(api);
+  const viewerRecovery = new SupabaseViewerRecoveryReader(api);
+  const sessionHistory = new SupabaseSessionHistoryReader(api);
   const snapshots = new SupabaseRoleSnapshotPublisher(api);
+  const hostedBoardSessions = new SupabaseHostedBoardSessionDirectory(api);
+  const dueVotes = new SupabaseDueVoteCycleReader(api);
   return {
     mode: "supabase",
     api,
     sessions,
     lifecycle: new SupabaseSessionLifecycleStore(api, sessions),
+    hostedBoardSessions,
     candidates: new SupabaseCandidateBatchRepository(api),
     acceptedVotes,
     snapshots,
     accessGrants: new SupabaseRealtimeAccessGrantStore(api),
+    dueVotes,
+    viewerRecovery,
+    sessionHistory,
     probe: (checkedAt) => api.probe(checkedAt),
   };
 }

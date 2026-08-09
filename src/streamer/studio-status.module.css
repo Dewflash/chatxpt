@@ -1,0 +1,146 @@
+.surface {
+  min-width: 0;
+  color: inherit;
+}
+
+.shell {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.titleBlock {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.title {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 1.35rem;
+  line-height: 1.18;
+}
+
+.subtitle,
+.bodyText,
+.finePrint {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.subtitle,
+.bodyText {
+  color: var(--cx-color-text-muted);
+}
+
+.finePrint {
+  font-size: 0.82rem;
+  color: var(--cx-color-text-muted);
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.section {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  gap: 10px;
+}
+
+.item {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.itemTitle {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.95rem;
+}
+
+.list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listItem {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.option {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.optionTitle {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.96rem;
+}
+
+.optionBody {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--cx-color-text-muted);
+  font-size: 0.88rem;
+}
+
+@media (max-width: 520px) {
+  .header,
+  .sectionHeader {
+    display: grid;
+  }
+
+  .title {
+    font-size: 1.15rem;
+  }
+}

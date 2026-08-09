@@ -4,6 +4,7 @@ import {
   authoritativeSessionStateSchema,
   canonicalJsonStringify,
   candidateBatchSchema,
+  viewerRecoveryStateSchema,
   type AcceptedCommandReceipt,
   type AcceptedVoteTallyReadInput,
   type AcceptedVoteTallyReader,
@@ -13,7 +14,11 @@ import {
   type CommitAuthoritativeStateInput,
   type CommitAuthoritativeStateResult,
   type RoleViewModels,
+  type ViewerRecoveryReadInput,
+  type ViewerRecoveryReader,
+  type ViewerRecoveryState,
 } from "../core";
+import { buildSessionHistoryFromReceipts } from "./session-history";
 import {
   PREPARING_SESSION_EXPIRY_MS,
   SESSION_RECONNECT_GRACE_MS,
@@ -21,10 +26,15 @@ import {
   type BootstrapSessionInput,
   type CandidateBatchRepository,
   type CommitSessionLifecycleInput,
+  type DueVoteCycleReader,
+  type HostedBoardSessionDirectory,
+  type HostedBoardSessionRecord,
   type LifecycleStoreCommitResult,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
   type RealtimeAccessGrantStore,
+  type SessionHistoryReadInput,
+  type SessionHistoryReader,
   type SessionLifecycleCommitResult,
   type SessionLifecycleStore,
   type SessionPresenceAction,
@@ -51,9 +61,13 @@ export class MemoryChatXptPersistence
   implements
     AcceptedVoteTallyReader,
     CandidateBatchRepository,
+    DueVoteCycleReader,
+    HostedBoardSessionDirectory,
     RoleSnapshotPublisher,
     RealtimeAccessGrantStore,
-    SessionLifecycleStore
+    SessionHistoryReader,
+    SessionLifecycleStore,
+    ViewerRecoveryReader
 {
   private readonly states = new Map<string, AuthoritativeSessionState>();
   private readonly receipts = new Map<string, AcceptedCommandReceipt>();
@@ -72,6 +86,7 @@ export class MemoryChatXptPersistence
       voterKey: string;
       candidateId: string;
       acceptedAt: number;
+      sourceMode: "twitch-extension" | "hosted-board" | "twitch-chat";
     }
   >();
 
@@ -176,6 +191,7 @@ export class MemoryChatXptPersistence
           voterKey: input.command.voterKey,
           candidateId: input.command.candidateId,
           acceptedAt: input.acceptedAt,
+          sourceMode: input.command.sourceMode,
         },
       );
     }
@@ -222,6 +238,31 @@ export class MemoryChatXptPersistence
     });
   }
 
+  async readViewerRecovery(input: ViewerRecoveryReadInput): Promise<ViewerRecoveryState> {
+    const vote = this.voteLedger.get(
+      this.voteKey(input.sessionId, input.questCycleId, input.voterKey),
+    );
+    return viewerRecoveryStateSchema.parse(
+      vote === undefined
+        ? {
+            sessionId: input.sessionId,
+            questCycleId: input.questCycleId,
+            acceptedCandidateId: null,
+            acceptedAt: null,
+            sessionPoints: 0,
+            sourceMode: null,
+          }
+        : {
+            sessionId: input.sessionId,
+            questCycleId: input.questCycleId,
+            acceptedCandidateId: vote.candidateId,
+            acceptedAt: vote.acceptedAt,
+            sessionPoints: 0,
+            sourceMode: vote.sourceMode,
+          },
+    );
+  }
+
   async store(batch: CandidateBatch): Promise<void> {
     const parsed = candidateBatchSchema.parse(batch);
     const existing = this.batches.get(parsed.envelope.messageId);
@@ -258,6 +299,19 @@ export class MemoryChatXptPersistence
   ): Promise<RoleViewModels[Role] | null> {
     const views = this.snapshots.get(sessionId);
     return views === undefined ? null : clone(views[role]);
+  }
+
+  async findHostedBoardSession(roomCode: string): Promise<HostedBoardSessionRecord | null> {
+    const sessionId = this.roomSessions.get(roomCode);
+    if (sessionId === undefined) return null;
+    const state = this.states.get(sessionId);
+    if (state === undefined) return null;
+    return {
+      sessionId: state.session.sessionId,
+      roomCode,
+      status: state.session.status,
+      revision: state.session.revision,
+    };
   }
 
   async grant(input: Omit<RealtimeAccessGrant, "revokedAt">): Promise<RealtimeAccessGrant> {
@@ -396,6 +450,36 @@ export class MemoryChatXptPersistence
     return due;
   }
 
+  async dueVoteCycles(at: number): Promise<readonly AuthoritativeSessionState[]> {
+    const due: AuthoritativeSessionState[] = [];
+    for (const state of this.states.values()) {
+      if (
+        state.session.status === "live" &&
+        state.questCycle.status === "voting" &&
+        state.questCycle.endsAt !== null &&
+        state.questCycle.endsAt <= at
+      ) {
+        due.push(clone(state));
+      }
+    }
+    return due.sort(
+      (left, right) =>
+        (left.questCycle.endsAt ?? 0) - (right.questCycle.endsAt ?? 0) ||
+        left.session.sessionId.localeCompare(right.session.sessionId),
+    );
+  }
+
+  async readSessionHistory(input: SessionHistoryReadInput) {
+    return buildSessionHistoryFromReceipts({
+      broadcasterId: input.broadcasterId,
+      receipts: [...this.receipts.values()].map((receipt) => clone(receipt)),
+      generatedAt: input.at,
+      limit: input.limit,
+      source: "orchestrator",
+      evidenceClass: "live",
+    });
+  }
+
   private replaceState(nextState: AuthoritativeSessionState): void {
     const previous = this.states.get(nextState.session.sessionId);
     this.states.set(nextState.session.sessionId, clone(nextState));
@@ -425,9 +509,13 @@ export function createMemoryPersistenceRuntime() {
     mode: "memory" as const,
     sessions: backend,
     lifecycle: backend,
+    hostedBoardSessions: backend,
     candidates: backend,
     acceptedVotes: backend,
     snapshots: backend,
     accessGrants: backend,
+    dueVotes: backend,
+    viewerRecovery: backend,
+    sessionHistory: backend,
   };
 }

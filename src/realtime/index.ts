@@ -36,6 +36,13 @@ export {
   type SubscribeToSnapshotsInput,
 } from "./subscriber";
 export {
+  HostedBoardAccessService,
+} from "./hosted-access";
+export {
+  buildSessionHistoryFromReceipts,
+  type BuildSessionHistoryInput,
+} from "./session-history";
+export {
   FALLBACK_ROOM_CODE_LENGTH,
   PREPARING_SESSION_EXPIRY_MS,
   SESSION_RECONNECT_GRACE_MS,
@@ -44,6 +51,11 @@ export {
   type CandidateBatchRepository,
   type ChatXptPersistenceRuntime,
   type CommitSessionLifecycleInput,
+  type DueVoteCycleReader,
+  type HostedBoardAccessRequest,
+  type HostedBoardAccessResult,
+  type HostedBoardSessionDirectory,
+  type HostedBoardSessionRecord,
   type LifecycleStoreCommitResult,
   type RealtimeAccessGrant,
   type RealtimeAccessGrantStore,
@@ -52,6 +64,8 @@ export {
   type SessionLifecycleAction,
   type SessionLifecycleCommitResult,
   type SessionLifecycleStore,
+  type SessionHistoryReadInput,
+  type SessionHistoryReader,
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,
@@ -77,6 +91,9 @@ export type {
   StatePublisher,
   StreamerViewModel,
   ViewerViewModel,
+  ViewerRecoveryReadInput,
+  ViewerRecoveryReader,
+  ViewerRecoveryState,
 } from "../core";
 
 export {

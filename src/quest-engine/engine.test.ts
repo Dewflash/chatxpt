@@ -1,7 +1,26 @@
 import { describe, expect, it } from "vitest";
 
-import { candidateBatchSchema, questCycleStateSchema, type QuestEngineResult } from "../core";
-import { DEFAULT_VOTING_MILLISECONDS, DefaultQuestEngine, createDefaultQuestEngine } from ".";
+import {
+  acceptedVoteTallySnapshotSchema,
+  audienceSnapshotSchema,
+  candidateBatchSchema,
+  gameplaySnapshotSchema,
+  questCycleStateSchema,
+  streamSessionSchema,
+  streamerProfileSchema,
+  systemQuestProgressCommandSchema,
+  type GameplaySnapshot,
+  type QuestEngineInput,
+  type QuestEngineResult,
+  type QuestProgress,
+} from "../core";
+import {
+  AUTOMATIC_PROGRESS_MINIMUM_CONFIDENCE,
+  DEFAULT_VOTING_MILLISECONDS,
+  DefaultQuestEngine,
+  MAXIMUM_SIGNAL_AGE_MILLISECONDS,
+  createDefaultQuestEngine,
+} from ".";
 import {
   ROLE_3_FIXTURE_TIME,
   role3CandidateCases,
@@ -10,6 +29,7 @@ import {
   role3IntelligenceCommand,
   role3StampFixtureState,
   role3StreamerCommand,
+  role3VoteCloseCommand,
   role3VoteCommand,
 } from "./testing";
 
@@ -18,6 +38,225 @@ function decision(result: QuestEngineResult) {
   return result.decision;
 }
 
+const progressProfile = streamerProfileSchema.parse({
+  profileId: "role-3-progress-profile",
+  streamerId: "role-3-progress-broadcaster",
+  revision: 0,
+  displayName: "Role 3 Progress Fixture",
+  gameId: null,
+  gameName: null,
+  experience: {},
+  restrictions: [],
+  preferredQuestTypes: [],
+  forbiddenQuestTypes: [],
+  accessibilityNeeds: [],
+});
+
+const voteCloseProfile = streamerProfileSchema.parse({
+  profileId: "role-3-fixture-profile",
+  streamerId: "role-3-fixture-broadcaster",
+  revision: 0,
+  displayName: "Role 3 Fixture Streamer",
+  gameId: null,
+  gameName: null,
+  experience: { intensity: 0.5, creativity: 0.5 },
+  restrictions: [],
+  preferredQuestTypes: [],
+  forbiddenQuestTypes: [],
+  accessibilityNeeds: [],
+});
+
+const progressSession = streamSessionSchema.parse({
+  sessionId: role3FixtureIdleState.envelope.sessionId,
+  broadcasterId: progressProfile.streamerId,
+  platform: "twitch",
+  status: "live",
+  revision: 0,
+  createdAt: ROLE_3_FIXTURE_TIME - 60_000,
+  startedAt: ROLE_3_FIXTURE_TIME - 30_000,
+  endedAt: null,
+  capabilities: {
+    twitchExtension: true,
+    hostedViewerBoard: true,
+    twitchChatVoting: true,
+    twitchIdentity: true,
+    anonymousParticipation: true,
+    reactions: true,
+  },
+});
+
+const voteCloseSession = streamSessionSchema.parse({
+  sessionId: role3FixtureIdleState.envelope.sessionId,
+  broadcasterId: "role-3-fixture-broadcaster",
+  platform: "twitch",
+  status: "live",
+  revision: 0,
+  createdAt: ROLE_3_FIXTURE_TIME - 60_000,
+  startedAt: ROLE_3_FIXTURE_TIME - 30_000,
+  endedAt: null,
+  capabilities: {
+    twitchExtension: true,
+    hostedViewerBoard: true,
+    twitchChatVoting: true,
+    twitchIdentity: true,
+    anonymousParticipation: true,
+    reactions: true,
+  },
+});
+
+function activeProgressState(progress: QuestProgress | null = null) {
+  return questCycleStateSchema.parse({
+    ...role3FixtureIdleState,
+    status: "active",
+    options: role3FixtureCandidateBatch.candidates,
+    activeCandidateId: role3FixtureCandidateBatch.candidates[0].candidateId,
+    availableStreamerActions: ["cancel", "skip", "succeed", "fail", "emergency-pause"],
+    startsAt: ROLE_3_FIXTURE_TIME,
+    endsAt: ROLE_3_FIXTURE_TIME + 60_000,
+    progress,
+    completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+  });
+}
+
+function progressCommand(overrides: Partial<ReturnType<typeof systemQuestProgressCommandSchema.parse>> = {}) {
+  return systemQuestProgressCommandSchema.parse({
+    contractVersion: "1.0.0",
+    sessionId: role3FixtureIdleState.envelope.sessionId,
+    questCycleId: role3FixtureIdleState.envelope.questCycleId,
+    commandId: "role-3-progress-command",
+    correlationId: "role-3-progress-correlation",
+    expectedRevision: 0,
+    issuedAt: ROLE_3_FIXTURE_TIME + 1_000,
+    actor: { kind: "system", actorId: "role-3-progress-system" },
+    type: "system.quest-progress",
+    requestedValue: 0.5,
+    evidenceSignalIds: ["role-3-progress-signal"],
+    ...overrides,
+  });
+}
+
+function progressGameplay(
+  patch: {
+    readonly status?: "known" | "unknown";
+    readonly kind?: string;
+    readonly confidence?: number;
+    readonly observedAt?: number;
+    readonly supportedSignals?: readonly string[];
+  } = {},
+): GameplaySnapshot {
+  const status = patch.status ?? "known";
+  const provenance = {
+    source: "test-fixture" as const,
+    method: "fixture-progress-signal",
+    confidence: patch.confidence ?? AUTOMATIC_PROGRESS_MINIMUM_CONFIDENCE,
+    observedAt: patch.observedAt ?? ROLE_3_FIXTURE_TIME,
+    receivedAt: ROLE_3_FIXTURE_TIME,
+    evidenceClass: "fixture" as const,
+  };
+  return gameplaySnapshotSchema.parse({
+    envelope: {
+      ...role3FixtureIdleState.envelope,
+      messageId: "role-3-progress-gameplay",
+    },
+    capabilities: {
+      tier: "calibrated-hud",
+      gameId: "role-3-progress-game",
+      adapterId: "role-3-progress-adapter",
+      supportedSignals: patch.supportedSignals ?? ["objective-progress"],
+    },
+    signals: [
+      {
+        signalId: "role-3-progress-signal",
+        kind: patch.kind ?? "objective-progress",
+        observation:
+          status === "known"
+            ? { status, value: 0.5, provenance }
+            : { status, reason: "not-observed", provenance },
+      },
+    ],
+  });
+}
+
+const emptyProgressAudience = audienceSnapshotSchema.parse({
+  envelope: {
+    ...role3FixtureIdleState.envelope,
+    messageId: "role-3-progress-audience",
+  },
+  sampleSize: 0,
+  signals: [],
+});
+
+const sessionScopedGameplay = gameplaySnapshotSchema.parse({
+  envelope: {
+    ...role3FixtureIdleState.envelope,
+    questCycleId: null,
+    messageId: "role-3-session-gameplay",
+  },
+  capabilities: {
+    tier: "universal-visual",
+    gameId: null,
+    adapterId: null,
+    supportedSignals: [],
+  },
+  signals: [],
+});
+
+const sessionScopedAudience = audienceSnapshotSchema.parse({
+  envelope: {
+    ...role3FixtureIdleState.envelope,
+    questCycleId: null,
+    messageId: "role-3-session-audience",
+  },
+  sampleSize: 0,
+  signals: [],
+});
+
+function votingFixture(options = role3FixtureCandidateBatch.candidates) {
+  return questCycleStateSchema.parse({
+    ...role3FixtureIdleState,
+    status: "voting",
+    options,
+    availableStreamerActions: ["cancel", "skip", "emergency-pause"],
+    voteTallies: options.map(({ candidateId }) => ({ candidateId, votes: 0 })),
+    startsAt: ROLE_3_FIXTURE_TIME,
+    endsAt: ROLE_3_FIXTURE_TIME + DEFAULT_VOTING_MILLISECONDS,
+  });
+}
+
+function voteCloseInput(
+  votes: readonly [number, number, number],
+  overrides: Partial<QuestEngineInput> = {},
+): QuestEngineInput {
+  const currentState = overrides.currentState ?? votingFixture();
+  const now = overrides.now ?? currentState.endsAt ?? ROLE_3_FIXTURE_TIME;
+  return {
+    currentState,
+    command:
+      overrides.command ??
+      role3VoteCloseCommand({ expectedRevision: currentState.envelope.revision }),
+    candidateBatch: null,
+    acceptedVoteTally: acceptedVoteTallySnapshotSchema.parse({
+      sessionId: currentState.envelope.sessionId,
+      questCycleId: currentState.envelope.questCycleId,
+      revision: currentState.envelope.revision,
+      closedAt: now,
+      acceptedVoteCount: votes.reduce((total, value) => total + value, 0),
+      tallies: currentState.options.map(({ candidateId }, index) => ({
+        candidateId,
+        votes: votes[index],
+      })),
+    }),
+    voteCloseValidationContext: {
+      profile: voteCloseProfile,
+      session: voteCloseSession,
+      gameplay: null,
+      audience: null,
+      recentQuests: [],
+    },
+    now,
+    ...overrides,
+  };
+}
 describe("DefaultQuestEngine", () => {
   it("is constructible through the Role 3 public entrypoint", () => {
     expect(createDefaultQuestEngine()).toBeInstanceOf(DefaultQuestEngine);
@@ -148,6 +387,385 @@ describe("DefaultQuestEngine", () => {
     expect(result).toMatchObject({ ok: false, error: { code: "expired" } });
   });
 
+  it("activates the authoritative majority winner after the voting deadline", () => {
+    const result = decision(new DefaultQuestEngine().decide(voteCloseInput([1, 4, 2])));
+
+    expect(result.nextState).toMatchObject({
+      status: "active",
+      activeCandidateId: "role-3-candidate-2",
+      voteTallies: [
+        { candidateId: "role-3-candidate-1", votes: 1 },
+        { candidateId: "role-3-candidate-2", votes: 4 },
+        { candidateId: "role-3-candidate-3", votes: 2 },
+      ],
+      startsAt: ROLE_3_FIXTURE_TIME + DEFAULT_VOTING_MILLISECONDS,
+      endsAt: ROLE_3_FIXTURE_TIME + DEFAULT_VOTING_MILLISECONDS + 45_000,
+      progress: { value: 0, method: "unknown" },
+    });
+    expect(result.events).toEqual([
+      {
+        eventType: "quest-cycle.activated",
+        attributes: {
+          candidateId: "role-3-candidate-2",
+          winningVotes: 4,
+          acceptedVoteCount: 7,
+          tiedCandidateCount: 1,
+          tieBreakUsed: false,
+        },
+      },
+    ]);
+  });
+
+  it("breaks a top-count tie deterministically from neutral cycle identifiers", () => {
+    const engine = new DefaultQuestEngine();
+    const first = decision(engine.decide(voteCloseInput([3, 3, 1])));
+    const second = decision(engine.decide(voteCloseInput([3, 3, 1])));
+
+    expect(first.nextState.activeCandidateId).toBe(second.nextState.activeCandidateId);
+    expect(first.nextState.activeCandidateId).toBe("role-3-candidate-1");
+    expect(first.events[0]).toMatchObject({
+      eventType: "quest-cycle.activated",
+      attributes: { tiedCandidateCount: 2, tieBreakUsed: true },
+    });
+  });
+
+  it("returns typed no-activation when the authoritative tally has zero votes", () => {
+    const result = decision(new DefaultQuestEngine().decide(voteCloseInput([0, 0, 0])));
+
+    expect(result.nextState).toMatchObject({
+      status: "cancelled",
+      activeCandidateId: null,
+      result: {
+        outcome: "cancelled",
+        rewardPointsAwarded: 0,
+        reason: "Voting closed without an accepted vote; no quest was activated.",
+      },
+    });
+    expect(result.events[0]).toMatchObject({
+      eventType: "quest-cycle.vote-closed-no-activation",
+      attributes: { reasonCode: "zero-votes", acceptedVoteCount: 0 },
+    });
+  });
+
+  it("rejects early, missing, and mismatched authoritative close inputs", () => {
+    const voting = votingFixture();
+    const early = new DefaultQuestEngine().decide(
+      voteCloseInput([1, 0, 0], { now: (voting.endsAt ?? 0) - 1 }),
+    );
+    const missing = new DefaultQuestEngine().decide({
+      ...voteCloseInput([1, 0, 0]),
+      acceptedVoteTally: null,
+    });
+    const mismatched = new DefaultQuestEngine().decide({
+      ...voteCloseInput([1, 0, 0]),
+      acceptedVoteTally: {
+        ...voteCloseInput([1, 0, 0]).acceptedVoteTally!,
+        sessionId: "another-session",
+      },
+    });
+    const invalidAggregate = new DefaultQuestEngine().decide({
+      ...voteCloseInput([1, 0, 0]),
+      acceptedVoteTally: {
+        ...voteCloseInput([1, 0, 0]).acceptedVoteTally!,
+        acceptedVoteCount: 2,
+      },
+    });
+
+    expect(early).toMatchObject({ ok: false, error: { code: "forbidden" } });
+    expect(missing).toMatchObject({ ok: false, error: { code: "dependency-unavailable" } });
+    expect(mismatched).toMatchObject({ ok: false, error: { code: "validation" } });
+    expect(invalidAggregate).toMatchObject({ ok: false, error: { code: "validation" } });
+  });
+
+  it("rechecks concrete harmful instructions before activating the winner", () => {
+    const options = role3FixtureCandidateBatch.candidates.map((candidate, index) =>
+      index === 0
+        ? {
+            ...candidate,
+            title: "Dangerous Drink",
+            instruction: "Drink bleach before the next match begins.",
+            rationale: "A concrete harmful fixture that must never reach active state.",
+          }
+        : candidate,
+    );
+    const result = decision(
+      new DefaultQuestEngine().decide(
+        voteCloseInput([5, 1, 0], { currentState: votingFixture(options) }),
+      ),
+    );
+
+    expect(result.nextState.status).toBe("cancelled");
+    expect(result.events[0]).toMatchObject({
+      eventType: "quest-cycle.vote-closed-no-activation",
+      attributes: { reasonCode: "winner-invalid", validationCodes: "unsafe" },
+    });
+  });
+
+  it("rechecks the winner against intrinsic confidence and duration hard gates", () => {
+    const options = role3FixtureCandidateBatch.candidates.map((candidate, index) =>
+      index === 0
+        ? {
+            ...candidate,
+            durationSeconds: 900,
+            difficulty: "easy" as const,
+            confidence: 0.1,
+          }
+        : candidate,
+    );
+    const result = decision(
+      new DefaultQuestEngine().decide(
+        voteCloseInput([5, 1, 0], { currentState: votingFixture(options) }),
+      ),
+    );
+
+    expect(result.nextState.status).toBe("cancelled");
+    expect(result.events[0]).toMatchObject({
+      eventType: "quest-cycle.vote-closed-no-activation",
+      attributes: {
+        reasonCode: "winner-invalid",
+        validationCodes: expect.stringContaining("low-confidence"),
+      },
+    });
+    expect(result.events[0]?.attributes.validationCodes).toContain("duration-out-of-range");
+    expect(result.events[0]?.attributes.validationCodes).toContain("difficulty-mismatch");
+  });
+
+  it("rechecks that the winner's cited evidence still exists at vote close", () => {
+    const options = role3FixtureCandidateBatch.candidates.map((candidate, index) =>
+      index === 0 ? { ...candidate, sourceSignalIds: ["missing-signal"] } : candidate,
+    );
+    const result = decision(
+      new DefaultQuestEngine().decide(
+        voteCloseInput([5, 1, 0], { currentState: votingFixture(options) }),
+      ),
+    );
+
+    expect(result.nextState.status).toBe("cancelled");
+    expect(result.events[0]).toMatchObject({
+      attributes: {
+        reasonCode: "winner-invalid",
+        validationCodes: expect.stringContaining("unsupported-evidence"),
+      },
+    });
+  });
+
+  it("does not activate a winner made unsafe by the current streamer boundary", () => {
+    const input = voteCloseInput([5, 1, 0]);
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        ...input,
+        voteCloseValidationContext: {
+          ...input.voteCloseValidationContext!,
+          profile: streamerProfileSchema.parse({
+            ...voteCloseProfile,
+            forbiddenQuestTypes: ["current playable area"],
+          }),
+        },
+      }),
+    );
+
+    expect(result.nextState.status).toBe("cancelled");
+    expect(result.events[0]).toMatchObject({
+      eventType: "quest-cycle.vote-closed-no-activation",
+      attributes: {
+        reasonCode: "winner-invalid",
+        validationCodes: "streamer-restricted",
+      },
+    });
+  });
+
+  it("does not activate a fact-dependent winner after supporting gameplay becomes unknown", () => {
+    const options = role3FixtureCandidateBatch.candidates.map((candidate, index) =>
+      index === 0
+        ? {
+            ...candidate,
+            title: "Elimination Callout",
+            instruction: "Get one elimination during the next 30 seconds of play.",
+            rationale: "A fixture that requires a current known kill signal before activation.",
+          }
+        : candidate,
+    );
+    const result = decision(
+      new DefaultQuestEngine().decide(
+        voteCloseInput([5, 1, 0], { currentState: votingFixture(options) }),
+      ),
+    );
+
+    expect(result.nextState.status).toBe("cancelled");
+    expect(result.events[0]).toMatchObject({
+      eventType: "quest-cycle.vote-closed-no-activation",
+      attributes: { reasonCode: "winner-invalid", validationCodes: "unknown-dependent" },
+    });
+  });
+
+  it("does not activate a winner that fails the full close-time candidate gates", () => {
+    const options = role3FixtureCandidateBatch.candidates.map((candidate, index) =>
+      index === 0
+        ? {
+            ...candidate,
+            title: "Impossible Marathon",
+            instruction: "Complete a perfect objective chain for the next 900 seconds.",
+            durationSeconds: 900,
+            difficulty: "easy" as const,
+            confidence: 0.1,
+            sourceSignalIds: ["missing-signal"],
+            rationale: "A low-confidence unsupported fixture that should fail full validation.",
+          }
+        : candidate,
+    );
+    const result = decision(
+      new DefaultQuestEngine().decide(
+        voteCloseInput([5, 1, 0], { currentState: votingFixture(options) }),
+      ),
+    );
+
+    expect(result.nextState.status).toBe("cancelled");
+    const validationCodes = String(result.events[0]?.attributes.validationCodes);
+    expect(validationCodes).toContain("unsupported-evidence");
+    expect(validationCodes).toContain("low-confidence");
+    expect(validationCodes).toContain("duration-out-of-range");
+    expect(validationCodes).toContain("difficulty-mismatch");
+  });
+
+  it("does not activate a recently repeated winner at vote close", () => {
+    const input = voteCloseInput([5, 1, 0]);
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        ...input,
+        voteCloseValidationContext: {
+          ...input.voteCloseValidationContext!,
+          recentQuests: [
+            {
+              title: "Hold Your Ground",
+              occurredAt: input.now - 1_000,
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(result.nextState.status).toBe("cancelled");
+    expect(result.events[0]).toMatchObject({
+      eventType: "quest-cycle.vote-closed-no-activation",
+      attributes: {
+        reasonCode: "winner-invalid",
+        validationCodes: "recently-repeated",
+      },
+    });
+  });
+
+  it("accepts session-scoped close-time snapshots with null quest cycle IDs", () => {
+    const input = voteCloseInput([2, 1, 0]);
+    const gameplay = gameplaySnapshotSchema.parse({
+      envelope: {
+        ...role3FixtureIdleState.envelope,
+        messageId: "role-3-session-gameplay",
+        questCycleId: null,
+      },
+      capabilities: {
+        tier: "universal-visual",
+        gameId: null,
+        adapterId: null,
+        supportedSignals: ["activity-intensity"],
+      },
+      signals: [],
+    });
+    const audience = audienceSnapshotSchema.parse({
+      envelope: {
+        ...role3FixtureIdleState.envelope,
+        messageId: "role-3-session-audience",
+        questCycleId: null,
+      },
+      sampleSize: 2,
+      signals: [],
+    });
+
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        ...input,
+        voteCloseValidationContext: {
+          ...input.voteCloseValidationContext!,
+          gameplay,
+          audience,
+        },
+      }),
+    );
+
+    expect(result.nextState.status).toBe("active");
+    expect(result.nextState.activeCandidateId).toBe("role-3-candidate-1");
+  });
+
+  it("does not activate after the session ends, while a missing audience remains non-blocking", () => {
+    const endedInput = voteCloseInput([2, 1, 0]);
+    const ended = decision(
+      new DefaultQuestEngine().decide({
+        ...endedInput,
+        voteCloseValidationContext: {
+          ...endedInput.voteCloseValidationContext!,
+          session: streamSessionSchema.parse({
+            ...voteCloseSession,
+            status: "ended",
+            endedAt: endedInput.now,
+          }),
+        },
+      }),
+    );
+    const disconnectedAudience = decision(
+      new DefaultQuestEngine().decide(voteCloseInput([2, 1, 0])),
+    );
+
+    expect(ended.nextState.status).toBe("cancelled");
+    expect(ended.events[0]).toMatchObject({
+      attributes: { reasonCode: "session-not-live", sessionStatus: "ended" },
+    });
+    expect(disconnectedAudience.nextState.status).toBe("active");
+  });
+
+  it("accepts canonical session-scoped gameplay and audience snapshots at vote close", () => {
+    const gameplayInput = voteCloseInput([2, 1, 0]);
+    const withGameplay = decision(
+      new DefaultQuestEngine().decide({
+        ...gameplayInput,
+        voteCloseValidationContext: {
+          ...gameplayInput.voteCloseValidationContext!,
+          gameplay: sessionScopedGameplay,
+        },
+      }),
+    );
+    const audienceInput = voteCloseInput([2, 1, 0]);
+    const withAudience = decision(
+      new DefaultQuestEngine().decide({
+        ...audienceInput,
+        voteCloseValidationContext: {
+          ...audienceInput.voteCloseValidationContext!,
+          audience: sessionScopedAudience,
+        },
+      }),
+    );
+
+    expect(withGameplay.nextState.status).toBe("active");
+    expect(withAudience.nextState.status).toBe("active");
+  });
+
+  it("still rejects a non-null snapshot cycle belonging to another quest", () => {
+    const input = voteCloseInput([2, 1, 0]);
+    const result = new DefaultQuestEngine().decide({
+      ...input,
+      voteCloseValidationContext: {
+        ...input.voteCloseValidationContext!,
+        gameplay: gameplaySnapshotSchema.parse({
+          ...sessionScopedGameplay,
+          envelope: {
+            ...sessionScopedGameplay.envelope,
+            questCycleId: "another-cycle",
+          },
+        }),
+      },
+    });
+
+    expect(result).toMatchObject({ ok: false, error: { code: "validation" } });
+  });
+
   it("applies terminal outcomes to an authoritative active-state fixture", () => {
     const active = questCycleStateSchema.parse({
       ...role3FixtureIdleState,
@@ -212,6 +830,114 @@ describe("DefaultQuestEngine", () => {
         },
       },
     ]);
+  });
+
+  it("accepts gameplay-backed automatic progress when audience state is unavailable", () => {
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        currentState: activeProgressState(),
+        command: progressCommand(),
+        candidateBatch: null,
+        questProgressValidationContext: {
+          profile: progressProfile,
+          session: progressSession,
+          gameplay: progressGameplay(),
+          audience: null,
+          completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+        },
+        now: ROLE_3_FIXTURE_TIME + 1_000,
+      }),
+    );
+
+    expect(result.nextState.progress).toEqual({
+      value: 0.5,
+      updatedAt: ROLE_3_FIXTURE_TIME + 1_000,
+      method: "automatic",
+      evidenceSignalIds: ["role-3-progress-signal"],
+    });
+    expect(result.events).toEqual([
+      {
+        eventType: "quest-cycle.progress-updated",
+        attributes: { method: "automatic", value: 0.5 },
+      },
+    ]);
+  });
+
+  it.each([
+    ["missing-evidence", { gameplay: null }],
+    ["unknown-evidence", { gameplay: progressGameplay({ status: "unknown" }) }],
+    ["unsupported-evidence", { gameplay: progressGameplay({ supportedSignals: [] }) }],
+    [
+      "disallowed-evidence",
+      {
+        gameplay: progressGameplay({
+          kind: "disallowed-signal",
+          supportedSignals: ["disallowed-signal"],
+        }),
+      },
+    ],
+    [
+      "low-confidence-evidence",
+      {
+        gameplay: progressGameplay({
+          confidence: AUTOMATIC_PROGRESS_MINIMUM_CONFIDENCE - 0.01,
+        }),
+      },
+    ],
+    [
+      "stale-evidence",
+      {
+        gameplay: progressGameplay({
+          observedAt: ROLE_3_FIXTURE_TIME - MAXIMUM_SIGNAL_AGE_MILLISECONDS - 1,
+        }),
+      },
+    ],
+  ] as const)("rejects automatic engine progress with %s", (reason, patch) => {
+    const result = new DefaultQuestEngine().decide({
+      currentState: activeProgressState(),
+      command: progressCommand(),
+      candidateBatch: null,
+      questProgressValidationContext: {
+        profile: progressProfile,
+        session: progressSession,
+        gameplay: patch.gameplay,
+        audience: emptyProgressAudience,
+        completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+      },
+      now: ROLE_3_FIXTURE_TIME + 1_000,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "validation", details: { reason } },
+    });
+  });
+
+  it("keeps automatic progress monotonic at the engine transition boundary", () => {
+    const currentProgress = {
+      value: 0.75,
+      updatedAt: ROLE_3_FIXTURE_TIME,
+      method: "automatic" as const,
+      evidenceSignalIds: ["role-3-previous-progress-signal"],
+    };
+    const result = new DefaultQuestEngine().decide({
+      currentState: activeProgressState(currentProgress),
+      command: progressCommand({ requestedValue: 0.5 }),
+      candidateBatch: null,
+      questProgressValidationContext: {
+        profile: progressProfile,
+        session: progressSession,
+        gameplay: progressGameplay(),
+        audience: null,
+        completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+      },
+      now: ROLE_3_FIXTURE_TIME + 1_000,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "validation", details: { reason: "progress-regression" } },
+    });
   });
 
   it("does not bypass cooldown with an intelligence-ready command", () => {

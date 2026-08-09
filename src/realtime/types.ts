@@ -4,8 +4,10 @@ import type {
   CandidateBatch,
   CandidateBatchReader,
   RoleViewModels,
+  SessionHistorySnapshot,
   SessionStateRepository,
   StatePublisher,
+  ViewerRecoveryReader,
 } from "../core";
 
 export type SnapshotRole = keyof RoleViewModels;
@@ -46,6 +48,47 @@ export interface RealtimeAccessGrantStore {
     at: number,
   ): Promise<boolean>;
 }
+
+export interface HostedBoardSessionRecord {
+  readonly sessionId: string;
+  readonly roomCode: string;
+  readonly status: AuthoritativeSessionState["session"]["status"];
+  readonly revision: number;
+}
+
+export interface HostedBoardSessionDirectory {
+  findHostedBoardSession(roomCode: string): Promise<HostedBoardSessionRecord | null>;
+}
+
+export interface HostedBoardAccessRequest {
+  readonly roomCode: string;
+  readonly principalId: string;
+  readonly requestedAt: number;
+  readonly expiresAt: number;
+  readonly viewerPathPrefix?: string;
+}
+
+export type HostedBoardAccessResult =
+  | {
+      readonly status: "granted";
+      readonly sessionId: string;
+      readonly roomCode: string;
+      readonly revision: number;
+      readonly viewRole: "viewer";
+      readonly expiresAt: number;
+      readonly viewerPath: string;
+      readonly share: {
+        readonly roomCode: string;
+        readonly viewerPath: string;
+        readonly qrPayload: string;
+      };
+    }
+  | {
+      readonly status: "invalid-code" | "not-found" | "inactive" | "expired" | "unavailable";
+      readonly roomCode: string | null;
+      readonly retryable: boolean;
+      readonly message: string;
+    };
 
 export type SessionPresenceAction = "heartbeat" | "disconnect";
 export type SessionLifecycleAction = "start" | "end" | "expire";
@@ -108,14 +151,32 @@ export interface SessionLifecycleStore {
   due(at: number): Promise<readonly AuthoritativeSessionState[]>;
 }
 
+export interface DueVoteCycleReader {
+  dueVoteCycles(at: number): Promise<readonly AuthoritativeSessionState[]>;
+}
+
+export interface SessionHistoryReadInput {
+  readonly broadcasterId: string;
+  readonly at: number;
+  readonly limit?: number;
+}
+
+export interface SessionHistoryReader {
+  readSessionHistory(input: SessionHistoryReadInput): Promise<SessionHistorySnapshot>;
+}
+
 export interface ChatXptPersistenceRuntime {
   readonly mode: "memory" | "supabase";
   readonly sessions: SessionStateRepository;
   readonly lifecycle: SessionLifecycleStore;
+  readonly hostedBoardSessions: HostedBoardSessionDirectory;
   readonly candidates: CandidateBatchRepository;
   readonly acceptedVotes: AcceptedVoteTallyReader;
   readonly snapshots: RoleSnapshotPublisher;
   readonly accessGrants: RealtimeAccessGrantStore;
+  readonly dueVotes: DueVoteCycleReader;
+  readonly viewerRecovery: ViewerRecoveryReader;
+  readonly sessionHistory: SessionHistoryReader;
 }
 
 export class PersistenceConflictError extends Error {

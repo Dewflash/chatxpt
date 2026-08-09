@@ -142,7 +142,7 @@ Role 2 is complete when:
 
 **Acceptance:** Executed results, latency/resource observations, failure modes, dependency requests, and immediate recovery recommendations reach Role 1 during the first integration wave.
 
-**Progress (7 August 2026):** `role-2/real-input-evidence` adds a threshold-agnostic evidence-report boundary over canonical OBS measurements. It preserves separate human annotations, summarises quiet/action/transition and p50/p95 processing metrics, records sanitised OCR/unknown metadata, checks two-sample and sanitised-audience coverage, and refuses to promote diagnostic inputs to real evidence. Two user-authorised Brawl Stars clips are source-inspected with separate relative-time annotations and local-only hashes, but remain unexecuted inputs rather than live evidence. Role 1's safely merged browser capture and Tesseract revisions, a sanitised real Twitch audience fixture, executed browser/resource observations, privacy review, artifacts, and the manifest entry remain pending.
+**Progress (9 August 2026):** `role-2/real-input-evidence` adds a threshold-agnostic evidence-report boundary over canonical OBS measurements. It preserves separate human annotations, summarises quiet/action/transition and p50/p95 processing metrics, records sanitised OCR/unknown metadata, checks two-sample and sanitised-audience coverage, and refuses to promote diagnostic inputs to real evidence. Two user-authorised Brawl Stars clips are source-inspected with separate relative-time annotations and local-only hashes, but remain unexecuted inputs rather than live evidence. Role 1's browser `FrameSource` is merged; a safely rebased and merged Tesseract revision, a sanitised real Twitch audience fixture, executed browser/resource observations, privacy review, artifacts, and the manifest entry remain pending.
 
 ## Phase 3: Real-frame gameplay extraction
 
@@ -152,7 +152,7 @@ Role 2 is complete when:
 | --- | --- | --- | --- |
 | D2-07 | Frame sampling cadence and adaptive-trigger strategy | Resolved by Joelyrk | Consume Role 1's current two-frame-per-second `FrameSource`, run bounded universal measurements on each delivered frame with at most one analysis in flight, and start rate-limited three-frame selective-OCR bursts only after meaningful activity/transition changes. Role 2 does not require a capture-control contract change for P0. |
 | D2-08 | Universal visual feature set versus calibrated HUD-adapter feature set used in P0 | Resolved by Joelyrk | P0 universal signals are quiet, action, and transition derived from frame-difference intensity plus temporal stability. The Brawl Stars calibrated adapter may expose one named timer/outcome or other HUD fact only after the real OCR/template trial proves it reliable; every unsupported or ambiguous specific fact remains `unknown`. |
-| D2-09 | OCR engine, preprocessing, region-selection, and temporal confirmation strategy | Resolved by Joelyrk | Request Tesseract.js from Role 1 as the leading free local/browser OCR dependency through [issue #70](https://github.com/Dewflash/chatxpt/issues/70), with no installation until approved. OCR runs only on named calibrated crops after local grayscale/contrast/upscale preprocessing, never on every full frame, and requires two matching readings in a three-reading window at confidence 0.75 or higher. PaddleOCR-compatible or native binaries remain fallback experiments only if the browser path fails. |
+| D2-09 | OCR engine, preprocessing, region-selection, and temporal confirmation strategy | Resolved by Joelyrk | Use the Tesseract.js dependency accepted by Role 1 through [issue #70](https://github.com/Dewflash/chatxpt/issues/70) once its isolated package change is safely merged onto `main`. OCR runs only on named calibrated crops after local grayscale/contrast/upscale preprocessing, never on every full frame, and requires two matching readings in a three-reading window at confidence 0.75 or higher. PaddleOCR-compatible or native binaries remain fallback experiments only if the browser path fails. |
 | D2-10 | Confidence fusion, stale-data expiry, contradiction handling, and `unknown` thresholds | Resolved by Joelyrk | Derive visual thresholds from two separately annotated authorised samples instead of guessing fixed pixel cutoffs. Use quiet p95 versus action p50 and transition p50 only when quiet/action distributions separate; otherwise collect more evidence. Require confidence 0.75, treat candidates within 0.10 as conflicting/`unknown`, and expire visual observations after three seconds. Diagnostic calibration may not be applied to or presented as live evidence. |
 | D2-11 | Whether a free vision model materially improves P0 beyond algorithms/OCR | Resolved by Joelyrk | Exclude free vision AI from P0 by default. Reconsider only after algorithms/OCR have real baseline evidence and a genuinely free, privacy-acceptable trial materially improves annotated accuracy without unacceptable latency or reliability; missing vision AI never blocks the credential-free path. |
 
@@ -225,10 +225,12 @@ Universal features may run across action games. Colour bars, icons, text regions
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D2-12 | Audience-signal taxonomy and aggregation windows | Open | — |
-| D2-13 | Rule-based versus free-model classification boundary | Open | — |
-| D2-14 | Sarcasm, spam, repeated-request, low-volume, and conflicting-chat handling | Open | — |
-| D2-15 | Whether any raw chat is stored within the 24-hour maximum or processed in memory only | Open | — |
+| D2-12 | Audience-signal taxonomy and aggregation windows | Resolved by Joelyrk | Use a 30-second rolling window for P0 live audience state. Every output carries sample size, observed/received time, freshness/expiry, and confidence; sparse windows remain unknown rather than being treated as neutral. |
+| D2-13 | Rule-based versus free-model classification boundary | Resolved by Joelyrk | Use credential-free, explainable rules as the mandatory P0 classifier. A genuinely free model may assist ambiguous classification later only behind the same validated port and cannot be required for the live or fallback path. |
+| D2-14 | Sarcasm, spam, repeated-request, low-volume, and conflicting-chat handling | Resolved by Joelyrk | Rate-limit and deduplicate spam per viewer in memory; repeated requests require multiple qualifying events rather than repeated tokens in one message. Sparse, sarcastic, multilingual or unrecognised, and similarly credible conflicting signals become low-confidence or unknown. Unsafe or toxic intent is high-recall suppression evidence only and is never used to create provocative quests. |
+| D2-15 | Whether any raw chat is stored within the 24-hour maximum or processed in memory only | Resolved by Joelyrk | Process raw Twitch chat in memory only for the MVP and do not persist raw messages. Retain bounded aggregates plus separately privacy-reviewed sanitised evidence fixtures with viewer identifiers removed. |
+
+**Decision batch accepted (8 August 2026):** Joelyrk approved D2-12 through D2-15 together. PR #111 must preserve evidence-class boundaries so fixture or diagnostic events never contribute to a live-labelled aggregate, and must add sparse, spam, repeated-request, sarcasm/conflict, unsafe, and multilingual/unknown regressions before approval.
 
 ### R2-P08 — Audience aggregation and behavioural signals
 
@@ -270,7 +272,7 @@ Raw chat is processed in memory by default. If Joelyrk's D2-15 choice requires t
 | --- | --- | --- | --- |
 | D2-16 | Model-ready context construction and signal prioritisation | Open | — |
 | D2-17 | Provider adapter, structured-output validation, retry, and observability design | Open | — |
-| D2-18 | Algorithmic candidate generation when free AI is unavailable | Open | — |
+| D2-18 | Algorithmic candidate generation when free AI is unavailable | Resolved by Role 1 deadline override | Use a credential-free deterministic strategy that emits exactly three game-neutral candidate quests from validated intelligence, streamer profile, and recent quest titles. It rotates a curated safe template set by session/cycle/revision, avoids recent titles when alternatives exist, labels every candidate as `algorithmic` with `provider: null`, and cites only fresh, high-confidence known canonical signal IDs compatible with Role 3 validation. Missing, stale, weak, unknown, unsupported, or unavailable observations are omitted rather than fabricated. Role 3 remains the deterministic validation, safety, feasibility, scoring, and replacement authority before any candidate reaches voting or overlay surfaces. |
 
 ### R2-P10 — Provider evaluation and adapter
 
@@ -280,7 +282,9 @@ Raw chat is processed in memory by default. If Joelyrk's D2-15 choice requires t
 
 **Acceptance:** No client secret; runtime validation; clear provider status; no paid calls; recommendation recorded with Role 3 and sent to Role 1.
 
-**Progress (6 August 2026):** `role-2/provider-fallback-evaluation` adds a provider-neutral, injected trial/fallback strategy plus privacy-safe operational observations and summary metrics. Fixture tests cover valid provider output, malformed/partial/overfull/incorrectly-labelled output, timeout, refusal, rate limiting, unavailability, generic failure, cancellation, and invalid algorithmic recovery. No external provider call, provider/model selection, concrete algorithmic policy, or joint recommendation is claimed; D23-01 through D23-03 and D2-16 through D2-18 remain open.
+**Progress (6 August 2026):** `role-2/provider-fallback-evaluation` adds a provider-neutral, injected trial/fallback strategy plus privacy-safe operational observations and summary metrics. Fixture tests cover valid provider output, malformed/partial/overfull/incorrectly-labelled output, timeout, refusal, rate limiting, unavailability, generic failure, cancellation, and invalid algorithmic recovery. No external provider call, provider/model selection, or joint recommendation is claimed; D23-01 through D23-03 and D2-16 through D2-17 remain open.
+
+**Progress (9 August 2026):** `codex/role-2-algorithmic-candidate-strategy` implements the accepted D2-18 credential-free strategy with exactly-three output, recent-title avoidance, provider-null algorithmic metadata, and Role 3-compatible source-signal citation filtering. Fixture tests cover deterministic output, duplicate-title avoidance, raw-chat exclusion, low-confidence omission, stale-signal omission, and validating provider compatibility. This is component evidence only; no external provider call or real-input candidate run is claimed.
 
 ### R2-P11 — Context and candidate generation
 

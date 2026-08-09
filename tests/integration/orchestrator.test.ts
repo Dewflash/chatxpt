@@ -2,9 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   ChatXptOrchestrator,
+  streamerEmergencyClearCommandSchema,
+  streamerProfileSettingsCommandSchema,
   streamerQuestCommandSchema,
+  streamerQuestProgressCommandSchema,
   systemIntelligenceCommandSchema,
+  systemQuestProgressCommandSchema,
   systemVoteCloseCommandSchema,
+  viewerReactionCommandSchema,
   type AuthoritativeSessionState,
   type OrchestratorDependencies,
   type AcceptedVoteTallyReader,
@@ -49,6 +54,7 @@ function initialState(): AuthoritativeSessionState {
     gameplay: structuredClone(contractFixtureGameplaySnapshot),
     audience: structuredClone(contractFixtureAudienceSnapshot),
     questCycle: structuredClone(contractFixtureQuestCycle),
+    emergencyPaused: false,
     communityHype: 0,
   };
 }
@@ -66,6 +72,21 @@ function command(commandId = "fixture-streamer-command", expectedRevision = 0) {
     type: "streamer.quest",
     action: "skip",
     candidateId: null,
+  });
+}
+
+function reactionCommand(commandId = "fixture-viewer-reaction", expectedRevision = 0) {
+  return viewerReactionCommandSchema.parse({
+    contractVersion: "1.0.0",
+    sessionId: contractFixtureSession.sessionId,
+    questCycleId: contractFixtureQuestCycle.envelope.questCycleId,
+    commandId,
+    correlationId: `correlation-${commandId}`,
+    expectedRevision,
+    issuedAt: ACCEPTED_AT,
+    actor: { kind: "anonymous", actorId: null },
+    type: "viewer.react",
+    reaction: "hype",
   });
 }
 
@@ -147,6 +168,85 @@ describe("Role 1 application orchestrator", () => {
     expect(recording.published[0]?.overlay.envelope.revision).toBe(1);
   });
 
+  it("records viewer reactions as community hype without invoking the quest engine", async () => {
+    const state = initialState();
+    const liveState: AuthoritativeSessionState = {
+      ...state,
+      session: {
+        ...state.session,
+        status: "live",
+        startedAt: ACCEPTED_AT - 60_000,
+        capabilities: { ...state.session.capabilities, reactions: true },
+      },
+      communityHype: 4,
+    };
+    const repository = new FixtureSessionStateRepository([liveState]);
+    const recording = new RecordingFixturePublisher();
+    const engine = successfulEngine();
+    const orchestrator = new ChatXptOrchestrator(dependencies(repository, recording, engine));
+
+    const result = await orchestrator.execute(reactionCommand());
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.outcome).toBe("committed");
+    expect(result.receipt.state.session.revision).toBe(1);
+    expect(result.receipt.state.communityHype).toBe(5);
+    expect(result.receipt.events[0]?.event).toMatchObject({
+      eventType: "viewer.reaction-recorded",
+      attributes: { reaction: "hype", hypeDelta: 1 },
+    });
+    expect(engine.calls).toBe(0);
+    expect(recording.published[0]?.viewer.communityHype).toBe(5);
+    expect(recording.published[0]?.overlay.communityHype).toBe(5);
+  });
+
+  it("applies broadcaster profile settings without invoking Role 3", async () => {
+    const repository = new FixtureSessionStateRepository([initialState()]);
+    const engine = successfulEngine();
+    const publisher = new RecordingFixturePublisher();
+    const orchestrator = new ChatXptOrchestrator(dependencies(repository, publisher, engine));
+    const settings = streamerProfileSettingsCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: null,
+      commandId: "fixture-profile-settings",
+      correlationId: "fixture-profile-settings-correlation",
+      expectedRevision: 0,
+      issuedAt: ACCEPTED_AT,
+      actor: { kind: "broadcaster", actorId: contractFixtureSession.broadcasterId },
+      type: "streamer.profile-settings",
+      experiencePatch: { intensity: 0.8 },
+      voting: { voteVisibility: "hidden-until-close" },
+      rewards: { rewardDisplay: "session-points" },
+    });
+
+    const result = await orchestrator.execute(settings);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(engine.calls).toBe(0);
+    expect(result.receipt.state.session.revision).toBe(1);
+    expect(result.receipt.state.profile.revision).toBe(1);
+    expect(result.receipt.state.profile.experience.intensity).toBe(0.8);
+    expect(result.receipt.state.profile.voting).toMatchObject({
+      voteVisibility: "hidden-until-close",
+      voteDurationSeconds: 30,
+      voteChangesAllowed: false,
+    });
+    expect(result.receipt.state.profile.rewards).toMatchObject({
+      rewardDisplay: "session-points",
+      persistentEconomy: false,
+      monetaryRewards: false,
+    });
+    expect(result.receipt.state.questCycle.envelope.revision).toBe(1);
+    expect(result.receipt.events[0]?.event.eventType).toBe("profile.settings-updated");
+    expect(result.views?.streamer.profile.experience.intensity).toBe(0.8);
+    expect(publisher.published[0]?.streamer.profile.voting.voteVisibility).toBe(
+      "hidden-until-close",
+    );
+  });
+
   it("passes a canonical candidate batch through the engine before persistence and broadcast", async () => {
     const repository = new FixtureSessionStateRepository([initialState()]);
     const publisher = new RecordingFixturePublisher();
@@ -192,6 +292,7 @@ describe("Role 1 application orchestrator", () => {
     const base = initialState();
     const state: AuthoritativeSessionState = {
       ...base,
+      recentQuests: [{ title: "Hold Your Ground", occurredAt: ACCEPTED_AT - 1_000 }],
       questCycle: {
         ...base.questCycle,
         status: "voting",
@@ -269,7 +370,206 @@ describe("Role 1 application orchestrator", () => {
       session: { sessionId: state.session.sessionId },
       gameplay: { envelope: { messageId: state.gameplay?.envelope.messageId } },
       audience: { envelope: { messageId: state.audience?.envelope.messageId } },
+      recentQuests: [{ title: "Hold Your Ground", occurredAt: ACCEPTED_AT - 1_000 }],
     });
+  });
+
+  it("sets the durable emergency latch only after an authorised emergency-pause command commits", async () => {
+    const repository = new FixtureSessionStateRepository([initialState()]);
+    const orchestrator = new ChatXptOrchestrator(dependencies(repository, new RecordingFixturePublisher()));
+    const pause = streamerQuestCommandSchema.parse({
+      ...command("fixture-emergency-pause"),
+      action: "emergency-pause",
+    });
+
+    const result = await orchestrator.execute(pause);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.receipt.state.emergencyPaused).toBe(true);
+    expect((await repository.load(contractFixtureSession.sessionId))?.emergencyPaused).toBe(true);
+  });
+
+  it("clears the emergency latch with an authenticated Role 1 state command without invoking Role 3", async () => {
+    const state = { ...initialState(), emergencyPaused: true };
+    const repository = new FixtureSessionStateRepository([state]);
+    const engine = successfulEngine();
+    const orchestrator = new ChatXptOrchestrator(
+      dependencies(repository, new RecordingFixturePublisher(), engine),
+    );
+    const clear = streamerEmergencyClearCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: null,
+      commandId: "fixture-emergency-clear",
+      correlationId: "fixture-emergency-clear-correlation",
+      expectedRevision: 0,
+      issuedAt: ACCEPTED_AT,
+      actor: { kind: "broadcaster", actorId: contractFixtureSession.broadcasterId },
+      type: "streamer.emergency-clear",
+    });
+
+    const result = await orchestrator.execute(clear);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(engine.calls).toBe(0);
+    expect(result.receipt.state.emergencyPaused).toBe(false);
+    expect(result.receipt.events[0]?.event.eventType).toBe("session.emergency-cleared");
+  });
+
+  it("blocks new intervention candidate publication while the emergency latch is active", async () => {
+    const state = { ...initialState(), emergencyPaused: true };
+    const repository = new FixtureSessionStateRepository([state]);
+    const publisher = new RecordingFixturePublisher();
+    const engine = successfulEngine();
+    const systemCommand = systemIntelligenceCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: contractFixtureQuestCycle.envelope.questCycleId,
+      commandId: "fixture-blocked-intelligence-command",
+      correlationId: "fixture-blocked-intelligence-correlation",
+      expectedRevision: 0,
+      issuedAt: ACCEPTED_AT,
+      actor: { kind: "system", actorId: "fixture-orchestrator" },
+      type: "system.intelligence-ready",
+      candidateBatchId: contractFixtureCandidateBatch.envelope.messageId,
+    });
+    const configured = dependencies(repository, publisher, engine);
+    const orchestrator = new ChatXptOrchestrator({
+      ...configured,
+      candidateBatches: new StaticFixtureCandidateBatchReader([contractFixtureCandidateBatch]),
+    });
+
+    const result = await orchestrator.execute(systemCommand);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("forbidden");
+    expect(engine.calls).toBe(0);
+    expect(publisher.published).toHaveLength(0);
+  });
+
+  it("passes neutral progress validation context for manual and system progress commands", async () => {
+    const base = initialState();
+    const activeState: AuthoritativeSessionState = {
+      ...base,
+      questCycle: {
+        ...base.questCycle,
+        status: "active",
+        options: structuredClone(contractFixtureCandidateBatch.candidates),
+        activeCandidateId: contractFixtureCandidateBatch.candidates[0]?.candidateId ?? null,
+        availableStreamerActions: ["cancel", "skip", "succeed", "fail", "emergency-pause"],
+        startsAt: ACCEPTED_AT - 1_000,
+        endsAt: ACCEPTED_AT + 30_000,
+        completionRule: { mode: "signal", allowedSignalKinds: ["activity-intensity"] },
+      },
+    };
+    const repository = new FixtureSessionStateRepository([activeState]);
+    const observedContexts: unknown[] = [];
+    const engine = new ScriptedFixtureQuestEngine((input) => {
+      observedContexts.push(input.questProgressValidationContext);
+      return {
+        ok: true,
+        decision: { nextState: structuredClone(input.currentState), events: [] },
+      };
+    });
+    const orchestrator = new ChatXptOrchestrator(dependencies(repository, new RecordingFixturePublisher(), engine));
+    const manual = streamerQuestProgressCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: activeState.session.sessionId,
+      questCycleId: activeState.questCycle.envelope.questCycleId,
+      commandId: "fixture-manual-progress",
+      correlationId: "fixture-manual-progress-correlation",
+      expectedRevision: 0,
+      issuedAt: ACCEPTED_AT,
+      actor: { kind: "broadcaster", actorId: activeState.session.broadcasterId },
+      type: "streamer.quest-progress",
+      requestedValue: 0.5,
+    });
+    const system = systemQuestProgressCommandSchema.parse({
+      ...manual,
+      commandId: "fixture-system-progress",
+      correlationId: "fixture-system-progress-correlation",
+      expectedRevision: 1,
+      actor: { kind: "system", actorId: "fixture-orchestrator" },
+      type: "system.quest-progress",
+      evidenceSignalIds: ["fixture-gameplay-signal-activity"],
+    });
+
+    expect((await orchestrator.execute(manual)).ok).toBe(true);
+    expect((await orchestrator.execute(system)).ok).toBe(true);
+    expect(observedContexts).toHaveLength(2);
+    expect(observedContexts[0]).toMatchObject({
+      completionRule: { mode: "signal", allowedSignalKinds: ["activity-intensity"] },
+      profile: { profileId: activeState.profile.profileId },
+    });
+    expect(observedContexts[1]).toMatchObject({
+      completionRule: { mode: "signal", allowedSignalKinds: ["activity-intensity"] },
+      gameplay: { envelope: { messageId: activeState.gameplay?.envelope.messageId } },
+    });
+  });
+
+  it("stores terminal quest history summaries for later vote-close validation", async () => {
+    const base = initialState();
+    const state: AuthoritativeSessionState = {
+      ...base,
+      questCycle: {
+        ...base.questCycle,
+        status: "active",
+        options: structuredClone(contractFixtureCandidateBatch.candidates),
+        activeCandidateId: contractFixtureCandidateBatch.candidates[1].candidateId,
+        availableStreamerActions: ["cancel", "skip", "succeed", "fail", "emergency-pause"],
+        startsAt: ACCEPTED_AT - 15_000,
+        endsAt: ACCEPTED_AT + 30_000,
+        progress: {
+          value: 0,
+          updatedAt: ACCEPTED_AT - 15_000,
+          method: "unknown",
+          evidenceSignalIds: [],
+        },
+      },
+    };
+    const repository = new FixtureSessionStateRepository([state]);
+    const engine = new ScriptedFixtureQuestEngine((input) => ({
+      ok: true,
+      decision: {
+        nextState: structuredClone(input.currentState),
+        events: [
+          {
+            eventType: "quest-cycle.terminal",
+            attributes: {
+              outcome: "succeeded",
+              historyCandidateId: contractFixtureCandidateBatch.candidates[1].candidateId,
+            },
+          },
+        ],
+      },
+    }));
+    const succeed = streamerQuestCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: state.session.sessionId,
+      questCycleId: state.questCycle.envelope.questCycleId,
+      commandId: "fixture-terminal-history",
+      correlationId: "fixture-terminal-history-correlation",
+      expectedRevision: 0,
+      issuedAt: ACCEPTED_AT,
+      actor: { kind: "broadcaster", actorId: state.session.broadcasterId },
+      type: "streamer.quest",
+      action: "succeed",
+      candidateId: contractFixtureCandidateBatch.candidates[1].candidateId,
+    });
+    const orchestrator = new ChatXptOrchestrator(
+      dependencies(repository, new RecordingFixturePublisher(), engine),
+    );
+
+    const result = await orchestrator.execute(succeed);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.receipt.state.recentQuests).toEqual([
+      { title: contractFixtureCandidateBatch.candidates[1].title, occurredAt: ACCEPTED_AT },
+    ]);
   });
 
   it("returns the original receipt for an identical command without deciding or publishing twice", async () => {

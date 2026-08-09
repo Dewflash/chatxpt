@@ -4,6 +4,7 @@ import {
   audienceSnapshotSchema,
   commandEnvelopeSchema,
   gameplaySnapshotSchema,
+  identifierSchema,
   questCycleStateSchema,
   questEngineEventSchema,
   serviceHealthSchema,
@@ -13,6 +14,13 @@ import {
 } from "../contracts";
 import { commandFingerprint } from "./fingerprint";
 
+export const recentQuestSummarySchema = z
+  .object({
+    title: z.string().trim().min(3).max(80),
+    occurredAt: timestampSchema,
+  })
+  .strict();
+
 export const authoritativeSessionStateSchema = z
   .object({
     session: streamSessionSchema,
@@ -21,7 +29,9 @@ export const authoritativeSessionStateSchema = z
     gameplay: gameplaySnapshotSchema.nullable(),
     audience: audienceSnapshotSchema.nullable(),
     questCycle: questCycleStateSchema,
+    emergencyPaused: z.boolean(),
     communityHype: z.number().int().nonnegative(),
+    recentQuests: z.array(recentQuestSummarySchema).max(20).optional(),
   })
   .strict()
   .superRefine((state, context) => {
@@ -92,6 +102,27 @@ export const acceptedCommandReceiptSchema = z
         code: "custom",
         message: "Receipt command and state must belong to the same session",
         path: ["state", "session", "sessionId"],
+      });
+    }
+  });
+
+export const viewerRecoveryStateSchema = z
+  .object({
+    sessionId: identifierSchema,
+    questCycleId: identifierSchema,
+    acceptedCandidateId: identifierSchema.nullable(),
+    acceptedAt: timestampSchema.nullable(),
+    sessionPoints: z.number().int().nonnegative().max(100_000),
+    sourceMode: z.enum(["twitch-extension", "hosted-board", "twitch-chat"]).nullable(),
+  })
+  .strict()
+  .superRefine((state, context) => {
+    const hasAcceptedVote = state.acceptedCandidateId !== null;
+    if (hasAcceptedVote !== (state.acceptedAt !== null) || hasAcceptedVote !== (state.sourceMode !== null)) {
+      context.addIssue({
+        code: "custom",
+        message: "Accepted vote fields must appear together",
+        path: ["acceptedCandidateId"],
       });
     }
   });

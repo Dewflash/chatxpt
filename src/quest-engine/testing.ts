@@ -153,6 +153,7 @@ export const role3CandidateCases = {
 type IntelligenceCommand = Extract<CommandEnvelope, { type: "system.intelligence-ready" }>;
 type StreamerCommand = Extract<CommandEnvelope, { type: "streamer.quest" }>;
 type VoteCommand = Extract<CommandEnvelope, { type: "viewer.vote" }>;
+type VoteCloseCommand = Extract<CommandEnvelope, { type: "system.vote-close" }>;
 
 const baseCommand = {
   contractVersion: CONTRACT_VERSION,
@@ -200,6 +201,17 @@ export function role3VoteCommand(overrides: Partial<VoteCommand> = {}): VoteComm
     actor: { kind: "viewer", actorId: "role-3-fixture-viewer" },
     ...overrides,
   }) as VoteCommand;
+}
+
+export function role3VoteCloseCommand(
+  overrides: Partial<VoteCloseCommand> = {},
+): VoteCloseCommand {
+  return commandEnvelopeSchema.parse({
+    ...baseCommand,
+    type: "system.vote-close",
+    actor: { kind: "system", actorId: "role-3-fixture-system" },
+    ...overrides,
+  }) as VoteCloseCommand;
 }
 
 export function role3StampFixtureState(
