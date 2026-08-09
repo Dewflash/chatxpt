@@ -27,7 +27,7 @@
 
 ## Five-Minute Demo Plan
 
-Use this plan when the project owner and Role 2 record the final short video. Role 2 owns the narration/run-of-show draft and acts as the viewer during the live run-through.
+Use this plan when the project owner and Joel record the final short video. Joel owns the narration/run-of-show draft, acts as the viewer during the live run-through, and may make practical editing decisions needed to keep the video clear and under five minutes.
 
 | Time | Segment | What to show | Role 2 action |
 | --- | --- | --- | --- |
@@ -39,16 +39,16 @@ Use this plan when the project owner and Role 2 record the final short video. Ro
 | 3:15-4:15 | Analytics and quest generator | Explain that ChatXPT combines broad gameplay activity, audience signals, streamer boundaries, and deterministic safety/validation to choose appropriate quests. | Keep the analysis explanation practical: what changed, why the quest fits, what is still prototype-level. |
 | 4:15-5:00 | Outcome and close | Complete/fail the quest, show status/reward/history or the relevant local state, and close with the reusable workflow. | End with the future-stream line: open OBS, start stream, play, viewers vote, overlay updates. |
 
-### Role 2 Handoff Wording
+### Joel Handoff Wording
 
-Role 2 should prepare the exact script and step-by-step capture process for the five-minute video. The required story is:
+Joel should prepare the exact script and step-by-step capture process for the five-minute video. He can make executive video decisions on shot order, transitions, what to trim, which screen best explains the quest generator, and how to keep the story understandable under time pressure. The required story is:
 
 1. Explain the app, OBS overlay, and Streamer Studio.
 2. Show first-time setup: open OBS, add/connect ChatXPT overlay/browser sources, and configure once.
 3. Show future-stream setup: OBS remembers the same sources, so the streamer opens OBS and starts.
 4. Run through the intended live loop: the streamer plays, ChatXPT silently assesses the selected screen/window and viewer activity, then generates sidequest options without constant streamer clicking.
 5. Start a short vote around 30 seconds into the run-through.
-6. Role 2 joins as the viewer and actually votes within that window.
+6. Joel joins as the viewer and actually votes within that window.
 7. Show the winning quest on the OBS overlay.
 8. Finish with analytics and quest-generator discussion under the five-minute limit.
 
@@ -58,21 +58,21 @@ The script must stay honest: real local screen sampling, real Twitch-chat messag
 
 Use this screen-by-screen checklist when deciding the final edit. Keep setup clips short; spend the time on the live loop.
 
-| # | Content | Screen/source to capture | Notes for Role 2 |
+| # | Content | Screen/source to capture | Notes for Joel |
 | --- | --- | --- | --- |
 | 1 | Explain the app | Short slide/title card or the app home/control-room screen | One sentence: ChatXPT turns stream context and viewer input into safe sidequests. |
 | 2 | Show the OBS overlay | Project owner's screen in OBS | The ChatXPT Browser Source should sit above the gameplay/screen source. |
 | 3 | Show Streamer Studio/control room | Project owner's screen at `http://localhost:3000/` | Show live screen analysis, streamer context, generated quests, and vote controls. |
 | 4 | Show first setup | Project owner's OBS screen | Add/select game capture and `http://localhost:3000/overlay` once. |
 | 5 | Show future stream setup | Same OBS scene as #4 | Explain that OBS remembers the scene, so future streams start from the saved setup. Do not spend extra time if nothing changes. |
-| 6 | Show viewer joining | Role 2's screen on the Twitch stream/viewer page | This is the viewer perspective that proves someone else can watch and participate. |
+| 6 | Show viewer joining | Joel's screen on the Twitch stream/viewer page | This is the viewer perspective that proves someone else can watch and participate. |
 | 7 | Show quests auto-generating and appearing on stream | Project owner's control room and OBS overlay, then Role 2's view of the stream | The intended flow is passive: streamer plays, ChatXPT samples context, three quests appear. If a click is still needed in the prototype, label it as prototype/demo control. |
-| 8 | Show Role 2 voting | Role 2's screen typing `1`, `2`, or `3` in Twitch chat | Vote within the short window, ideally around 30 seconds into the run-through. |
+| 8 | Show Joel voting | Joel's screen typing `1`, `2`, or `3` in Twitch chat | Vote within the short window, ideally around 30 seconds into the run-through. |
 | 9 | Show chosen quest on overlay | Project owner's OBS overlay and Role 2's stream view | Confirm the selected quest is visible in the broadcast overlay. |
 | 10 | Discuss analytics | Simple local screen, preferably `http://localhost:3000/` | Point to visible activity/confidence/chat/vote signals; keep unsupported gameplay facts as `unknown`. |
 | 11 | Discuss quest generator | The generated quest cards on `http://localhost:3000/`; use `/diagnostics/ui-harness` only if needed | Explain why the three quests fit the stream context and safety boundaries. Avoid deep implementation detail. |
 
-Role 2 should turn this into a shot list with exact transitions, narration, and who shares which screen. The core edit should feel like one smooth story: first-time setup once, future streams reuse it, streamer plays, ChatXPT prepares quests, viewer votes, overlay updates, then analytics and quest-generation reasoning close the loop.
+Joel should turn this into a shot list with exact transitions, narration, and who shares which screen. The core edit should feel like one smooth story: first-time setup once, future streams reuse it, streamer plays, ChatXPT prepares quests, viewer votes, overlay updates, then analytics and quest-generation reasoning close the loop.
 
 ## Recording Script
 

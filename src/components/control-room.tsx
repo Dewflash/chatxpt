@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { goldenScenario, sampleChat } from "@/lib/demo-data";
 import type {
   ActiveQuest,
@@ -122,6 +122,10 @@ export function ControlRoom() {
   const [chatStatus, setChatStatus] = useState<TwitchChatStatus>("idle");
   const [chatMessage, setChatMessage] = useState("Connect Twitch chat so 1 / 2 / 3 messages become votes.");
   const [liveChat, setLiveChat] = useState<TwitchChatLine[]>([]);
+  const [autoDemoEnabled, setAutoDemoEnabled] = useState(true);
+  const [autoOverlayEnabled, setAutoOverlayEnabled] = useState(true);
+  const [autoQuestCountdown, setAutoQuestCountdown] = useState<number | null>(null);
+  const [autoOverlayCountdown, setAutoOverlayCountdown] = useState<number | null>(null);
   const chatSocketRef = useRef<WebSocket | null>(null);
   const questsRef = useRef<Sidequest[]>([]);
 
@@ -141,7 +145,20 @@ export function ControlRoom() {
     [votes],
   );
 
-  async function generate() {
+  const leadingQuest = useMemo(() => {
+    const ranked = quests
+      .map((quest, index) => ({ quest, index, count: votes[quest.id] || 0 }))
+      .sort((left, right) => right.count - left.count || left.index - right.index);
+    return ranked[0]?.count > 0 ? ranked[0].quest : null;
+  }, [quests, votes]);
+  const questAutoArmed = autoDemoEnabled
+    && analysis.status === "running"
+    && quests.length === 0
+    && !loading
+    && !activeQuest;
+  const overlayAutoArmed = autoOverlayEnabled && !!leadingQuest && !activeQuest;
+
+  const generate = useCallback(async () => {
     setLoading(true);
     setError("");
     setWarning("");
@@ -162,17 +179,55 @@ export function ControlRoom() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [signals]);
 
   function addVote(id: string) {
     setVotes((current) => ({ ...current, [id]: (current[id] || 0) + 1 }));
   }
 
-  function activate(quest: Sidequest) {
+  const activate = useCallback((quest: Sidequest) => {
     const next: ActiveQuest = { quest, startedAt: Date.now(), status: "active" };
     setActiveQuest(next);
     publishActiveQuest(next);
-  }
+  }, []);
+
+  useEffect(() => {
+    if (!questAutoArmed) return;
+
+    let remaining = 30;
+    const initial = window.setTimeout(() => setAutoQuestCountdown(remaining), 0);
+    const countdown = window.setInterval(() => {
+      remaining -= 1;
+      setAutoQuestCountdown(Math.max(remaining, 0));
+    }, 1000);
+    const trigger = window.setTimeout(() => {
+      void generate();
+    }, 30_000);
+
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(countdown);
+      window.clearTimeout(trigger);
+    };
+  }, [generate, questAutoArmed]);
+
+  useEffect(() => {
+    if (!overlayAutoArmed || !leadingQuest) return;
+
+    let remaining = 5;
+    const initial = window.setTimeout(() => setAutoOverlayCountdown(remaining), 0);
+    const countdown = window.setInterval(() => {
+      remaining -= 1;
+      setAutoOverlayCountdown(Math.max(remaining, 0));
+    }, 1000);
+    const trigger = window.setTimeout(() => activate(leadingQuest), 5_000);
+
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(countdown);
+      window.clearTimeout(trigger);
+    };
+  }, [activate, leadingQuest, overlayAutoArmed]);
 
   function updateStatus(status: QuestStatus) {
     if (!activeQuest) return;
@@ -471,6 +526,45 @@ export function ControlRoom() {
                   <b>{line.user}</b> {line.text}{line.vote ? ` -> vote ${line.vote}` : ""}
                 </span>
               ))}
+            </div>
+          </div>
+
+          <div className="automation-card">
+            <div>
+              <p className="step">Demo automation</p>
+              <h3>Auto loop is ready</h3>
+              <p>
+                Default-on for recording: capture starts the 30s quest timer, then the first viewer vote
+                publishes the leading quest to the OBS overlay.
+              </p>
+            </div>
+            <label className="toggle-row">
+              <input
+                type="checkbox"
+                checked={autoDemoEnabled}
+                onChange={(event) => setAutoDemoEnabled(event.target.checked)}
+              />
+              <span>Auto-generate quests after 30s of live capture</span>
+            </label>
+            <label className="toggle-row">
+              <input
+                type="checkbox"
+                checked={autoOverlayEnabled}
+                onChange={(event) => setAutoOverlayEnabled(event.target.checked)}
+              />
+              <span>Auto-show the leading voted quest on overlay</span>
+            </label>
+            <div className="automation-status">
+              <span>
+                {!questAutoArmed
+                  ? "Quest timer waits for live capture"
+                  : `Generating in ${autoQuestCountdown}s`}
+              </span>
+              <span>
+                {!overlayAutoArmed
+                  ? "Overlay waits for a viewer vote"
+                  : `Overlay in ${autoOverlayCountdown}s`}
+              </span>
             </div>
           </div>
 

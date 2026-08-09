@@ -11,9 +11,10 @@ The repository contains a runnable local prototype that demonstrates the core id
 2. exactly three generated sidequests;
 3. local screen/window activity sampling when the browser is granted capture permission;
 4. anonymous Twitch-chat `1`/`2`/`3` vote ingestion for the configured broadcaster channel when Twitch chat is reachable;
-5. manual viewer-vote simulation as a diagnostic fallback;
-6. streamer activation and result controls;
-7. OBS-style overlay output through `http://localhost:3000/overlay`.
+5. default-on local demo automation that generates after 30 seconds of live capture and publishes the leading voted quest to the overlay;
+6. manual viewer-vote simulation as a diagnostic fallback;
+7. streamer activation and result controls;
+8. OBS-style overlay output through `http://localhost:3000/overlay`.
 
 That path is useful for a demo walkthrough and deterministic diagnostics. If the recording visibly exercises screen capture and Twitch chat, those individual inputs may be described as real local inputs. It is still not full golden end-to-end evidence. The accepted MVP evidence still needs the same authoritative session/cycle revision across Studio, two viewer clients, persistence, and OBS overlay, with every unavailable signal labelled honestly.
 
@@ -50,12 +51,12 @@ Local demo routes:
 1. Run `npm run dev`.
 2. Open `http://localhost:3000/`.
 3. Click **Capture game window** and choose the game/phone/OBS preview window. Confirm the preview thumbnail and checksum are changing before claiming live screen sampling.
-4. Connect Twitch chat to the broadcaster channel, for example `dewflash`, if a test stream is available.
-5. Click **Generate sidequests**.
-6. Confirm exactly three Brawl Stars-safe quest cards appear. With no `OPENAI_API_KEY`, this uses the safe mock/demo engine. If `OPENAI_API_KEY` is configured, the legacy API tries the optional OpenAI adapter and falls back to the mock engine on failure. The accepted judged MVP path remains the credential-free algorithmic route recorded in D-055.
-7. Ask Role 2 or another viewer to type `1`, `2`, or `3` in Twitch chat. Confirm the vote increments in the app. If Twitch chat is unavailable, click `+ vote` and label it as simulated diagnostic voting.
-8. Click **Activate** on the winning quest or the chosen quest.
-9. Open `http://localhost:3000/overlay` in another browser tab or OBS Browser Source to show the active quest, timer, status, and reward.
+4. Confirm **Auto-generate quests after 30s of live capture** and **Auto-show the leading voted quest on overlay** are enabled in the demo automation panel.
+5. Connect Twitch chat to the broadcaster channel, for example `dewflash`, if a test stream is available.
+6. Wait for auto-generation or click **Generate sidequests** if the recording needs to move faster. If clicked manually, label that as prototype/demo control.
+7. Confirm exactly three Brawl Stars-safe quest cards appear. With no `OPENAI_API_KEY`, this uses the safe mock/demo engine. If `OPENAI_API_KEY` is configured, the legacy API tries the optional OpenAI adapter and falls back to the mock engine on failure. The accepted judged MVP path remains the credential-free algorithmic route recorded in D-055.
+8. Ask Joel or another viewer to type `1`, `2`, or `3` in Twitch chat. Confirm the vote increments in the app and the leading voted quest auto-publishes to the overlay. If Twitch chat is unavailable, click `+ vote` and label it as simulated diagnostic voting.
+9. Open `http://localhost:3000/overlay` in another browser tab or OBS Browser Source to show the active quest, timer, status, and reward. If the automation is disabled, click **Activate** on the chosen quest.
 10. Return to the control room and click **Complete**, **Fail**, or **Clear** to demonstrate terminal overlay updates.
 11. Open `http://localhost:3000/diagnostics/ui-harness` separately to show the newer canonical fixture shape: one session ID, one quest-cycle ID, one revision, exactly three options, streamer/viewer/overlay views, and example command envelopes.
 
