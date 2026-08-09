@@ -53,6 +53,12 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 - Memory and Supabase adapters expose a hosted-board session directory backed by the existing session room-code records.
 - Twitch-chat delivery/acknowledgement (UI-X07) remains open under R1-016 after this pass.
 
+## Current R1-016 chat fallback policy pass
+
+- `codex/role-1-chat-fallback-policy` adds the UI-X07 chat fallback formatting and receipt-policy seam for poll-open, final-result, and counted/duplicate/rejected/late/unavailable presentation.
+- The seam maps authoritative visible options to `1`/`2`/`3` only when exactly three options are in the voting state.
+- Real Twitch outbound sending, rate-limit handling, and live acknowledgement evidence remain open after this template/policy pass.
+
 ## Decisions Role 1 still owns
 
 - Shared contract acceptance and breaking changes
