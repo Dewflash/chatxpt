@@ -49,8 +49,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .status-bar.grouped { align-items: stretch; }
 .status-group { display: grid; align-content: start; gap: 6px; min-width: 0; padding: 8px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; background: rgba(0,0,0,.12); }
 .status-group h2 { margin: 0; color: var(--lime); font: 800 10px/1 "Space Grotesk"; text-transform: uppercase; letter-spacing: .12em; }
-.status-group > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-.status-group:first-child > div, .status-group:nth-child(2) > div { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.status-group > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(86px, 1fr)); gap: 6px; }
 .status-bar span { min-height: 48px; display: grid; align-content: center; gap: 2px; position: relative; padding: 8px 9px 8px 24px; color: var(--muted); border: 1px solid rgba(255,255,255,.09); border-radius: 9px; background: rgba(0,0,0,.18); font-size: 11px; line-height: 1.2; overflow: hidden; }
 .status-bar span::before { content: ""; position: absolute; left: 9px; top: 13px; width: 7px; height: 7px; border-radius: 50%; background: rgba(167,160,189,.58); }
 .status-bar span[data-state="ready"] { color: #f7f3ff; border-color: rgba(215,255,82,.3); background: rgba(215,255,82,.06); }
@@ -99,7 +98,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .analysis-preview span { color: var(--muted); font-size: 11px; }
 .analysis-preview b { color: var(--lime); font-size: 11px; overflow-wrap: anywhere; }
 .analytics-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr); gap: 12px; align-items: start; }
-.analytics-main, .analytics-side, .game-context-stack { display: grid; gap: 12px; min-width: 0; }
+.analytics-main, .analytics-side, .game-context-stack, .studio-side-stack { display: grid; gap: 12px; min-width: 0; }
 .analysis-insights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
 .analysis-insights div { min-height: 92px; padding: 10px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; background: rgba(0,0,0,.16); }
 .analysis-insights span { display: block; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
@@ -178,9 +177,15 @@ input[type="range"] { accent-color: var(--violet); padding: 7px 0; background: t
 .event-timeline > span { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
 .event-timeline p { margin: 0; color: #d6d0e4; font-size: 11px; line-height: 1.35; }
 .event-timeline b { color: var(--lime); margin-right: 6px; }
-.automation-card { display: grid; gap: 12px; margin-top: 14px; padding: 14px; border: 1px solid rgba(215,255,82,.26); border-radius: 12px; background: rgba(215,255,82,.055); }
-.automation-card h3 { margin: 2px 0 6px; font: 700 18px "Space Grotesk"; }
-.automation-card p { margin: 0; color: #d6d0e4; font-size: 12px; line-height: 1.5; }
+.automation-card, .engine-card { display: grid; gap: 12px; padding: 14px; border: 1px solid rgba(215,255,82,.26); border-radius: 12px; background: rgba(215,255,82,.055); }
+.automation-card h3, .engine-card h3 { margin: 2px 0 6px; font: 700 18px "Space Grotesk"; }
+.automation-card p, .engine-card p { margin: 0; color: #d6d0e4; font-size: 12px; line-height: 1.5; }
+.engine-card { border-color: rgba(141,99,255,.24); background: rgba(141,99,255,.055); }
+.engine-flow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.engine-flow div { min-height: 86px; display: grid; align-content: start; gap: 4px; padding: 10px; border: 1px solid rgba(255,255,255,.08); border-radius: 9px; background: rgba(0,0,0,.16); }
+.engine-flow span { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.engine-flow strong { color: var(--ink); font: 800 14px/1.12 "Space Grotesk"; overflow-wrap: anywhere; }
+.engine-flow p { color: #a9a1b8; font-size: 11px; line-height: 1.32; }
 .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .mode-grid button { min-height: 68px; display: grid; align-content: center; gap: 5px; padding: 10px; border: 1px solid rgba(255,255,255,.1); border-radius: 9px; color: var(--muted); background: rgba(0,0,0,.14); text-align: left; cursor: pointer; }
 .mode-grid button:hover { border-color: rgba(215,255,82,.35); color: var(--ink); }
@@ -255,11 +260,11 @@ input[type="range"] { accent-color: var(--violet); padding: 7px 0; background: t
   .shell { width: min(100% - 20px, 1480px); }.topbar { gap: 10px; }.live-pill { display: none; }.ghost-button { margin-left: auto; font-size: 11px; }
   .form-grid { grid-template-columns: 1fr; }
   .status-bar, .status-bar.secondary { grid-template-columns: 1fr; }
-  .status-group > div, .status-group:first-child > div, .status-group:nth-child(2) > div, .status-bar.secondary .status-group > div { grid-template-columns: 1fr 1fr; }
+  .status-group > div, .status-bar.secondary .status-group > div { grid-template-columns: 1fr 1fr; }
   .status-bar span { min-height: 44px; }
   .view-ribbon button, .view-ribbon a { flex: 1 1 130px; }
   .analysis-card dl { grid-template-columns: 1fr 1fr; }
-  .panel { padding: 18px; border-radius: 16px; }.analysis-insights, .mode-grid, .readiness-grid, .history-stats, .ribbon-actions { grid-template-columns: 1fr 1fr; }.context-columns { grid-template-columns: 1fr; }.quest-card { grid-template-columns: 30px 1fr; }.quest-actions { grid-column: 2; grid-template-columns: 1fr 1fr; }.automation-status { grid-template-columns: 1fr; }
+  .panel { padding: 18px; border-radius: 16px; }.analysis-insights, .mode-grid, .readiness-grid, .history-stats, .ribbon-actions, .engine-flow { grid-template-columns: 1fr 1fr; }.context-columns { grid-template-columns: 1fr; }.quest-card { grid-template-columns: 30px 1fr; }.quest-actions { grid-column: 2; grid-template-columns: 1fr 1fr; }.automation-status { grid-template-columns: 1fr; }
   .active-bar { align-items: flex-start; }.active-bar p { display: block; margin: 4px 0 0; }.active-actions { flex-direction: column; }
 }
 

@@ -68,30 +68,90 @@ type DemoParticipationSnapshot = {
   updatedAt: number;
 };
 
-type GamePhasePreset = "action" | "objective" | "battle-royale";
+type GameCategoryPreset =
+  | "arena"
+  | "tactical"
+  | "battle-royale"
+  | "moba"
+  | "racing"
+  | "strategy"
+  | "platformer"
+  | "unknown";
 type StudioView = "studio" | "analytics" | "game-signals" | "vote-overlay";
 
 const MAX_ANALYSIS_SAMPLES = 24;
 const MAX_DEMO_EVENTS = 8;
 
-const gamePhasePresets: Record<GamePhasePreset, Record<GenerationRequest["gameplay"]["phase"], string>> = {
-  action: {
+const gameCategoryLabels: Record<GameCategoryPreset, string> = {
+  arena: "Arena action",
+  tactical: "Tactical shooter",
+  "battle-royale": "Battle royale",
+  moba: "MOBA / objective",
+  racing: "Racing",
+  strategy: "Strategy",
+  platformer: "Platformer",
+  unknown: "Custom / unknown",
+};
+
+const gameCategoryDemoGames: Record<GameCategoryPreset, string> = {
+  arena: "Brawl Stars",
+  tactical: "Valorant",
+  "battle-royale": "Fortnite",
+  moba: "League of Legends",
+  racing: "Mario Kart",
+  strategy: "StarCraft",
+  platformer: "Celeste",
+  unknown: "Custom game",
+};
+
+const gamePhasePresets: Record<GameCategoryPreset, Record<GenerationRequest["gameplay"]["phase"], string>> = {
+  arena: {
     looting: "Setup / respawn",
     rotation: "Objective rotate",
     combat: "Active fight",
     "final-circle": "Final push",
   },
-  objective: {
+  tactical: {
+    looting: "Buy / setup",
+    rotation: "Site rotate",
+    combat: "Duel / execute",
+    "final-circle": "Retake / clutch",
+  },
+  "battle-royale": {
+    looting: "Looting",
+    rotation: "Zone rotate",
+    combat: "Squad fight",
+    "final-circle": "Endgame circle",
+  },
+  moba: {
     looting: "Lane setup",
     rotation: "Objective setup",
     combat: "Team fight",
     "final-circle": "Last objective",
   },
-  "battle-royale": {
-    looting: "Looting",
-    rotation: "Rotating zone",
-    combat: "Engaged fight",
-    "final-circle": "Endgame circle",
+  racing: {
+    looting: "Grid / setup",
+    rotation: "Corner sequence",
+    combat: "Overtake window",
+    "final-circle": "Final lap",
+  },
+  strategy: {
+    looting: "Economy setup",
+    rotation: "Map control",
+    combat: "Engagement",
+    "final-circle": "Endgame push",
+  },
+  platformer: {
+    looting: "Route setup",
+    rotation: "Checkpoint run",
+    combat: "Precision section",
+    "final-circle": "Final stretch",
+  },
+  unknown: {
+    looting: "Quiet / setup",
+    rotation: "Movement",
+    combat: "Action",
+    "final-circle": "Endgame",
   },
 };
 
@@ -243,7 +303,7 @@ export function ControlRoom() {
   const [autoOverlayCountdown, setAutoOverlayCountdown] = useState<number | null>(null);
   const [analysisSamples, setAnalysisSamples] = useState<AnalysisSample[]>([]);
   const [demoEvents, setDemoEvents] = useState<DemoEvent[]>([]);
-  const [gamePhasePreset, setGamePhasePreset] = useState<GamePhasePreset>("action");
+  const [gamePhasePreset, setGamePhasePreset] = useState<GameCategoryPreset>("arena");
   const [activeStudioView, setActiveStudioView] = useState<StudioView>("studio");
   const chatSocketRef = useRef<WebSocket | null>(null);
   const questsRef = useRef<Sidequest[]>([]);
@@ -323,6 +383,16 @@ export function ControlRoom() {
     const phaseLabels = gamePhasePresets[gamePhasePreset];
     return [
       {
+        label: "Game category",
+        value: gameCategoryLabels[gamePhasePreset],
+        detail: "Streamer-selected model",
+      },
+      {
+        label: "Game",
+        value: signals.gameplay.game,
+        detail: "Used for genre-safe quest wording",
+      },
+      {
         label: "Match phase",
         value: phaseLabels[signals.gameplay.phase],
         detail: analysis.status === "running" ? "Broad visual tempo" : "Saved context",
@@ -356,6 +426,28 @@ export function ControlRoom() {
         detail: "Quest flavour",
       },
   ], [chatStatus, signals.profile.intensity, signals.profile.style, signals.sentiment.mood, signals.sentiment.request]);
+  const generatorRead = useMemo(() => [
+    {
+      label: "MVP provider",
+      value: "No external model",
+      detail: "D-055 keeps the judged path credential-free.",
+    },
+    {
+      label: "Primary generator",
+      value: "Algorithmic candidates",
+      detail: "Exactly three options from gameplay, chat mood, and profile.",
+    },
+    {
+      label: "Quest authority",
+      value: "Deterministic engine",
+      detail: "Unsafe, infeasible, or malformed quests are replaced.",
+    },
+    {
+      label: "Fallback order",
+      value: "Algorithmic -> safe library",
+      detail: "Streamer can still manually review before overlay.",
+    },
+  ], []);
   const rollingAnalysis = useMemo(() => {
     if (analysisSamples.length === 0) {
       return {
@@ -447,6 +539,11 @@ export function ControlRoom() {
       title: "Game",
       items: [
         readinessItems[0],
+        {
+          label: "Category",
+          value: gameCategoryLabels[gamePhasePreset],
+          ready: true,
+        },
         {
           label: "Phase",
           value: gamePhasePresets[gamePhasePreset][signals.gameplay.phase],
@@ -657,6 +754,22 @@ export function ControlRoom() {
     });
     setChatMessage(`Twitch chat vote ${choice} counted for ${quest.title}.`);
     logDemoEvent("Viewer vote", `Vote ${choice} counted for ${quest.title}.`);
+  }
+
+  function applyGameCategory(nextCategory: GameCategoryPreset) {
+    setGamePhasePreset(nextCategory);
+    setSignals((current) => ({
+      ...current,
+      gameplay: {
+        ...current.gameplay,
+        game: gameCategoryDemoGames[nextCategory],
+      },
+    }));
+  }
+
+  function resetDemoContext() {
+    setGamePhasePreset("arena");
+    setSignals(goldenScenario);
   }
 
   function connectTwitchChat() {
@@ -948,6 +1061,24 @@ export function ControlRoom() {
     </div>
   );
 
+  const enginePanel = (
+    <section className="engine-card" aria-label="Quest generator status">
+      <div className="section-heading compact-heading">
+        <div><p className="step">Quest generator</p><h3>Engine stack</h3></div>
+        <span className="provider">MVP decided</span>
+      </div>
+      <div className="engine-flow">
+        {generatorRead.map((item) => (
+          <div key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <p>{item.detail}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+
   const studioPanel = (
     <section className="view-panel">
       <div className="context-columns">
@@ -986,15 +1117,18 @@ export function ControlRoom() {
         <div className="signal-mode-panel">
           <div className="section-heading compact-heading">
             <div><p className="step">Adjustments</p><h3>Streamer controls</h3></div>
-            <button className="text-button" onClick={() => setSignals(goldenScenario)}>Reset demo</button>
+            <button className="text-button" onClick={resetDemoContext}>Reset demo</button>
           </div>
           <div className="form-grid">
-            <label>Game phase set
-              <select value={gamePhasePreset} onChange={(event) => setGamePhasePreset(event.target.value as GamePhasePreset)}>
-                <option value="action">Action / arena</option>
-                <option value="objective">MOBA / objective</option>
-                <option value="battle-royale">Battle royale</option>
+            <label>Game category
+              <select value={gamePhasePreset} onChange={(event) => applyGameCategory(event.target.value as GameCategoryPreset)}>
+                {(Object.keys(gameCategoryLabels) as GameCategoryPreset[]).map((category) => (
+                  <option value={category} key={category}>{gameCategoryLabels[category]}</option>
+                ))}
               </select>
+            </label>
+            <label>Demo game
+              <input value={signals.gameplay.game} onChange={(event) => setSignals((current) => ({ ...current, gameplay: { ...current.gameplay, game: event.target.value } }))} />
             </label>
             <label>Match phase
               <select value={signals.gameplay.phase} onChange={(event) => setSignals((current) => ({ ...current, gameplay: { ...current.gameplay, phase: event.target.value as GenerationRequest["gameplay"]["phase"] } }))}>
@@ -1037,7 +1171,10 @@ export function ControlRoom() {
             </label>
           </div>
         </div>
-        {automationPanel}
+        <div className="studio-side-stack">
+          {enginePanel}
+          {automationPanel}
+        </div>
       </div>
     </section>
   );
@@ -1161,7 +1298,7 @@ export function ControlRoom() {
           </section>
           <section className="context-column" aria-label="Game phase model">
             <div className="section-heading compact-heading">
-              <div><p className="step">Phase model</p><h3>{gamePhasePreset.replace("-", " ")}</h3></div>
+              <div><p className="step">Phase model</p><h3>{gameCategoryLabels[gamePhasePreset]}</h3></div>
             </div>
             <div className="context-list">
               {Object.entries(gamePhasePresets[gamePhasePreset]).map(([phase, label]) => (

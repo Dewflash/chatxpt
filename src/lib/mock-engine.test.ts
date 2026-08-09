@@ -30,4 +30,27 @@ describe("generateMockSidequests", () => {
     expect(quests).toHaveLength(3);
     expect(quests.some((quest) => /caster|narrat/i.test(`${quest.title} ${quest.instruction}`))).toBe(false);
   });
+
+  it("adapts fallback quest language for non-shooter game families", () => {
+    const games = [
+      { game: "Mario Kart", expected: /corner|lap|sector|overtake/i },
+      { game: "StarCraft", expected: /scout|map control|macro|resources|strategy/i },
+      { game: "Celeste", expected: /checkpoint|route|section|platformer/i },
+    ];
+
+    for (const { game, expected } of games) {
+      const quests = generateMockSidequests({
+        ...goldenScenario,
+        gameplay: {
+          ...goldenScenario.gameplay,
+          game,
+          health: 80,
+        },
+      });
+      const text = quests.map((quest) => `${quest.title} ${quest.instruction} ${quest.rationale}`).join(" ");
+
+      expect(quests).toHaveLength(3);
+      expect(text).toMatch(expected);
+    }
+  });
 });
