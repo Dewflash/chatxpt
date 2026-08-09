@@ -11,6 +11,7 @@ import {
   intelligenceSnapshotSchema,
   overlayViewModelSchema,
   questCycleStateSchema,
+  sessionHistorySnapshotSchema,
   signalObservationSchema,
   streamSessionSchema,
   streamerReadinessViewSchema,
@@ -33,6 +34,7 @@ import {
   contractFixtureSession,
   contractFixtureStreamerView,
   contractFixtureUiX01ReadinessCatalog,
+  contractFixtureUiX04SessionHistory,
   contractFixtureUiX06QuestStateCatalog,
   contractFixtureUiX06RoleViewCatalog,
   contractFixtureViewerView,
@@ -526,6 +528,26 @@ describe("streamer setup readiness boundary", () => {
     expect(
       contractFixtureUiX01ReadinessCatalog["r4.setup.misconfigured.v1"].recommendedAction,
     ).toBe("connect-twitch");
+  });
+});
+
+describe("session history boundary", () => {
+  it("publishes a privacy-safe session history fixture", () => {
+    expect(sessionHistorySnapshotSchema.safeParse(contractFixtureUiX04SessionHistory).success).toBe(true);
+    expect(contractFixtureUiX04SessionHistory.evidenceClass).toBe("fixture");
+    expect(contractFixtureUiX04SessionHistory.summary).toMatchObject({
+      totalQuestCycles: 2,
+      succeeded: 1,
+      skipped: 1,
+      totalAcceptedVotes: 3,
+    });
+    expect(contractFixtureUiX04SessionHistory.privacy).toMatchObject({
+      rawChatHistoryRetained: false,
+      viewerIdentifiersIncluded: false,
+      privateVoteReceiptsIncluded: false,
+    });
+    expect(contractFixtureUiX04SessionHistory.entries[0]).not.toHaveProperty("viewerId");
+    expect(contractFixtureUiX04SessionHistory.entries[0]).not.toHaveProperty("rawChat");
   });
 });
 

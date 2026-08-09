@@ -18,6 +18,7 @@ import {
   type ViewerRecoveryReader,
   type ViewerRecoveryState,
 } from "../core";
+import { buildSessionHistoryFromReceipts } from "./session-history";
 import {
   PREPARING_SESSION_EXPIRY_MS,
   SESSION_RECONNECT_GRACE_MS,
@@ -32,6 +33,8 @@ import {
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
   type RealtimeAccessGrantStore,
+  type SessionHistoryReadInput,
+  type SessionHistoryReader,
   type SessionLifecycleCommitResult,
   type SessionLifecycleStore,
   type SessionPresenceAction,
@@ -62,6 +65,7 @@ export class MemoryChatXptPersistence
     HostedBoardSessionDirectory,
     RoleSnapshotPublisher,
     RealtimeAccessGrantStore,
+    SessionHistoryReader,
     SessionLifecycleStore,
     ViewerRecoveryReader
 {
@@ -465,6 +469,17 @@ export class MemoryChatXptPersistence
     );
   }
 
+  async readSessionHistory(input: SessionHistoryReadInput) {
+    return buildSessionHistoryFromReceipts({
+      broadcasterId: input.broadcasterId,
+      receipts: [...this.receipts.values()].map((receipt) => clone(receipt)),
+      generatedAt: input.at,
+      limit: input.limit,
+      source: "orchestrator",
+      evidenceClass: "live",
+    });
+  }
+
   private replaceState(nextState: AuthoritativeSessionState): void {
     const previous = this.states.get(nextState.session.sessionId);
     this.states.set(nextState.session.sessionId, clone(nextState));
@@ -501,5 +516,6 @@ export function createMemoryPersistenceRuntime() {
     accessGrants: backend,
     dueVotes: backend,
     viewerRecovery: backend,
+    sessionHistory: backend,
   };
 }
