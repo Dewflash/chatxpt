@@ -268,7 +268,7 @@ Raw chat is processed in memory by default. If Joelyrk's D2-15 choice requires t
 | --- | --- | --- | --- |
 | D2-16 | Model-ready context construction and signal prioritisation | Open | — |
 | D2-17 | Provider adapter, structured-output validation, retry, and observability design | Open | — |
-| D2-18 | Algorithmic candidate generation when free AI is unavailable | Open | — |
+| D2-18 | Algorithmic candidate generation when free AI is unavailable | Resolved by Role 1 deadline override | Use a credential-free deterministic strategy that emits exactly three game-neutral candidate quests from validated intelligence, streamer profile, and recent quest titles. It rotates a curated safe template set by session/cycle/revision, avoids recent titles when alternatives exist, labels every candidate as `algorithmic` with `provider: null`, and cites only fresh, high-confidence known canonical signal IDs compatible with Role 3 validation. Missing, stale, weak, unknown, unsupported, or unavailable observations are omitted rather than fabricated. Role 3 remains the deterministic validation, safety, feasibility, scoring, and replacement authority before any candidate reaches voting or overlay surfaces. |
 
 ### R2-P10 — Provider evaluation and adapter
 
@@ -278,7 +278,9 @@ Raw chat is processed in memory by default. If Joelyrk's D2-15 choice requires t
 
 **Acceptance:** No client secret; runtime validation; clear provider status; no paid calls; recommendation recorded with Role 3 and sent to Role 1.
 
-**Progress (6 August 2026):** `role-2/provider-fallback-evaluation` adds a provider-neutral, injected trial/fallback strategy plus privacy-safe operational observations and summary metrics. Fixture tests cover valid provider output, malformed/partial/overfull/incorrectly-labelled output, timeout, refusal, rate limiting, unavailability, generic failure, cancellation, and invalid algorithmic recovery. No external provider call, provider/model selection, concrete algorithmic policy, or joint recommendation is claimed; D23-01 through D23-03 and D2-16 through D2-18 remain open.
+**Progress (6 August 2026):** `role-2/provider-fallback-evaluation` adds a provider-neutral, injected trial/fallback strategy plus privacy-safe operational observations and summary metrics. Fixture tests cover valid provider output, malformed/partial/overfull/incorrectly-labelled output, timeout, refusal, rate limiting, unavailability, generic failure, cancellation, and invalid algorithmic recovery. No external provider call, provider/model selection, or joint recommendation is claimed; D23-01 through D23-03 and D2-16 through D2-17 remain open.
+
+**Progress (9 August 2026):** `codex/role-2-algorithmic-candidate-strategy` implements the accepted D2-18 credential-free strategy with exactly-three output, recent-title avoidance, provider-null algorithmic metadata, and Role 3-compatible source-signal citation filtering. Fixture tests cover deterministic output, duplicate-title avoidance, raw-chat exclusion, low-confidence omission, stale-signal omission, and validating provider compatibility. This is component evidence only; no external provider call or real-input candidate run is claimed.
 
 ### R2-P11 — Context and candidate generation
 

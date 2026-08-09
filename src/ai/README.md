@@ -6,7 +6,7 @@ Role 2 owns implementations behind the provider ports exported by `index.ts`. Co
 
 `createProviderFallbackGenerationStrategy` composes an injected provider strategy with an injected credential-free algorithmic strategy. It enforces a bounded provider timeout, rejects malformed or incorrectly labelled output, preserves caller cancellation, and emits privacy-safe attempt observations without raw prompts or provider payloads. `summariseProviderAttempts` reports pinned-provider success, fallback, malformed, timeout, rate-limit, and p50/p95 latency measurements.
 
-`createAlgorithmicCandidateStrategy` is the credential-free candidate path for the MVP. It deterministically selects three game-neutral quest prompts from canonical intelligence/profile/recent-title input, labels them `algorithmic`, cites only known canonical signal IDs when available, and never retains raw chat text or provider payloads.
+`createAlgorithmicCandidateStrategy` is the credential-free candidate path for the MVP. It deterministically selects three game-neutral quest prompts from canonical intelligence/profile/recent-title input, labels them `algorithmic`, cites only fresh, high-confidence known canonical signal IDs when available, and never retains raw chat text or provider payloads.
 
 [`PROVIDER_EVALUATION.md`](./PROVIDER_EVALUATION.md) defines the Role 2 operational half of the joint Role 2/3 trial matrix and records the fixture/live evidence boundary.
 

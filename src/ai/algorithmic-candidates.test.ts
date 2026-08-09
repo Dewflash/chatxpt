@@ -26,6 +26,41 @@ async function fixtureIntelligence(audience: AudienceSnapshot = contractFixtureA
   });
 }
 
+function audienceWithKnownSignal(options: {
+  readonly signalId: string;
+  readonly confidence: number;
+  readonly observedAt: number;
+}): AudienceSnapshot {
+  return intelligenceSnapshotSchema.parse({
+    envelope: {
+      ...contractFixtureEnvelope,
+      messageId: `algorithmic-intelligence-${options.signalId}`,
+    },
+    gameplay: contractFixtureGameplaySnapshot,
+    audience: {
+      ...contractFixtureAudienceSnapshot,
+      signals: [
+        {
+          signalId: options.signalId,
+          kind: "audience-energy",
+          observation: {
+            status: "known",
+            value: 0.9,
+            provenance: {
+              source: "algorithm",
+              method: "fixture-audience-pipeline",
+              confidence: options.confidence,
+              observedAt: options.observedAt,
+              receivedAt: options.observedAt,
+              evidenceClass: "fixture",
+            },
+          },
+        },
+      ],
+    },
+  }).audience;
+}
+
 describe("algorithmic candidate strategy", () => {
   it("produces exactly three canonical algorithmic candidates without a provider", async () => {
     const provider = createValidatingCandidateProvider(createAlgorithmicCandidateStrategy());
@@ -115,6 +150,46 @@ describe("algorithmic candidate strategy", () => {
       expect.arrayContaining(["audience-energy-known", "audience-intent-known"]),
     );
     expect(JSON.stringify(batch)).not.toContain("requesting quest please");
+  });
+
+  it("omits known low-confidence signal IDs that Role 3 would reject", async () => {
+    const provider = createValidatingCandidateProvider(createAlgorithmicCandidateStrategy());
+    const batch = await provider.generate({
+      envelope: contractFixtureCandidateBatch.envelope,
+      intelligence: await fixtureIntelligence(
+        audienceWithKnownSignal({
+          signalId: "audience-energy-low-confidence",
+          confidence: 0.1,
+          observedAt: contractFixtureEnvelope.occurredAt,
+        }),
+      ),
+      profile: contractFixtureProfile,
+      recentQuestTitles: [],
+    });
+
+    expect(batch.candidates.flatMap((candidate) => candidate.sourceSignalIds)).not.toContain(
+      "audience-energy-low-confidence",
+    );
+  });
+
+  it("omits known stale signal IDs that Role 3 would reject", async () => {
+    const provider = createValidatingCandidateProvider(createAlgorithmicCandidateStrategy());
+    const batch = await provider.generate({
+      envelope: contractFixtureCandidateBatch.envelope,
+      intelligence: await fixtureIntelligence(
+        audienceWithKnownSignal({
+          signalId: "audience-energy-stale",
+          confidence: 0.9,
+          observedAt: contractFixtureEnvelope.occurredAt - 30_001,
+        }),
+      ),
+      profile: contractFixtureProfile,
+      recentQuestTitles: [],
+    });
+
+    expect(batch.candidates.flatMap((candidate) => candidate.sourceSignalIds)).not.toContain(
+      "audience-energy-stale",
+    );
   });
 
   it("is deterministic for the same session, cycle, revision, and recent titles", async () => {

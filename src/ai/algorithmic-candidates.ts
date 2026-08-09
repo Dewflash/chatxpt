@@ -95,6 +95,10 @@ const algorithmicTemplates: readonly AlgorithmicTemplate[] = [
   },
 ] as const;
 
+const ROLE3_COMPATIBLE_MINIMUM_SIGNAL_CONFIDENCE = 0.5;
+const ROLE3_COMPATIBLE_MAXIMUM_GAMEPLAY_SIGNAL_AGE_MS = 15_000;
+const ROLE3_COMPATIBLE_MAXIMUM_AUDIENCE_SIGNAL_AGE_MS = 30_000;
+
 function normaliseTitle(title: string): string {
   return title.trim().toLocaleLowerCase();
 }
@@ -115,9 +119,21 @@ function rotate<T>(values: readonly T[], offset: number): readonly T[] {
 
 function knownSignalIds(input: CandidateInput): ReadonlyMap<string, readonly string[]> {
   const byKind = new Map<string, string[]>();
-  for (const snapshot of [input.intelligence.gameplay, input.intelligence.audience]) {
+  const now = input.envelope.occurredAt;
+  for (const [snapshot, maximumAgeMs] of [
+    [input.intelligence.gameplay, ROLE3_COMPATIBLE_MAXIMUM_GAMEPLAY_SIGNAL_AGE_MS],
+    [input.intelligence.audience, ROLE3_COMPATIBLE_MAXIMUM_AUDIENCE_SIGNAL_AGE_MS],
+  ] as const) {
     for (const signal of snapshot.signals) {
       if (signal.observation.status !== "known") continue;
+      const ageMs = now - signal.observation.provenance.observedAt;
+      if (
+        ageMs < 0 ||
+        ageMs > maximumAgeMs ||
+        signal.observation.provenance.confidence < ROLE3_COMPATIBLE_MINIMUM_SIGNAL_CONFIDENCE
+      ) {
+        continue;
+      }
       byKind.set(signal.kind, [...(byKind.get(signal.kind) ?? []), signal.signalId]);
     }
   }
