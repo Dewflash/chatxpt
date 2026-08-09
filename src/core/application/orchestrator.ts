@@ -453,6 +453,19 @@ export class ChatXptOrchestrator {
           events: [{ eventType: "session.emergency-cleared", attributes: {} }],
         },
       } satisfies QuestEngineResult;
+    } else if (command.type === "viewer.react") {
+      untrustedEngineResult = {
+        ok: true,
+        decision: {
+          nextState: current.questCycle,
+          events: [
+            {
+              eventType: "viewer.reaction-recorded",
+              attributes: { reaction: command.reaction, hypeDelta: 1 },
+            },
+          ],
+        },
+      } satisfies QuestEngineResult;
     } else {
       try {
         untrustedEngineResult = await this.dependencies.engine.decide({
@@ -501,6 +514,19 @@ export class ChatXptOrchestrator {
     }
     if ("code" in authoritative) {
       return { ok: false, error: authoritative };
+    }
+    if (command.type === "viewer.react") {
+      const communityHype = authoritative.state.communityHype + 1;
+      if (!Number.isSafeInteger(communityHype)) {
+        return { ok: false, error: error("validation", "Community hype limit has been reached") };
+      }
+      authoritative = {
+        ...authoritative,
+        state: {
+          ...authoritative.state,
+          communityHype,
+        },
+      };
     }
 
     let untrustedCommitResult: unknown;

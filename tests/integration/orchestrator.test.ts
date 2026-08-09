@@ -8,6 +8,7 @@ import {
   systemIntelligenceCommandSchema,
   systemQuestProgressCommandSchema,
   systemVoteCloseCommandSchema,
+  viewerReactionCommandSchema,
   type AuthoritativeSessionState,
   type OrchestratorDependencies,
   type AcceptedVoteTallyReader,
@@ -70,6 +71,21 @@ function command(commandId = "fixture-streamer-command", expectedRevision = 0) {
     type: "streamer.quest",
     action: "skip",
     candidateId: null,
+  });
+}
+
+function reactionCommand(commandId = "fixture-viewer-reaction", expectedRevision = 0) {
+  return viewerReactionCommandSchema.parse({
+    contractVersion: "1.0.0",
+    sessionId: contractFixtureSession.sessionId,
+    questCycleId: contractFixtureQuestCycle.envelope.questCycleId,
+    commandId,
+    correlationId: `correlation-${commandId}`,
+    expectedRevision,
+    issuedAt: ACCEPTED_AT,
+    actor: { kind: "anonymous", actorId: null },
+    type: "viewer.react",
+    reaction: "hype",
   });
 }
 
@@ -149,6 +165,39 @@ describe("Role 1 application orchestrator", () => {
     expect(recording.published[0]?.streamer.envelope.revision).toBe(1);
     expect(recording.published[0]?.viewer.envelope.revision).toBe(1);
     expect(recording.published[0]?.overlay.envelope.revision).toBe(1);
+  });
+
+  it("records viewer reactions as community hype without invoking the quest engine", async () => {
+    const state = initialState();
+    const liveState: AuthoritativeSessionState = {
+      ...state,
+      session: {
+        ...state.session,
+        status: "live",
+        startedAt: ACCEPTED_AT - 60_000,
+        capabilities: { ...state.session.capabilities, reactions: true },
+      },
+      communityHype: 4,
+    };
+    const repository = new FixtureSessionStateRepository([liveState]);
+    const recording = new RecordingFixturePublisher();
+    const engine = successfulEngine();
+    const orchestrator = new ChatXptOrchestrator(dependencies(repository, recording, engine));
+
+    const result = await orchestrator.execute(reactionCommand());
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.outcome).toBe("committed");
+    expect(result.receipt.state.session.revision).toBe(1);
+    expect(result.receipt.state.communityHype).toBe(5);
+    expect(result.receipt.events[0]?.event).toMatchObject({
+      eventType: "viewer.reaction-recorded",
+      attributes: { reaction: "hype", hypeDelta: 1 },
+    });
+    expect(engine.calls).toBe(0);
+    expect(recording.published[0]?.viewer.communityHype).toBe(5);
+    expect(recording.published[0]?.overlay.communityHype).toBe(5);
   });
 
   it("passes a canonical candidate batch through the engine before persistence and broadcast", async () => {
