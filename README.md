@@ -122,3 +122,7 @@ Each role also has an additive public `index.ts` in its owned source directory. 
 Submission-facing third-party disclosures live in [`docs/THIRD_PARTY_DISCLOSURES.md`](docs/THIRD_PARTY_DISCLOSURES.md). The disclosure covers runtime dependencies, development tooling, Twitch/OBS/Supabase/Vercel/provider status, data and asset boundaries, non-MVP platforms, and evidence-claim rules.
 
 No third-party datasets are bundled. Existing demo chat and gameplay events are synthetic and may be used only as test/diagnostic fixtures, not live-extraction evidence.
+
+## Submission packet
+
+The current repository-side submission map lives in [`docs/submission/SUBMISSION_PACKET_STATUS.md`](docs/submission/SUBMISSION_PACKET_STATUS.md). It links the prepared source docs, deck proposal/PDF, five-minute recording runbook, extension package, evidence boundaries, and the remaining owner actions for the final Garena submission.
