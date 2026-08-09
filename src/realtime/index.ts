@@ -36,6 +36,9 @@ export {
   type SubscribeToSnapshotsInput,
 } from "./subscriber";
 export {
+  HostedBoardAccessService,
+} from "./hosted-access";
+export {
   FALLBACK_ROOM_CODE_LENGTH,
   PREPARING_SESSION_EXPIRY_MS,
   SESSION_RECONNECT_GRACE_MS,
@@ -45,6 +48,10 @@ export {
   type ChatXptPersistenceRuntime,
   type CommitSessionLifecycleInput,
   type DueVoteCycleReader,
+  type HostedBoardAccessRequest,
+  type HostedBoardAccessResult,
+  type HostedBoardSessionDirectory,
+  type HostedBoardSessionRecord,
   type LifecycleStoreCommitResult,
   type RealtimeAccessGrant,
   type RealtimeAccessGrantStore,

@@ -26,6 +26,8 @@ import {
   type CandidateBatchRepository,
   type CommitSessionLifecycleInput,
   type DueVoteCycleReader,
+  type HostedBoardSessionDirectory,
+  type HostedBoardSessionRecord,
   type LifecycleStoreCommitResult,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
@@ -57,6 +59,7 @@ export class MemoryChatXptPersistence
     AcceptedVoteTallyReader,
     CandidateBatchRepository,
     DueVoteCycleReader,
+    HostedBoardSessionDirectory,
     RoleSnapshotPublisher,
     RealtimeAccessGrantStore,
     SessionLifecycleStore,
@@ -294,6 +297,19 @@ export class MemoryChatXptPersistence
     return views === undefined ? null : clone(views[role]);
   }
 
+  async findHostedBoardSession(roomCode: string): Promise<HostedBoardSessionRecord | null> {
+    const sessionId = this.roomSessions.get(roomCode);
+    if (sessionId === undefined) return null;
+    const state = this.states.get(sessionId);
+    if (state === undefined) return null;
+    return {
+      sessionId: state.session.sessionId,
+      roomCode,
+      status: state.session.status,
+      revision: state.session.revision,
+    };
+  }
+
   async grant(input: Omit<RealtimeAccessGrant, "revokedAt">): Promise<RealtimeAccessGrant> {
     if (!this.states.has(input.sessionId)) throw new Error("Cannot grant access to a missing session");
     const value: RealtimeAccessGrant = { ...input, revokedAt: null };
@@ -478,6 +494,7 @@ export function createMemoryPersistenceRuntime() {
     mode: "memory" as const,
     sessions: backend,
     lifecycle: backend,
+    hostedBoardSessions: backend,
     candidates: backend,
     acceptedVotes: backend,
     snapshots: backend,

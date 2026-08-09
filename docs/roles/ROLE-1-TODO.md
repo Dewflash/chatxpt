@@ -47,6 +47,12 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 - Memory and Supabase readers return only the requesting viewer's accepted candidate/source/time plus `sessionPoints: 0` until the reward read model is persisted.
 - Hosted-board discovery (UI-X08) and Twitch-chat delivery/acknowledgement (UI-X07) remain open under R1-016 after this pass.
 
+## Current R1-016 hosted-board access pass
+
+- `codex/role-1-hosted-access` adds the UI-X08 server-side `HostedBoardAccessService` for room-code lookup, viewer access grants, direct path/share data, and typed invalid/not-found/inactive/unavailable states.
+- Memory and Supabase adapters expose a hosted-board session directory backed by the existing session room-code records.
+- Twitch-chat delivery/acknowledgement (UI-X07) remains open under R1-016 after this pass.
+
 ## Decisions Role 1 still owns
 
 - Shared contract acceptance and breaking changes

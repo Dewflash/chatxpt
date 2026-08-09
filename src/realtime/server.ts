@@ -15,6 +15,7 @@ export {
   SupabaseChatXptDataApi,
   SupabaseDataError,
   SupabaseDueVoteCycleReader,
+  SupabaseHostedBoardSessionDirectory,
   SupabaseRoleSnapshotPublisher,
   SupabaseRealtimeAccessGrantStore,
   SupabaseSessionLifecycleStore,

@@ -37,6 +37,8 @@ import {
   type ChatXptPersistenceRuntime,
   type CommitSessionLifecycleInput,
   type DueVoteCycleReader,
+  type HostedBoardSessionDirectory,
+  type HostedBoardSessionRecord,
   type LifecycleStoreCommitResult,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
@@ -73,6 +75,14 @@ const acceptedVoteRecoveryRowSchema = z
         sourceMode: z.enum(["twitch-extension", "hosted-board", "twitch-chat"]),
       })
       .passthrough(),
+  })
+  .passthrough();
+const hostedBoardSessionRowSchema = z
+  .object({
+    session_id: z.string().min(1).max(128),
+    room_code: z.string().regex(/^[A-HJ-NP-Z2-9]{8}$/),
+    status: z.enum(["offline", "preparing", "live", "ended"]),
+    revision: z.number().int().nonnegative(),
   })
   .passthrough();
 
@@ -283,6 +293,16 @@ export class SupabaseChatXptDataApi {
       .maybeSingle();
     throwIfError(error);
     return data === null ? null : rowJson(data, "snapshot");
+  }
+
+  async loadHostedBoardSession(roomCode: string): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("stream_sessions")
+      .select("session_id, room_code, status, revision")
+      .eq("room_code", roomCode)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
   }
 
   async grantRealtimeAccess(
@@ -595,6 +615,22 @@ export class SupabaseRoleSnapshotPublisher implements RoleSnapshotPublisher {
   }
 }
 
+export class SupabaseHostedBoardSessionDirectory implements HostedBoardSessionDirectory {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async findHostedBoardSession(roomCode: string): Promise<HostedBoardSessionRecord | null> {
+    const raw = await this.api.loadHostedBoardSession(roomCode);
+    if (raw === null) return null;
+    const row = hostedBoardSessionRowSchema.parse(raw);
+    return {
+      sessionId: row.session_id,
+      roomCode: row.room_code,
+      status: row.status,
+      revision: row.revision,
+    };
+  }
+}
+
 const realtimeAccessGrantRowSchema = z
   .object({
     principal_id: z.uuid(),
@@ -730,12 +766,14 @@ export function createSupabasePersistenceRuntime(
   const acceptedVotes = new SupabaseAcceptedVoteTallyReader(api);
   const viewerRecovery = new SupabaseViewerRecoveryReader(api);
   const snapshots = new SupabaseRoleSnapshotPublisher(api);
+  const hostedBoardSessions = new SupabaseHostedBoardSessionDirectory(api);
   const dueVotes = new SupabaseDueVoteCycleReader(api);
   return {
     mode: "supabase",
     api,
     sessions,
     lifecycle: new SupabaseSessionLifecycleStore(api, sessions),
+    hostedBoardSessions,
     candidates: new SupabaseCandidateBatchRepository(api),
     acceptedVotes,
     snapshots,
