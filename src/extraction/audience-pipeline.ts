@@ -250,7 +250,9 @@ export function createAudienceSignalPipeline(
 
         const newestReceivedAt = event.envelope.receivedAt;
         samples = [...samples, sampleFromEvent(event)].filter(
-          (sample) => newestReceivedAt - sample.receivedAt <= rollingWindowMs,
+          (sample) =>
+            newestReceivedAt - sample.receivedAt <= rollingWindowMs &&
+            sample.evidenceClass === event.envelope.evidenceClass,
         );
 
         yield buildSnapshot({

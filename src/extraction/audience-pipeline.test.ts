@@ -142,4 +142,31 @@ describe("createAudienceSignalPipeline", () => {
       },
     });
   });
+
+  it("partitions the rolling window when fixture and live evidence classes mix", async () => {
+    const snapshots = await collect([
+      event(0, { text: "quest please" }),
+      event(1, {
+        envelope: {
+          ...event(1).envelope,
+          messageId: "live-twitch-message",
+          source: "twitch",
+          evidenceClass: "live",
+        },
+        text: "hello",
+      }),
+    ]);
+    const latest = snapshots.at(-1)!;
+
+    expect(latest.envelope.evidenceClass).toBe("live");
+    expect(latest.sampleSize).toBe(1);
+    expect(signalValue(latest, "audience-repeated-requests")).toBe(0);
+    expect(latest.signals[0].observation).toMatchObject({
+      provenance: {
+        source: "algorithm",
+        method: "role-2-audience-rolling-window",
+        evidenceClass: "live",
+      },
+    });
+  });
 });
