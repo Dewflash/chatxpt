@@ -9,7 +9,7 @@ import type {
   QuestStatus,
   Sidequest,
 } from "@/lib/domain";
-import { publishActiveQuest, readActiveQuest } from "@/lib/overlay-store";
+import { publishActiveQuest } from "@/lib/overlay-store";
 
 type CaptureStatus = "idle" | "starting" | "running" | "stopped" | "error";
 
@@ -310,8 +310,8 @@ export function ControlRoom() {
   const demoEventIdRef = useRef(0);
 
   useEffect(() => {
-    const initialRead = window.setTimeout(() => setActiveQuest(readActiveQuest()), 0);
-    return () => window.clearTimeout(initialRead);
+    const initialClear = window.setTimeout(() => publishActiveQuest(null), 0);
+    return () => window.clearTimeout(initialClear);
   }, []);
 
   useEffect(() => {
@@ -627,6 +627,11 @@ export function ControlRoom() {
   ], [streamMetricItems]);
 
   const generate = useCallback(async () => {
+    if (analysis.status !== "running") {
+      setError("Start game capture before generating quests.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     setWarning("");
@@ -652,7 +657,7 @@ export function ControlRoom() {
     } finally {
       setLoading(false);
     }
-  }, [logDemoEvent, signals]);
+  }, [analysis.status, logDemoEvent, signals]);
 
   function addVote(id: string) {
     setVotes((current) => ({ ...current, [id]: (current[id] || 0) + 1 }));
@@ -1423,8 +1428,12 @@ export function ControlRoom() {
             <button onClick={connectTwitchChat}>
               {chatStatus === "connected" ? "Reconnect chat" : "Connect chat"}
             </button>
-            <button className="primary-ribbon-action" onClick={generate} disabled={loading}>
-              {loading ? "Reading..." : "Generate now"}
+            <button
+              className="primary-ribbon-action"
+              onClick={generate}
+              disabled={loading || analysis.status !== "running"}
+            >
+              {loading ? "Reading..." : analysis.status === "running" ? "Generate now" : "Start capture first"}
             </button>
             <a href="/overlay" target="_blank" rel="noreferrer">Open overlay</a>
           </div>

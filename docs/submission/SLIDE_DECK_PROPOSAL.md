@@ -1,210 +1,188 @@
-# ChatXPT Slide Deck Proposal
+# ChatXPT Competition Deck
 
-**Package purpose:** Competition proposal deck outline for a maximum 15-slide PDF.
+**Format:** 15 slides, 16:9. Slides 2-5 are `OVERVIEW`, slides 6-10 are `USERS`, slides 11-14 are `MECHANISM`, and slide 15 is `FUTURE`.
 
-**Communication job:** By the end, judges should understand why ChatXPT is a credible AI livestream engagement product because it turns real gameplay, audience intent, and streamer boundaries into safe viewer-voted sidequests while clearly separating implemented evidence from planned proof.
+**Communication job:** By the end, judges should understand that ChatXPT turns livestream reactions into safe, gameplay-aware viewer agency through an AI-ready intelligence layer, deterministic quest authority, and Twitch/OBS surfaces that fit a streamer's existing workflow.
 
-**Evidence label legend:** `[real]` means proven by a manifest `real` entry. `[fixture]` means deterministic fixture/test or fixture screenshot evidence. `[diagnostic]` means source inspection, local fallback, static checks, or planning evidence only. `[unknown]` means the repo defines the intended behaviour, but no current manifest entry proves it.
+**Evidence language:** Research findings are attributed on-slide. Product claims distinguish implemented source, fixture-rendered evidence, current local/demo behaviour, and future work. The deck does not claim measured retention or revenue uplift.
 
-**Current evidence boundary:** `docs/evidence/manifest.json` currently records repository/process validation as inspection-only and Role 5 fixture-rendered viewer/overlay screenshots as fixture-only. It records no real Twitch, OBS, Supabase cloud, Vercel deployment, external model-provider, real OCR, real gameplay, or end-to-end golden workflow evidence.
+## Slide 1 - ChatXPT
 
-## Slide 1: ChatXPT Turns Livestream Chat Into Playable Sidequests
+**Headline:** Viewer agency, generated live.
 
-- AI stream director for game streamers on Twitch.
-- Converts gameplay moments, audience behaviour, and streamer preferences into exactly three safe sidequest options.
-- Viewers vote; the winning quest becomes an OBS broadcast moment.
+**Subhead:** An AI stream director that turns gameplay context, audience energy, and streamer style into safe sidequests viewers choose in real time.
 
-**Evidence labels:** product promise `[diagnostic]`; end-to-end live proof `[unknown]`.
+**Team:** Yong Chen Jun, Kevin (Team Lead); Joel Yap; Fred; Lim Jia Yin; Phua Jun Kai.
 
-**Screenshots/assets needed:** Hero visual from final demo showing Studio, viewer vote, and overlay in one composition; avoid implying live evidence until manifest entry exists.
+**Repo lens:** `README.md` | `docs/PRODUCT_BRIEF.md`
 
-## Slide 2: Livestream Chat Has Energy, But Little Structured Agency
+## Slide 2 - The creator gap is widening
 
-- Viewers suggest ideas, react, and spam chat, but streamers cannot safely process all of it while playing.
-- Static polls and fixed rewards do not adapt to the current match, audience mood, or streamer limits.
-- The missed opportunity is not more chat volume; it is safe, contextual participation.
+One 2024-2025 audit of the Spanish-speaking Twitch ecosystem reported 75.23% creator attrition, 90% of audience attention concentrated in the top 20%, and a 27.4% average-audience decline among creators active in both periods. This is a regional preprint, not a global Twitch estimate, but it illustrates the discoverability pressure faced by emerging creators.
 
-**Evidence labels:** problem framing `[diagnostic]`; participant validation `[unknown]`.
+**Takeaway:** Better gameplay alone is not enough. Smaller streamers need repeatable, participatory moments that make personality visible and give viewers a reason to stay involved.
 
-**Screenshots/assets needed:** Optional sanitized observation quote or workflow screenshot after `docs/research/PRODUCT-VALIDATION.md` receives real participant evidence.
+**Evidence:** Padilla, *The Shrinking Creator Economy*, OSF preprint, 2025.
 
-## Slide 3: The Primary Users Are Streamers, Viewers, and Moderators
+**Repo lens:** `docs/research/PRODUCT-VALIDATION.md` | `docs/PRODUCT_BRIEF.md`
 
-- Streamers need hands-on control, persistent setup, safety limits, and low distraction.
-- Viewers want a fast way to influence the stream without leaving Twitch.
-- Moderators and stream teams need compact controls, status clarity, and emergency recovery.
-- Judges and maintainers need proof labels that distinguish real, fixture, diagnostic, and unknown states.
+## Slide 3 - Today's engagement is manual, shallow, and tiring to sustain
 
-**Evidence labels:** target users from product brief and role plans `[diagnostic]`; usability observations `[unknown]`.
+**Problem statement:** Livestream chat creates lots of messages but little structured participation. Turning those reactions into engaging content is inconvenient and mentally tiring because the streamer must read, interpret, moderate, invent, and operate controls while still playing.
 
-**Screenshots/assets needed:** Studio setup/status screenshot for streamer; Twitch/hosted viewer screenshot for viewer; compact Live Config screenshot for moderator.
+- Fast chat is noisy; quiet chat offers too little signal.
+- Viewers comment, but rarely influence the next playable moment.
+- Manual polls and ad hoc challenges interrupt gameplay and demand constant attention.
+- Repetitive sessions make personality depend on nonstop improvisation.
+- Generic engagement tools ignore game state, audience mood, and streamer boundaries.
 
-## Slide 4: The Product Promise Is A Closed Participation Loop
+**Repo lens:** `docs/PRODUCT_BRIEF.md` | `docs/research/PRODUCT-VALIDATION.md`
 
-- ChatXPT watches real gameplay and audience signals through authorised adapters.
-- Role 2 intelligence proposes exactly three structured candidate quests.
-- Role 3 validates safety, feasibility, timing, fallback, voting, progress, and outcome rules.
-- Role 1 persists one authoritative revision and broadcasts safe views to Studio, viewers, and OBS.
+## Slide 4 - ChatXPT closes the loop from signal to shared moment
 
-**Evidence labels:** architecture/contracts `[diagnostic]`; Role 5 visual fixture surfaces `[fixture]`; live closed loop `[unknown]`.
+1. **Unstructured reactions become context:** gameplay signals, chat energy, and saved streamer preferences are normalised separately.
+2. **Manual invention becomes fast generation:** the intelligence layer proposes exactly three distinct, vote-ready sidequests.
+3. **Risk becomes controlled:** deterministic validation applies safety, feasibility, duplication, timing, and streamer-boundary rules.
+4. **Participation becomes visible:** viewers vote in Twitch, the winner appears in OBS, and progress and outcomes return to the shared session.
 
-**Screenshots/assets needed:** One clean architecture diagram or final golden-workflow sequence with session/cycle revision visible in evidence notes.
+**Core loop:** Observe -> understand -> propose three -> validate -> vote -> activate -> resolve -> learn.
 
-## Slide 5: ChatXPT Stays Twitch-First Without Becoming Twitch-Locked
+**Repo lens:** `src/core/` | `src/ai/` | `src/quest-engine/` | `src/viewer/`
 
-- Twitch is the only implemented MVP platform.
-- Twitch Extension is the primary viewer surface; hosted Quest Board and `1`/`2`/`3` Twitch-chat voting are fallbacks.
-- OBS Browser Source is visual output only, not the configuration or voting surface.
-- YouTube, Discord, TikTok, and other platforms remain disabled `Coming Soon` options.
+## Slide 5 - The full product is broad; the MVP proves one complete path
 
-**Evidence labels:** accepted product scope `[diagnostic]`; Twitch test registration/runtime `[unknown]`.
+**Full ChatXPT:** Cross-platform AI stream director; persistent streamer and viewer profiles; multi-game intelligence; engagement analytics; adaptive quest timing; platform adapters; account and session history.
 
-**Screenshots/assets needed:** Twitch Extension hosted/local test screenshots after allowlisted test evidence; hosted board fallback screenshot already has fixture evidence.
+**Twitch-first MVP:** ChatXPT Studio; Twitch Extension viewer voting; hosted board and chat fallbacks; OBS Browser Source overlay; real gameplay capture interface; gameplay/chat/profile context; credential-free algorithmic candidate generation; deterministic validation and lifecycle.
 
-## Slide 6: AI Contributes Context, But Determinism Holds Authority
+**Explicitly deferred:** non-Twitch adapters, public SDK/API, billing, persistent monetary rewards, official game telemetry partnerships, production-scale moderation, and public Extension review.
 
-- AI contribution is scoped to gameplay/audience intelligence and candidate generation.
-- The product never requires paid model usage for the MVP.
-- Provider output must be structured, validated, and routed through Role 3 before viewers see it.
-- D-055 adopts no external model provider for the judged MVP; credential-free algorithms and deterministic fallback continue the workflow.
+**Repo lens:** `AGENTS.md` | `docs/PRODUCT_BRIEF.md` | `docs/DECISIONS.md`
 
-**Evidence labels:** provider decision and fallback strategy `[diagnostic]`; algorithmic path on real inputs `[unknown]`; external provider trial `[unknown/future]`.
+## Slide 6 - Twitch gives the MVP an interactive surface without replacing the stream
 
-**Screenshots/assets needed:** Studio intelligence status screenshot showing algorithmic and deterministic fallback labels after Role 1 promotes canonical UI-X09 fixtures or live evidence exists.
+Twitch supports panel, overlay, and video-component Extensions, so ChatXPT can place voting beside the live video. OBS remains the broadcast tool, and ChatXPT adds a Browser Source rather than hosting video.
 
-## Slide 7: Gameplay Understanding Is Honest About Confidence And Unknowns
+**First setup:** Connect Twitch -> select the game/capture source -> add the ChatXPT overlay URL to one OBS scene -> save streamer preferences.
 
-- OBS Virtual Camera is the accepted MVP capture path for raw game frames.
-- Universal visual signals cover broad activity, quiet, and transitions across action games.
-- Calibrated HUD facts are claimed only for configured games and evidenced regions.
-- Unsupported or low-confidence facts stay `unknown`; they are not guessed from expectations.
+**Future streams:** Open the same OBS scene -> existing sources remain -> ChatXPT observes the session -> automation can open a vote when the chosen trigger is met.
 
-**Evidence labels:** extraction boundary and synthetic tests `[diagnostic]`; synthetic visual/OCR tests `[fixture]`; real OBS frame extraction `[unknown]`.
+**Evidence:** Twitch Extensions documentation.
 
-**Screenshots/assets needed:** Privacy-reviewed OBS Virtual Camera frame capture with separated annotation overlays; one selected demo-game calibrated fact if proven.
+**Repo lens:** `src/integrations/twitch/` | `src/integrations/obs/` | `src/streamer/`
 
-## Slide 8: The Architecture Uses One Runtime Source Of Truth
+## Slide 7 - Streamers choose the level of automation
 
-- Next.js and TypeScript provide one product shell with role-owned public modules.
-- Zod schemas define versioned platform-neutral contracts for signals, profiles, sessions, candidates, votes, quest state, views, commands, and errors.
-- Role 1's orchestrator authenticates commands, checks revisions, deduplicates IDs, persists atomically, and broadcasts role-specific views.
-- Role modules integrate through public ports; private Twitch, OBS, provider, Supabase, and UI payloads stay outside Core.
+**Automatic mode:** Choose a trigger or interval, voting duration, and safety boundaries. ChatXPT assesses silently, generates three quests, opens the viewer vote, and sends the winner to the overlay.
 
-**Evidence labels:** source/contracts/tests `[diagnostic]`; live multi-client authority `[unknown]`.
+**Manual mode:** ChatXPT still analyses and proposes three quests, but the streamer reviews, approves, rejects, or delays them before viewers see a vote.
 
-**Screenshots/assets needed:** Compact data-flow diagram plus a later screenshot/log proving the same session and quest-cycle revision across Studio, two viewers, persistence, and OBS.
+**Always available:** emergency pause, skip/cancel/result controls, quick intensity changes, connection health, and clear current-context status.
 
-## Slide 9: The Quest Engine Makes Safety And Flow Deterministic
+**Repo lens:** `src/streamer/` | `src/core/application/` | `docs/DECISIONS.md`
 
-- It validates unsafe, illegal, humiliating, wagering, privacy-violating, unsupported, repetitive, stale, and impossible quests.
-- It opens a 30-second vote using authoritative time and rejects late votes.
-- It resolves majority, ties, zero-vote no-activation, cancellation, skip, failure, success, expiry, cooldown, points, and hype through deterministic rules.
-- Human-facing surfaces show allowed actions; they do not calculate winners, rewards, or lifecycle transitions.
+## Slide 8 - Customise once, keep the streamer's personality in the loop
 
-**Evidence labels:** engine and validation tests `[fixture]`; live quest cycle `[unknown]`.
+The streamer sets game category, preferred intervention mode, tone, style, intensity, accessibility needs, forbidden quest types, vote timing, and reward settings. Saved profiles are designed to carry these choices into later streams.
 
-**Screenshots/assets needed:** Test result summary or demo screenshots for proposed, voting, active, terminal, tie, zero-vote, and emergency states.
+**Benefit:** ChatXPT creates prompts that fit the creator instead of replacing the creator. The streamer retains veto power and can move between automatic and manual control.
 
-## Slide 10: Participation Converges Through One Private Service
+**Current MVP:** Studio exposes the control model and local demo settings. Persistent authenticated profile storage remains an integration target until proven in the final deployment.
 
-- Twitch Extension, hosted Quest Board, and Twitch-chat fallback all submit to the same authoritative vote ledger.
-- The first accepted vote per viewer and quest cycle is final.
-- Shared broadcasts remove private vote receipts and personal points.
-- Reconnecting viewers recover only their own accepted vote and session points through a private recovery seam.
+**Repo lens:** `src/streamer/` | `src/core/contracts/` | `src/quest-engine/`
 
-**Evidence labels:** memory/Supabase source and tests `[diagnostic]`; Role 5 viewer fixture screenshots `[fixture]`; real two-viewer vote `[unknown]`.
+## Slide 9 - Viewer agency turns watching into a shared decision
 
-**Screenshots/assets needed:** Two isolated viewer clients voting in one real or memory-backed run; include duplicate/late vote evidence only when exercised.
+**Viewer flow:** See exactly three options -> vote in the Twitch Extension -> receive acknowledgement and live tally -> see the winning quest on the stream -> follow progress and outcome.
 
-## Slide 11: Streamer Studio Keeps Control With Minimal Live Burden
+**Why it matters:** Research on 2,227 Twitch users found that social interaction and sense of community help explain livestream engagement, with stronger social motivations among viewers who preferred smaller channels. A large-scale Twitch study also found distinct participation styles across stream sizes.
 
-- Studio is the full management surface for Twitch setup, OBS capture, profile preferences, safety, game context, health, diagnostics, history, and advanced controls.
-- Twitch Live Config is the compact stream-time control surface inside Twitch.
-- Current Role 4 work includes a design-system handoff, setup shell, readiness/status presentation, and render-only status modules.
-- Authoritative connection, profile save, session wiring, and Live Config controls still depend on Role 1 gateway handoffs.
+**Benefit hypothesis:** Meaningful influence should increase participation, belonging, anticipation, and reasons to return. The MVP measures accepted-vote participation rather than claiming retention uplift in advance.
 
-**Evidence labels:** Role 4 source/tests `[diagnostic]`; final integrated Studio `[unknown]`.
+**Evidence:** Hilvert-Bruce et al., 2018; Wohn et al., *Audience and Streamer Participation at Scale on Twitch*, 2019/2020.
 
-**Screenshots/assets needed:** Desktop and narrow Studio screenshots for setup, returning readiness, generated quests, recovery, and compact Live Config.
+**Repo lens:** `src/viewer/` | `src/realtime/` | `docs/DECISIONS.md`
 
-## Slide 12: Viewer And Overlay Surfaces Show The Shared Payoff
+## Slide 10 - One interaction creates value for viewers, streamers, and platforms
 
-- Viewers see exactly three understandable options, vote acknowledgement, tallies, countdown, active quest, progress, results, hype, and recovery states.
-- Hosted board fallback supports desktop/mobile participation without a separate account.
-- Twitch-chat fallback explains the `1`/`2`/`3` voting path without putting chat parsing or sending inside Role 5.
-- OBS overlay stays read-only and low-distraction for the broadcast.
+**Streamer use case:** Turn a quiet or high-energy moment into a structured challenge without stopping to invent one. Measure setup time, control burden, veto rate, and quest completion.
 
-**Evidence labels:** Role 5 fixture-rendered screenshots in manifest `[fixture]`; Twitch Extension identity/hosted access/realtime/OBS proof `[unknown]`.
+**Viewer use case:** Influence the next moment without leaving Twitch or creating a separate account. Measure participation, vote completion, reconnect success, and reactions.
 
-**Screenshots/assets needed:** Existing fixture assets can illustrate current UI; final deck needs real or memory-backed same-revision evidence before claiming integration.
+**Platform use case:** Add differentiated, on-platform interactivity around existing video. Measure watch/follow/support outcomes only through later controlled evaluation.
 
-## Slide 13: Expected Impact Is Measured As Participation, Not Vanity
+Research links live viewing with presence, connection, longer continued watching, and willingness to follow or subscribe; a 2026 meta-analysis associates activated engagement with virtual gifting. These support the product hypothesis, not a guaranteed earnings claim.
 
-- Principal metric: viewer participation rate, the share of active viewers who cast an accepted vote.
-- Supporting measures: quest completion, setup time, response latency, fallback/reconnect success, and streamer control burden.
-- Product hypotheses remain open until recorded streamer/viewer observations and executed runs exist.
-- The deck should describe impact as measurable hypotheses unless the manifest records results.
+**Evidence:** Duani, Barasch & Ward, 2026; Chokpaisan et al., 2026.
 
-**Evidence labels:** accepted KPI decision `[diagnostic]`; measured impact `[unknown]`.
+**Repo lens:** `docs/DECISIONS.md` | `docs/evidence/manifest.json` | `src/viewer/`
 
-**Screenshots/assets needed:** A simple metrics snapshot or table after real or memory-backed rehearsal: viewers present, accepted votes, completion, latency, reconnect/fallback outcome.
+## Slide 11 - OBS intelligence creates honest, confidence-scored AI context
 
-## Slide 14: Technical Choices Prioritise Trust, Privacy, And Recoverability
+**Inputs stay distinct:** real OBS-captured frames, Twitch audience activity, and the saved streamer profile.
 
-- Supabase Free is the accepted authoritative persistence/realtime target; credential-free memory mode remains a development fallback.
-- Vercel is the planned deployment host; deployment evidence is not yet recorded.
-- Server-only secrets protect Twitch and Supabase credentials; any future provider trial would also remain server-side.
-- Raw frames are ephemeral; raw chat is processed in memory unless approved for short-lived debugging; rewards are session-scoped and non-monetary.
-- Third-party disclosures cover runtime dependencies, development tooling, Twitch, OBS, Supabase, Vercel, and provider status.
+**Extraction implementation:** sample bounded frames; detect motion, activity, quiet, and transitions; apply selective OCR only to configured regions; timestamp every observation with confidence and provenance.
 
-**Evidence labels:** disclosures and source checks `[diagnostic]`; cloud/deployment proof `[unknown]`.
+**AI intelligence decision:** infer broad moment context and audience state from reliable signals. Unsupported health, kill, score, or phase facts remain `unknown` instead of being invented.
 
-**Screenshots/assets needed:** Deployment health screenshot only after real preview is configured; no secret-bearing screenshots.
+**Game support decision:** universal visual signals first; calibrated adapters for known HUDs; official telemetry later. Raw frames are ephemeral, and the capture path excludes the ChatXPT overlay to avoid recursive analysis.
 
-## Slide 15: Final Deck Assets Must Prove The Golden Workflow Or Label The Gap
+**Repo lens:** `src/extraction/` | `src/ai/` | `src/integrations/obs/` | `docs/DECISIONS.md`
 
-- Required final proof: real Twitch activity, real OBS-captured gameplay, exactly three validated quests, one streamer, two viewers, one authoritative revision, OBS overlay, progress, result, and fallback/failure handling.
-- Current manifest does not yet prove the real golden workflow.
-- The proposal deck can be submitted honestly as a build-and-evidence plan; the final competition deck should swap unknown labels for manifest-backed real entries only after rehearsal.
-- Never upgrade fixture screenshots, static checks, or source inspection into live product claims.
+## Slide 12 - The candidate layer is AI-ready and credential-free today
 
-**Evidence labels:** final golden workflow `[unknown]`; available manifest evidence `[fixture]` and `[diagnostic]`.
+**Context assembly:** `GameplaySnapshot + AudienceSignal + StreamerProfile + recent quests + restrictions` becomes one model-ready, game-capability-aware context.
 
-**Screenshots/assets needed:** Privacy-reviewed demo recording stills, evidence manifest IDs, golden run limitations, and final source commit.
+**Current judged path:** a credential-free algorithmic generator uses that real context to produce exactly three distinct candidates. Genre-aware templates cover racing, strategy, platformer, tactical, MOBA, battle royale, arena, and unknown categories.
 
-## Source Basis Inspected
+**AI implementation boundary:** any future model adapter stays server-side, returns structured candidates, observes latency and privacy limits, and falls back cleanly on timeout, refusal, malformed output, or outage.
 
-- `AGENTS.md`
-- `README.md`
-- `docs/PRODUCT_BRIEF.md`
-- `docs/ARCHITECTURE.md`
-- `docs/THIRD_PARTY_DISCLOSURES.md`
-- `docs/SUBMISSION_CHECKLIST.md`
-- `docs/DECISIONS.md`
-- `docs/PROJECT_TODO.md`
-- `docs/TEAM_CONTEXT.md`
-- `docs/TEAM_PLAYBOOK.md`
-- `docs/evidence/README.md`
-- `docs/evidence/manifest.json`
-- `docs/evidence/GOLDEN_REHEARSAL_RUNBOOK.md`
-- `docs/research/PRODUCT-VALIDATION.md`
-- `docs/build-plans/README.md`
-- `docs/build-plans/INTEGRATION-CONTRACT.md`
-- `docs/build-plans/ROLE-1-BUILD-PLAN.md`
-- `docs/build-plans/ROLE-2-BUILD-PLAN.md`
-- `docs/build-plans/ROLE-3-BUILD-PLAN.md`
-- `docs/build-plans/ROLE-4-BUILD-PLAN.md`
-- `docs/build-plans/ROLE-5-BUILD-PLAN.md`
-- `docs/build-plans/ROLE-4-5-DELIVERY-MATRIX.md`
-- `docs/roles/ROLE-1-TODO.md`
-- `docs/roles/ROLE-2-TODO.md`
-- `docs/roles/ROLE-3-TODO.md`
-- `docs/roles/ROLE-4-TODO.md`
-- `docs/roles/ROLE-5-TODO.md`
-- Role public-entry READMEs under `src/core/`, `src/integrations/`, `src/realtime/`, `src/ai/`, `src/extraction/`, `src/quest-engine/`, `src/design-system/`, `src/streamer/`, and `src/viewer/`.
+**Technical decision:** no external model provider is configured for the judged MVP. A future provider trial must first clear a recorded quality, latency, privacy, cost, and reliability rubric.
 
-## PDF Rendering Notes
+**Repo lens:** `src/ai/` | `src/lib/mock-engine.ts` | `src/app/api/sidequests/route.ts` | `docs/DECISIONS.md`
 
-- Recommended final PDF: 15 slides, landscape, low-density copy, one claim per slide.
-- Use fixture screenshots only with visible labels. Use `[real]` labels only after a corresponding manifest entry exists.
-- If the final golden workflow remains unproved, keep slide 15 as a transparent evidence-readiness close rather than a success claim.
+## Slide 13 - AI proposes; the deterministic quest engine decides
+
+Every AI or algorithmic candidate is untrusted input until the quest engine accepts it.
+
+**Validation:** schema, safety, legality, humiliation, wagering, privacy, streamer boundaries, game capability, feasibility, clarity, duration, duplication, and diversity.
+
+**Recovery:** invalid or missing candidates are rejected or replaced from the deterministic fallback library until exactly three safe options exist.
+
+**Lifecycle authority:** proposed -> voting -> active -> succeeded, failed, cancelled, skipped, or expired. Server time closes the 30-second vote; deterministic rules resolve majority, ties, zero votes, cooldown, points, and hype.
+
+**Technical decision:** the engine is pure and client-independent. UIs display allowed actions; they do not calculate winners, rewards, or state transitions.
+
+**Repo lens:** `src/quest-engine/` | `src/quest-engine/validation.ts` | `src/core/contracts/`
+
+## Slide 14 - One authoritative architecture keeps five surfaces consistent
+
+**Flow:** Twitch + OBS adapters -> platform-neutral Core -> Role 2 intelligence/candidates -> Role 3 deterministic engine -> Role 1 orchestrator -> persistence/realtime -> Studio, Twitch Extension, hosted board, chat fallback, and read-only OBS overlay.
+
+**Technical rigour:** versioned Zod contracts; typed commands and errors; command IDs and expected revisions; idempotency; server timestamps; atomic persistence before broadcast; reconnect snapshots; role-sanitised view models; server-only secrets; producer/consumer contract tests.
+
+**Evidence posture:** fixture-rendered viewer and overlay states are labelled as fixtures. Real Twitch/OBS activity is required before the team claims a live golden workflow.
+
+**Repo lens:** `docs/ARCHITECTURE.md` | `docs/build-plans/INTEGRATION-CONTRACT.md` | `src/core/` | `tests/integration/`
+
+## Slide 15 - Future work turns one Twitch MVP into a cross-platform stream director
+
+- Persistent streamer accounts, personalities, boundaries, game preferences, and cross-stream memory.
+- Streamer engagement analytics: quest timing, vetoes, completions, audience response, and creator growth experiments.
+- Viewer profiles and analytics: participation history, preferences, reconnect continuity, and privacy-safe community insights.
+- Deeper game support through calibration packs, selective OCR improvements, and official telemetry where available.
+- Evaluated server-side AI providers, adaptive quest timing, personalised challenge styles, and automated highlight prompts.
+- Platform-neutral adapters for YouTube, Discord, TikTok Live, Kick, and future livestream APIs after the Twitch workflow is proven.
+
+**Closing:** Prove the interaction on Twitch. Carry the intelligence, safety, and participation engine everywhere streams already happen.
+
+**Repo lens:** `src/integrations/` | `src/core/` | `docs/ARCHITECTURE.md` | `docs/DECISIONS.md`
+
+## External Research Sources
+
+- Padilla, A. (2025). *The Shrinking Creator Economy: Inequality and Impoverishment of the Hispanic Twitch Ecosystem*. OSF preprint. <https://doi.org/10.31235/osf.io/gef2q_v1>
+- Hilvert-Bruce, Z., Neill, J. T., Sjoblom, M., & Hamari, J. (2018). *Social motivations of live-streaming viewer engagement on Twitch*. Computers in Human Behavior, 84, 58-67. <https://doi.org/10.1016/j.chb.2018.02.013>
+- Wohn, D. Y. et al. (2019/2020). *Audience and Streamer Participation at Scale on Twitch*. <https://arxiv.org/abs/2012.00215>
+- Duani, N., Barasch, A., & Ward, A. F. (2026). *The Liveness Lift: Viewing Live Streams Creates Connection and Enhances Engagement in Amateur Music Performances*. <https://doi.org/10.1177/00222429261421488>
+- Chokpaisan, S. et al. (2026). *Virtual gifting as affective monetization: a meta-analysis of behavioral antecedents in live game streaming platforms*. <https://doi.org/10.1186/s40359-026-04813-x>
+- Twitch Developers. *Extensions*. <https://dev.twitch.tv/docs/extensions/>

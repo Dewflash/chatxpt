@@ -5,7 +5,7 @@
 
 ## Current Verdict
 
-The repository-side submission materials are prepared and linked below: source/setup docs, architecture, disclosures, deck proposal/PDF, five-minute recording runbook, extension package notes, prototype check, and evidence boundaries.
+The repository-side submission materials are prepared and linked below: source/setup docs, architecture, disclosures, final editable deck/PDF, five-minute recording runbook, extension package notes, prototype check, and evidence boundaries.
 
 The final submission is not complete until the project owner records/uploads the final video, confirms Google Drive access, invites `garena-ai-build-challenge` to the private repository, and sends the email to `outreachsg@garena.com`.
 
@@ -13,12 +13,14 @@ The final submission is not complete until the project owner records/uploads the
 
 | Requirement | Prepared artifact | Status | Notes |
 | --- | --- | --- | --- |
-| Source repository and setup instructions | `README.md` | Ready | Includes local setup, routes, checks, architecture pointers, and third-party disclosure link. |
+| Setup instructions | [`README.md` section 1](../../README.md#1-setup-instructions) | Ready | Includes prerequisites, credential-free install, environment variables, local routes, OBS setup, Twitch Extension Local Test settings, optional Supabase, and verification commands. |
+| Architecture overview | [`README.md` section 2](../../README.md#2-architecture-overview) | Ready | Includes the end-to-end flow, role/module boundaries, runnable-demo versus production-shaped paths, state authority, safety, and failure handling. `docs/ARCHITECTURE.md` remains the deep dive. |
+| Relevant prompts and agent configurations | [`README.md` section 3](../../README.md#3-prompts-and-agent-configurations) | Ready | Separately discloses runtime quest policy, the legacy optional model prompt, the credential-free judged path, deterministic validation, and repository agent instructions/configuration. |
+| Third-party libraries, models, datasets, and APIs | [`README.md` section 4](../../README.md#4-third-party-libraries-models-datasets-and-apis) | Ready | Includes dependency versions/purposes, model/provider status, external-service claim boundaries, dataset/asset use, and privacy rules. `docs/THIRD_PARTY_DISCLOSURES.md` remains the full disclosure register. |
 | Product explanation | `docs/PRODUCT_BRIEF.md` | Ready | Covers problem, users, product promise, core loop, differentiation, MVP criteria, and deferred scope. |
-| Architecture / technical approach | `docs/ARCHITECTURE.md` | Ready | Covers Twitch-first surfaces, OBS, Role 1-5 boundaries, persistence/realtime, extraction, AI/fallback, safety, and privacy. |
-| Third-party disclosures | `docs/THIRD_PARTY_DISCLOSURES.md` | Ready | Covers runtime/dev dependencies, Twitch, OBS, Supabase, Vercel, AI provider status, data/assets, and claim rules. |
-| Proposal deck outline | `docs/submission/SLIDE_DECK_PROPOSAL.md` | Ready as editable source | Maximum 15-slide structure with evidence labels. |
-| Proposal deck PDF | `docs/submission/chatxpt-slide-deck-proposal.pdf` | Ready as current PDF proposal | Use as the deck artifact unless the final video/evidence changes require a last-minute deck refresh. |
+| Competition deck source | `docs/submission/SLIDE_DECK_PROPOSAL.md` | Ready | Final 15-slide narrative, research sources, evidence language, and per-slide repo lens. |
+| Editable competition deck | `docs/submission/chatxpt-slide-deck-proposal.pptx` | Ready | Editable 16:9 PowerPoint with speaker-note source blocks and local product visuals. |
+| Competition deck PDF | `docs/submission/chatxpt-slide-deck-proposal.pdf` | Ready | Submission-ready 15-page PDF; visually verified after PowerPoint export. |
 | Five-minute video plan | `docs/submission/MANUAL_TEST_RECORDING_RUNBOOK.md` | Ready | Includes Joel handoff, required screen list, timing, what to claim, and what not to claim. |
 | Prototype truth table | `docs/submission/END_TO_END_PROTOTYPE_CHECK.md` | Ready | States what the current local prototype can demonstrate and which live evidence claims remain unproved. |
 | Repository completeness check | `docs/submission/REPOSITORY_SUBMISSION_CHECK.md` | Ready, but dated to earlier merged main check | It truthfully lists remaining live-evidence and owner-action gaps. |
