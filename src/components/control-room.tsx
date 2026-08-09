@@ -34,6 +34,25 @@ type TwitchChatLine = {
   vote: 1 | 2 | 3 | null;
 };
 
+type AnalysisSample = {
+  timestamp: number;
+  label: LiveAnalysis["label"];
+  confidence: number;
+  motion: number | null;
+  visualChange: number | null;
+  checksum: number;
+};
+
+type DemoEvent = {
+  id: number;
+  label: string;
+  detail: string;
+  timestamp: number;
+};
+
+const MAX_ANALYSIS_SAMPLES = 24;
+const MAX_DEMO_EVENTS = 8;
+
 const initialAnalysis: LiveAnalysis = {
   status: "idle",
   label: "unknown",
@@ -127,8 +146,11 @@ export function ControlRoom() {
   const [generationDelaySeconds, setGenerationDelaySeconds] = useState(30);
   const [autoQuestCountdown, setAutoQuestCountdown] = useState<number | null>(null);
   const [autoOverlayCountdown, setAutoOverlayCountdown] = useState<number | null>(null);
+  const [analysisSamples, setAnalysisSamples] = useState<AnalysisSample[]>([]);
+  const [demoEvents, setDemoEvents] = useState<DemoEvent[]>([]);
   const chatSocketRef = useRef<WebSocket | null>(null);
   const questsRef = useRef<Sidequest[]>([]);
+  const demoEventIdRef = useRef(0);
 
   useEffect(() => {
     const initialRead = window.setTimeout(() => setActiveQuest(readActiveQuest()), 0);
@@ -145,6 +167,16 @@ export function ControlRoom() {
     () => Object.values(votes).reduce((total, count) => total + count, 0),
     [votes],
   );
+  const logDemoEvent = useCallback((label: string, detail: string) => {
+    demoEventIdRef.current += 1;
+    const event = {
+      id: demoEventIdRef.current,
+      label,
+      detail,
+      timestamp: Date.now(),
+    };
+    setDemoEvents((current) => [event, ...current].slice(0, MAX_DEMO_EVENTS));
+  }, []);
 
   const leadingQuest = useMemo(() => {
     const ranked = quests
@@ -190,6 +222,53 @@ export function ControlRoom() {
       },
     ];
   }, [analysis]);
+  const rollingAnalysis = useMemo(() => {
+    if (analysisSamples.length === 0) {
+      return {
+        sampleCount: 0,
+        averageMotion: null as number | null,
+        peakMotion: null as number | null,
+        averageConfidence: null as number | null,
+        dominantTempo: "No live samples",
+        questReadiness: "Waiting for capture",
+      };
+    }
+
+    const motionValues = analysisSamples
+      .map((sample) => sample.motion)
+      .filter((value): value is number => value !== null);
+    const confidenceValues = analysisSamples.map((sample) => sample.confidence);
+    const averageMotion = motionValues.length
+      ? motionValues.reduce((sum, value) => sum + value, 0) / motionValues.length
+      : null;
+    const peakMotion = motionValues.length ? Math.max(...motionValues) : null;
+    const averageConfidence = confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length;
+    const labelCounts = analysisSamples.reduce<Record<LiveAnalysis["label"], number>>((counts, sample) => {
+      counts[sample.label] += 1;
+      return counts;
+    }, { quiet: 0, action: 0, transition: 0, unknown: 0 });
+    const dominantLabel = (Object.entries(labelCounts) as Array<[LiveAnalysis["label"], number]>)
+      .sort((left, right) => right[1] - left[1])[0][0];
+    const dominantTempo = dominantLabel === "action"
+      ? "Mostly active"
+      : dominantLabel === "transition"
+        ? "Frequent transitions"
+        : dominantLabel === "quiet"
+          ? "Mostly quiet"
+          : "Mixed / unknown";
+    const questReadiness = averageConfidence >= 0.45 && motionValues.length >= 3
+      ? "Enough broad signal for demo quests"
+      : "Collecting more live context";
+
+    return {
+      sampleCount: analysisSamples.length,
+      averageMotion,
+      peakMotion,
+      averageConfidence,
+      dominantTempo,
+      questReadiness,
+    };
+  }, [analysisSamples]);
   const questAutoArmed = autoDemoEnabled
     && analysis.status === "running"
     && quests.length === 0
@@ -245,12 +324,13 @@ export function ControlRoom() {
       setProvider(data.provider);
       setWarning(data.warning || "");
       setVotes(Object.fromEntries(data.quests.map((quest) => [quest.id, 0])));
+      logDemoEvent("Generated", `${data.quests.length} quests from current stream context.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Generation failed");
     } finally {
       setLoading(false);
     }
-  }, [signals]);
+  }, [logDemoEvent, signals]);
 
   function addVote(id: string) {
     setVotes((current) => ({ ...current, [id]: (current[id] || 0) + 1 }));
@@ -260,7 +340,8 @@ export function ControlRoom() {
     const next: ActiveQuest = { quest, startedAt: Date.now(), status: "active" };
     setActiveQuest(next);
     publishActiveQuest(next);
-  }, []);
+    logDemoEvent("Overlay", `${quest.title} published to viewers.`);
+  }, [logDemoEvent]);
 
   useEffect(() => {
     if (!questAutoArmed) return;
@@ -305,6 +386,7 @@ export function ControlRoom() {
     const next = { ...activeQuest, status };
     setActiveQuest(next);
     publishActiveQuest(next);
+    logDemoEvent("Result", `${activeQuest.quest.title} marked ${status}.`);
   }
 
   function applyChatVote(choice: 1 | 2 | 3) {
@@ -315,6 +397,7 @@ export function ControlRoom() {
     }
     setVotes((current) => ({ ...current, [quest.id]: (current[quest.id] || 0) + 1 }));
     setChatMessage(`Twitch chat vote ${choice} counted for ${quest.title}.`);
+    logDemoEvent("Viewer vote", `Vote ${choice} counted for ${quest.title}.`);
   }
 
   function connectTwitchChat() {
@@ -340,6 +423,7 @@ export function ControlRoom() {
       socket.send(`JOIN #${channel}`);
       setChatStatus("connected");
       setChatMessage(`Listening to #${channel}. Ask viewers to type 1, 2, or 3.`);
+      logDemoEvent("Chat connected", `Listening to #${channel}.`);
     });
 
     socket.addEventListener("message", (event) => {
@@ -384,6 +468,7 @@ export function ControlRoom() {
       status: "starting",
       message: "Choose the Brawl Stars, phone mirror, or OBS preview window.",
     }));
+    setAnalysisSamples([]);
 
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({
@@ -392,6 +477,7 @@ export function ControlRoom() {
       });
       const track = stream.getVideoTracks()[0];
       const sourceLabel = track?.label || "Selected screen/window";
+      logDemoEvent("Capture", `Sampling ${sourceLabel}.`);
       const video = document.createElement("video");
       video.muted = true;
       video.playsInline = true;
@@ -456,6 +542,17 @@ export function ControlRoom() {
           sourceLabel,
           message: "Analysing real pixels from the selected screen/window.",
         });
+        setAnalysisSamples((current) => [
+          {
+            timestamp: Date.now(),
+            label: classification.label,
+            confidence: classification.confidence,
+            motion: changedPixelRatio,
+            visualChange: meanLumaDelta,
+            checksum,
+          },
+          ...current,
+        ].slice(0, MAX_ANALYSIS_SAMPLES));
 
         setSignals((current) => ({
           ...current,
@@ -555,6 +652,31 @@ export function ControlRoom() {
             ))}
           </div>
 
+          <div className="analysis-history">
+            <div className="section-heading compact-heading">
+              <div><p className="step">Rolling live analysis</p><h3>{rollingAnalysis.dominantTempo}</h3></div>
+              <span>{rollingAnalysis.sampleCount} samples</span>
+            </div>
+            <div className="history-stats">
+              <div><span>Avg motion</span><strong>{rollingAnalysis.averageMotion === null ? "n/a" : `${Math.round(rollingAnalysis.averageMotion * 100)}%`}</strong></div>
+              <div><span>Peak motion</span><strong>{rollingAnalysis.peakMotion === null ? "n/a" : `${Math.round(rollingAnalysis.peakMotion * 100)}%`}</strong></div>
+              <div><span>Avg confidence</span><strong>{rollingAnalysis.averageConfidence === null ? "n/a" : `${Math.round(rollingAnalysis.averageConfidence * 100)}%`}</strong></div>
+            </div>
+            <div className="history-bars" aria-label="Recent motion samples">
+              {analysisSamples.length === 0 ? (
+                <p>No live samples yet.</p>
+              ) : analysisSamples.slice().reverse().map((sample) => (
+                <i
+                  key={`${sample.timestamp}-${sample.checksum}`}
+                  className={`bar-${sample.label}`}
+                  title={`${sample.label}: ${sample.motion === null ? "n/a" : `${Math.round(sample.motion * 100)}%`} motion`}
+                  style={{ height: `${Math.max(8, Math.round((sample.motion ?? 0.03) * 80))}px` }}
+                />
+              ))}
+            </div>
+            <p>{rollingAnalysis.questReadiness}</p>
+          </div>
+
           <div className="form-grid">
             <label>Match phase
               <select value={signals.gameplay.phase} onChange={(event) => setSignals((current) => ({ ...current, gameplay: { ...current.gameplay, phase: event.target.value as GenerationRequest["gameplay"]["phase"] } }))}>
@@ -636,6 +758,21 @@ export function ControlRoom() {
                 Publish leading quest now
               </button>
             )}
+            <div className="obs-preview">
+              <div><span>OBS output mirror</span><b>{activeQuest ? activeQuest.quest.title : "Waiting for active quest"}</b></div>
+              <iframe src="/overlay" title="OBS overlay preview" />
+            </div>
+            <div className="event-timeline">
+              <span>Recent flow</span>
+              {demoEvents.length === 0 ? (
+                <p>No demo events yet.</p>
+              ) : demoEvents.map((event) => (
+                <p key={event.id}>
+                  <b>{event.label}</b>
+                  {event.detail}
+                </p>
+              ))}
+            </div>
           </div>
 
           <div className="automation-card">

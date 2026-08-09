@@ -55,7 +55,7 @@ export function OverlayStage() {
           </div>
         </section>
       ) : (
-        <p className="overlay-waiting">ChatXPT overlay ready</p>
+        <p className="overlay-waiting">ChatXPT overlay ready · waiting for viewer quest</p>
       )}
     </main>
   );
