@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChatXPT - Slide Deck</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08070d;
+      --panel: #13101d;
+      --text: #f7f4ff;
+      --muted: #aaa1bb;
+      --accent: #caff3d;
+      --line: rgba(255, 255, 255, 0.13);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top left, #1a1130 0, var(--bg) 34rem);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.9rem clamp(1rem, 3vw, 2rem);
+      background: rgba(8, 7, 13, 0.86);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(16px);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.05rem, 2vw, 1.45rem);
+      letter-spacing: 0;
+    }
+
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      justify-content: flex-end;
+    }
+
+    nav a {
+      min-width: 2.15rem;
+      padding: 0.42rem 0.62rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      text-align: center;
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    nav a:hover,
+    nav a:focus {
+      color: #111;
+      background: var(--accent);
+      outline: none;
+    }
+
+    main {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      padding: clamp(1rem, 3vw, 2rem);
+    }
+
+    .slide {
+      margin: 0 0 clamp(1.4rem, 4vw, 3rem);
+      padding: clamp(0.65rem, 2vw, 1rem);
+      background: rgba(255, 255, 255, 0.045);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 26px 80px rgba(0, 0, 0, 0.28);
+      scroll-margin-top: 5rem;
+    }
+
+    .slide h2 {
+      display: flex;
+      align-items: baseline;
+      gap: 0.7rem;
+      margin: 0 0 0.75rem;
+      font-size: clamp(1rem, 1.8vw, 1.25rem);
+      letter-spacing: 0;
+    }
+
+    .slide h2 span {
+      color: var(--accent);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+    }
+
+    .slide img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+      background: #050408;
+    }
+
+    footer {
+      padding: 2rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media print {
+      header,
+      footer {
+        display: none;
+      }
+
+      body {
+        background: #fff;
+      }
+
+      main {
+        width: 100%;
+        padding: 0;
+      }
+
+      .slide {
+        page-break-after: always;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .slide h2 {
+        display: none;
+      }
+
+      .slide img {
+        border-radius: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ChatXPT Slide Deck</h1>
+    <nav aria-label="Slides">
+      <a href="#slide-01">1</a>
+      <a href="#slide-02">2</a>
+      <a href="#slide-03">3</a>
+      <a href="#slide-04">4</a>
+      <a href="#slide-05">5</a>
+      <a href="#slide-06">6</a>
+      <a href="#slide-07">7</a>
+      <a href="#slide-08">8</a>
+      <a href="#slide-09">9</a>
+      <a href="#slide-10">10</a>
+      <a href="#slide-11">11</a>
+      <a href="#slide-12">12</a>
+      <a href="#slide-13">13</a>
+      <a href="#slide-14">14</a>
+      <a href="#slide-15">15</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="slide" id="slide-01">
+      <h2><span>01</span> ChatXPT</h2>
+      <img src="chatxpt-slide-deck-html-assets/slide-01.png" alt="Slide 1: ChatXPT title slide">
+    </section>
+    <section class="slide" id="slide-02">
+      <h2><span>02</span> The struggle of small streamers</h2>
+      <img src="chatxpt-slide-deck-html-assets/slide-02.png" alt="Slide 2: The struggle of small streamers">
+    </section>
+    <section class="slide" id="slide-03">
+      <h2><span>03</span> Engagement difficulties</h2>
+      <img src="chatxpt-slide-deck-html-assets/slide-03.png" alt="Slide 3: Engagement difficulties">
+    </section>
+    <section class="slide" id="slide-04">
+      <h2><span>04</span> ChatXPT removes the manual burden</h2>
+      <img src="chatxpt-slide-deck-html-assets/slide-04.png" alt="Slide 4: ChatXPT removes the manual burden">
+    </section>
+    <section class="slide" id="slide-05">
+      <h2><span>05</span> MVP scope</h2>
+      <img src="chatxpt-slide-deck-html-assets/slide-05.png" alt="Slide 5: MVP scope">
+    </section>
+    <section class="slide" id="slide-06">
+      <h2><span>06</span> Twitch gives the MVP an interactive home</h2>
+      <img src="chatxpt-slide-deck-html-assets/slide-06.png" alt="Slide 6: Twitch gives the MVP an interactive home">
+    </section>
+    <section class="slide" id="slide-07">
+      <h2><span>07</span> Streamers choose automation</h2>
+      <img src="chatxpt-slide-deck-html-assets/slide-07.png" alt="Slide 7: Streamers choose how much the system automates">
+    </section>
+    <section class="slide" id="slide-08">
+      <h2><span>08</span> Streamer personality stays in the loop</h2>
+      <img src="chatxpt-slide-deck-html-assets/slide-08.png" alt="Slide 8: Customise once and keep the streamer's personality in the loop">
+    </section>
+    <section class="slide" id="slide-09">
+      <h2><span>09</span> Viewer agency</h2>
+      <img src="chatxpt-slide-deck-html-assets/slide-09.png" alt="Slide 9: Viewer agency turns watching into a shared decision">
+    </section>
+    <section class="slide" id="slide-10">
+      <h2><span>10</span> Ecosystem value</h2>
+      <img src="chatxpt-slide-deck-html-assets/slide-10.png" alt="Slide 10: One interaction creates value across the livestream ecosystem">
+    </section>
+    <section class="slide" id="slide-11">
+      <h2><span>11</span> OBS intelligence</h2>
+      <img src="chatxpt-slide-deck-html-assets/slide-11.png" alt="Slide 11: OBS intelligence creates confidence-scored AI context">
+    </section>
+    <section class="slide" id="slide-12">
+      <h2><span>12</span> Candidate layer</h2>
+      <img src="chatxpt-slide-deck-html-assets/slide-12.png" alt="Slide 12: The candidate layer is AI-ready and credential-free">
+    </section>
+    <section class="slide" id="slide-13">
+      <h2><span>13</span> Quest engine</h2>
+      <img src="chatxpt-slide-deck-html-assets/slide-13.png" alt="Slide 13: AI proposes and the deterministic quest engine decides">
+    </section>
+    <section class="slide" id="slide-14">
+      <h2><span>14</span> Authoritative architecture</h2>
+      <img src="chatxpt-slide-deck-html-assets/slide-14.png" alt="Slide 14: One authoritative architecture keeps every surface consistent">
+    </section>
+    <section class="slide" id="slide-15">
+      <h2><span>15</span> Future work</h2>
+      <img src="chatxpt-slide-deck-html-assets/slide-15.png" alt="Slide 15: Future work beyond one Twitch MVP">
+    </section>
+  </main>
+
+  <footer>
+    HTML rebuilt from docs/submission/chatxpt-slide-deck-proposal.pptx.
+  </footer>
+</body>
+</html>
