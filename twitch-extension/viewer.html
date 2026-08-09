@@ -6,19 +6,26 @@
     <title>ChatXPT Viewer</title>
     <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
     <link rel="stylesheet" href="assets/extension.css">
+    <script defer src="assets/viewer.js"></script>
   </head>
   <body data-surface="viewer">
-    <main class="shell" aria-label="ChatXPT viewer surface">
-      <p class="kicker">ChatXPT Viewer</p>
-      <h1>Quest voting surface reserved</h1>
-      <p>
-        This Twitch Extension panel is ready for Local or Hosted Test upload path checks. The live
-        voting experience will be mounted here after the reviewed viewer module is connected.
-      </p>
-      <section class="status" aria-label="Current status">
-        <span>Setup shell</span>
-        <strong>Not connected</strong>
+    <main class="shell voter-shell" aria-label="ChatXPT viewer voting surface">
+      <header class="voter-header">
+        <div>
+          <p class="kicker">ChatXPT Viewer</p>
+          <h1>Vote for the sidequest</h1>
+        </div>
+        <span id="connection-state" class="pill">Connecting</span>
+      </header>
+      <section id="quest-list" class="quest-list" aria-label="Quest choices">
+        <div class="empty-state">
+          <strong>No vote is open.</strong>
+          <span>Generate quests in ChatXPT Studio first.</span>
+        </div>
       </section>
+      <button id="submit-vote" class="submit-vote" disabled>Submit vote</button>
+      <p id="vote-status" class="status-line" aria-live="polite">Waiting for Studio to publish quests.</p>
+      <p class="api-note">Backend: <span id="api-base-label">auto</span></p>
     </main>
   </body>
 </html>

@@ -57,8 +57,53 @@ type DemoParticipationSnapshot = {
   updatedAt: number;
 };
 
+type GamePhasePreset = "action" | "objective" | "battle-royale";
+
 const MAX_ANALYSIS_SAMPLES = 24;
 const MAX_DEMO_EVENTS = 8;
+
+const gamePhasePresets: Record<GamePhasePreset, Record<GenerationRequest["gameplay"]["phase"], string>> = {
+  action: {
+    looting: "Setup / respawn",
+    rotation: "Objective rotate",
+    combat: "Active fight",
+    "final-circle": "Final push",
+  },
+  objective: {
+    looting: "Lane setup",
+    rotation: "Objective setup",
+    combat: "Team fight",
+    "final-circle": "Last objective",
+  },
+  "battle-royale": {
+    looting: "Looting",
+    rotation: "Rotating zone",
+    combat: "Engaged fight",
+    "final-circle": "Endgame circle",
+  },
+};
+
+const squadStatusLabels: Record<GenerationRequest["gameplay"]["squadStatus"], string> = {
+  "all-up": "Team ready",
+  "teammate-knocked": "Teammate down",
+  "last-alive": "Solo pressure",
+};
+
+const moodLabels: Record<GenerationRequest["sentiment"]["mood"], string> = {
+  bored: "Bored",
+  hyped: "Hyped",
+  chaotic: "Chaotic",
+  supportive: "Supportive",
+  teasing: "Teasing",
+};
+
+const styleLabels: Record<GenerationRequest["profile"]["style"], string> = {
+  aggressive: "Aggressive",
+  supportive: "Supportive",
+  comedic: "Comedic",
+  beginner: "Beginner",
+  competitive: "Competitive",
+};
 
 const initialAnalysis: LiveAnalysis = {
   status: "idle",
@@ -179,6 +224,7 @@ export function ControlRoom() {
   const [autoOverlayCountdown, setAutoOverlayCountdown] = useState<number | null>(null);
   const [analysisSamples, setAnalysisSamples] = useState<AnalysisSample[]>([]);
   const [demoEvents, setDemoEvents] = useState<DemoEvent[]>([]);
+  const [gamePhasePreset, setGamePhasePreset] = useState<GamePhasePreset>("action");
   const chatSocketRef = useRef<WebSocket | null>(null);
   const questsRef = useRef<Sidequest[]>([]);
   const demoEventIdRef = useRef(0);
@@ -253,6 +299,43 @@ export function ControlRoom() {
       },
     ];
   }, [analysis]);
+  const gameStatusRead = useMemo(() => {
+    const phaseLabels = gamePhasePresets[gamePhasePreset];
+    return [
+      {
+        label: "Match phase",
+        value: phaseLabels[signals.gameplay.phase],
+        detail: analysis.status === "running" ? "Broad visual tempo" : "Saved context",
+      },
+      {
+        label: "Team pressure",
+        value: squadStatusLabels[signals.gameplay.squadStatus],
+        detail: signals.gameplay.recentEvent === "under-fire" ? "Activity spike" : "Streamer set",
+      },
+      {
+        label: "Health",
+        value: `${signals.gameplay.health}%`,
+        detail: "Manual HUD read",
+      },
+    ];
+  }, [analysis.status, gamePhasePreset, signals.gameplay]);
+  const questDirectionRead = useMemo(() => [
+      {
+        label: "Viewer mood",
+        value: moodLabels[signals.sentiment.mood],
+        detail: chatStatus === "connected" ? "Chat-informed" : "Streamer set",
+      },
+      {
+        label: "Streamer style",
+        value: styleLabels[signals.profile.style],
+        detail: `Intensity ${signals.profile.intensity} / 3`,
+      },
+      {
+        label: "Chat request",
+        value: signals.sentiment.request || "No request",
+        detail: "Quest flavour",
+      },
+  ], [chatStatus, signals.profile.intensity, signals.profile.style, signals.sentiment.mood, signals.sentiment.request]);
   const rollingAnalysis = useMemo(() => {
     if (analysisSamples.length === 0) {
       return {
@@ -901,33 +984,90 @@ export function ControlRoom() {
             <p>{rollingAnalysis.questReadiness}</p>
           </div>
 
-          <div className="form-grid">
-            <label>Match phase
-              <select value={signals.gameplay.phase} onChange={(event) => setSignals((current) => ({ ...current, gameplay: { ...current.gameplay, phase: event.target.value as GenerationRequest["gameplay"]["phase"] } }))}>
-                <option value="looting">Pre-fight / setup</option><option value="rotation">Rotating objective</option><option value="combat">Active fight</option><option value="final-circle">Final push</option>
-              </select>
-            </label>
-            <label>Team pressure
-              <select value={signals.gameplay.squadStatus} onChange={(event) => setSignals((current) => ({ ...current, gameplay: { ...current.gameplay, squadStatus: event.target.value as GenerationRequest["gameplay"]["squadStatus"] } }))}>
-                <option value="all-up">Team ready</option><option value="last-alive">Solo pressure</option>
-              </select>
-            </label>
-            <label className="range-label">Health <strong>{signals.gameplay.health}%</strong>
-              <input type="range" min="0" max="100" value={signals.gameplay.health} onChange={(event) => setSignals((current) => ({ ...current, gameplay: { ...current.gameplay, health: Number(event.target.value) } }))} />
-            </label>
-            <label>Viewer mood
-              <select value={signals.sentiment.mood} onChange={(event) => setSignals((current) => ({ ...current, sentiment: { ...current.sentiment, mood: event.target.value as GenerationRequest["sentiment"]["mood"] } }))}>
-                <option value="bored">Bored</option><option value="hyped">Hyped</option><option value="chaotic">Chaotic</option><option value="supportive">Supportive</option><option value="teasing">Teasing</option>
-              </select>
-            </label>
-            <label>Streamer style
-              <select value={signals.profile.style} onChange={(event) => setSignals((current) => ({ ...current, profile: { ...current.profile, style: event.target.value as GenerationRequest["profile"]["style"] } }))}>
-                <option value="aggressive">Aggressive</option><option value="supportive">Supportive</option><option value="comedic">Comedic</option><option value="beginner">Beginner</option><option value="competitive">Competitive</option>
-              </select>
-            </label>
-            <label>Chat request
-              <input value={signals.sentiment.request} onChange={(event) => setSignals((current) => ({ ...current, sentiment: { ...current.sentiment, request: event.target.value } }))} />
-            </label>
+          <div className="context-columns">
+            <section className="context-column" aria-label="Current game status">
+              <div className="section-heading compact-heading">
+                <div><p className="step">Game status</p><h3>Current read</h3></div>
+              </div>
+              <div className="context-list">
+                {gameStatusRead.map((item) => (
+                  <div key={item.label}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                    <p>{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="context-column" aria-label="Quest direction">
+              <div className="section-heading compact-heading">
+                <div><p className="step">Quest direction</p><h3>Streamer preference</h3></div>
+              </div>
+              <div className="context-list">
+                {questDirectionRead.map((item) => (
+                  <div key={item.label}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                    <p>{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <div className="signal-mode-panel">
+            <div className="section-heading compact-heading">
+              <div><p className="step">Adjustments</p><h3>Streamer controls</h3></div>
+            </div>
+            <div className="form-grid">
+              <label>Game phase set
+                <select value={gamePhasePreset} onChange={(event) => setGamePhasePreset(event.target.value as GamePhasePreset)}>
+                  <option value="action">Action / arena</option>
+                  <option value="objective">MOBA / objective</option>
+                  <option value="battle-royale">Battle royale</option>
+                </select>
+              </label>
+              <label>Match phase
+                <select value={signals.gameplay.phase} onChange={(event) => setSignals((current) => ({ ...current, gameplay: { ...current.gameplay, phase: event.target.value as GenerationRequest["gameplay"]["phase"] } }))}>
+                  <option value="looting">{gamePhasePresets[gamePhasePreset].looting}</option>
+                  <option value="rotation">{gamePhasePresets[gamePhasePreset].rotation}</option>
+                  <option value="combat">{gamePhasePresets[gamePhasePreset].combat}</option>
+                  <option value="final-circle">{gamePhasePresets[gamePhasePreset]["final-circle"]}</option>
+                </select>
+              </label>
+              <label>Team pressure
+                <select value={signals.gameplay.squadStatus} onChange={(event) => setSignals((current) => ({ ...current, gameplay: { ...current.gameplay, squadStatus: event.target.value as GenerationRequest["gameplay"]["squadStatus"] } }))}>
+                  <option value="all-up">{squadStatusLabels["all-up"]}</option>
+                  <option value="teammate-knocked">{squadStatusLabels["teammate-knocked"]}</option>
+                  <option value="last-alive">{squadStatusLabels["last-alive"]}</option>
+                </select>
+              </label>
+              <label className="range-label">Health <strong>{signals.gameplay.health}%</strong>
+                <input type="range" min="0" max="100" value={signals.gameplay.health} onChange={(event) => setSignals((current) => ({ ...current, gameplay: { ...current.gameplay, health: Number(event.target.value) } }))} />
+              </label>
+              <label>Viewer mood
+                <select value={signals.sentiment.mood} onChange={(event) => setSignals((current) => ({ ...current, sentiment: { ...current.sentiment, mood: event.target.value as GenerationRequest["sentiment"]["mood"] } }))}>
+                  <option value="bored">{moodLabels.bored}</option>
+                  <option value="hyped">{moodLabels.hyped}</option>
+                  <option value="chaotic">{moodLabels.chaotic}</option>
+                  <option value="supportive">{moodLabels.supportive}</option>
+                  <option value="teasing">{moodLabels.teasing}</option>
+                </select>
+              </label>
+              <label>Streamer style
+                <select value={signals.profile.style} onChange={(event) => setSignals((current) => ({ ...current, profile: { ...current.profile, style: event.target.value as GenerationRequest["profile"]["style"] } }))}>
+                  <option value="aggressive">{styleLabels.aggressive}</option>
+                  <option value="supportive">{styleLabels.supportive}</option>
+                  <option value="comedic">{styleLabels.comedic}</option>
+                  <option value="beginner">{styleLabels.beginner}</option>
+                  <option value="competitive">{styleLabels.competitive}</option>
+                </select>
+              </label>
+              <label>Chat request
+                <input value={signals.sentiment.request} onChange={(event) => setSignals((current) => ({ ...current, sentiment: { ...current.sentiment, request: event.target.value } }))} />
+              </label>
+            </div>
           </div>
 
           <div className="chat-strip">

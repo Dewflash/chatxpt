@@ -36,6 +36,12 @@ const globalStore = globalThis as typeof globalThis & {
   [stateKey]?: DemoParticipationState;
 };
 
+const corsHeaders = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET, POST, OPTIONS",
+  "access-control-allow-headers": "content-type",
+};
+
 function store(): DemoParticipationState {
   globalStore[stateKey] ??= {
     quests: [],
@@ -58,7 +64,14 @@ function snapshot(state: DemoParticipationState) {
 }
 
 export async function GET() {
-  return NextResponse.json(snapshot(store()));
+  return NextResponse.json(snapshot(store()), { headers: corsHeaders });
+}
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
 }
 
 export async function POST(request: Request) {
@@ -66,14 +79,17 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Request body must be valid JSON." },
+      { status: 400, headers: corsHeaders },
+    );
   }
 
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid demo participation command.", details: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400, headers: corsHeaders },
     );
   }
 
@@ -85,37 +101,43 @@ export async function POST(request: Request) {
     current.votes = Object.fromEntries(command.quests.map((quest) => [quest.id, 0]));
     current.voterChoices = {};
     current.updatedAt = Date.now();
-    return NextResponse.json({ ok: true, accepted: true, ...snapshot(current) });
+    return NextResponse.json({ ok: true, accepted: true, ...snapshot(current) }, { headers: corsHeaders });
   }
 
   const quest = current.quests.find((candidate) => candidate.id === command.questId);
   if (!quest) {
     return NextResponse.json(
       { ok: false, accepted: false, error: "Quest is not open for voting.", ...snapshot(current) },
-      { status: 409 },
+      { status: 409, headers: corsHeaders },
     );
   }
 
   const previousChoice = current.voterChoices[command.voterKey];
   if (previousChoice) {
-    return NextResponse.json({
-      ok: true,
-      accepted: false,
-      duplicate: true,
-      previousChoice,
-      ...snapshot(current),
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        accepted: false,
+        duplicate: true,
+        previousChoice,
+        ...snapshot(current),
+      },
+      { headers: corsHeaders },
+    );
   }
 
   current.voterChoices[command.voterKey] = quest.id;
   current.votes[quest.id] = (current.votes[quest.id] ?? 0) + 1;
   current.updatedAt = Date.now();
 
-  return NextResponse.json({
-    ok: true,
-    accepted: true,
-    duplicate: false,
-    questId: quest.id,
-    ...snapshot(current),
-  });
+  return NextResponse.json(
+    {
+      ok: true,
+      accepted: true,
+      duplicate: false,
+      questId: quest.id,
+      ...snapshot(current),
+    },
+    { headers: corsHeaders },
+  );
 }
