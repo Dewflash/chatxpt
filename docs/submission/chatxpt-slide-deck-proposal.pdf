@@ -1,0 +1,805 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [6 0 R 8 0 R 10 0 R 12 0 R 14 0 R 16 0 R 18 0 R 20 0 R 22 0 R 24 0 R 26 0 R 28 0 R 30 0 R 32 0 R 34 0 R] /Count 15 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+5 0 obj
+<< /Length 1540 >>
+stream
+0.96 0.97 0.95 rg 0 0 960 540 re f
+0.05 0.08 0.08 rg 0 500 960 40 re f
+0.91 0.61 0.07 rg 0 496 960 4 re f
+0.96 0.97 0.95 rg
+BT /F2 12 Tf 58.0 515.0 Td (ChatXPT proposal package - slide 1/15) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 456.0 Td (ChatXPT Turns Livestream Chat Into Playable) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 419.0 Td (Sidequests) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 374.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 374.0 Td (AI stream director for game streamers on Twitch.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 344.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 344.0 Td (Converts gameplay moments, audience behaviour, and streamer preferences into exactly) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 321.0 Td (  three safe sidequest options.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 291.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 291.0 Td (Viewers vote; the winning quest becomes an OBS broadcast moment.) Tj ET
+0.88 0.91 0.87 rg 58 92 844 58 re f
+0.05 0.08 0.08 rg
+BT /F1 12 Tf 74.0 128.0 Td (Evidence labels) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 128.0 Td (product promise [diagnostic]; end-to-end live proof [unknown].) Tj ET
+0.05 0.08 0.08 rg 58 28 844 48 re f
+0.96 0.97 0.95 rg
+BT /F1 11 Tf 74.0 56.0 Td (Asset note) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 56.0 Td (Hero visual from final demo showing Studio, viewer vote, and overlay in one composition; avoid implying live) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 41.0 Td (evidence until manifest entry exists.) Tj ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 960 540] /Resources << /Font << /F1 4 0 R /F2 3 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 1653 >>
+stream
+0.96 0.97 0.95 rg 0 0 960 540 re f
+0.05 0.08 0.08 rg 0 500 960 40 re f
+0.91 0.61 0.07 rg 0 496 960 4 re f
+0.96 0.97 0.95 rg
+BT /F2 12 Tf 58.0 515.0 Td (ChatXPT proposal package - slide 2/15) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 456.0 Td (Livestream Chat Has Energy, But Little) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 419.0 Td (Structured Agency) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 374.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 374.0 Td (Viewers suggest ideas, react, and spam chat, but streamers cannot safely process all) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 351.0 Td (  of it while playing.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 321.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 321.0 Td (Static polls and fixed rewards do not adapt to the current match, audience mood, or) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 298.0 Td (  streamer limits.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 268.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 268.0 Td (The missed opportunity is not more chat volume; it is safe, contextual participation.) Tj ET
+0.88 0.91 0.87 rg 58 92 844 58 re f
+0.05 0.08 0.08 rg
+BT /F1 12 Tf 74.0 128.0 Td (Evidence labels) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 128.0 Td (problem framing [diagnostic]; participant validation [unknown].) Tj ET
+0.05 0.08 0.08 rg 58 28 844 48 re f
+0.96 0.97 0.95 rg
+BT /F1 11 Tf 74.0 56.0 Td (Asset note) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 56.0 Td (Optional sanitized observation quote or workflow screenshot after docs/research/PRODUCT-VALIDATION.md receives) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 41.0 Td (real participant evidence.) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 960 540] /Resources << /Font << /F1 4 0 R /F2 3 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 1851 >>
+stream
+0.96 0.97 0.95 rg 0 0 960 540 re f
+0.05 0.08 0.08 rg 0 500 960 40 re f
+0.91 0.61 0.07 rg 0 496 960 4 re f
+0.96 0.97 0.95 rg
+BT /F2 12 Tf 58.0 515.0 Td (ChatXPT proposal package - slide 3/15) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 456.0 Td (The Primary Users Are Streamers, Viewers,) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 419.0 Td (and Moderators) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 374.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 374.0 Td (Streamers need hands-on control, persistent setup, safety limits, and low distraction.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 344.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 344.0 Td (Viewers want a fast way to influence the stream without leaving Twitch.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 314.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 314.0 Td (Moderators and stream teams need compact controls, status clarity, and emergency) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 291.0 Td (  recovery.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 261.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 261.0 Td (Judges and maintainers need proof labels that distinguish real, fixture, diagnostic,) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 238.0 Td (  and unknown states.) Tj ET
+0.88 0.91 0.87 rg 58 92 844 58 re f
+0.05 0.08 0.08 rg
+BT /F1 12 Tf 74.0 128.0 Td (Evidence labels) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 128.0 Td (target users from product brief and role plans [diagnostic]; usability observations [unknown].) Tj ET
+0.05 0.08 0.08 rg 58 28 844 48 re f
+0.96 0.97 0.95 rg
+BT /F1 11 Tf 74.0 56.0 Td (Asset note) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 56.0 Td (Studio setup/status screenshot for streamer; Twitch/hosted viewer screenshot for viewer; compact Live Config) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 41.0 Td (screenshot for moderator.) Tj ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 960 540] /Resources << /Font << /F1 4 0 R /F2 3 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Length 1830 >>
+stream
+0.96 0.97 0.95 rg 0 0 960 540 re f
+0.05 0.08 0.08 rg 0 500 960 40 re f
+0.91 0.61 0.07 rg 0 496 960 4 re f
+0.96 0.97 0.95 rg
+BT /F2 12 Tf 58.0 515.0 Td (ChatXPT proposal package - slide 4/15) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 456.0 Td (The Product Promise Is A Closed) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 419.0 Td (Participation Loop) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 374.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 374.0 Td (ChatXPT watches real gameplay and audience signals through authorised adapters.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 344.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 344.0 Td (Role 2 intelligence proposes exactly three structured candidate quests.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 314.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 314.0 Td (Role 3 validates safety, feasibility, timing, fallback, voting, progress, and outcome) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 291.0 Td (  rules.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 261.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 261.0 Td (Role 1 persists one authoritative revision and broadcasts safe views to Studio,) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 238.0 Td (  viewers, and OBS.) Tj ET
+0.88 0.91 0.87 rg 58 92 844 58 re f
+0.05 0.08 0.08 rg
+BT /F1 12 Tf 74.0 128.0 Td (Evidence labels) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 128.0 Td (architecture/contracts [diagnostic]; Role 5 visual fixture surfaces [fixture]; live closed loop [unknown].) Tj ET
+0.05 0.08 0.08 rg 58 28 844 48 re f
+0.96 0.97 0.95 rg
+BT /F1 11 Tf 74.0 56.0 Td (Asset note) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 56.0 Td (One clean architecture diagram or final golden-workflow sequence with session/cycle revision visible in) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 41.0 Td (evidence notes.) Tj ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 960 540] /Resources << /Font << /F1 4 0 R /F2 3 0 R >> >> /Contents 11 0 R >>
+endobj
+13 0 obj
+<< /Length 1758 >>
+stream
+0.96 0.97 0.95 rg 0 0 960 540 re f
+0.05 0.08 0.08 rg 0 500 960 40 re f
+0.91 0.61 0.07 rg 0 496 960 4 re f
+0.96 0.97 0.95 rg
+BT /F2 12 Tf 58.0 515.0 Td (ChatXPT proposal package - slide 5/15) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 456.0 Td (ChatXPT Stays Twitch-First Without Becoming) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 419.0 Td (Twitch-Locked) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 374.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 374.0 Td (Twitch is the only implemented MVP platform.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 344.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 344.0 Td (Twitch Extension is the primary viewer surface; hosted Quest Board and 1/2/3) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 321.0 Td (  Twitch-chat voting are fallbacks.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 291.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 291.0 Td (OBS Browser Source is visual output only, not the configuration or voting surface.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 261.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 261.0 Td (YouTube, Discord, TikTok, and other platforms remain disabled Coming Soon options.) Tj ET
+0.88 0.91 0.87 rg 58 92 844 58 re f
+0.05 0.08 0.08 rg
+BT /F1 12 Tf 74.0 128.0 Td (Evidence labels) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 128.0 Td (accepted product scope [diagnostic]; Twitch test registration/runtime [unknown].) Tj ET
+0.05 0.08 0.08 rg 58 28 844 48 re f
+0.96 0.97 0.95 rg
+BT /F1 11 Tf 74.0 56.0 Td (Asset note) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 56.0 Td (Twitch Extension hosted/local test screenshots after allowlisted test evidence; hosted board fallback) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 41.0 Td (screenshot already has fixture evidence.) Tj ET
+endstream
+endobj
+14 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 960 540] /Resources << /Font << /F1 4 0 R /F2 3 0 R >> >> /Contents 13 0 R >>
+endobj
+15 0 obj
+<< /Length 1980 >>
+stream
+0.96 0.97 0.95 rg 0 0 960 540 re f
+0.05 0.08 0.08 rg 0 500 960 40 re f
+0.91 0.61 0.07 rg 0 496 960 4 re f
+0.96 0.97 0.95 rg
+BT /F2 12 Tf 58.0 515.0 Td (ChatXPT proposal package - slide 6/15) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 456.0 Td (AI Contributes Context, But Determinism) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 419.0 Td (Holds Authority) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 374.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 374.0 Td (AI contribution is scoped to gameplay/audience intelligence and candidate generation.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 344.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 344.0 Td (The product never requires paid model usage for the MVP.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 314.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 314.0 Td (Provider output must be structured, validated, and routed through Role 3 before) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 291.0 Td (  viewers see it.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 261.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 261.0 Td (If a provider is slow, unavailable, malformed, or refused, credential-free algorithms) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 238.0 Td (  and deterministic fallback continue the workflow.) Tj ET
+0.88 0.91 0.87 rg 58 92 844 58 re f
+0.05 0.08 0.08 rg
+BT /F1 12 Tf 74.0 128.0 Td (Evidence labels) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 128.0 Td (provider fallback tests and strategy [diagnostic]; live free-provider run [unknown]; algorithmic path on) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 111.0 Td (real inputs [unknown].) Tj ET
+0.05 0.08 0.08 rg 58 28 844 48 re f
+0.96 0.97 0.95 rg
+BT /F1 11 Tf 74.0 56.0 Td (Asset note) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 56.0 Td (Studio/provider status screenshot showing provider, algorithmic, and fallback labels after Role 1 promotes) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 41.0 Td (canonical UI-X09 fixtures or live evidence exists.) Tj ET
+endstream
+endobj
+16 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 960 540] /Resources << /Font << /F1 4 0 R /F2 3 0 R >> >> /Contents 15 0 R >>
+endobj
+17 0 obj
+<< /Length 1927 >>
+stream
+0.96 0.97 0.95 rg 0 0 960 540 re f
+0.05 0.08 0.08 rg 0 500 960 40 re f
+0.91 0.61 0.07 rg 0 496 960 4 re f
+0.96 0.97 0.95 rg
+BT /F2 12 Tf 58.0 515.0 Td (ChatXPT proposal package - slide 7/15) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 456.0 Td (Gameplay Understanding Is Honest About) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 419.0 Td (Confidence And Unknowns) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 374.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 374.0 Td (OBS Virtual Camera is the accepted MVP capture path for raw game frames.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 344.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 344.0 Td (Universal visual signals cover broad activity, quiet, and transitions across action) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 321.0 Td (  games.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 291.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 291.0 Td (Calibrated HUD facts are claimed only for configured games and evidenced regions.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 261.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 261.0 Td (Unsupported or low-confidence facts stay unknown; they are not guessed from) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 238.0 Td (  expectations.) Tj ET
+0.88 0.91 0.87 rg 58 92 844 58 re f
+0.05 0.08 0.08 rg
+BT /F1 12 Tf 74.0 128.0 Td (Evidence labels) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 128.0 Td (extraction boundary and synthetic tests [diagnostic]; synthetic visual/OCR tests [fixture]; real OBS frame) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 111.0 Td (extraction [unknown].) Tj ET
+0.05 0.08 0.08 rg 58 28 844 48 re f
+0.96 0.97 0.95 rg
+BT /F1 11 Tf 74.0 56.0 Td (Asset note) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 56.0 Td (Privacy-reviewed OBS Virtual Camera frame capture with separated annotation overlays; one selected demo-game) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 41.0 Td (calibrated fact if proven.) Tj ET
+endstream
+endobj
+18 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 960 540] /Resources << /Font << /F1 4 0 R /F2 3 0 R >> >> /Contents 17 0 R >>
+endobj
+19 0 obj
+<< /Length 2035 >>
+stream
+0.96 0.97 0.95 rg 0 0 960 540 re f
+0.05 0.08 0.08 rg 0 500 960 40 re f
+0.91 0.61 0.07 rg 0 496 960 4 re f
+0.96 0.97 0.95 rg
+BT /F2 12 Tf 58.0 515.0 Td (ChatXPT proposal package - slide 8/15) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 456.0 Td (The Architecture Uses One Runtime Source Of) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 419.0 Td (Truth) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 374.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 374.0 Td (Next.js and TypeScript provide one product shell with role-owned public modules.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 344.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 344.0 Td (Zod schemas define versioned platform-neutral contracts for signals, profiles,) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 321.0 Td (  sessions, candidates, votes, quest state, views, commands, and errors.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 291.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 291.0 Td (Role 1's orchestrator authenticates commands, checks revisions, deduplicates IDs,) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 268.0 Td (  persists atomically, and broadcasts role-specific views.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 238.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 238.0 Td (Role modules integrate through public ports; private Twitch, OBS, provider, Supabase,) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 215.0 Td (  and UI payloads stay outside Core.) Tj ET
+0.88 0.91 0.87 rg 58 92 844 58 re f
+0.05 0.08 0.08 rg
+BT /F1 12 Tf 74.0 128.0 Td (Evidence labels) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 128.0 Td (source/contracts/tests [diagnostic]; live multi-client authority [unknown].) Tj ET
+0.05 0.08 0.08 rg 58 28 844 48 re f
+0.96 0.97 0.95 rg
+BT /F1 11 Tf 74.0 56.0 Td (Asset note) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 56.0 Td (Compact data-flow diagram plus a later screenshot/log proving the same session and quest-cycle revision across) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 41.0 Td (Studio, two viewers, persistence, and OBS.) Tj ET
+endstream
+endobj
+20 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 960 540] /Resources << /Font << /F1 4 0 R /F2 3 0 R >> >> /Contents 19 0 R >>
+endobj
+21 0 obj
+<< /Length 1969 >>
+stream
+0.96 0.97 0.95 rg 0 0 960 540 re f
+0.05 0.08 0.08 rg 0 500 960 40 re f
+0.91 0.61 0.07 rg 0 496 960 4 re f
+0.96 0.97 0.95 rg
+BT /F2 12 Tf 58.0 515.0 Td (ChatXPT proposal package - slide 9/15) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 456.0 Td (The Quest Engine Makes Safety And Flow) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 419.0 Td (Deterministic) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 374.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 374.0 Td (It validates unsafe, illegal, humiliating, wagering, privacy-violating, unsupported,) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 351.0 Td (  repetitive, stale, and impossible quests.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 321.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 321.0 Td (It opens a 30-second vote using authoritative time and rejects late votes.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 291.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 291.0 Td (It resolves majority, ties, zero-vote no-activation, cancellation, skip, failure,) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 268.0 Td (  success, expiry, cooldown, points, and hype through deterministic rules.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 238.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 238.0 Td (Human-facing surfaces show allowed actions; they do not calculate winners, rewards, or) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 215.0 Td (  lifecycle transitions.) Tj ET
+0.88 0.91 0.87 rg 58 92 844 58 re f
+0.05 0.08 0.08 rg
+BT /F1 12 Tf 74.0 128.0 Td (Evidence labels) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 128.0 Td (engine and validation tests [fixture]; live quest cycle [unknown].) Tj ET
+0.05 0.08 0.08 rg 58 28 844 48 re f
+0.96 0.97 0.95 rg
+BT /F1 11 Tf 74.0 56.0 Td (Asset note) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 56.0 Td (Test result summary or demo screenshots for proposed, voting, active, terminal, tie, zero-vote, and emergency) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 41.0 Td (states.) Tj ET
+endstream
+endobj
+22 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 960 540] /Resources << /Font << /F1 4 0 R /F2 3 0 R >> >> /Contents 21 0 R >>
+endobj
+23 0 obj
+<< /Length 1919 >>
+stream
+0.96 0.97 0.95 rg 0 0 960 540 re f
+0.05 0.08 0.08 rg 0 500 960 40 re f
+0.91 0.61 0.07 rg 0 496 960 4 re f
+0.96 0.97 0.95 rg
+BT /F2 12 Tf 58.0 515.0 Td (ChatXPT proposal package - slide 10/15) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 456.0 Td (Participation Converges Through One Private) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 419.0 Td (Service) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 374.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 374.0 Td (Twitch Extension, hosted Quest Board, and Twitch-chat fallback all submit to the same) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 351.0 Td (  authoritative vote ledger.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 321.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 321.0 Td (The first accepted vote per viewer and quest cycle is final.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 291.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 291.0 Td (Shared broadcasts remove private vote receipts and personal points.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 261.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 261.0 Td (Reconnecting viewers recover only their own accepted vote and session points through a) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 238.0 Td (  private recovery seam.) Tj ET
+0.88 0.91 0.87 rg 58 92 844 58 re f
+0.05 0.08 0.08 rg
+BT /F1 12 Tf 74.0 128.0 Td (Evidence labels) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 128.0 Td (memory/Supabase source and tests [diagnostic]; Role 5 viewer fixture screenshots [fixture]; real) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 111.0 Td (two-viewer vote [unknown].) Tj ET
+0.05 0.08 0.08 rg 58 28 844 48 re f
+0.96 0.97 0.95 rg
+BT /F1 11 Tf 74.0 56.0 Td (Asset note) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 56.0 Td (Two isolated viewer clients voting in one real or memory-backed run; include duplicate/late vote evidence only) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 41.0 Td (when exercised.) Tj ET
+endstream
+endobj
+24 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 960 540] /Resources << /Font << /F1 4 0 R /F2 3 0 R >> >> /Contents 23 0 R >>
+endobj
+25 0 obj
+<< /Length 1996 >>
+stream
+0.96 0.97 0.95 rg 0 0 960 540 re f
+0.05 0.08 0.08 rg 0 500 960 40 re f
+0.91 0.61 0.07 rg 0 496 960 4 re f
+0.96 0.97 0.95 rg
+BT /F2 12 Tf 58.0 515.0 Td (ChatXPT proposal package - slide 11/15) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 456.0 Td (Streamer Studio Keeps Control With Minimal) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 419.0 Td (Live Burden) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 374.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 374.0 Td (Studio is the full management surface for Twitch setup, OBS capture, profile) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 351.0 Td (  preferences, safety, game context, health, diagnostics, history, and advanced) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 321.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 321.0 Td (Twitch Live Config is the compact stream-time control surface inside Twitch.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 291.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 291.0 Td (Current Role 4 work includes a design-system handoff, setup shell, readiness/status) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 268.0 Td (  presentation, and render-only status modules.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 238.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 238.0 Td (Authoritative connection, profile save, session wiring, and Live Config controls still) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 215.0 Td (  depend on Role 1 gateway handoffs.) Tj ET
+0.88 0.91 0.87 rg 58 92 844 58 re f
+0.05 0.08 0.08 rg
+BT /F1 12 Tf 74.0 128.0 Td (Evidence labels) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 128.0 Td (Role 4 source/tests [diagnostic]; final integrated Studio [unknown].) Tj ET
+0.05 0.08 0.08 rg 58 28 844 48 re f
+0.96 0.97 0.95 rg
+BT /F1 11 Tf 74.0 56.0 Td (Asset note) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 56.0 Td (Desktop and narrow Studio screenshots for setup, returning readiness, generated quests, recovery, and compact) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 41.0 Td (Live Config.) Tj ET
+endstream
+endobj
+26 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 960 540] /Resources << /Font << /F1 4 0 R /F2 3 0 R >> >> /Contents 25 0 R >>
+endobj
+27 0 obj
+<< /Length 2055 >>
+stream
+0.96 0.97 0.95 rg 0 0 960 540 re f
+0.05 0.08 0.08 rg 0 500 960 40 re f
+0.91 0.61 0.07 rg 0 496 960 4 re f
+0.96 0.97 0.95 rg
+BT /F2 12 Tf 58.0 515.0 Td (ChatXPT proposal package - slide 12/15) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 456.0 Td (Viewer And Overlay Surfaces Show The Shared) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 419.0 Td (Payoff) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 374.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 374.0 Td (Viewers see exactly three understandable options, vote acknowledgement, tallies,) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 351.0 Td (  countdown, active quest, progress, results, hype, and recovery states.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 321.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 321.0 Td (Hosted board fallback supports desktop/mobile participation without a separate) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 298.0 Td (  account.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 268.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 268.0 Td (Twitch-chat fallback explains the 1/2/3 voting path without putting chat parsing or) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 245.0 Td (  sending inside Role 5.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 215.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 215.0 Td (OBS overlay stays read-only and low-distraction for the broadcast.) Tj ET
+0.88 0.91 0.87 rg 58 92 844 58 re f
+0.05 0.08 0.08 rg
+BT /F1 12 Tf 74.0 128.0 Td (Evidence labels) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 128.0 Td (Role 5 fixture-rendered screenshots in manifest [fixture]; Twitch Extension identity/hosted) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 111.0 Td (access/realtime/OBS proof [unknown].) Tj ET
+0.05 0.08 0.08 rg 58 28 844 48 re f
+0.96 0.97 0.95 rg
+BT /F1 11 Tf 74.0 56.0 Td (Asset note) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 56.0 Td (Existing fixture assets can illustrate current UI; final deck needs real or memory-backed same-revision) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 41.0 Td (evidence before claiming integration.) Tj ET
+endstream
+endobj
+28 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 960 540] /Resources << /Font << /F1 4 0 R /F2 3 0 R >> >> /Contents 27 0 R >>
+endobj
+29 0 obj
+<< /Length 2016 >>
+stream
+0.96 0.97 0.95 rg 0 0 960 540 re f
+0.05 0.08 0.08 rg 0 500 960 40 re f
+0.91 0.61 0.07 rg 0 496 960 4 re f
+0.96 0.97 0.95 rg
+BT /F2 12 Tf 58.0 515.0 Td (ChatXPT proposal package - slide 13/15) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 456.0 Td (Expected Impact Is Measured As) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 419.0 Td (Participation, Not Vanity) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 374.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 374.0 Td (Principal metric: viewer participation rate, the share of active viewers who cast an) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 351.0 Td (  accepted vote.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 321.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 321.0 Td (Supporting measures: quest completion, setup time, response latency,) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 298.0 Td (  fallback/reconnect success, and streamer control burden.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 268.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 268.0 Td (Product hypotheses remain open until recorded streamer/viewer observations and) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 245.0 Td (  executed runs exist.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 215.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 215.0 Td (The deck should describe impact as measurable hypotheses unless the manifest records) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 192.0 Td (  results.) Tj ET
+0.88 0.91 0.87 rg 58 92 844 58 re f
+0.05 0.08 0.08 rg
+BT /F1 12 Tf 74.0 128.0 Td (Evidence labels) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 128.0 Td (accepted KPI decision [diagnostic]; measured impact [unknown].) Tj ET
+0.05 0.08 0.08 rg 58 28 844 48 re f
+0.96 0.97 0.95 rg
+BT /F1 11 Tf 74.0 56.0 Td (Asset note) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 56.0 Td (A simple metrics snapshot or table after real or memory-backed rehearsal: viewers present, accepted votes,) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 41.0 Td (completion, latency, reconnect/fallback outcome.) Tj ET
+endstream
+endobj
+30 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 960 540] /Resources << /Font << /F1 4 0 R /F2 3 0 R >> >> /Contents 29 0 R >>
+endobj
+31 0 obj
+<< /Length 2117 >>
+stream
+0.96 0.97 0.95 rg 0 0 960 540 re f
+0.05 0.08 0.08 rg 0 500 960 40 re f
+0.91 0.61 0.07 rg 0 496 960 4 re f
+0.96 0.97 0.95 rg
+BT /F2 12 Tf 58.0 515.0 Td (ChatXPT proposal package - slide 14/15) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 456.0 Td (Technical Choices Prioritise Trust, Privacy,) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 419.0 Td (And Recoverability) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 374.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 374.0 Td (Supabase Free is the accepted authoritative persistence/realtime target;) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 351.0 Td (  credential-free memory mode remains a development fallback.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 321.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 321.0 Td (Vercel is the planned deployment host; deployment evidence is not yet recorded.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 291.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 291.0 Td (Server-only secrets protect Twitch, Supabase, and provider credentials.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 261.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 261.0 Td (Raw frames are ephemeral; raw chat is processed in memory unless approved for) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 238.0 Td (  short-lived debugging; rewards are session-scoped and non-monetary.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 208.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 208.0 Td (Third-party disclosures cover runtime dependencies, development tooling, Twitch, OBS,) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 185.0 Td (  Supabase, Vercel, and provider status.) Tj ET
+0.88 0.91 0.87 rg 58 92 844 58 re f
+0.05 0.08 0.08 rg
+BT /F1 12 Tf 74.0 128.0 Td (Evidence labels) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 128.0 Td (disclosures and source checks [diagnostic]; cloud/deployment proof [unknown].) Tj ET
+0.05 0.08 0.08 rg 58 28 844 48 re f
+0.96 0.97 0.95 rg
+BT /F1 11 Tf 74.0 56.0 Td (Asset note) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 56.0 Td (Deployment health screenshot only after real preview is configured; no secret-bearing screenshots.) Tj ET
+endstream
+endobj
+32 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 960 540] /Resources << /Font << /F1 4 0 R /F2 3 0 R >> >> /Contents 31 0 R >>
+endobj
+33 0 obj
+<< /Length 2029 >>
+stream
+0.96 0.97 0.95 rg 0 0 960 540 re f
+0.05 0.08 0.08 rg 0 500 960 40 re f
+0.91 0.61 0.07 rg 0 496 960 4 re f
+0.96 0.97 0.95 rg
+BT /F2 12 Tf 58.0 515.0 Td (ChatXPT proposal package - slide 15/15) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 456.0 Td (Final Deck Assets Must Prove The Golden) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 29 Tf 58.0 419.0 Td (Workflow Or Label The Gap) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 374.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 374.0 Td (Required final proof: real Twitch activity, real OBS-captured gameplay, exactly three) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 351.0 Td (  validated quests, one streamer, two viewers, one authoritative revision, OBS overlay,) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 321.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 321.0 Td (Current manifest does not yet prove the real golden workflow.) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 291.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 291.0 Td (The proposal deck can be submitted honestly as a build-and-evidence plan; the final) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 268.0 Td (  competition deck should swap unknown labels for manifest-backed real entries only) Tj ET
+0.91 0.61 0.07 rg
+BT /F1 16 Tf 58.0 238.0 Td (-) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 238.0 Td (Never upgrade fixture screenshots, static checks, or source inspection into live) Tj ET
+0.05 0.08 0.08 rg
+BT /F2 16 Tf 82.0 215.0 Td (  product claims.) Tj ET
+0.88 0.91 0.87 rg 58 92 844 58 re f
+0.05 0.08 0.08 rg
+BT /F1 12 Tf 74.0 128.0 Td (Evidence labels) Tj ET
+0.24 0.28 0.26 rg
+BT /F2 12 Tf 192.0 128.0 Td (final golden workflow [unknown]; available manifest evidence [fixture] and [diagnostic].) Tj ET
+0.05 0.08 0.08 rg 58 28 844 48 re f
+0.96 0.97 0.95 rg
+BT /F1 11 Tf 74.0 56.0 Td (Asset note) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 56.0 Td (Privacy-reviewed demo recording stills, evidence manifest IDs, golden run limitations, and final source) Tj ET
+0.96 0.97 0.95 rg
+BT /F2 11 Tf 164.0 41.0 Td (commit.) Tj ET
+endstream
+endobj
+34 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 960 540] /Resources << /Font << /F1 4 0 R /F2 3 0 R >> >> /Contents 33 0 R >>
+endobj
+xref
+0 35
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000219 00000 n 
+0000000289 00000 n 
+0000000364 00000 n 
+0000001955 00000 n 
+0000002091 00000 n 
+0000003795 00000 n 
+0000003931 00000 n 
+0000005833 00000 n 
+0000005970 00000 n 
+0000007852 00000 n 
+0000007990 00000 n 
+0000009800 00000 n 
+0000009938 00000 n 
+0000011970 00000 n 
+0000012108 00000 n 
+0000014087 00000 n 
+0000014225 00000 n 
+0000016312 00000 n 
+0000016450 00000 n 
+0000018471 00000 n 
+0000018609 00000 n 
+0000020580 00000 n 
+0000020718 00000 n 
+0000022766 00000 n 
+0000022904 00000 n 
+0000025011 00000 n 
+0000025149 00000 n 
+0000027217 00000 n 
+0000027355 00000 n 
+0000029524 00000 n 
+0000029662 00000 n 
+0000031743 00000 n 
+trailer
+<< /Size 35 /Root 1 0 R >>
+startxref
+31881
+%%EOF
