@@ -9,9 +9,9 @@ The repository contains a runnable local prototype that demonstrates the core id
 
 1. streamer-facing signal controls;
 2. exactly three generated sidequests;
-3. local screen/window activity sampling when the browser is granted capture permission;
+3. local screen/window activity sampling when the browser is granted capture permission, with visible motion, visual-change, tempo, confidence, preview, and checksum signals;
 4. anonymous Twitch-chat `1`/`2`/`3` vote ingestion for the configured broadcaster channel when Twitch chat is reachable;
-5. default-on local demo automation that generates after 30 seconds of live capture and publishes the leading voted quest to the overlay;
+5. visible Studio automation settings for automatic quest generation versus manual producer review, and automatic overlay publishing versus streamer-approved activation;
 6. manual viewer-vote simulation as a diagnostic fallback;
 7. streamer activation and result controls;
 8. OBS-style overlay output through `http://localhost:3000/overlay`.
@@ -51,7 +51,7 @@ Local demo routes:
 1. Run `npm run dev`.
 2. Open `http://localhost:3000/`.
 3. Click **Capture game window** and choose the game/phone/OBS preview window. Confirm the preview thumbnail and checksum are changing before claiming live screen sampling.
-4. Confirm **Auto-generate quests after 30s of live capture** and **Auto-show the leading voted quest on overlay** are enabled in the demo automation panel.
+4. Confirm the **Stream automation settings** are set to **Auto generate** and **Auto overlay**, or switch to **Manual review** / **Streamer approves** if the recording should show manual control.
 5. Connect Twitch chat to the broadcaster channel, for example `dewflash`, if a test stream is available.
 6. Wait for auto-generation or click **Generate sidequests** if the recording needs to move faster. If clicked manually, label that as prototype/demo control.
 7. Confirm exactly three Brawl Stars-safe quest cards appear. With no `OPENAI_API_KEY`, this uses the safe mock/demo engine. If `OPENAI_API_KEY` is configured, the legacy API tries the optional OpenAI adapter and falls back to the mock engine on failure. The accepted judged MVP path remains the credential-free algorithmic route recorded in D-055.

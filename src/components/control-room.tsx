@@ -124,6 +124,7 @@ export function ControlRoom() {
   const [liveChat, setLiveChat] = useState<TwitchChatLine[]>([]);
   const [autoDemoEnabled, setAutoDemoEnabled] = useState(true);
   const [autoOverlayEnabled, setAutoOverlayEnabled] = useState(true);
+  const [generationDelaySeconds, setGenerationDelaySeconds] = useState(30);
   const [autoQuestCountdown, setAutoQuestCountdown] = useState<number | null>(null);
   const [autoOverlayCountdown, setAutoOverlayCountdown] = useState<number | null>(null);
   const chatSocketRef = useRef<WebSocket | null>(null);
@@ -151,6 +152,44 @@ export function ControlRoom() {
       .sort((left, right) => right.count - left.count || left.index - right.index);
     return ranked[0]?.count > 0 ? ranked[0].quest : null;
   }, [quests, votes]);
+  const analysisSummary = useMemo(() => {
+    const motion = analysis.changedPixelRatio === null ? null : Math.round(analysis.changedPixelRatio * 100);
+    const visualChange = analysis.meanLumaDelta === null ? null : Math.round(analysis.meanLumaDelta * 100);
+    const confidence = Math.round(analysis.confidence * 100);
+    const readiness = analysis.status === "running"
+      ? "Live pixels are feeding quest context"
+      : "Start capture to feed live context";
+    const tempo = analysis.label === "action"
+      ? "Active fight"
+      : analysis.label === "transition"
+        ? "Big screen change"
+        : analysis.label === "quiet"
+          ? "Quiet moment"
+          : "Unknown tempo";
+
+    return [
+      {
+        label: "Motion",
+        value: motion === null ? "n/a" : `${motion}%`,
+        detail: motion === null ? "No comparison frame yet" : "Changed-pixel share from live frames",
+      },
+      {
+        label: "Visual change",
+        value: visualChange === null ? "n/a" : `${visualChange}%`,
+        detail: visualChange === null ? "Waiting for luma delta" : "Brightness shift between samples",
+      },
+      {
+        label: "Tempo",
+        value: tempo,
+        detail: readiness,
+      },
+      {
+        label: "Confidence",
+        value: `${confidence}%`,
+        detail: analysis.label === "unknown" ? "Unsupported facts stay unknown" : "Broad activity signal only",
+      },
+    ];
+  }, [analysis]);
   const questAutoArmed = autoDemoEnabled
     && analysis.status === "running"
     && quests.length === 0
@@ -194,7 +233,7 @@ export function ControlRoom() {
   useEffect(() => {
     if (!questAutoArmed) return;
 
-    let remaining = 30;
+    let remaining = generationDelaySeconds;
     const initial = window.setTimeout(() => setAutoQuestCountdown(remaining), 0);
     const countdown = window.setInterval(() => {
       remaining -= 1;
@@ -202,14 +241,14 @@ export function ControlRoom() {
     }, 1000);
     const trigger = window.setTimeout(() => {
       void generate();
-    }, 30_000);
+    }, generationDelaySeconds * 1000);
 
     return () => {
       window.clearTimeout(initial);
       window.clearInterval(countdown);
       window.clearTimeout(trigger);
     };
-  }, [generate, questAutoArmed]);
+  }, [generate, generationDelaySeconds, questAutoArmed]);
 
   useEffect(() => {
     if (!overlayAutoArmed || !leadingQuest) return;
@@ -458,8 +497,8 @@ export function ControlRoom() {
             </button>
             <dl>
               <div><dt>Frames</dt><dd>{analysis.frameCount}</dd></div>
-              <div><dt>Changed pixels</dt><dd>{analysis.changedPixelRatio === null ? "n/a" : `${Math.round(analysis.changedPixelRatio * 100)}%`}</dd></div>
-              <div><dt>Luma delta</dt><dd>{analysis.meanLumaDelta === null ? "n/a" : analysis.meanLumaDelta.toFixed(3)}</dd></div>
+              <div><dt>Motion</dt><dd>{analysis.changedPixelRatio === null ? "n/a" : `${Math.round(analysis.changedPixelRatio * 100)}%`}</dd></div>
+              <div><dt>Visual change</dt><dd>{analysis.meanLumaDelta === null ? "n/a" : `${Math.round(analysis.meanLumaDelta * 100)}%`}</dd></div>
               <div><dt>Confidence</dt><dd>{Math.round(analysis.confidence * 100)}%</dd></div>
             </dl>
             <div className="analysis-preview">
@@ -472,6 +511,16 @@ export function ControlRoom() {
               <b>checksum {analysis.visualChecksum ?? "n/a"}</b>
             </div>
             <p>{analysis.message}</p>
+          </div>
+
+          <div className="analysis-insights">
+            {analysisSummary.map((item) => (
+              <div key={item.label}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <p>{item.detail}</p>
+              </div>
+            ))}
           </div>
 
           <div className="form-grid">
@@ -531,29 +580,60 @@ export function ControlRoom() {
 
           <div className="automation-card">
             <div>
-              <p className="step">Demo automation</p>
-              <h3>Auto loop is ready</h3>
+              <p className="step">Stream automation settings</p>
+              <h3>{autoDemoEnabled ? "Automatic quest flow" : "Manual producer review"}</h3>
               <p>
-                Default-on for recording: capture starts the 30s quest timer, then the first viewer vote
-                publishes the leading quest to the OBS overlay.
+                Choose whether ChatXPT prepares quests while you play or waits for the streamer to stop
+                and review. Overlay publishing can also be automatic or manual.
               </p>
             </div>
-            <label className="toggle-row">
-              <input
-                type="checkbox"
-                checked={autoDemoEnabled}
-                onChange={(event) => setAutoDemoEnabled(event.target.checked)}
-              />
-              <span>Auto-generate quests after 30s of live capture</span>
+            <div className="mode-grid">
+              <button
+                type="button"
+                className={autoDemoEnabled ? "selected" : ""}
+                onClick={() => setAutoDemoEnabled(true)}
+              >
+                <b>Auto generate</b>
+                <span>{generationDelaySeconds}s after live capture starts</span>
+              </button>
+              <button
+                type="button"
+                className={!autoDemoEnabled ? "selected" : ""}
+                onClick={() => setAutoDemoEnabled(false)}
+              >
+                <b>Manual review</b>
+                <span>Streamer clicks Generate now</span>
+              </button>
+            </div>
+            <label>Quest timing
+              <select
+                value={generationDelaySeconds}
+                onChange={(event) => setGenerationDelaySeconds(Number(event.target.value))}
+                disabled={!autoDemoEnabled}
+              >
+                <option value={15}>15 seconds</option>
+                <option value={30}>30 seconds</option>
+                <option value={45}>45 seconds</option>
+              </select>
             </label>
-            <label className="toggle-row">
-              <input
-                type="checkbox"
-                checked={autoOverlayEnabled}
-                onChange={(event) => setAutoOverlayEnabled(event.target.checked)}
-              />
-              <span>Auto-show the leading voted quest on overlay</span>
-            </label>
+            <div className="mode-grid">
+              <button
+                type="button"
+                className={autoOverlayEnabled ? "selected" : ""}
+                onClick={() => setAutoOverlayEnabled(true)}
+              >
+                <b>Auto overlay</b>
+                <span>Winner appears for viewers after vote</span>
+              </button>
+              <button
+                type="button"
+                className={!autoOverlayEnabled ? "selected" : ""}
+                onClick={() => setAutoOverlayEnabled(false)}
+              >
+                <b>Streamer approves</b>
+                <span>Click Activate before overlay shows</span>
+              </button>
+            </div>
             <div className="automation-status">
               <span>
                 {!questAutoArmed
@@ -568,7 +648,7 @@ export function ControlRoom() {
             </div>
           </div>
 
-          <button className="primary-button" onClick={generate} disabled={loading}>{loading ? "Reading the moment…" : "Generate sidequests ✦"}</button>
+          <button className="primary-button" onClick={generate} disabled={loading}>{loading ? "Reading the moment…" : "Generate now"}</button>
           {error && <p className="notice error">{error}</p>}
           {warning && <p className="notice">{warning}</p>}
         </div>

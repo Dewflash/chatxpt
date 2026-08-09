@@ -33,7 +33,7 @@ Use this plan when the project owner and Joel record the final short video. Joel
 | --- | --- | --- | --- |
 | 0:00-0:25 | Product promise | ChatXPT turns gameplay state, viewer activity, and streamer preferences into safe sidequests viewers choose in real time. | Keep this to one plain-language line; no architecture lecture. |
 | 0:25-0:55 | First setup | OBS has the game/screen source and ChatXPT Browser Source overlay at `http://localhost:3000/overlay`, with the overlay above gameplay in Sources. | Script the one-time setup line: once OBS is configured, future streams reuse the saved scene. |
-| 0:55-1:25 | Streamer Studio/control room | Open `http://localhost:3000/`, show live screen analysis, streamer settings/context, and exactly three generated quests. | Call out only the signals visible on screen, such as activity/delta/confidence/chat; unsupported gameplay facts stay unknown. |
+| 0:55-1:25 | Streamer Studio/control room | Open `http://localhost:3000/`, show live screen analysis, stream automation settings, streamer settings/context, and exactly three generated quests. | Call out only the signals visible on screen, such as motion/visual-change/tempo/confidence/chat; unsupported gameplay facts stay unknown. |
 | 1:25-2:30 | Live run-through | Project owner plays the game while ChatXPT samples the selected screen/window, generates three Brawl Stars-safe sidequests, and starts a short vote. | Join the Twitch channel as viewer and type `1`, `2`, or `3` within the voting window. |
 | 2:30-3:15 | Viewer vote and overlay | Show the vote count update, activate or auto-show the winning quest, and show the OBS overlay updating for the broadcast. | Confirm the viewer action is the vote shown on screen; if chat cannot connect, label the fallback honestly. |
 | 3:15-4:15 | Analytics and quest generator | Explain that ChatXPT combines broad gameplay activity, audience signals, streamer boundaries, and deterministic safety/validation to choose appropriate quests. | Keep the analysis explanation practical: what changed, why the quest fits, what is still prototype-level. |
@@ -62,14 +62,14 @@ Use this screen-by-screen checklist when deciding the final edit. Keep setup cli
 | --- | --- | --- | --- |
 | 1 | Explain the app | Short slide/title card or the app home/control-room screen | One sentence: ChatXPT turns stream context and viewer input into safe sidequests. |
 | 2 | Show the OBS overlay | Project owner's screen in OBS | The ChatXPT Browser Source should sit above the gameplay/screen source. |
-| 3 | Show Streamer Studio/control room | Project owner's screen at `http://localhost:3000/` | Show live screen analysis, streamer context, generated quests, and vote controls. |
+| 3 | Show Streamer Studio/control room | Project owner's screen at `http://localhost:3000/` | Show live screen analysis, stream automation settings, streamer context, generated quests, and vote controls. |
 | 4 | Show first setup | Project owner's OBS screen | Add/select game capture and `http://localhost:3000/overlay` once. |
 | 5 | Show future stream setup | Same OBS scene as #4 | Explain that OBS remembers the scene, so future streams start from the saved setup. Do not spend extra time if nothing changes. |
 | 6 | Show viewer joining | Joel's screen on the Twitch stream/viewer page | This is the viewer perspective that proves someone else can watch and participate. |
 | 7 | Show quests auto-generating and appearing on stream | Project owner's control room and OBS overlay, then Role 2's view of the stream | The intended flow is passive: streamer plays, ChatXPT samples context, three quests appear. If a click is still needed in the prototype, label it as prototype/demo control. |
 | 8 | Show Joel voting | Joel's screen typing `1`, `2`, or `3` in Twitch chat | Vote within the short window, ideally around 30 seconds into the run-through. |
 | 9 | Show chosen quest on overlay | Project owner's OBS overlay and Role 2's stream view | Confirm the selected quest is visible in the broadcast overlay. |
-| 10 | Discuss analytics | Simple local screen, preferably `http://localhost:3000/` | Point to visible activity/confidence/chat/vote signals; keep unsupported gameplay facts as `unknown`. |
+| 10 | Discuss analytics | Simple local screen, preferably `http://localhost:3000/` | Point to visible motion, visual-change, tempo, confidence, chat, and vote signals; keep unsupported gameplay facts as `unknown`. |
 | 11 | Discuss quest generator | The generated quest cards on `http://localhost:3000/`; use `/diagnostics/ui-harness` only if needed | Explain why the three quests fit the stream context and safety boundaries. Avoid deep implementation detail. |
 
 Joel should turn this into a shot list with exact transitions, narration, and who shares which screen. The core edit should feel like one smooth story: first-time setup once, future streams reuse it, streamer plays, ChatXPT prepares quests, viewer votes, overlay updates, then analytics and quest-generation reasoning close the loop.
