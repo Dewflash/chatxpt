@@ -21,14 +21,16 @@ export type ViewerSurfacePhase =
   | "waiting"
   | "voting"
   | "active"
-  | "result";
+  | "result"
+  | "cooldown";
 
 export type OverlaySurfacePhase =
   | "loading"
   | "inactive"
   | "voting"
   | "active"
-  | "result";
+  | "result"
+  | "cooldown";
 
 export interface ViewerQuestOptionPresentation {
   readonly candidateId: string;
@@ -82,6 +84,7 @@ export interface OverlayPresentation {
   readonly evidenceClass: OverlayViewModel["envelope"]["evidenceClass"] | null;
   readonly revision: number | null;
   readonly connection: OverlayViewModel["connection"] | null;
+  readonly options: readonly ViewerQuestOptionPresentation[];
   readonly activeQuest: ViewerQuestOptionPresentation | null;
   readonly startsAt: number | null;
   readonly endsAt: number | null;
@@ -105,6 +108,7 @@ function viewerPhase(view: ViewerViewModel): ViewerSurfacePhase {
   if (view.questCycle.status === "voting") return "voting";
   if (view.questCycle.status === "active") return "active";
   if (terminalQuestStatuses.has(view.questCycle.status)) return "result";
+  if (view.questCycle.status === "cooldown") return "cooldown";
   return "waiting";
 }
 
@@ -112,6 +116,7 @@ function overlayPhase(view: OverlayViewModel): OverlaySurfacePhase {
   if (view.questCycle.status === "voting") return "voting";
   if (view.questCycle.status === "active") return "active";
   if (terminalQuestStatuses.has(view.questCycle.status)) return "result";
+  if (view.questCycle.status === "cooldown") return "cooldown";
   return "inactive";
 }
 
@@ -215,6 +220,7 @@ export function presentOverlay(view: OverlayViewModel | null): OverlayPresentati
       evidenceClass: null,
       revision: null,
       connection: null,
+      options: [],
       activeQuest: null,
       startsAt: null,
       endsAt: null,
@@ -232,6 +238,7 @@ export function presentOverlay(view: OverlayViewModel | null): OverlayPresentati
     evidenceClass: view.envelope.evidenceClass,
     revision: view.envelope.revision,
     connection: view.connection,
+    options,
     activeQuest:
       options.find((candidate) => candidate.candidateId === view.questCycle.activeCandidateId) ??
       null,

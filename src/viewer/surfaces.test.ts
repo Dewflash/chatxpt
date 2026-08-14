@@ -131,13 +131,62 @@ describe("Role 5 viewer surfaces", () => {
         },
         onSelectCandidate: () => undefined,
         onVoteCandidate: () => undefined,
+        onRetry: () => undefined,
       }),
     );
 
     expect(html).toContain("The quest changed");
     expect(html).toContain("Your selection is preserved while ChatXPT refreshes.");
     expect(html).toContain("Selected");
+    expect(html).toContain("Retry connection");
+    expect(html).toContain("Voting and reactions are paused until recovery completes.");
+    expect(html.match(/disabled=""/g)).toHaveLength(3);
   });
+
+  it("offers Twitch reauthentication without asking for a separate viewer account", () => {
+    const html = renderToStaticMarkup(
+      h(TwitchExtensionViewerSurface, {
+        view: votingView(),
+        selectedCandidateId: options[0].candidateId,
+        commandError: {
+          code: "unauthenticated",
+          message: "The Twitch viewer token expired.",
+          retryable: true,
+        },
+        onSelectCandidate: () => undefined,
+        onVoteCandidate: () => undefined,
+        onReauthenticate: () => undefined,
+      }),
+    );
+
+    expect(html).toContain("Reconnect with Twitch");
+    expect(html).toContain("No separate ChatXPT account is needed.");
+    expect(html).not.toContain("Retry connection");
+    expect(html.match(/disabled=""/g)).toHaveLength(3);
+  });
+
+  it.each(["r5.vote.zero-vote.v1", "r5.vote.tie.v1"] as const)(
+    "waits for an authoritative resolution for %s without declaring a local outcome",
+    (fixtureId) => {
+      const source = contractFixtureUiX06RoleViewCatalog[fixtureId].viewer;
+      const view = viewerViewModelSchema.parse({
+        ...source,
+        canVote: false,
+      });
+      const html = renderToStaticMarkup(
+        h(TwitchExtensionViewerSurface, {
+          view,
+          now: (view.questCycle.endsAt ?? NOW) + 1,
+        }),
+      );
+
+      expect(html).toContain("Awaiting the official result");
+      expect(html.match(/Option [123]\./g)).toHaveLength(3);
+      expect(html).not.toContain("Winner confirmed");
+      expect(html).not.toContain("Tie decided");
+      expect(html).not.toContain("Zero votes");
+    },
+  );
 
   it("collapses the resolved vote into one authoritative active quest", () => {
     const view = contractFixtureUiX06RoleViewCatalog["r5.quest.active-automatic-progress.v1"].viewer;
@@ -163,7 +212,36 @@ describe("Role 5 viewer surfaces", () => {
     expect(html).not.toContain(inactive?.title);
     expect(html).toContain("Winner confirmed. The quest is now active.");
     expect(html).toContain("75%");
+    expect(html).toContain("Live game progress");
     expect(html).toContain("Send hype");
+  });
+
+  it("labels manual progress as a streamer update", () => {
+    const view = contractFixtureUiX06RoleViewCatalog["r5.quest.active-manual-progress.v1"].viewer;
+    const html = renderToStaticMarkup(h(TwitchExtensionViewerSurface, { view, now: NOW }));
+
+    expect(html).toContain("50%");
+    expect(html).toContain("Streamer updated");
+    expect(html).not.toContain("Live game progress");
+  });
+
+  it("labels progress with unknown provenance without inventing a source", () => {
+    const source =
+      contractFixtureUiX06RoleViewCatalog["r5.quest.active-manual-progress.v1"].viewer;
+    const view = viewerViewModelSchema.parse({
+      ...source,
+      questCycle: {
+        ...source.questCycle,
+        progress: source.questCycle.progress
+          ? { ...source.questCycle.progress, method: "unknown" }
+          : null,
+      },
+    });
+    const html = renderToStaticMarkup(h(TwitchExtensionViewerSurface, { view, now: NOW }));
+
+    expect(html).toContain("Progress unavailable");
+    expect(html).not.toContain("Streamer updated");
+    expect(html).not.toContain("Live game progress");
   });
 
   it("uses explicit community and private labels in the authoritative result state", () => {
@@ -176,10 +254,38 @@ describe("Role 5 viewer surfaces", () => {
     );
 
     expect(html).toContain("Quest result");
-    expect(html).toContain("Quest succeeded");
+    expect(html).toContain("Quest completed");
+    expect(html).toContain("Awarded 100 pts.");
     expect(html).toContain("Community hype");
     expect(html).toContain("Your session points");
     expect(html).toContain("The authoritative quest result is shown above.");
+  });
+
+  it.each([
+    ["r5.quest.failed.v1", "Quest attempt ended"],
+    ["r5.quest.cancelled.v1", "Quest cancelled"],
+    ["r5.quest.skipped.v1", "Quest skipped"],
+    ["r5.quest.expired.v1", "Quest expired"],
+  ] as const)("distinguishes the authoritative %s outcome", (fixtureId, title) => {
+    const view = contractFixtureUiX06RoleViewCatalog[fixtureId].viewer;
+    const html = renderToStaticMarkup(h(TwitchExtensionViewerSurface, { view, now: NOW }));
+
+    expect(html).toContain(title);
+    expect(html).not.toContain("Awarded 0 pts");
+  });
+
+  it("renders the authoritative cooldown without inventing a next quest", () => {
+    const view = contractFixtureUiX06RoleViewCatalog["r4.quest.cooldown.v1"].viewer;
+    const html = renderToStaticMarkup(
+      h(TwitchExtensionViewerSurface, {
+        view,
+        now: view.questCycle.startsAt ?? NOW,
+      }),
+    );
+
+    expect(html).toContain("Next vote soon");
+    expect(html).toContain("The next vote opens after the official cooldown.");
+    expect(html).not.toContain("<button");
   });
 
   it("keeps the hosted board wider-layout wrapper separate from Twitch copy", () => {
@@ -230,7 +336,28 @@ describe("Role 5 viewer surfaces", () => {
     expect(html).toContain("Send <strong>1</strong>");
     expect(html).toContain("Send <strong>2</strong>");
     expect(html).toContain("Send <strong>3</strong>");
-    expect(html).toContain("status comes from ChatXPT");
+    expect(html).toContain("ChatXPT replies with counted, duplicate, rejected, or late status");
+  });
+
+  it("keeps active and terminal quest status consistent in the chat fallback", () => {
+    const activeSource =
+      contractFixtureUiX06RoleViewCatalog["r5.quest.active-manual-progress.v1"].viewer;
+    const resultSource = contractFixtureUiX06RoleViewCatalog["r5.quest.cancelled.v1"].viewer;
+    const active = viewerViewModelSchema.parse({
+      ...activeSource,
+      participationMode: "twitch-chat",
+    });
+    const result = viewerViewModelSchema.parse({
+      ...resultSource,
+      participationMode: "twitch-chat",
+    });
+    const activeHtml = renderToStaticMarkup(h(ChatFallbackInstructions, { view: active }));
+    const resultHtml = renderToStaticMarkup(h(ChatFallbackInstructions, { view: result }));
+
+    expect(activeHtml).toContain("Quest active");
+    expect(activeHtml).toContain(options[0].title);
+    expect(resultHtml).toContain("Quest cancelled");
+    expect(resultHtml).toContain("No separate viewer account is needed.");
   });
 });
 
@@ -270,6 +397,66 @@ describe("Role 5 OBS overlay surface", () => {
     expect(html).toContain(options[2].title);
     expect(html).toContain("45s left");
     expect(html).toContain("Progress");
+    expect(html).toContain("Live game progress");
+    expect(html).not.toContain("<button");
+  });
+
+  it("renders all three authoritative choices and tallies during overlay voting", () => {
+    const source = contractFixtureUiX06RoleViewCatalog["r5.vote.tie.v1"].overlay;
+    const html = renderToStaticMarkup(
+      h(ObsQuestOverlaySurface, {
+        view: source,
+        now: source.questCycle.startsAt ?? NOW,
+      }),
+    );
+
+    expect(html).toContain("Audience vote");
+    expect(html).toContain("Vote now");
+    expect(html).toContain(options[0].title);
+    expect(html).toContain(options[1].title);
+    expect(html).toContain(options[2].title);
+    expect(html).toContain("2 votes");
+    expect(html).not.toContain("<button");
+  });
+
+  it("shows a terminal overlay result even when no winning candidate exists", () => {
+    const view = contractFixtureUiX06RoleViewCatalog["r5.quest.cancelled.v1"].overlay;
+    const html = renderToStaticMarkup(h(ObsQuestOverlaySurface, { view, now: NOW }));
+
+    expect(html).toContain("Quest cancelled");
+    expect(html).toContain("Fixture streamer cancellation.");
+    expect(html).not.toContain("Awarded");
+    expect(html).not.toContain("<button");
+  });
+
+  it("shows a compact recovery state instead of silently disappearing", () => {
+    const view = overlayViewModelSchema.parse({
+      ...contractFixtureOverlayView,
+      connection: {
+        ...contractFixtureOverlayView.connection,
+        status: "degraded",
+        retryable: true,
+        message: "Fixture reconnect",
+      },
+    });
+    const html = renderToStaticMarkup(h(ObsQuestOverlaySurface, { view, now: NOW }));
+
+    expect(html).toContain("Overlay reconnecting");
+    expect(html).toContain("latest safe quest stays visible");
+    expect(html).not.toContain("<button");
+  });
+
+  it("renders the authoritative overlay cooldown as a quiet status card", () => {
+    const view = contractFixtureUiX06RoleViewCatalog["r4.quest.cooldown.v1"].overlay;
+    const html = renderToStaticMarkup(
+      h(ObsQuestOverlaySurface, {
+        view,
+        now: view.questCycle.startsAt ?? NOW,
+      }),
+    );
+
+    expect(html).toContain("Next vote soon");
+    expect(html).toContain("120s left");
     expect(html).not.toContain("<button");
   });
 });
