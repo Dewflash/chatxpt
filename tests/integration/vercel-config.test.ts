@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const repositoryRoot = process.cwd();
 const secretNamePattern =
-  /(SUPABASE_(SECRET_KEY|SERVICE_ROLE_KEY)|TWITCH_(CLIENT_SECRET|EXTENSION_SECRET)|CHATXPT_OBS_OVERLAY_SETUP_KEY|OPENAI_API_KEY)/;
+  /(SUPABASE_(SECRET_KEY|SERVICE_ROLE_KEY)|TWITCH_(CLIENT_SECRET|EXTENSION_SECRET)|CHATXPT_(OBS_OVERLAY|GAMEPLAY_INGRESS)_SETUP_KEY|OPENAI_API_KEY)/;
 const fixtureSecretValuePattern =
   /(sb_secret_|service-role|client-secret|extension-secret|overlay-secret|sk-[A-Za-z0-9])/i;
 
@@ -40,6 +40,7 @@ describe("Role 1 Vercel preview configuration", () => {
     expect(runbook).toContain("SUPABASE_SECRET_KEY=<Supabase secret key>");
     expect(runbook).toContain("TWITCH_CLIENT_SECRET=<Twitch app client secret>");
     expect(runbook).toContain("CHATXPT_OBS_OVERLAY_SETUP_KEY=<Role 1 generated setup key>");
+    expect(runbook).toContain("CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY=<Role 1 generated gameplay ingress key>");
     expect(runbook).toContain("/api/health/deployment");
     expect(runbook).toContain("docs/evidence/manifest.json");
     expect(runbook).not.toMatch(fixtureSecretValuePattern);
@@ -59,6 +60,7 @@ describe("Role 1 Vercel preview configuration", () => {
       "TWITCH_EXTENSION_CLIENT_ID",
       "TWITCH_EXTENSION_SECRET",
       "CHATXPT_OBS_OVERLAY_SETUP_KEY",
+      "CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY",
     ]) {
       expect(environmentExample).toContain(`${name}=`);
       expect(runbook).toContain(name);

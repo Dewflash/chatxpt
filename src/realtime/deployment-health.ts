@@ -18,6 +18,9 @@ export const deploymentHealthReportSchema = z
       configured: z.boolean(),
       url: z.string().url().optional(),
     }),
+    gameplayIngress: z.object({
+      configured: z.boolean(),
+    }),
   })
   .strict();
 
@@ -46,5 +49,8 @@ export function resolveDeploymentHealthReport(
       : {
           configured: false,
         },
+    gameplayIngress: {
+      configured: (source.CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY?.trim().length ?? 0) >= 32,
+    },
   });
 }

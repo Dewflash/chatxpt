@@ -58,6 +58,7 @@ All values in `.env.example` are empty placeholders. Real credentials must remai
 | `TWITCH_EXTENSION_CLIENT_ID` | No | Identifier for the registered Twitch Extension. |
 | `TWITCH_EXTENSION_SECRET` | No | Server-only secret used for Extension authentication/JWT work. |
 | `CHATXPT_OBS_OVERLAY_SETUP_KEY` | No | Server-only key for the streamer-controlled OBS overlay setup boundary. |
+| `CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY` | For authenticated capture | Server-only key that bootstraps short-lived, session-scoped normalised gameplay ingress grants. It is never a client bundle value. |
 | `NEXT_PUBLIC_APP_ENV` | No | Environment label; the example uses `local`. |
 
 Legacy Supabase projects may use the aliases documented in [.env.example](.env.example), but each environment should configure only one key pair.
