@@ -25,6 +25,7 @@ export type TwitchExtensionAuthErrorCode =
   | "malformed-token"
   | "invalid-signature"
   | "expired-token"
+  | "invalid-role"
   | "invalid-identity";
 
 export class TwitchExtensionAuthError extends Error {
@@ -40,7 +41,7 @@ export class TwitchExtensionAuthError extends Error {
 export interface TwitchExtensionAuthorization {
   readonly channelId: string;
   readonly expiresAt: number;
-  readonly role: "broadcaster" | "moderator" | "viewer" | "external";
+  readonly role: "broadcaster" | "moderator" | "viewer";
   readonly participantSubject: string;
   readonly actorKind: "viewer" | "anonymous";
   readonly actorId: string | null;
@@ -118,16 +119,21 @@ export function verifyTwitchExtensionJwt(
   if (expiresAt <= now) {
     throw new TwitchExtensionAuthError("expired-token", "Twitch authorization token has expired");
   }
+  if (payload.data.role === "external") {
+    throw new TwitchExtensionAuthError(
+      "invalid-role",
+      "Twitch authorization token is not valid for channel participation",
+    );
+  }
   const prefix = payload.data.opaque_user_id[0];
   if (prefix !== "U" && prefix !== "A") {
     throw new TwitchExtensionAuthError("invalid-identity", "Twitch viewer identity is invalid");
   }
 
-  const rawSubject = payload.data.user_id ?? payload.data.opaque_user_id;
   const participantSubject = pseudonym(
     secret,
     "participant",
-    `${payload.data.channel_id}:${rawSubject}`,
+    `${payload.data.channel_id}:${payload.data.opaque_user_id}`,
   );
   const actorKind = prefix === "A" ? "anonymous" : "viewer";
   return {

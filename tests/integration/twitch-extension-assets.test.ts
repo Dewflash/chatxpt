@@ -5,12 +5,30 @@ import { describe, expect, it } from "vitest";
 const packageRoot = "twitch-extension";
 const htmlFiles = ["viewer.html", "config.html", "live-config.html"] as const;
 const twitchHelperUrl = "https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js";
+const releasePackage = "release/chatxpt-twitch-extension-finals.zip";
 
 function readAsset(path: string): string {
   return readFileSync(join(process.cwd(), packageRoot, path), "utf8");
 }
 
 describe("Twitch Extension upload package", () => {
+  it("ships only hostable assets in the release archive", () => {
+    const archive = readFileSync(join(process.cwd(), releasePackage));
+    const expectedEntries = [
+      "viewer.html",
+      "config.html",
+      "live-config.html",
+      "assets/extension.css",
+      "assets/environment.js",
+      "assets/viewer.js",
+    ];
+
+    for (const entry of expectedEntries) {
+      expect(archive.includes(Buffer.from(entry))).toBe(true);
+    }
+    expect(archive.includes(Buffer.from("README.md"))).toBe(false);
+  });
+
   it("contains root-level html paths required by Twitch Asset Hosting", () => {
     for (const file of htmlFiles) {
       const source = readAsset(file);

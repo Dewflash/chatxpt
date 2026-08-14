@@ -59,6 +59,26 @@ describe("Twitch Extension JWT authorization", () => {
     expect(first.actor.voterKey).not.toBe(second.actor.voterKey);
   });
 
+  it("keeps the same participant when optional Twitch identity sharing changes", () => {
+    const opaqueOnly = verifyTwitchExtensionJwt(signedToken(payload()), SECRET, NOW);
+    const identityShared = verifyTwitchExtensionJwt(
+      signedToken(payload({ user_id: "twitch-user-123" })),
+      SECRET,
+      NOW,
+    );
+
+    expect(identityShared.participantSubject).toBe(opaqueOnly.participantSubject);
+    expect(
+      toVerifiedTwitchParticipant(identityShared, "session-one", SECRET).actor.voterKey,
+    ).toBe(toVerifiedTwitchParticipant(opaqueOnly, "session-one", SECRET).actor.voterKey);
+  });
+
+  it("rejects external tokens that do not represent a channel participant", () => {
+    expect(() =>
+      verifyTwitchExtensionJwt(signedToken(payload({ role: "external" })), SECRET, NOW),
+    ).toThrow(/not valid for channel participation/);
+  });
+
   it("rejects tampered, expired, malformed, and missing bearer tokens", () => {
     const valid = signedToken(payload());
     const tampered = `${valid.slice(0, -1)}${valid.endsWith("a") ? "b" : "a"}`;
