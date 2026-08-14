@@ -1,0 +1,270 @@
+.surface {
+  min-width: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top right, rgb(145 71 255 / 16%), transparent 38rem),
+    var(--cx-color-canvas);
+}
+
+.shell {
+  width: min(100%, 50rem);
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: var(--cx-space-lg);
+  padding: clamp(0.75rem, 3vw, 1.5rem);
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--cx-space-lg);
+  padding-bottom: var(--cx-space-lg);
+  border-bottom: 1px solid var(--cx-color-border);
+}
+
+.header h1,
+.statusCard h2,
+.compactSection h2 {
+  margin: 0;
+}
+
+.header h1 {
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  line-height: 1.05;
+}
+
+.eyebrow {
+  margin: 0 0 var(--cx-space-xs);
+  color: var(--cx-color-primary);
+  font-size: var(--cx-font-size-sm);
+  font-weight: var(--cx-font-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.badges,
+.noticeActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--cx-space-sm);
+}
+
+.statusCard {
+  display: grid;
+  gap: var(--cx-space-lg);
+}
+
+.statusCard small,
+.summary small,
+.activeQuest small,
+.optionRow small,
+.compactSection > p {
+  color: var(--cx-color-text-muted);
+}
+
+.statusCard p,
+.activeQuest p,
+.compactSection > p {
+  margin: 0;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--cx-space-lg);
+}
+
+.summary > div {
+  min-width: 0;
+  display: grid;
+  gap: var(--cx-space-xs);
+}
+
+.summary strong {
+  overflow-wrap: anywhere;
+}
+
+.studioLink {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--cx-color-primary);
+  border-radius: var(--cx-radius-md);
+  color: var(--cx-color-primary);
+  background: var(--cx-color-primary-soft);
+  text-decoration: none;
+  font-weight: var(--cx-font-weight-medium);
+}
+
+.studioLink:focus-visible,
+.optionRow input:focus-visible,
+.manualProgress input:focus-visible,
+.disabledRange input:focus-visible {
+  outline: none;
+  box-shadow: var(--cx-focus-ring);
+}
+
+.compactSection {
+  min-width: 0;
+  display: grid;
+  gap: var(--cx-space-md);
+  padding: var(--cx-space-lg);
+  border: 1px solid var(--cx-color-border);
+  border-radius: var(--cx-radius-md);
+  background: var(--cx-color-surface);
+}
+
+.healthList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cx-space-sm);
+}
+
+.healthList > div {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cx-space-sm);
+  padding: var(--cx-space-sm);
+  border: 1px solid var(--cx-color-border);
+  border-radius: var(--cx-radius-sm);
+  background: var(--cx-color-surface-raised);
+}
+
+.healthList > div > span:first-child {
+  font-weight: var(--cx-font-weight-medium);
+}
+
+.activeQuest {
+  display: grid;
+  gap: var(--cx-space-sm);
+  border-color: var(--cx-color-accent);
+}
+
+.optionList {
+  display: grid;
+  gap: var(--cx-space-sm);
+}
+
+.optionRow {
+  min-height: 3.5rem;
+  display: flex;
+  align-items: center;
+  gap: var(--cx-space-md);
+  padding: var(--cx-space-md);
+  border: 1px solid var(--cx-color-border);
+  border-radius: var(--cx-radius-md);
+  background: var(--cx-color-surface-raised);
+  cursor: pointer;
+}
+
+.optionRow[data-selected="true"] {
+  border-color: var(--cx-color-accent);
+  box-shadow: inset 0 0 0 1px var(--cx-color-accent);
+}
+
+.optionRow input {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: 0 0 auto;
+  accent-color: var(--cx-color-primary);
+}
+
+.optionRow > span {
+  min-width: 0;
+  display: grid;
+  gap: var(--cx-space-xs);
+}
+
+.optionRow strong,
+.optionRow small {
+  overflow-wrap: anywhere;
+}
+
+.manualProgress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--cx-space-md);
+}
+
+.manualProgress label,
+.disabledRange {
+  display: grid;
+  gap: var(--cx-space-sm);
+}
+
+.manualProgress label > span,
+.disabledRange > span {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--cx-space-sm);
+  font-weight: var(--cx-font-weight-medium);
+}
+
+.manualProgress input,
+.disabledRange input {
+  width: 100%;
+  min-height: 2.75rem;
+  accent-color: var(--cx-color-primary);
+}
+
+.manualProgress output,
+.disabledRange output {
+  color: var(--cx-color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.actionSection {
+  display: grid;
+  gap: var(--cx-space-sm);
+}
+
+.actionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cx-space-sm);
+}
+
+.actionGrid > button,
+.actionSection > button {
+  width: 100%;
+}
+
+.noticeActions {
+  margin-top: var(--cx-space-md);
+}
+
+@media (max-width: 34rem) {
+  .header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .summary,
+  .healthList,
+  .actionGrid,
+  .manualProgress {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .noticeActions,
+  .noticeActions > button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studioLink,
+  .optionRow {
+    scroll-behavior: auto;
+  }
+}
