@@ -16,6 +16,7 @@ playwright-report/
 .env.local
 .env.*.local
 !.env.example
+.private/
 
 # Logs
 *.log

@@ -2,6 +2,10 @@
 
 This is the short, current handoff for all five contributors and their ChatGPT/Codex agents. Root `AGENTS.md` defines authority, `docs/DECISIONS.md` records durable product decisions, `docs/PROJECT_TODO.md` tracks cross-project outcomes, and each role's guide, TODO, and execution plan define its work.
 
+## Finalist schedule authority
+
+ChatXPT is a Top 10 finalist. `docs/submission/FINALS-2026.md` records the non-sensitive finalist deadlines, 10-minute pitch plus 5-minute Q&A format, deliverables, judging weights, and presentation-day requirements from Garena's 14 August finalist email. The final Drive submission is due **21 August 2026 at 3 PM SGT** and becomes immutable after submission. Mentoring credentials and participant-registration links remain local/private and must not be committed.
+
 ## Current product baseline
 
 - ChatXPT is one reusable, game-neutral Next.js/TypeScript product with a platform-neutral core.
