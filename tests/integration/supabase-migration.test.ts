@@ -15,6 +15,10 @@ const voteCloseSchedulerMigration = readFileSync(
   resolve(process.cwd(), "supabase/migrations/202608050002_vote_close_scheduler.sql"),
   "utf8",
 );
+const gameplaySnapshotMigration = readFileSync(
+  resolve(process.cwd(), "supabase/migrations/202608140001_current_gameplay_snapshots.sql"),
+  "utf8",
+);
 const environmentExample = readFileSync(resolve(process.cwd(), ".env.example"), "utf8");
 
 describe("Supabase migration security regression", () => {
@@ -75,6 +79,22 @@ describe("Supabase migration security regression", () => {
     expect(voteCloseSchedulerMigration).toContain("revoke all on function public.due_vote_cycle_states");
     expect(voteCloseSchedulerMigration).toContain("grant execute on function public.due_vote_cycle_states(bigint) to service_role");
     expect(voteCloseSchedulerMigration).not.toMatch(/grant execute.* to (anon|authenticated)/i);
+  });
+
+  it("stores only one server-owned gameplay snapshot without advancing session revision", () => {
+    expect(gameplaySnapshotMigration).toContain("create table public.current_gameplay_snapshots");
+    expect(gameplaySnapshotMigration).toContain("session_id text primary key");
+    expect(gameplaySnapshotMigration).toContain("create or replace function public.ingest_gameplay_snapshot");
+    expect(gameplaySnapshotMigration).toContain("v_revision is distinct from");
+    expect(gameplaySnapshotMigration).toContain("v_evidence_class is distinct from");
+    expect(gameplaySnapshotMigration).toContain(
+      "revoke all on function public.ingest_gameplay_snapshot(jsonb) from public, anon, authenticated",
+    );
+    expect(gameplaySnapshotMigration).toContain(
+      "grant execute on function public.ingest_gameplay_snapshot(jsonb) to service_role",
+    );
+    expect(gameplaySnapshotMigration).not.toContain("update public.stream_sessions");
+    expect(gameplaySnapshotMigration).not.toMatch(/grant .* to (anon|authenticated)/i);
   });
 
   it("broadcasts only private role snapshots authorised by short-lived server grants", () => {

@@ -29,6 +29,7 @@ import {
 } from "../contracts";
 import type { OrchestratorDependencies } from "./ports";
 import { canonicalJsonStringify, commandFingerprint } from "./fingerprint";
+import { deriveGameplayServiceHealth, upsertGameplayServiceHealth } from "./gameplay-health";
 import type {
   AcceptedCommandReceipt,
   AuthoritativeSessionState,
@@ -428,6 +429,25 @@ export class ChatXptOrchestrator {
       return { ok: false, error: error("stale-revision", "Command expected a stale session revision") };
     }
 
+    try {
+      const latestGameplay = await this.dependencies.gameplaySnapshots.readCurrent({
+        sessionId: current.session.sessionId,
+        questCycleId: current.questCycle.envelope.questCycleId,
+        revision: current.session.revision,
+        evidenceClass: current.questCycle.envelope.evidenceClass,
+      });
+      if (latestGameplay !== null) {
+        current = { ...current, gameplay: latestGameplay };
+        invariantError = stateInvariantError(current);
+        if (invariantError !== null) return { ok: false, error: invariantError };
+      }
+    } catch {
+      return {
+        ok: false,
+        error: error("dependency-unavailable", "Current gameplay snapshot is unavailable", true),
+      };
+    }
+
     if (command.type === "system.intelligence-ready" && current.emergencyPaused) {
       return {
         ok: false,
@@ -472,6 +492,13 @@ export class ChatXptOrchestrator {
     if (!timestampSchema.safeParse(acceptedAt).success) {
       return { ok: false, error: error("internal", "Server clock returned an invalid timestamp") };
     }
+    current = {
+      ...current,
+      services: upsertGameplayServiceHealth(
+        current.services,
+        deriveGameplayServiceHealth(current.gameplay, acceptedAt),
+      ),
+    };
 
     let acceptedVoteTally: AcceptedVoteTallySnapshot | null = null;
     let voteCloseValidationContext: VoteCloseValidationContext | null = null;

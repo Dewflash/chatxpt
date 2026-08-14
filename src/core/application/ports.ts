@@ -3,6 +3,7 @@ import type {
   CandidateBatch,
   CommandEnvelope,
   DomainError,
+  GameplaySnapshot,
   QuestEngine,
   RoleViewModels,
   ViewModelProjector,
@@ -25,6 +26,30 @@ export interface CommandAuthorizer {
 export interface CandidateBatchReader {
   /** candidateBatchId is the canonical candidate-batch envelope messageId. */
   read(candidateBatchId: string, sessionId: string): Promise<CandidateBatch | null>;
+}
+
+export interface CurrentGameplaySnapshotReadInput {
+  readonly sessionId: string;
+  readonly questCycleId: string | null;
+  readonly revision: number;
+  readonly evidenceClass: GameplaySnapshot["envelope"]["evidenceClass"];
+}
+
+export type IngestGameplaySnapshotResult =
+  | { readonly status: "accepted" | "duplicate"; readonly snapshot: GameplaySnapshot }
+  | {
+      readonly status: "rejected";
+      readonly reason: "session-missing" | "session-inactive" | "state-mismatch" | "older-snapshot";
+    };
+
+/**
+ * Stores only the latest normalised gameplay observation for each session.
+ * This deliberately sits outside the authoritative command revision log:
+ * the orchestrator snapshots it into state only when a command is committed.
+ */
+export interface CurrentGameplaySnapshotRepository {
+  ingest(snapshot: GameplaySnapshot): Promise<IngestGameplaySnapshotResult>;
+  readCurrent(input: CurrentGameplaySnapshotReadInput): Promise<GameplaySnapshot | null>;
 }
 
 export interface AcceptedVoteTallyReadInput {
@@ -94,6 +119,7 @@ export interface OrchestratorDependencies {
   readonly authorizer: CommandAuthorizer;
   readonly candidateBatches: CandidateBatchReader;
   readonly acceptedVotes: AcceptedVoteTallyReader;
+  readonly gameplaySnapshots: CurrentGameplaySnapshotRepository;
   readonly repository: SessionStateRepository;
   readonly engine: QuestEngine;
   readonly projectionContext: ProjectionContextResolver;

@@ -4,6 +4,7 @@ import {
   authoritativeSessionStateSchema,
   canonicalJsonStringify,
   candidateBatchSchema,
+  gameplaySnapshotSchema,
   viewerRecoveryStateSchema,
   type AcceptedCommandReceipt,
   type AcceptedVoteTallyReadInput,
@@ -13,6 +14,10 @@ import {
   type CandidateBatch,
   type CommitAuthoritativeStateInput,
   type CommitAuthoritativeStateResult,
+  type CurrentGameplaySnapshotReadInput,
+  type CurrentGameplaySnapshotRepository,
+  type GameplaySnapshot,
+  type IngestGameplaySnapshotResult,
   type RoleViewModels,
   type ViewerRecoveryReadInput,
   type ViewerRecoveryReader,
@@ -61,6 +66,7 @@ export class MemoryChatXptPersistence
   implements
     AcceptedVoteTallyReader,
     CandidateBatchRepository,
+    CurrentGameplaySnapshotRepository,
     DueVoteCycleReader,
     HostedBoardSessionDirectory,
     RoleSnapshotPublisher,
@@ -72,6 +78,7 @@ export class MemoryChatXptPersistence
   private readonly states = new Map<string, AuthoritativeSessionState>();
   private readonly receipts = new Map<string, AcceptedCommandReceipt>();
   private readonly batches = new Map<string, CandidateBatch>();
+  private readonly gameplaySnapshots = new Map<string, GameplaySnapshot>();
   private readonly snapshots = new Map<string, RoleViewModels>();
   private readonly roomSessions = new Map<string, string>();
   private readonly broadcasterActiveSessions = new Map<string, string>();
@@ -279,6 +286,51 @@ export class MemoryChatXptPersistence
     return clone(batch);
   }
 
+  async ingest(snapshot: GameplaySnapshot): Promise<IngestGameplaySnapshotResult> {
+    const parsed = gameplaySnapshotSchema.parse(snapshot);
+    const current = this.states.get(parsed.envelope.sessionId);
+    if (current === undefined) return { status: "rejected", reason: "session-missing" };
+    if (!active(current.session.status)) {
+      return { status: "rejected", reason: "session-inactive" };
+    }
+    if (
+      parsed.envelope.questCycleId !== current.questCycle.envelope.questCycleId ||
+      parsed.envelope.revision !== current.session.revision ||
+      parsed.envelope.evidenceClass !== current.questCycle.envelope.evidenceClass
+    ) {
+      return { status: "rejected", reason: "state-mismatch" };
+    }
+
+    const existing = this.gameplaySnapshots.get(parsed.envelope.sessionId);
+    if (existing !== undefined) {
+      if (canonicalJsonStringify(existing) === canonicalJsonStringify(parsed)) {
+        return { status: "duplicate", snapshot: clone(existing) };
+      }
+      if (
+        existing.envelope.revision > parsed.envelope.revision ||
+        (existing.envelope.revision === parsed.envelope.revision &&
+          existing.envelope.occurredAt >= parsed.envelope.occurredAt)
+      ) {
+        return { status: "rejected", reason: "older-snapshot" };
+      }
+    }
+    this.gameplaySnapshots.set(parsed.envelope.sessionId, clone(parsed));
+    return { status: "accepted", snapshot: clone(parsed) };
+  }
+
+  async readCurrent(input: CurrentGameplaySnapshotReadInput): Promise<GameplaySnapshot | null> {
+    const snapshot = this.gameplaySnapshots.get(input.sessionId);
+    if (
+      snapshot === undefined ||
+      snapshot.envelope.questCycleId !== input.questCycleId ||
+      snapshot.envelope.revision !== input.revision ||
+      snapshot.envelope.evidenceClass !== input.evidenceClass
+    ) {
+      return null;
+    }
+    return clone(snapshot);
+  }
+
   async publish(views: RoleViewModels): Promise<void> {
     const parsed = sanitizeRoleViewsForBroadcast(views);
     const sessionId = parsed.streamer.envelope.sessionId;
@@ -484,6 +536,7 @@ export class MemoryChatXptPersistence
     const previous = this.states.get(nextState.session.sessionId);
     this.states.set(nextState.session.sessionId, clone(nextState));
     if (previous !== undefined && active(previous.session.status) && !active(nextState.session.status)) {
+      this.gameplaySnapshots.delete(nextState.session.sessionId);
       this.broadcasterActiveSessions.delete(previous.session.broadcasterId);
     }
     if (active(nextState.session.status)) {
@@ -512,6 +565,7 @@ export function createMemoryPersistenceRuntime() {
     hostedBoardSessions: backend,
     candidates: backend,
     acceptedVotes: backend,
+    gameplaySnapshots: backend,
     snapshots: backend,
     accessGrants: backend,
     dueVotes: backend,

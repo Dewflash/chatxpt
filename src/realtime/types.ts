@@ -3,6 +3,7 @@ import type {
   AuthoritativeSessionState,
   CandidateBatch,
   CandidateBatchReader,
+  CurrentGameplaySnapshotRepository,
   RoleViewModels,
   SessionHistorySnapshot,
   SessionStateRepository,
@@ -172,6 +173,7 @@ export interface ChatXptPersistenceRuntime {
   readonly hostedBoardSessions: HostedBoardSessionDirectory;
   readonly candidates: CandidateBatchRepository;
   readonly acceptedVotes: AcceptedVoteTallyReader;
+  readonly gameplaySnapshots: CurrentGameplaySnapshotRepository;
   readonly snapshots: RoleSnapshotPublisher;
   readonly accessGrants: RealtimeAccessGrantStore;
   readonly dueVotes: DueVoteCycleReader;

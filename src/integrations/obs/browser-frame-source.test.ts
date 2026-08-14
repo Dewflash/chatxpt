@@ -8,6 +8,50 @@ import {
 } from "./browser-frame-source";
 
 describe("OBS browser frame source", () => {
+  it("stamps each frame with the latest realtime session authority", async () => {
+    let revision = 4;
+    let cycleId = "cycle-4";
+    const capture: BrowserFrameCapture = {
+      width: 1280,
+      height: 720,
+      start: () => undefined,
+      captureFrame: () => ({} as CanvasImageSource),
+    };
+    const source = new BrowserMediaFrameSource({
+      sessionId: "session-live",
+      correlationId: "capture-live",
+      capture,
+      authority: () => ({ questCycleId: cycleId, revision, evidenceClass: "live" }),
+      frameIntervalMs: 0,
+      sleep: async () => undefined,
+      now: (() => {
+        let now = 100;
+        return () => ++now;
+      })(),
+    });
+    const controller = new AbortController();
+    const observations: Array<{ envelope: { questCycleId: string | null; revision: number } }> = [];
+
+    for await (const frame of source.frames(controller.signal)) {
+      observations.push(frame.observation);
+      frame.release();
+      if (observations.length === 1) {
+        revision = 5;
+        cycleId = "cycle-5";
+      } else {
+        controller.abort();
+      }
+    }
+
+    expect(observations.map((observation) => [
+      observation.envelope.questCycleId,
+      observation.envelope.revision,
+    ])).toEqual([
+      ["cycle-4", 4],
+      ["cycle-5", 5],
+    ]);
+  });
+
   it("selects the OBS Virtual Camera when the browser exposes it", async () => {
     const devices = [
       { deviceId: "webcam", groupId: "group-a", kind: "videoinput", label: "FaceTime HD Camera", toJSON: () => ({}) },

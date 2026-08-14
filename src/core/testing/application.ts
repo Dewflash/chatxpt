@@ -1,12 +1,14 @@
 import {
   acceptedVoteTallySnapshotSchema,
   domainErrorSchema,
+  gameplaySnapshotSchema,
   overlayViewModelSchema,
   streamerViewModelSchema,
   viewerViewModelSchema,
   type CandidateBatch,
   type AcceptedVoteTallySnapshot,
   type CommandEnvelope,
+  type GameplaySnapshot,
   type QuestEngine,
   type QuestEngineInput,
   type QuestEngineResult,
@@ -20,6 +22,9 @@ import type {
   CandidateBatchReader,
   CommandAuthorizer,
   CommitAuthoritativeStateInput,
+  CurrentGameplaySnapshotReadInput,
+  CurrentGameplaySnapshotRepository,
+  IngestGameplaySnapshotResult,
   MessageIdFactory,
   ProjectionContextResolver,
   ServerClock,
@@ -127,6 +132,50 @@ export class StaticFixtureCandidateBatchReader implements CandidateBatchReader {
         candidate.envelope.messageId === candidateBatchId && candidate.envelope.sessionId === sessionId,
     );
     return batch === undefined ? null : clone(batch);
+  }
+}
+
+export class FixtureCurrentGameplaySnapshotRepository
+  implements CurrentGameplaySnapshotRepository
+{
+  private readonly snapshots = new Map<string, GameplaySnapshot>();
+
+  constructor(initialSnapshots: readonly GameplaySnapshot[] = []) {
+    for (const snapshot of initialSnapshots) {
+      const parsed = gameplaySnapshotSchema.parse(snapshot);
+      if (parsed.envelope.evidenceClass !== "fixture") {
+        throw new Error("Fixture gameplay repository accepts only fixture-labelled snapshots");
+      }
+      this.snapshots.set(parsed.envelope.sessionId, clone(parsed));
+    }
+  }
+
+  async ingest(snapshot: GameplaySnapshot): Promise<IngestGameplaySnapshotResult> {
+    const parsed = gameplaySnapshotSchema.parse(snapshot);
+    if (parsed.envelope.evidenceClass !== "fixture") {
+      return { status: "rejected", reason: "state-mismatch" };
+    }
+    const existing = this.snapshots.get(parsed.envelope.sessionId);
+    if (existing !== undefined && existing.envelope.occurredAt >= parsed.envelope.occurredAt) {
+      return existing.envelope.messageId === parsed.envelope.messageId
+        ? { status: "duplicate", snapshot: clone(existing) }
+        : { status: "rejected", reason: "older-snapshot" };
+    }
+    this.snapshots.set(parsed.envelope.sessionId, clone(parsed));
+    return { status: "accepted", snapshot: clone(parsed) };
+  }
+
+  async readCurrent(input: CurrentGameplaySnapshotReadInput): Promise<GameplaySnapshot | null> {
+    const snapshot = this.snapshots.get(input.sessionId);
+    if (
+      snapshot === undefined ||
+      snapshot.envelope.questCycleId !== input.questCycleId ||
+      snapshot.envelope.revision !== input.revision ||
+      snapshot.envelope.evidenceClass !== input.evidenceClass
+    ) {
+      return null;
+    }
+    return clone(snapshot);
   }
 }
 
