@@ -8,7 +8,7 @@ If the owner asks only `What do I need to do?`, Codex selects the first `READY` 
 
 The feasibility review must also check `docs/build-plans/INTEGRATION-CONTRACT.md`: public entries, viewer/overlay view models, commands/errors/fixtures, Role 1 route/Extension/OBS mounts, upstream deadlines, and Role 4's early token handoff.
 
-**Current pass:** R5-P02's public viewer boundary and fixture-rendered surfaces are merged on main. The R5-P03A presentation slice on `role-5/primary-vote-flow` now covers pending/accepted vote trust, post-acknowledgement tallies, active/result hierarchy, engagement labels, typed recovery, and compact responsive screenshots. R5-003 remains in progress until Role 1 mounts the authorised viewer dispatcher/private recovery path and the remaining integrated failure/tie/zero-vote evidence is reviewable.
+**Current pass:** R5-P03B completes Role 5's canonical-fixture presentation for exactly three choices, vote acknowledgement/tallies/countdown, neutral unresolved tie/zero-vote handling, winner/active/progress, all terminal outcomes, cooldown, reconnect-safe retry/reauthentication, hosted/chat parity, and read-only overlay voting/result/reconnect states. Exact 318x496, 390x720, 1024x768, and 1280x720 local captures are registered as unverified `E-20260814-R5-001`; they found and drove a compact overflow fix. PR #136's latest branch fixes the earlier JWT identity and upload contents findings. R5-003 remains in progress because issues #51/#137 still own the missing authoritative tie/zero resolution detail, Role 1 hosted-board/overlay mounts, packaged-Extension parity, and real Twitch/cloud/OBS evidence.
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |

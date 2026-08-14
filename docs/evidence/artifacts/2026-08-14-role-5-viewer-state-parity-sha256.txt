@@ -1,0 +1,6 @@
+fd7255c5c43a8a819cf28b0e8bfe66f1b0b6d039f244f7a10c96d07a52ddbc61  2026-08-14-role-5-extension-voting-fixture-only.png
+350caa41ffa4870a35385adaffd3581b86c58af179b72d5d04911ec53cae9286  2026-08-14-role-5-extension-reconnect-fixture-only.png
+5f762aac0acdeb22939b0d7b2ba31a2b3b4cc5be15f1386ae26ecd8483bc2955  2026-08-14-role-5-hosted-unresolved-zero-vote-fixture-only.png
+a5a0bdd3a1d4249e6f28cec72a40240b72abc885a1e6247452d43cca7ba4c0fa  2026-08-14-role-5-hosted-mobile-cancelled-fixture-only.png
+83e7028985ec524683934c2233fd7721e6422dbb8f22efe120eb9ca8e926a63a  2026-08-14-role-5-overlay-voting-fixture-only.png
+8cbd837fabd4d262e91bab1af869e9e4bf4f9f2daeb158cb9bd88d8d51778ef9  2026-08-14-role-5-overlay-reconnect-fixture-only.png

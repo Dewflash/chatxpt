@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-08-09",
+  "updatedAt": "2026-08-14",
   "resources": [
     {
       "id": "twitch-broadcaster",
@@ -305,6 +305,126 @@
         "Role 1 has not yet reviewed these captures, so this entry remains unverified and partial rather than accepted fixture-only evidence.",
         "No real Twitch identity or vote, authorised command dispatch, private Supabase recovery, same-revision multi-viewer flow, or OBS Browser Source was exercised.",
         "The additional automated keyboard browser runner was inconclusive and is not claimed as evidence."
+      ]
+    },
+    {
+      "id": "E-20260814-R5-001",
+      "capturedAt": "2026-08-14T18:31:00+08:00",
+      "owner": { "role": "role-5", "github": "drdexe" },
+      "reviewer": null,
+      "evidenceClass": "unverified",
+      "result": "partial",
+      "claim": "Unreviewed local canonical-fixture captures show Role 5 voting, reconnect, unresolved zero-vote, cancellation, and read-only overlay states at compact, mobile, desktop, and broadcast viewports without horizontal overflow.",
+      "resourceIds": [],
+      "surfaces": [
+        {
+          "name": "Twitch Extension voting fixture",
+          "deviceClass": "mobile",
+          "viewport": "318x496"
+        },
+        {
+          "name": "Twitch Extension reconnect fixture",
+          "deviceClass": "mobile",
+          "viewport": "318x496"
+        },
+        {
+          "name": "Hosted Quest Board unresolved zero-vote fixture",
+          "deviceClass": "desktop",
+          "viewport": "1024x768"
+        },
+        {
+          "name": "Hosted Quest Board cancelled-result fixture",
+          "deviceClass": "mobile",
+          "viewport": "390x720"
+        },
+        {
+          "name": "OBS overlay voting fixture",
+          "deviceClass": "obs",
+          "viewport": "1280x720"
+        },
+        {
+          "name": "OBS overlay reconnect fixture",
+          "deviceClass": "obs",
+          "viewport": "1280x720"
+        }
+      ],
+      "source": {
+        "gitCommit": "ad757d4",
+        "branch": "role-5/finals-viewer-review",
+        "prNumber": null
+      },
+      "authoritativeState": {
+        "sessionRef": "contract-fixture-session",
+        "questCycleRef": "ui-x06-role-view-catalog",
+        "revision": null
+      },
+      "inputs": [
+        {
+          "kind": "unverified",
+          "description": "Canonical UI-X06 Role 1/3 fixture views rendered through Role 5 public surfaces; Role 1 review is required before fixture-only acceptance."
+        }
+      ],
+      "commands": [
+        "npm run test -- src/viewer/presentation.test.ts src/viewer/surfaces.test.ts tests/integration/role-entrypoints.test.ts",
+        "npm run test -- src/viewer/__visual-capture.test.ts",
+        "node tmp/capture-role-5-viewports.mjs",
+        "npm run check"
+      ],
+      "artifacts": [
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-14-role-5-extension-voting-fixture-only.png",
+          "mediaType": "image/png",
+          "privacyReviewed": true,
+          "sha256": "fd7255c5c43a8a819cf28b0e8bfe66f1b0b6d039f244f7a10c96d07a52ddbc61"
+        },
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-14-role-5-extension-reconnect-fixture-only.png",
+          "mediaType": "image/png",
+          "privacyReviewed": true,
+          "sha256": "350caa41ffa4870a35385adaffd3581b86c58af179b72d5d04911ec53cae9286"
+        },
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-14-role-5-hosted-unresolved-zero-vote-fixture-only.png",
+          "mediaType": "image/png",
+          "privacyReviewed": true,
+          "sha256": "5f762aac0acdeb22939b0d7b2ba31a2b3b4cc5be15f1386ae26ecd8483bc2955"
+        },
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-14-role-5-hosted-mobile-cancelled-fixture-only.png",
+          "mediaType": "image/png",
+          "privacyReviewed": true,
+          "sha256": "a5a0bdd3a1d4249e6f28cec72a40240b72abc885a1e6247452d43cca7ba4c0fa"
+        },
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-14-role-5-overlay-voting-fixture-only.png",
+          "mediaType": "image/png",
+          "privacyReviewed": true,
+          "sha256": "83e7028985ec524683934c2233fd7721e6422dbb8f22efe120eb9ca8e926a63a"
+        },
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-14-role-5-overlay-reconnect-fixture-only.png",
+          "mediaType": "image/png",
+          "privacyReviewed": true,
+          "sha256": "8cbd837fabd4d262e91bab1af869e9e4bf4f9f2daeb158cb9bd88d8d51778ef9"
+        },
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-14-role-5-viewer-state-parity-sha256.txt",
+          "mediaType": "text/plain",
+          "privacyReviewed": true,
+          "sha256": null
+        }
+      ],
+      "limitations": [
+        "This is unreviewed canonical-fixture browser evidence, not real Twitch Extension identity, JWT delivery, authorised vote dispatch, hosted access, Twitch chat delivery, Supabase recovery, or OBS Browser Source proof.",
+        "Tie and zero-vote resolution remain neutral because the current ViewerViewModel has no authoritative resolution field; no result was calculated in Role 5.",
+        "The temporary capture test and CDP script are removed after generation; committed component tests retain the state coverage."
       ]
     }
   ]
