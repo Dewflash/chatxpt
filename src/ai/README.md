@@ -8,6 +8,8 @@ Role 2 owns implementations behind the provider ports exported by `index.ts`. Co
 
 `createAlgorithmicCandidateStrategy` is the credential-free candidate path for the MVP. It deterministically selects three game-neutral quest prompts from canonical intelligence/profile/recent-title input, labels them `algorithmic`, cites only fresh, high-confidence known canonical signal IDs when available, and never retains raw chat text or provider payloads.
 
+`createOpenAICandidateStrategy` is the provider-neutral structured-output strategy used by the server composition in `server.ts`. It sends only normalized gameplay/audience/profile context, never sends streamer identity or raw chat, accepts exactly three strict drafts, refuses invented signal citations, and assigns canonical provider metadata itself. `createConfiguredCandidateProvider` requires explicit `CHATXPT_LLM_ENABLED=true` plus a server-side key, otherwise it returns the algorithmic provider. Provider refusal, timeout, rate limiting, outage, or malformed output automatically uses the same credential-free fallback.
+
 [`PROVIDER_EVALUATION.md`](./PROVIDER_EVALUATION.md) defines the Role 2 operational half of the joint Role 2/3 trial matrix and records the fixture/live evidence boundary.
 
 No model, provider, prompt, or quest-quality rule is selected here. Provider adoption remains a joint Role 2/Role 3 recommendation. Every provider or algorithmic result still goes to Role 3 for deterministic safety, evidence, feasibility, diversity, history, and fallback handling.

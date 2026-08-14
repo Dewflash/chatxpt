@@ -13,6 +13,7 @@ describe("sidequest generation route", () => {
   });
 
   it("labels the no-credential path as algorithmic and returns exactly three quests", async () => {
+    vi.stubEnv("CHATXPT_LLM_ENABLED", "false");
     vi.stubEnv("OPENAI_API_KEY", "");
 
     const response = await postSidequests(
@@ -49,5 +50,36 @@ describe("sidequest generation route", () => {
     expect(body.quests.map((quest) => `${quest.title} ${quest.instruction}`).join(" ")).toMatch(
       /corner|lap|overtake/i,
     );
+  });
+
+  it("does not spend provider calls when a key exists but explicit LLM enablement is off", async () => {
+    vi.stubEnv("CHATXPT_LLM_ENABLED", "false");
+    vi.stubEnv("OPENAI_API_KEY", "fixture-key-that-must-not-be-used");
+
+    const response = await postSidequests(
+      new Request("http://localhost/api/sidequests", {
+        method: "POST",
+        body: JSON.stringify({
+          gameplay: {
+            game: "Brawl Stars",
+            phase: "combat",
+            health: 80,
+            squadStatus: "all-up",
+            recentEvent: "quiet",
+          },
+          sentiment: { energy: 3, mood: "supportive", request: "" },
+          profile: {
+            displayName: "Demo",
+            style: "supportive",
+            intensity: 1,
+            allowRoleplay: false,
+            boundaries: [],
+          },
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ provider: "algorithmic" });
   });
 });

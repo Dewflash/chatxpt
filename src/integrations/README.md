@@ -14,9 +14,9 @@ acknowledgement spam.
 
 ## OBS browser capture
 
-`obs/browser-frame-source.ts` provides the browser-side `FrameSource` adapter for an authorised OBS Virtual Camera stream. Studio can request/select the OBS camera, wrap the resulting `MediaStream`, and pass canonical ephemeral frames to Role 2 without persisting raw video.
+`obs/browser-frame-source.ts` provides the browser-side `FrameSource` adapter for an authorised OBS Virtual Camera stream. Studio can request/select the OBS camera, wrap the resulting `MediaStream`, and pass canonical ephemeral frames to Role 2 without persisting raw video. When browsers initially hide camera labels, the adapter may request provisional video permission only to reveal device labels; it stops that stream and then requires an exact OBS device. It fails instead of silently analysing a built-in webcam.
 
-The current tests use fixture-labelled fake browser media/canvas objects. They prove device-selection constraints, canonical frame observations, stop handling, and one-shot frame release semantics; they do not prove that a real OBS Virtual Camera was selected or sampled on this machine.
+`/diagnostics/gameplay-extraction` composes this public adapter with Role 2's multi-game analyzer at a burst-capable 100 ms source interval. It is explicitly diagnostic and does not persist frames or feed authoritative quest state. On 14 August 2026, OBS 32.2.1 launched and reported that its macOS Camera Extension activated and Virtual Camera output started; the selected target browser was denied macOS camera permission, so zero frames crossed the browser `FrameSource`. The runtime therefore proves the OBS output boundary started and the page failed safely, but not real frame sampling or extraction accuracy.
 
 ## OBS browser source output
 

@@ -123,11 +123,28 @@ export async function requestObsVirtualCameraStream(
 
   const devices = await mediaDevices.enumerateDevices();
   const obsDevice = findObsVirtualCameraDevice(devices, options.labelPattern);
-  const video = obsDevice === null
-    ? true
-    : { deviceId: { exact: obsDevice.deviceId } };
+  if (obsDevice !== null) {
+    return mediaDevices.getUserMedia({
+      audio: false,
+      video: { deviceId: { exact: obsDevice.deviceId } },
+    });
+  }
 
-  return mediaDevices.getUserMedia({ audio: false, video });
+  // Browsers commonly hide camera labels until the page receives permission.
+  // Acquire a provisional stream only to unlock labels, then require OBS
+  // explicitly so diagnostics cannot silently analyse the built-in webcam.
+  const provisional = await mediaDevices.getUserMedia({ audio: false, video: true });
+  const labelledDevices = await mediaDevices.enumerateDevices();
+  const labelledObsDevice = findObsVirtualCameraDevice(labelledDevices, options.labelPattern);
+  if (labelledObsDevice === null) {
+    for (const track of provisional.getTracks()) track.stop();
+    throw new Error("OBS Virtual Camera was not found. Start Virtual Camera in OBS, then retry.");
+  }
+  for (const track of provisional.getTracks()) track.stop();
+  return mediaDevices.getUserMedia({
+    audio: false,
+    video: { deviceId: { exact: labelledObsDevice.deviceId } },
+  });
 }
 
 export interface MediaStreamVideoFrameCaptureOptions {

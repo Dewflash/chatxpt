@@ -51,24 +51,38 @@ export async function generateOpenAISidequests(input: GenerationRequest): Promis
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
 
-  const client = new OpenAI({ apiKey });
-  const response = await client.responses.create({
-    model: process.env.OPENAI_MODEL || "gpt-5.6-terra",
-    instructions,
-    input: JSON.stringify(input),
-    reasoning: { effort: "low" },
-    max_output_tokens: 1000,
-    store: false,
-    text: {
-      format: {
-        type: "json_schema",
-        name: "chatxpt_sidequests",
-        strict: true,
-        schema: bundleJsonSchema,
+  const timeoutMs = Number(process.env.CHATXPT_LLM_TIMEOUT_MS || 8_000);
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 500 || timeoutMs > 120_000) {
+    throw new Error("CHATXPT_LLM_TIMEOUT_MS must be an integer from 500 to 120000");
+  }
+  const client = new OpenAI({
+    apiKey,
+    ...(process.env.OPENAI_BASE_URL ? { baseURL: process.env.OPENAI_BASE_URL } : {}),
+  });
+  const response = await client.responses.create(
+    {
+      model: process.env.OPENAI_MODEL || "gpt-5.6-terra",
+      instructions,
+      input: JSON.stringify(input),
+      reasoning: { effort: "low" },
+      max_output_tokens: 1000,
+      store: false,
+      text: {
+        format: {
+          type: "json_schema",
+          name: "chatxpt_sidequests",
+          strict: true,
+          schema: bundleJsonSchema,
+        },
       },
     },
-  });
+    { signal: AbortSignal.timeout(timeoutMs) },
+  );
 
   if (!response.output_text) throw new Error("The model returned no sidequest payload");
   return sidequestBundleSchema.parse(JSON.parse(response.output_text)).quests;
+}
+
+export function isLegacyOpenAISidequestPathEnabled(): boolean {
+  return process.env.CHATXPT_LLM_ENABLED === "true" && Boolean(process.env.OPENAI_API_KEY);
 }

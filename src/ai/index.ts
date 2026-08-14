@@ -6,6 +6,16 @@ export {
 } from "./providers";
 export type { CandidateGenerationStrategy } from "./providers";
 export {
+  candidateDraftJsonSchema,
+  createOpenAICandidateStrategy,
+} from "./openai-candidate-strategy";
+export type {
+  OpenAICandidateStrategyOptions,
+  StructuredCandidateTransport,
+  StructuredCandidateTransportRequest,
+  StructuredCandidateTransportResponse,
+} from "./openai-candidate-strategy";
+export {
   createProviderFallbackGenerationStrategy,
   ProviderGenerationError,
   providerAttemptStatuses,

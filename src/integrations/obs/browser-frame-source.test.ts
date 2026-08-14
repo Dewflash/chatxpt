@@ -35,23 +35,58 @@ describe("OBS browser frame source", () => {
     });
   });
 
-  it("falls back to generic video permission when OBS is not labelled yet", async () => {
-    const devices = [
+  it("uses generic video only to unlock labels, then reselects OBS exactly", async () => {
+    const hiddenDevices = [
       { deviceId: "camera", groupId: "group-a", kind: "videoinput", label: "", toJSON: () => ({}) },
     ] satisfies MediaDeviceInfo[];
-    let requested: MediaStreamConstraints | undefined;
+    const labelledDevices = [
+      { deviceId: "camera", groupId: "group-a", kind: "videoinput", label: "FaceTime HD Camera", toJSON: () => ({}) },
+      { deviceId: "obs", groupId: "group-b", kind: "videoinput", label: "OBS Virtual Camera", toJSON: () => ({}) },
+    ] satisfies MediaDeviceInfo[];
+    const requests: MediaStreamConstraints[] = [];
+    let enumerations = 0;
+    let stopped = 0;
+    const provisional = {
+      getTracks: () => [{ stop: () => { stopped += 1; } }],
+    } as unknown as MediaStream;
+    const obsStream = { getTracks: () => [] } as unknown as MediaStream;
 
-    await requestObsVirtualCameraStream({
+    const selected = await requestObsVirtualCameraStream({
       mediaDevices: {
-        enumerateDevices: async () => devices,
+        enumerateDevices: async () => {
+          enumerations += 1;
+          return enumerations === 1 ? hiddenDevices : labelledDevices;
+        },
         getUserMedia: async (constraints) => {
-          requested = constraints;
-          return { getTracks: () => [] } as unknown as MediaStream;
+          requests.push(constraints ?? {});
+          return requests.length === 1 ? provisional : obsStream;
         },
       },
     });
 
-    expect(requested).toEqual({ audio: false, video: true });
+    expect(selected).toBe(obsStream);
+    expect(requests).toEqual([
+      { audio: false, video: true },
+      { audio: false, video: { deviceId: { exact: "obs" } } },
+    ]);
+    expect(stopped).toBe(1);
+  });
+
+  it("stops the provisional webcam and fails when OBS remains unavailable", async () => {
+    const devices = [
+      { deviceId: "camera", groupId: "group-a", kind: "videoinput", label: "FaceTime HD Camera", toJSON: () => ({}) },
+    ] satisfies MediaDeviceInfo[];
+    let stopped = 0;
+
+    await expect(requestObsVirtualCameraStream({
+      mediaDevices: {
+        enumerateDevices: async () => devices,
+        getUserMedia: async () => ({
+          getTracks: () => [{ stop: () => { stopped += 1; } }],
+        } as unknown as MediaStream),
+      },
+    })).rejects.toThrow("OBS Virtual Camera was not found");
+    expect(stopped).toBe(1);
   });
 
   it("emits canonical ephemeral frame observations and releases captured images", async () => {
