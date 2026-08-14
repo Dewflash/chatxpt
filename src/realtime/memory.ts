@@ -40,6 +40,8 @@ import {
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,
+  type TwitchChannelSessionDirectory,
+  type TwitchChannelSessionRecord,
 } from "./types";
 import { sanitizeRoleViewsForBroadcast } from "./sanitization";
 
@@ -67,6 +69,7 @@ export class MemoryChatXptPersistence
     RealtimeAccessGrantStore,
     SessionHistoryReader,
     SessionLifecycleStore,
+    TwitchChannelSessionDirectory,
     ViewerRecoveryReader
 {
   private readonly states = new Map<string, AuthoritativeSessionState>();
@@ -314,6 +317,19 @@ export class MemoryChatXptPersistence
     };
   }
 
+  async findTwitchChannelSession(channelId: string): Promise<TwitchChannelSessionRecord | null> {
+    const sessionId = this.broadcasterActiveSessions.get(channelId);
+    if (sessionId === undefined) return null;
+    const state = this.states.get(sessionId);
+    if (state === undefined || !active(state.session.status)) return null;
+    return {
+      sessionId,
+      channelId,
+      status: state.session.status,
+      revision: state.session.revision,
+    };
+  }
+
   async grant(input: Omit<RealtimeAccessGrant, "revokedAt">): Promise<RealtimeAccessGrant> {
     if (!this.states.has(input.sessionId)) throw new Error("Cannot grant access to a missing session");
     const value: RealtimeAccessGrant = { ...input, revokedAt: null };
@@ -510,6 +526,7 @@ export function createMemoryPersistenceRuntime() {
     sessions: backend,
     lifecycle: backend,
     hostedBoardSessions: backend,
+    twitchChannelSessions: backend,
     candidates: backend,
     acceptedVotes: backend,
     snapshots: backend,

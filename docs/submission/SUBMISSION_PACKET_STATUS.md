@@ -25,10 +25,10 @@ The final submission is not complete until the project owner records/uploads the
 | Prototype truth table | `docs/submission/END_TO_END_PROTOTYPE_CHECK.md` | Ready | States what the current local prototype can demonstrate and which live evidence claims remain unproved. |
 | Repository completeness check | `docs/submission/REPOSITORY_SUBMISSION_CHECK.md` | Ready, but dated to earlier merged main check | It truthfully lists remaining live-evidence and owner-action gaps. |
 | Evidence rules and manifest | `docs/evidence/GOLDEN_REHEARSAL_RUNBOOK.md`, `docs/evidence/manifest.json` | Ready for recorded evidence | Current manifest has inspection-only and fixture-only evidence; add real recording entries only after privacy-reviewed runs. |
-| Twitch Extension local package | `release/chatxpt-twitch-extension-demo-v2.zip`, `twitch-extension/README.md` | Ready for Local Test package use | Interactive demo bridge to `/api/demo-participation`; not public Twitch Extension approval evidence. |
+| Twitch Extension test package | `release/chatxpt-twitch-extension-finals.zip`, `twitch-extension/README.md` | Ready for Local/Hosted Test configuration | Uses Twitch `onAuthorized`, a build-owned exact EBS origin, and signed canonical viewer/vote routes; not real Twitch delivery or public approval evidence. |
 | UI/control-room state for recording | `http://localhost:3000/` | Ready locally | Top cockpit has two status bars, four main actions, and ribbon toggles for Studio, Stream analytics, Game signals, and Vote / overlay. |
 | OBS overlay URL | `http://localhost:3000/overlay?obs=1` | Ready locally | Add as OBS Browser Source above gameplay/screen capture. |
-| Viewer voting URL | `http://localhost:3000/viewer.html` | Ready locally | Joel/viewer can vote through the local Extension-style viewer; Twitch chat `1`/`2`/`3` is fallback/comment proof only. |
+| Viewer voting URL | `https://localhost:3000/viewer.html` through Twitch Local Test | Implemented; external run required | Direct browser access cannot invent a viewer identity. Joel/viewer votes through the installed panel; Twitch chat `1`/`2`/`3` remains the final fallback. |
 
 ## Five-Minute Video Contents To Capture
 
@@ -71,7 +71,7 @@ These cannot be completed by repository edits alone:
 
 ## What Not To Overclaim
 
-- The local `/viewer.html` route is an Extension-style demo voter, not proof of public Twitch Extension approval or JWT identity verification.
+- The `/viewer.html` route and signed-fixture tests prove JWT/EBS application behaviour, not real Twitch JWT issuance, Local/Hosted Test delivery, or public Extension approval.
 - The local overlay route proves OBS can load the page only when OBS is visibly using that URL.
 - Fixture screenshots and diagnostic harnesses do not prove real Twitch, real OBS capture, real Supabase cloud, Vercel deployment, or two external viewers.
 - Unsupported gameplay facts must remain `unknown`; do not narrate guessed health, kills, score, or phase as live extraction unless the recording actually proves them.

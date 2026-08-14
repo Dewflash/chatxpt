@@ -69,6 +69,8 @@ export {
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,
+  type TwitchChannelSessionDirectory,
+  type TwitchChannelSessionRecord,
 } from "./types";
 export type {
   AcceptedCommandReceipt,

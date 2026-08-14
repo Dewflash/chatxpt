@@ -60,6 +60,17 @@ export interface HostedBoardSessionDirectory {
   findHostedBoardSession(roomCode: string): Promise<HostedBoardSessionRecord | null>;
 }
 
+export interface TwitchChannelSessionRecord {
+  readonly sessionId: string;
+  readonly channelId: string;
+  readonly status: AuthoritativeSessionState["session"]["status"];
+  readonly revision: number;
+}
+
+export interface TwitchChannelSessionDirectory {
+  findTwitchChannelSession(channelId: string): Promise<TwitchChannelSessionRecord | null>;
+}
+
 export interface HostedBoardAccessRequest {
   readonly roomCode: string;
   readonly principalId: string;
@@ -170,6 +181,7 @@ export interface ChatXptPersistenceRuntime {
   readonly sessions: SessionStateRepository;
   readonly lifecycle: SessionLifecycleStore;
   readonly hostedBoardSessions: HostedBoardSessionDirectory;
+  readonly twitchChannelSessions: TwitchChannelSessionDirectory;
   readonly candidates: CandidateBatchRepository;
   readonly acceptedVotes: AcceptedVoteTallyReader;
   readonly snapshots: RoleSnapshotPublisher;

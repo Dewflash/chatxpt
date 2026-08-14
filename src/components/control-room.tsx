@@ -249,11 +249,12 @@ function parseChatVote(text: string): 1 | 2 | 3 | null {
 }
 
 async function publishDemoParticipationQuests(quests: Sidequest[]) {
-  await fetch("/api/demo-participation", {
+  const response = await fetch("/api/demo-participation", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ type: "publish-quests", quests }),
   });
+  if (!response.ok) throw new Error("Local Twitch diagnostic staging failed");
 }
 
 async function clearDemoParticipation() {
@@ -270,6 +271,15 @@ async function submitDemoParticipationVote(questId: string, voterKey: string) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ type: "vote", questId, voterKey }),
   });
+}
+
+async function submitDemoParticipationResult(outcome: "completed" | "failed") {
+  const response = await fetch("/api/demo-participation", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ type: "quest-result", outcome }),
+  });
+  if (!response.ok) throw new Error("Canonical Twitch quest result was not accepted");
 }
 
 function transientVoterKey(source: string) {
@@ -755,6 +765,11 @@ export function ControlRoom() {
     const next = { ...activeQuest, status };
     setActiveQuest(next);
     publishActiveQuest(next);
+    if (status === "completed" || status === "failed") {
+      void submitDemoParticipationResult(status).catch(() => {
+        setWarning("Overlay result updated, but the canonical Twitch viewer quest is not active yet.");
+      });
+    }
     logDemoEvent("Result", `${activeQuest.quest.title} marked ${status}.`);
   }
 
