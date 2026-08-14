@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  ChatXptOrchestrator,
   authoritativeSessionStateSchema,
   gameplaySnapshotSchema,
   streamerQuestProgressCommandSchema,
@@ -18,9 +17,10 @@ import {
   contractFixtureQuestCycle,
   contractFixtureSession,
 } from "@/core/testing";
-import { bindPersistenceRuntime, createMemoryPersistenceRuntime } from "@/realtime";
+import { createMemoryPersistenceRuntime } from "@/realtime";
 
 import { GameplayIngressApplication } from "./gameplay-ingress";
+import { ChatXptServerRuntime } from "./runtime";
 
 const KEY = "fixture-gameplay-ingress-key-0123456789abcdef";
 const FIXTURE_NOW = contractFixtureSession.createdAt;
@@ -149,43 +149,47 @@ describe("authenticated gameplay snapshot ingress", () => {
       requestedValue: 0.5,
     });
     let engineGameplayMessageId: string | null = null;
-    const orchestrator = new ChatXptOrchestrator(
-      bindPersistenceRuntime(
-        {
-          authorizer: { authorize: () => null },
-          engine: new ScriptedFixtureQuestEngine((input) => {
-            engineGameplayMessageId =
-              input.questProgressValidationContext?.gameplay?.envelope.messageId ?? null;
-            return {
-              ok: false,
-              error: {
-                code: "validation",
-                message: "Stop after observing hydrated gameplay in this boundary test",
-                retryable: false,
-              },
-            };
-          }),
-          projectionContext: new FixtureProjectionContextResolver({
-            participationMode: "hosted-board",
-            viewerId: null,
-            sessionPoints: 0,
-            acceptedCandidateId: null,
-            connection: {
-              service: "fixture-ingress",
-              status: "ready",
-              checkedAt: FIXTURE_NOW + 2_000,
-              retryable: false,
-            },
-          }),
-          projector: new CanonicalFixtureViewProjector(),
-          clock: new FixedFixtureClock(FIXTURE_NOW + 2_000),
-          ids: new SequenceFixtureMessageIds(),
+    const runtime = new ChatXptServerRuntime({
+      persistence,
+      engine: new ScriptedFixtureQuestEngine((input) => {
+        engineGameplayMessageId =
+          input.questProgressValidationContext?.gameplay?.envelope.messageId ?? null;
+        return {
+          ok: false,
+          error: {
+            code: "validation",
+            message: "Stop after observing hydrated gameplay in this boundary test",
+            retryable: false,
+          },
+        };
+      }),
+      projector: new CanonicalFixtureViewProjector(),
+      clock: new FixedFixtureClock(FIXTURE_NOW + 2_000),
+      ids: new SequenceFixtureMessageIds(),
+    });
+    const result = await runtime.execute(
+      command,
+      {
+        kind: "broadcaster",
+        actorId: state.session.broadcasterId,
+        expiresAt: null,
+        moderatorForBroadcasterIds: [],
+        voterKey: null,
+        participationModes: [],
+      },
+      new FixtureProjectionContextResolver({
+        participationMode: "hosted-board",
+        viewerId: null,
+        sessionPoints: 0,
+        acceptedCandidateId: null,
+        connection: {
+          service: "fixture-ingress",
+          status: "ready",
+          checkedAt: FIXTURE_NOW + 2_000,
+          retryable: false,
         },
-        persistence,
-      ),
+      }),
     );
-
-    const result = await orchestrator.execute(command);
     expect(result).toMatchObject({ ok: false, error: { code: "validation" } });
     expect(engineGameplayMessageId).toBe("live-gameplay-1");
   });
