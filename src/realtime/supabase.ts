@@ -56,6 +56,8 @@ import {
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,
+  type TwitchChannelSessionDirectory,
+  type TwitchChannelSessionRecord,
 } from "./types";
 import { sanitizeRoleViewsForBroadcast } from "./sanitization";
 import { buildSessionHistoryFromReceipts } from "./session-history";
@@ -100,6 +102,14 @@ const hostedBoardSessionRowSchema = z
   .object({
     session_id: z.string().min(1).max(128),
     room_code: z.string().regex(/^[A-HJ-NP-Z2-9]{8}$/),
+    status: z.enum(["offline", "preparing", "live", "ended"]),
+    revision: z.number().int().nonnegative(),
+  })
+  .passthrough();
+const twitchChannelSessionRowSchema = z
+  .object({
+    session_id: z.string().min(1).max(128),
+    broadcaster_id: z.string().min(1).max(128),
     status: z.enum(["offline", "preparing", "live", "ended"]),
     revision: z.number().int().nonnegative(),
   })
@@ -348,6 +358,19 @@ export class SupabaseChatXptDataApi {
       .from("stream_sessions")
       .select("session_id, room_code, status, revision")
       .eq("room_code", roomCode)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
+  }
+
+  async loadTwitchChannelSession(channelId: string): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("stream_sessions")
+      .select("session_id, broadcaster_id, status, revision")
+      .eq("broadcaster_id", channelId)
+      .in("status", ["preparing", "live"])
+      .order("updated_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
     throwIfError(error);
     return data;
@@ -725,6 +748,22 @@ export class SupabaseHostedBoardSessionDirectory implements HostedBoardSessionDi
   }
 }
 
+export class SupabaseTwitchChannelSessionDirectory implements TwitchChannelSessionDirectory {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async findTwitchChannelSession(channelId: string): Promise<TwitchChannelSessionRecord | null> {
+    const raw = await this.api.loadTwitchChannelSession(channelId);
+    if (raw === null) return null;
+    const row = twitchChannelSessionRowSchema.parse(raw);
+    return {
+      sessionId: row.session_id,
+      channelId: row.broadcaster_id,
+      status: row.status,
+      revision: row.revision,
+    };
+  }
+}
+
 const realtimeAccessGrantRowSchema = z
   .object({
     principal_id: z.uuid(),
@@ -863,6 +902,7 @@ export function createSupabasePersistenceRuntime(
   const sessionHistory = new SupabaseSessionHistoryReader(api);
   const snapshots = new SupabaseRoleSnapshotPublisher(api);
   const hostedBoardSessions = new SupabaseHostedBoardSessionDirectory(api);
+  const twitchChannelSessions = new SupabaseTwitchChannelSessionDirectory(api);
   const dueVotes = new SupabaseDueVoteCycleReader(api);
   return {
     mode: "supabase",
@@ -870,6 +910,7 @@ export function createSupabasePersistenceRuntime(
     sessions,
     lifecycle: new SupabaseSessionLifecycleStore(api, sessions),
     hostedBoardSessions,
+    twitchChannelSessions,
     candidates: new SupabaseCandidateBatchRepository(api),
     acceptedVotes,
     gameplaySnapshots,
