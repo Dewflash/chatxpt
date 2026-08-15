@@ -873,8 +873,8 @@ describe("DefaultQuestEngine", () => {
     ]);
   });
 
-  it("terminalises accepted automatic completion with authoritative reward evidence", () => {
-    const result = decision(
+  it("keeps automatic value 1 non-terminal until manual completion", () => {
+    const progressResult = decision(
       new DefaultQuestEngine().decide({
         currentState: activeProgressState(),
         command: progressCommand({ requestedValue: 1 }),
@@ -890,21 +890,43 @@ describe("DefaultQuestEngine", () => {
       }),
     );
 
-    expect(result.nextState).toMatchObject({
-      status: "succeeded",
+    expect(progressResult.nextState).toMatchObject({
+      status: "active",
       progress: {
         value: 1,
         method: "automatic",
         evidenceSignalIds: ["role-3-progress-signal"],
       },
+      completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+      result: null,
+    });
+    expect(progressResult.events).toEqual([
+      {
+        eventType: "quest-cycle.progress-updated",
+        attributes: { method: "automatic", value: 1 },
+      },
+    ]);
+
+    const completionResult = decision(
+      new DefaultQuestEngine().decide({
+        currentState: progressResult.nextState,
+        command: role3StreamerCommand("succeed"),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 2_000,
+      }),
+    );
+
+    expect(completionResult.nextState).toMatchObject({
+      status: "succeeded",
+      progress: { value: 1, method: "manual" },
       completionRule: null,
       result: {
         outcome: "succeeded",
         rewardPointsAwarded: 100,
-        reason: "Automatic completion evidence satisfied the quest rule.",
+        reason: "Streamer marked the active quest as succeeded.",
       },
     });
-    expect(result.events).toEqual([
+    expect(completionResult.events).toEqual([
       {
         eventType: "quest-cycle.terminal",
         attributes: {
@@ -912,8 +934,7 @@ describe("DefaultQuestEngine", () => {
           rewardPointsAwarded: 100,
           hypeDelta: 10,
           historyCandidateId: "role-3-candidate-1",
-          cooldownEndsAt: ROLE_3_FIXTURE_TIME + 121_000,
-          completionMethod: "automatic",
+          cooldownEndsAt: ROLE_3_FIXTURE_TIME + 122_000,
         },
       },
     ]);

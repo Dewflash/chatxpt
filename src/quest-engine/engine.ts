@@ -246,18 +246,6 @@ function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
     });
   }
 
-  if (input.command.type === "system.quest-progress" && progressDecision.progress.value === 1) {
-    return terminalTransition(
-      input,
-      "succeeded",
-      "Automatic completion evidence satisfied the quest rule.",
-      "quest-cycle.terminal",
-      { completionMethod: "automatic" },
-      {},
-      progressDecision.progress,
-    );
-  }
-
   return accept(
     input.currentState,
     { progress: progressDecision.progress },
