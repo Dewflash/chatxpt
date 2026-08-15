@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-08-09",
+  "updatedAt": "2026-08-14",
   "resources": [
     {
       "id": "twitch-broadcaster",
@@ -305,6 +305,58 @@
         "Role 1 has not yet reviewed these captures, so this entry remains unverified and partial rather than accepted fixture-only evidence.",
         "No real Twitch identity or vote, authorised command dispatch, private Supabase recovery, same-revision multi-viewer flow, or OBS Browser Source was exercised.",
         "The additional automated keyboard browser runner was inconclusive and is not claimed as evidence."
+      ]
+    },
+    {
+      "id": "E-20260814-R1-002",
+      "capturedAt": "2026-08-14T14:41:12+08:00",
+      "owner": { "role": "role-1", "github": "Dewflash" },
+      "reviewer": { "role": "role-1", "github": "Dewflash" },
+      "evidenceClass": "unverified",
+      "result": "partial",
+      "claim": "A local production build accepted a signed fixture Twitch JWT, opened a diagnostic canonical cycle, committed one private viewer vote, and returned an idempotent duplicate outcome.",
+      "resourceIds": [],
+      "surfaces": [
+        {
+          "name": "Twitch Extension signed EBS HTTP routes",
+          "deviceClass": "server",
+          "viewport": null
+        }
+      ],
+      "source": {
+        "gitCommit": "534e248",
+        "branch": "codex/finals-twitch-viewer",
+        "prNumber": null
+      },
+      "authoritativeState": {
+        "sessionRef": "local-diagnostic-session",
+        "questCycleRef": "local-diagnostic-cycle",
+        "revision": 4
+      },
+      "inputs": [
+        {
+          "kind": "unverified",
+          "description": "Three diagnostic candidates plus a locally signed fixture JWT for a pseudonymous viewer and channel; no Twitch account, Twitch-issued token, or personal viewer data was used."
+        }
+      ],
+      "commands": [
+        "next build; next start on local port 3210 with a fixture-only Extension secret",
+        "POST /api/demo-participation to stage exactly three diagnostic candidates",
+        "GET /api/twitch/extension/viewer with a signed fixture JWT header",
+        "POST /api/twitch/extension/commands twice with the same vote command ID"
+      ],
+      "artifacts": [
+        {
+          "storage": "local-only",
+          "reference": "local-artifact:codex-runtime-transcript-20260814",
+          "mediaType": "text/plain",
+          "privacyReviewed": true,
+          "sha256": null
+        }
+      ],
+      "limitations": [
+        "The run used memory persistence, diagnostic candidates, and a locally signed fixture token; it is not real Twitch, Supabase, two-device, OBS, or public Extension evidence.",
+        "The run occurred against an uncommitted branch diff based on 534e248, so it remains unverified until repeated from an immutable commit and reviewed artifact."
       ]
     }
   ]

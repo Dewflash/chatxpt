@@ -98,7 +98,7 @@ export function resolveTwitchSetupReadiness(
     ],
     limitations: [
       "No Twitch secrets are included in this response or rendered route.",
-      "OAuth token exchange, Extension JWT validation, EventSub, and chat ingestion are not claimed by these diagnostic setup shells.",
+      "The viewer EBS verifies Extension JWT signatures and expiry; OAuth token exchange, EventSub, and real chat ingestion remain separate work.",
       "Twitch Asset Hosting compliance, Local Test, or Hosted Test evidence must be recorded separately before Twitch is described as live.",
     ],
   };

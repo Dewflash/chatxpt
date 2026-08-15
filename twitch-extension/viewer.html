@@ -6,6 +6,7 @@
     <title>ChatXPT Viewer</title>
     <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
     <link rel="stylesheet" href="assets/extension.css">
+    <script defer src="assets/environment.js"></script>
     <script defer src="assets/viewer.js"></script>
   </head>
   <body data-surface="viewer">
@@ -17,6 +18,7 @@
         </div>
         <span id="connection-state" class="pill">Connecting</span>
       </header>
+      <p id="countdown" class="countdown" hidden></p>
       <section id="quest-list" class="quest-list" aria-label="Quest choices">
         <div class="empty-state">
           <strong>No vote is open.</strong>
@@ -24,7 +26,7 @@
         </div>
       </section>
       <button id="submit-vote" class="submit-vote" disabled>Submit vote</button>
-      <p id="vote-status" class="status-line" aria-live="polite">Waiting for Studio to publish quests.</p>
+      <p id="vote-status" class="status-line" aria-live="polite">Waiting for Twitch authorization.</p>
       <p class="api-note">Backend: <span id="api-base-label">auto</span></p>
     </main>
   </body>

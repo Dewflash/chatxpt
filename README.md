@@ -56,7 +56,7 @@ All values in `.env.example` are empty placeholders. Real credentials must remai
 | `TWITCH_CLIENT_ID` | No | Twitch application client identifier for real Twitch integration work. |
 | `TWITCH_CLIENT_SECRET` | No | Server-only Twitch application secret. |
 | `TWITCH_EXTENSION_CLIENT_ID` | No | Identifier for the registered Twitch Extension. |
-| `TWITCH_EXTENSION_SECRET` | No | Server-only secret used for Extension authentication/JWT work. |
+| `TWITCH_EXTENSION_SECRET` | For Twitch tests | Base64 Extension signing secret used only by the server to verify Twitch JWTs and derive pseudonymous, session-scoped participation identity. |
 | `CHATXPT_OBS_OVERLAY_SETUP_KEY` | No | Server-only key for the streamer-controlled OBS overlay setup boundary. |
 | `NEXT_PUBLIC_APP_ENV` | No | Environment label; the example uses `local`. |
 
@@ -68,7 +68,7 @@ Legacy Supabase projects may use the aliases documented in [.env.example](.env.e
 | --- | --- | --- |
 | Streamer Studio / control room | [http://localhost:3000](http://localhost:3000) | Configure the session, inspect detected context, generate or review quests, control the vote, and inspect analytics. |
 | OBS overlay | [http://127.0.0.1:3000/overlay?obs=1](http://127.0.0.1:3000/overlay?obs=1) | Transparent browser-source output for vote and active-quest states. |
-| Viewer Extension-style panel | [http://localhost:3000/viewer.html](http://localhost:3000/viewer.html) | Local interactive viewer voting surface. |
+| Viewer Twitch Extension panel | [https://localhost:3000/viewer.html](https://localhost:3000/viewer.html) | Authenticated viewer voting surface when opened by Twitch Local Test. Direct browser access intentionally cannot vote. |
 | Twitch configuration page | [http://localhost:3000/config.html](http://localhost:3000/config.html) | Local Twitch Extension configuration path. |
 | Twitch live controls | [http://localhost:3000/live-config.html](http://localhost:3000/live-config.html) | Compact broadcaster controls for Twitch's Live Config area. |
 | Hosted Quest Board fallback | `http://localhost:3000/quest-board/<roomCode>` | ChatXPT-hosted participation fallback when an Extension is unavailable. |
@@ -89,17 +89,25 @@ The overlay is broadcast output, not the primary voting or configuration surface
 
 ### Twitch Extension local-test setup
 
-Run ChatXPT locally, then configure the registered Extension version in the Twitch Developer Console with:
+Set the base64 `TWITCH_EXTENSION_SECRET` in `.env.local`, then run the HTTPS development server:
+
+```bash
+npm run dev:twitch
+```
+
+Trust the one-time local certificate warning in the test browser, then configure the registered Extension version in the Twitch Developer Console with:
 
 | Twitch setting | Value |
 | --- | --- |
-| Testing Base URI | `http://localhost:3000/` |
+| Testing Base URI | `https://localhost:3000/` |
 | Configuration Path | `config.html` |
 | Live Configuration Path | `live-config.html` |
 | Panel Viewer Path | `viewer.html` |
 | Extension type | Panel; enable additional video placements only if they are intentionally being tested |
 
-Install and activate that Local Test version on the broadcaster's channel. The local viewer page and the Extension panel use the same demo participation endpoint, so a submitted vote can update the local tally and winner. The committed package under `twitch-extension/` and `release/chatxpt-twitch-extension-demo-v2.zip` is for Twitch Local Test or upload workflow; it is not evidence of public Twitch approval.
+Install and activate that Local Test version on the broadcaster's channel. Generate three quests in Studio, then open the installed Extension as a viewer. Twitch `onAuthorized` supplies a refreshable JWT; ChatXPT verifies its signature and expiry, binds its channel to the staged local diagnostic cycle, derives a non-reversible session voter key, and routes the vote through the canonical orchestrator and Role 3 engine. A direct `/viewer.html` tab is expected to show an authorization recovery message because browser-created identities are no longer accepted.
+
+The upload package under `twitch-extension/` uses a build-owned exact EBS origin in `assets/environment.js`; replace it with the deployed HTTPS ChatXPT origin before Hosted Test and add that domain to Twitch's URL-fetching allowlist. Automated signed-token tests and local diagnostic state are not proof of a real Twitch run, public approval, or cloud persistence; record real Local/Hosted Test evidence separately.
 
 ### Optional local Supabase stack
 
@@ -174,11 +182,11 @@ The repository intentionally distinguishes what can be shown locally today from 
 | Capability | Current runnable local behaviour | Production-shaped direction / evidence boundary |
 | --- | --- | --- |
 | Quest generation | `/api/sidequests` validates input and returns three credential-free algorithmic options. The optional model path requires both explicit enablement and a server key; failure still falls back algorithmically. | Role 2 now exposes a canonical structured-output strategy over normalized gameplay, audience, and profile context. Role 3 remains the deterministic validation/replacement authority. No external model is required for the judged MVP. |
-| Viewer participation | `/viewer.html` and the local Twitch shell submit votes to `/api/demo-participation`, whose state is process-local. | All participation surfaces consume one private, platform-neutral service with authoritative revisioned state. Real Twitch identity/JWT evidence is not claimed by the local demo. |
+| Viewer participation | Studio stages a local diagnostic cycle; `/viewer.html` accepts only verified Twitch Extension JWTs and routes votes through the canonical revisioned memory ledger with private acknowledgement/recovery. | Supabase adapters implement the same channel lookup, vote ledger, and private recovery boundaries. Real Twitch/Supabase evidence is claimed only after a recorded external run. |
 | Overlay state | The local overlay uses same-origin state, `BroadcastChannel`, and `/api/overlay-state` so Studio and OBS can reflect vote/quest changes. | OBS remains an output adapter driven by sanitised `OverlayViewModel` state from the orchestrator. |
 | Persistence and realtime | Blank Supabase configuration selects the credential-free memory runtime. | Role 1 includes Supabase-backed repository/realtime adapters and schema/RLS checks. A real cloud run is only claimed when recorded in `docs/evidence/manifest.json`. |
 | Gameplay understanding | The Studio can expose local screen-capture-derived activity signals and clearly labelled manual/diagnostic context where used. Unknown facts remain unknown. | Role 2's extraction boundary supports real OBS Virtual Camera frames, lightweight motion/visual algorithms, bounded OCR, timestamps, confidence, and provenance. A fixture is never presented as live extraction evidence. |
-| Twitch Extension | Local Test paths and an interactive Extension-style viewer are provided. | Public release, hosted-test approval, verified JWT identity, and real-channel evidence require Twitch-side configuration and recorded proof. |
+| Twitch Extension | Local/Hosted Test paths, HS256 JWT verification, channel/session mapping, anonymous and opaque-viewer participation, token refresh, canonical vote handling, private recovery, and the Role 5 viewer surface are implemented. | Public release, Twitch-side Local/Hosted Test success, and real-channel evidence still require external configuration and recorded proof. |
 
 ### State, safety, and failure handling
 

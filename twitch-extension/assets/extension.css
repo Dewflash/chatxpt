@@ -113,6 +113,13 @@ p {
   background: rgba(255, 111, 97, .08);
 }
 
+.countdown {
+  color: var(--lime);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+}
+
 .quest-list {
   display: grid;
   gap: 8px;
@@ -133,9 +140,22 @@ p {
 }
 
 .quest-choice:hover,
-.quest-choice.selected {
+.quest-choice.selected,
+.quest-choice.active {
   border-color: rgba(215, 255, 82, .52);
   background: rgba(215, 255, 82, .075);
+}
+
+.quest-choice mark {
+  width: fit-content;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: #0c0912;
+  background: var(--lime);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 
 .quest-choice:disabled {
@@ -220,4 +240,42 @@ p {
 
 .empty-state strong {
   color: white;
+}
+
+.quest-progress,
+.quest-result {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid rgba(215, 255, 82, .24);
+  border-radius: 8px;
+  background: rgba(215, 255, 82, .06);
+}
+
+.quest-progress {
+  grid-template-columns: 1fr auto;
+}
+
+.quest-progress progress {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .12);
+}
+
+.quest-progress progress::-webkit-progress-bar {
+  background: rgba(255, 255, 255, .12);
+}
+
+.quest-progress progress::-webkit-progress-value,
+.quest-progress progress::-moz-progress-bar {
+  background: var(--lime);
+}
+
+.quest-result span {
+  color: var(--muted);
+  font-size: 12px;
 }
