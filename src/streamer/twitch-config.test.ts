@@ -6,6 +6,22 @@ import { createFixtureUiGatewaySnapshot, streamerViewModelSchema } from "../core
 import { contractFixtureUiX01ReadinessCatalog } from "../core/testing";
 import { TwitchConfigSurface, TwitchLiveConfigSurface } from "./twitch-config";
 
+function mixedGenerationView() {
+  const view = createFixtureUiGatewaySnapshot().views.streamer;
+  return streamerViewModelSchema.parse({
+    ...view,
+    questCycle: {
+      ...view.questCycle,
+      options: view.questCycle.options.map((option, index) => ({
+        ...option,
+        generation: index === 1
+          ? { ...option.generation, method: "deterministic-fallback", provider: null }
+          : { ...option.generation, method: "ai-provider", provider: "fixture-provider" },
+      })),
+    },
+  });
+}
+
 describe("TwitchConfigSurface", () => {
   it("keeps infrequent setup compact and routes detailed management back to Studio", () => {
     const view = createFixtureUiGatewaySnapshot().views.streamer;
@@ -41,6 +57,15 @@ describe("TwitchLiveConfigSurface", () => {
     expect(html).toContain("Realtime");
     expect(html).toContain("Fallback active");
     expect(html).toContain("Quest");
+  });
+
+  it("shows a warning label for a mixed AI and fallback candidate batch", () => {
+    const html = renderToStaticMarkup(h(TwitchLiveConfigSurface, {
+      view: mixedGenerationView(),
+    }));
+
+    expect(html).toContain("AI + validated replacements");
+    expect(html).not.toContain("AI intelligence active");
   });
 
   it("distinguishes temporary intensity from the saved default without pretending to persist it", () => {

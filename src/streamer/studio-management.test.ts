@@ -6,6 +6,22 @@ import { createFixtureUiGatewaySnapshot, streamerViewModelSchema } from "../core
 import { contractFixtureUiX01ReadinessCatalog } from "../core/testing";
 import { StudioManagementSurface } from "./studio-management";
 
+function mixedGenerationView() {
+  const view = createFixtureUiGatewaySnapshot().views.streamer;
+  return streamerViewModelSchema.parse({
+    ...view,
+    questCycle: {
+      ...view.questCycle,
+      options: view.questCycle.options.map((option, index) => ({
+        ...option,
+        generation: index === 1
+          ? { ...option.generation, method: "deterministic-fallback", provider: null }
+          : { ...option.generation, method: "ai-provider", provider: "fixture-provider" },
+      })),
+    },
+  });
+}
+
 describe("StudioManagementSurface", () => {
   it("keeps persistent and live controls unavailable before an authorised view loads", () => {
     const html = renderToStaticMarkup(h(StudioManagementSurface, { view: null }));
@@ -48,6 +64,17 @@ describe("StudioManagementSurface", () => {
     expect(html).toContain("There is no combined readiness percentage");
     expect(html).not.toContain("API key");
     expect(html).not.toContain("model selector");
+  });
+
+  it("warns when an AI candidate batch contains validated fallback replacements", () => {
+    const html = renderToStaticMarkup(h(StudioManagementSurface, {
+      view: mixedGenerationView(),
+      readiness: contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"],
+    }));
+
+    expect(html).toContain("AI + validated replacements");
+    expect(html).toContain("This candidate batch includes validated fallback replacements");
+    expect(html).not.toContain("AI route active");
   });
 
   it("renders only authoritative quest actions and keeps destructive controls explicit", () => {

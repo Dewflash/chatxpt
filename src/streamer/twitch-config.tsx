@@ -31,6 +31,7 @@ import {
   type StreamerUiCommand,
 } from "./streamer-commands";
 import { summarizeGameplayHealth } from "./gameplay-health";
+import { summarizeQuestGeneration } from "./quest-generation-health";
 
 import styles from "./twitch-config.module.css";
 
@@ -200,14 +201,6 @@ export function TwitchConfigSurface({
   );
 }
 
-function generationLabel(view: StreamerViewModel): { readonly label: string; readonly tone: StatusTone } {
-  const methods = new Set(view.questCycle.options.map((option) => option.generation.method));
-  if (methods.has("ai-provider")) return { label: "AI intelligence active", tone: "success" };
-  if (methods.has("algorithmic")) return { label: "Algorithmic intelligence", tone: "info" };
-  if (methods.has("deterministic-fallback")) return { label: "Fallback active", tone: "warning" };
-  return { label: "Intelligence unknown", tone: "neutral" };
-}
-
 function CompactHealth({ view, readiness }: {
   readonly view: StreamerViewModel;
   readonly readiness?: StreamerReadinessView | null;
@@ -215,7 +208,7 @@ function CompactHealth({ view, readiness }: {
   const obs = readinessService(readiness, "obs-capture");
   const realtime = readinessService(readiness, "realtime");
   const gameplay = summarizeGameplayHealth(view.gameplay);
-  const generation = generationLabel(view);
+  const generation = summarizeQuestGeneration(view.questCycle.options);
   return (
     <section className={styles.compactSection} aria-labelledby="live-health-heading">
       <ControlRow>

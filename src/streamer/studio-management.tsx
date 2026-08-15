@@ -39,6 +39,7 @@ import {
   type StreamerUiCommand,
 } from "./streamer-commands";
 import { summarizeGameplayHealth } from "./gameplay-health";
+import { summarizeQuestGeneration } from "./quest-generation-health";
 
 import styles from "./studio-management.module.css";
 
@@ -432,14 +433,9 @@ function HealthAndRecovery({
         : gameplayHealth.averageKnownConfidence === null
           ? "Unsupported facts remain unknown"
           : `${Math.round(gameplayHealth.averageKnownConfidence * 100)}% average known-signal confidence`;
-  const methods = new Set(view.questCycle.options.map((option) => option.generation.method));
-  const aiRoute = methods.has("ai-provider")
-    ? { badge: "AI route active", tone: "success" as const }
-    : methods.has("algorithmic")
-      ? { badge: "Algorithmic route", tone: "info" as const }
-      : methods.has("deterministic-fallback")
-        ? { badge: "Fallback active", tone: "warning" as const }
-        : null;
+  const generation = view.questCycle.options.length > 0
+    ? summarizeQuestGeneration(view.questCycle.options)
+    : null;
 
   function serviceCard(
     title: string,
@@ -489,11 +485,11 @@ function HealthAndRecovery({
         />
         <HealthCard
           {...serviceCard("AI intelligence", intelligence, "Intelligence service health is unknown.")}
-          badge={aiRoute?.badge ?? (intelligence ? healthLabel(intelligence.health.status) : "Unknown")}
-          tone={aiRoute?.tone ?? (intelligence ? healthTone(intelligence.health.status) : "neutral")}
-          detail={aiRoute === null
+          badge={generation?.label ?? (intelligence ? healthLabel(intelligence.health.status) : "Unknown")}
+          tone={generation?.tone ?? (intelligence ? healthTone(intelligence.health.status) : "neutral")}
+          detail={generation === null
             ? intelligence?.health.message ?? "No candidate-generation route is visible yet."
-            : "Provider-neutral generation status; raw model and provider controls stay server-side."}
+            : `${generation.detail} Raw model and provider controls stay server-side.`}
         />
         <HealthCard {...serviceCard("Realtime", realtime, "Realtime snapshot and recovery state are unknown.")} />
       </CardGrid>
