@@ -40,6 +40,8 @@ export type ProgressUpdateRejection =
   | "stale-evidence"
   | "cross-game-evidence"
   | "blocked-gameplay-context"
+  | "completion-rule-unavailable"
+  | "completion-rule-mismatch"
   | "unproven-progress-value"
   | "ambiguous-completion-evidence";
 

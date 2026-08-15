@@ -10,6 +10,7 @@ import {
   streamerProfileSchema,
   systemQuestProgressCommandSchema,
   type GameplaySnapshot,
+  type QuestCompletionRule,
   type QuestEngineInput,
   type QuestEngineResult,
   type QuestProgress,
@@ -104,7 +105,13 @@ const voteCloseSession = streamSessionSchema.parse({
   },
 });
 
-function activeProgressState(progress: QuestProgress | null = null) {
+function activeProgressState(
+  progress: QuestProgress | null = null,
+  completionRule: QuestCompletionRule | null = {
+    mode: "signal",
+    allowedSignalKinds: ["objective-progress"],
+  },
+) {
   return questCycleStateSchema.parse({
     ...role3FixtureIdleState,
     status: "active",
@@ -114,7 +121,7 @@ function activeProgressState(progress: QuestProgress | null = null) {
     startsAt: ROLE_3_FIXTURE_TIME,
     endsAt: ROLE_3_FIXTURE_TIME + 60_000,
     progress,
-    completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+    completionRule,
   });
 }
 
@@ -913,6 +920,57 @@ describe("DefaultQuestEngine", () => {
   });
 
   it.each([
+    [
+      "null active rule",
+      null,
+      { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+      "completion-rule-unavailable",
+    ],
+    [
+      "manual active rule",
+      { mode: "manual", allowedSignalKinds: [] },
+      { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+      "completion-rule-unavailable",
+    ],
+    [
+      "mismatched context rule",
+      { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+      { mode: "signal", allowedSignalKinds: ["another-progress"] },
+      "completion-rule-mismatch",
+    ],
+  ] as const)(
+    "fails closed when automatic progress receives %s",
+    (_label, activeRule, contextRule, reason) => {
+      const activeCompletionRule: QuestCompletionRule | null =
+        activeRule === null
+          ? null
+          : { mode: activeRule.mode, allowedSignalKinds: [...activeRule.allowedSignalKinds] };
+      const suppliedCompletionRule: QuestCompletionRule = {
+        mode: contextRule.mode,
+        allowedSignalKinds: [...contextRule.allowedSignalKinds],
+      };
+      const result = new DefaultQuestEngine().decide({
+        currentState: activeProgressState(null, activeCompletionRule),
+        command: progressCommand({ requestedValue: 1 }),
+        candidateBatch: null,
+        questProgressValidationContext: {
+          profile: progressProfile,
+          session: progressSession,
+          gameplay: progressGameplay({ value: 1 }),
+          audience: null,
+          completionRule: suppliedCompletionRule,
+        },
+        now: ROLE_3_FIXTURE_TIME + 1_000,
+      });
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: "validation", details: { reason } },
+      });
+    },
+  );
+
+  it.each([
     ["missing-evidence", { gameplay: null }],
     ["unknown-evidence", { gameplay: progressGameplay({ status: "unknown" }) }],
     [
@@ -978,7 +1036,10 @@ describe("DefaultQuestEngine", () => {
 
   it("keeps broad visual completion evidence on the manual fallback path", () => {
     const result = new DefaultQuestEngine().decide({
-      currentState: activeProgressState(),
+      currentState: activeProgressState(null, {
+        mode: "signal",
+        allowedSignalKinds: ["activity-intensity"],
+      }),
       command: progressCommand({ requestedValue: 1 }),
       candidateBatch: null,
       questProgressValidationContext: {

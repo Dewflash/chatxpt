@@ -138,6 +138,21 @@ function validateCandidateBatch(input: QuestEngineInput): QuestEngineResult | nu
   return null;
 }
 
+function completionRulesMatch(
+  activeRule: QuestCycleState["completionRule"],
+  suppliedRule: QuestCycleState["completionRule"],
+): boolean {
+  return (
+    activeRule !== null &&
+    suppliedRule !== null &&
+    activeRule.mode === suppliedRule.mode &&
+    activeRule.allowedSignalKinds.length === suppliedRule.allowedSignalKinds.length &&
+    activeRule.allowedSignalKinds.every(
+      (kind, index) => suppliedRule.allowedSignalKinds[index] === kind,
+    )
+  );
+}
+
 function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
   if (input.command.type !== "streamer.quest-progress" && input.command.type !== "system.quest-progress") {
     return error("internal", "Progress transition received another command type");
@@ -149,16 +164,27 @@ function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
       ? decideManualProgress(input.currentState.progress, input.command.requestedValue, input.now)
       : (() => {
           const context = input.questProgressValidationContext;
-          const completionRule = context?.completionRule ?? null;
           if (
             context === null ||
             context === undefined ||
-            context.gameplay === null ||
-            completionRule?.mode !== "signal"
+            context.gameplay === null
           ) {
             return {
               accepted: false as const,
               reason: "missing-evidence" as const,
+            };
+          }
+          const activeCompletionRule = input.currentState.completionRule;
+          if (activeCompletionRule === null || activeCompletionRule.mode !== "signal") {
+            return {
+              accepted: false as const,
+              reason: "completion-rule-unavailable" as const,
+            };
+          }
+          if (!completionRulesMatch(activeCompletionRule, context.completionRule)) {
+            return {
+              accepted: false as const,
+              reason: "completion-rule-mismatch" as const,
             };
           }
           const profile = streamerProfileSchema.safeParse(context.profile);
@@ -207,7 +233,7 @@ function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
             currentProgress: input.currentState.progress,
             requestedValue: input.command.requestedValue,
             evidenceSignalIds: input.command.evidenceSignalIds,
-            allowedSignalKinds: completionRule.allowedSignalKinds,
+            allowedSignalKinds: activeCompletionRule.allowedSignalKinds,
             expectedGameId: profile.data.gameId,
             intelligence: intelligence.data,
             now: input.now,
