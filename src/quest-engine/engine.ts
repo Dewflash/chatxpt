@@ -17,6 +17,7 @@ import {
   type QuestEngineEventDraft,
   type QuestEngineInput,
   type QuestEngineResult,
+  type QuestProgress,
   type StreamerQuestAction,
 } from "../core";
 import { decideAutomaticProgress, decideManualProgress, decideQuestOutcome } from "./outcomes";
@@ -160,6 +161,25 @@ function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
               reason: "missing-evidence" as const,
             };
           }
+          const profile = streamerProfileSchema.safeParse(context.profile);
+          const session = streamSessionSchema.safeParse(context.session);
+          if (
+            !profile.success ||
+            !session.success ||
+            session.data.sessionId !== input.currentState.envelope.sessionId ||
+            profile.data.streamerId !== session.data.broadcasterId
+          ) {
+            return {
+              accepted: false as const,
+              reason: "unknown-evidence" as const,
+            };
+          }
+          if (session.data.status !== "live") {
+            return {
+              accepted: false as const,
+              reason: "blocked-gameplay-context" as const,
+            };
+          }
           const intelligence = intelligenceSnapshotSchema.safeParse({
             envelope: {
               ...input.currentState.envelope,
@@ -188,6 +208,7 @@ function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
             requestedValue: input.command.requestedValue,
             evidenceSignalIds: input.command.evidenceSignalIds,
             allowedSignalKinds: completionRule.allowedSignalKinds,
+            expectedGameId: profile.data.gameId,
             intelligence: intelligence.data,
             now: input.now,
           });
@@ -197,6 +218,18 @@ function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
     return error("validation", "Quest progress update was rejected", {
       reason: progressDecision.reason,
     });
+  }
+
+  if (input.command.type === "system.quest-progress" && progressDecision.progress.value === 1) {
+    return terminalTransition(
+      input,
+      "succeeded",
+      "Automatic completion evidence satisfied the quest rule.",
+      "quest-cycle.terminal",
+      { completionMethod: "automatic" },
+      {},
+      progressDecision.progress,
+    );
   }
 
   return accept(
@@ -244,6 +277,7 @@ function terminalTransition(
   eventType = "quest-cycle.terminal",
   eventAttributes: QuestEngineEventDraft["attributes"] = {},
   statePatch: Omit<Partial<QuestCycleState>, "envelope"> = {},
+  completedProgressOverride: QuestProgress | null = null,
 ): QuestEngineResult {
   const activeCandidate = input.currentState.options.find(
     (candidate) => candidate.candidateId === input.currentState.activeCandidateId,
@@ -256,13 +290,18 @@ function terminalTransition(
   if (outcomeDecision === null) {
     return error("internal", "Quest outcome policy rejected an invalid terminal transition");
   }
-  const completedProgress =
-    outcome === "succeeded"
+  const completedProgressDecision =
+    outcome === "succeeded" && completedProgressOverride === null
       ? decideManualProgress(input.currentState.progress, 1, input.now)
       : null;
-  if (completedProgress !== null && !completedProgress.accepted) {
+  if (completedProgressDecision !== null && !completedProgressDecision.accepted) {
     return error("internal", "Quest completion produced invalid manual progress");
   }
+  const completedProgress =
+    completedProgressOverride ??
+    (completedProgressDecision?.accepted === true
+      ? completedProgressDecision.progress
+      : null);
   const reasonByOutcome = {
     succeeded: "Streamer marked the active quest as succeeded.",
     failed: "Streamer marked the active quest as failed.",
@@ -277,10 +316,7 @@ function terminalTransition(
       status: outcome,
       availableStreamerActions: [...actionsByStatus[outcome]],
       endsAt: input.now,
-      progress:
-        completedProgress?.accepted === true
-          ? completedProgress.progress
-          : input.currentState.progress,
+      progress: completedProgress ?? input.currentState.progress,
       completionRule: null,
       result: {
         outcome,

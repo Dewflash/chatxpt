@@ -139,9 +139,12 @@ function progressGameplay(
   patch: {
     readonly status?: "known" | "unknown";
     readonly kind?: string;
+    readonly value?: string | number | boolean;
+    readonly unknownReason?: "not-observed" | "conflicting";
     readonly confidence?: number;
     readonly observedAt?: number;
     readonly supportedSignals?: readonly string[];
+    readonly gameId?: string | null;
   } = {},
 ): GameplaySnapshot {
   const status = patch.status ?? "known";
@@ -160,7 +163,7 @@ function progressGameplay(
     },
     capabilities: {
       tier: "calibrated-hud",
-      gameId: "role-3-progress-game",
+      gameId: patch.gameId === undefined ? "role-3-progress-game" : patch.gameId,
       adapterId: "role-3-progress-adapter",
       supportedSignals: patch.supportedSignals ?? ["objective-progress"],
     },
@@ -170,8 +173,8 @@ function progressGameplay(
         kind: patch.kind ?? "objective-progress",
         observation:
           status === "known"
-            ? { status, value: 0.5, provenance }
-            : { status, reason: "not-observed", provenance },
+            ? { status, value: patch.value ?? 0.5, provenance }
+            : { status, reason: patch.unknownReason ?? "not-observed", provenance },
       },
     ],
   });
@@ -863,9 +866,69 @@ describe("DefaultQuestEngine", () => {
     ]);
   });
 
+  it("terminalises accepted automatic completion with authoritative reward evidence", () => {
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        currentState: activeProgressState(),
+        command: progressCommand({ requestedValue: 1 }),
+        candidateBatch: null,
+        questProgressValidationContext: {
+          profile: progressProfile,
+          session: progressSession,
+          gameplay: progressGameplay({ value: 1 }),
+          audience: null,
+          completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+        },
+        now: ROLE_3_FIXTURE_TIME + 1_000,
+      }),
+    );
+
+    expect(result.nextState).toMatchObject({
+      status: "succeeded",
+      progress: {
+        value: 1,
+        method: "automatic",
+        evidenceSignalIds: ["role-3-progress-signal"],
+      },
+      completionRule: null,
+      result: {
+        outcome: "succeeded",
+        rewardPointsAwarded: 100,
+        reason: "Automatic completion evidence satisfied the quest rule.",
+      },
+    });
+    expect(result.events).toEqual([
+      {
+        eventType: "quest-cycle.terminal",
+        attributes: {
+          outcome: "succeeded",
+          rewardPointsAwarded: 100,
+          hypeDelta: 10,
+          historyCandidateId: "role-3-candidate-1",
+          cooldownEndsAt: ROLE_3_FIXTURE_TIME + 121_000,
+          completionMethod: "automatic",
+        },
+      },
+    ]);
+  });
+
   it.each([
     ["missing-evidence", { gameplay: null }],
     ["unknown-evidence", { gameplay: progressGameplay({ status: "unknown" }) }],
+    [
+      "contradictory-evidence",
+      { gameplay: progressGameplay({ status: "unknown", unknownReason: "conflicting" }) },
+    ],
+    [
+      "blocked-gameplay-context",
+      {
+        gameplay: progressGameplay({
+          kind: "scene-transition",
+          value: true,
+          supportedSignals: ["scene-transition"],
+        }),
+      },
+    ],
     ["unsupported-evidence", { gameplay: progressGameplay({ supportedSignals: [] }) }],
     [
       "disallowed-evidence",
@@ -910,6 +973,60 @@ describe("DefaultQuestEngine", () => {
     expect(result).toMatchObject({
       ok: false,
       error: { code: "validation", details: { reason } },
+    });
+  });
+
+  it("keeps broad visual completion evidence on the manual fallback path", () => {
+    const result = new DefaultQuestEngine().decide({
+      currentState: activeProgressState(),
+      command: progressCommand({ requestedValue: 1 }),
+      candidateBatch: null,
+      questProgressValidationContext: {
+        profile: progressProfile,
+        session: progressSession,
+        gameplay: progressGameplay({
+          kind: "activity-intensity",
+          value: 1,
+          supportedSignals: ["activity-intensity"],
+        }),
+        audience: null,
+        completionRule: { mode: "signal", allowedSignalKinds: ["activity-intensity"] },
+      },
+      now: ROLE_3_FIXTURE_TIME + 1_000,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        code: "validation",
+        details: { reason: "ambiguous-completion-evidence" },
+      },
+    });
+  });
+
+  it("rejects calibrated progress evidence from another saved game", () => {
+    const expectedGameProfile = streamerProfileSchema.parse({
+      ...progressProfile,
+      gameId: "expected-game",
+      gameName: "Expected Game",
+    });
+    const result = new DefaultQuestEngine().decide({
+      currentState: activeProgressState(),
+      command: progressCommand(),
+      candidateBatch: null,
+      questProgressValidationContext: {
+        profile: expectedGameProfile,
+        session: progressSession,
+        gameplay: progressGameplay({ gameId: "another-game" }),
+        audience: null,
+        completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+      },
+      now: ROLE_3_FIXTURE_TIME + 1_000,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "validation", details: { reason: "cross-game-evidence" } },
     });
   });
 
