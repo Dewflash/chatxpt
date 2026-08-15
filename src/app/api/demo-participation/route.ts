@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { getTwitchExtensionViewerApplication } from "@/app/server/twitch-extension-viewer";
 import { sidequestSchema, type Sidequest } from "@/lib/domain";
 
 export const runtime = "nodejs";
@@ -29,7 +30,27 @@ const clearRequestSchema = z
   })
   .strict();
 
-const requestSchema = z.discriminatedUnion("type", [publishRequestSchema, voteRequestSchema, clearRequestSchema]);
+const progressRequestSchema = z
+  .object({
+    type: z.literal("quest-progress"),
+    value: z.number().min(0).max(1),
+  })
+  .strict();
+
+const resultRequestSchema = z
+  .object({
+    type: z.literal("quest-result"),
+    outcome: z.enum(["completed", "failed"]),
+  })
+  .strict();
+
+const requestSchema = z.discriminatedUnion("type", [
+  publishRequestSchema,
+  voteRequestSchema,
+  clearRequestSchema,
+  progressRequestSchema,
+  resultRequestSchema,
+]);
 
 type DemoParticipationState = {
   quests: Sidequest[];
@@ -70,7 +91,22 @@ function snapshot(state: DemoParticipationState) {
 }
 
 export async function GET() {
-  return NextResponse.json(snapshot(store()), { headers: corsHeaders });
+  const current = store();
+  try {
+    const diagnostic =
+      await getTwitchExtensionViewerApplication().readLocalDiagnosticSnapshot();
+    if (
+      diagnostic !== null &&
+      diagnostic.quests.length === 3 &&
+      diagnostic.quests.every((quest) => current.quests.some((currentQuest) => currentQuest.id === quest.id))
+    ) {
+      current.votes = { ...diagnostic.votes };
+      current.updatedAt = diagnostic.updatedAt;
+    }
+  } catch {
+    // The legacy control-room poll remains best-effort; the signed EBS is authoritative.
+  }
+  return NextResponse.json(snapshot(current), { headers: corsHeaders });
 }
 
 export async function OPTIONS() {
@@ -103,6 +139,7 @@ export async function POST(request: Request) {
   const current = store();
 
   if (command.type === "clear") {
+    await getTwitchExtensionViewerApplication().clearLocalDiagnosticQuests();
     current.quests = [];
     current.votes = {};
     current.voterChoices = {};
@@ -111,11 +148,51 @@ export async function POST(request: Request) {
   }
 
   if (command.type === "publish-quests") {
+    try {
+      getTwitchExtensionViewerApplication().stageLocalDiagnosticQuests(command.quests);
+    } catch (caught) {
+      return NextResponse.json(
+        {
+          error: caught instanceof Error ? caught.message : "Local Twitch diagnostic staging failed.",
+        },
+        { status: 503, headers: corsHeaders },
+      );
+    }
     current.quests = command.quests;
     current.votes = Object.fromEntries(command.quests.map((quest) => [quest.id, 0]));
     current.voterChoices = {};
     current.updatedAt = Date.now();
     return NextResponse.json({ ok: true, accepted: true, ...snapshot(current) }, { headers: corsHeaders });
+  }
+
+  if (command.type === "quest-progress" || command.type === "quest-result") {
+    try {
+      const state = await getTwitchExtensionViewerApplication().updateLocalDiagnosticQuest(
+        command.type === "quest-progress"
+          ? { type: "progress", value: command.value }
+          : { type: "result", outcome: command.outcome === "completed" ? "succeed" : "fail" },
+      );
+      return NextResponse.json(
+        {
+          ok: true,
+          accepted: true,
+          questStatus: state.questCycle.status,
+          revision: state.session.revision,
+          ...snapshot(current),
+        },
+        { headers: corsHeaders },
+      );
+    } catch (caught) {
+      return NextResponse.json(
+        {
+          ok: false,
+          accepted: false,
+          error: caught instanceof Error ? caught.message : "Quest update failed.",
+          ...snapshot(current),
+        },
+        { status: 409, headers: corsHeaders },
+      );
+    }
   }
 
   const quest = current.quests.find((candidate) => candidate.id === command.questId);

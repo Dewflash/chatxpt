@@ -26,6 +26,7 @@ import {
   SupabaseRoleSnapshotPublisher,
   SupabaseSessionHistoryReader,
   SupabaseSessionStateRepository,
+  SupabaseTwitchChannelSessionDirectory,
   SupabaseViewerRecoveryReader,
 } from "../../src/realtime/server";
 import { persistenceState } from "./persistence-fixtures";
@@ -36,6 +37,7 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
   acceptedVoteRows: readonly unknown[] = [];
   viewerAcceptedVoteRow: unknown | null = null;
   hostedBoardSessionRow: unknown | null = null;
+  twitchChannelSessionRow: unknown | null = null;
   dueVoteStates: readonly unknown[] = [];
   commandReceipts: readonly unknown[] = [];
 
@@ -61,6 +63,10 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
 
   override async loadHostedBoardSession(): Promise<unknown | null> {
     return this.hostedBoardSessionRow;
+  }
+
+  override async loadTwitchChannelSession(): Promise<unknown | null> {
+    return this.twitchChannelSessionRow;
   }
 
   override async loadDueVoteCycleStates(): Promise<readonly unknown[]> {
@@ -189,6 +195,26 @@ describe("Supabase production adapters", () => {
 
     api.hostedBoardSessionRow = { ...hostedRow, room_code: "INVALID1" };
     await expect(directory.findHostedBoardSession("INVALID1")).rejects.toThrow();
+  });
+
+  it("maps a Twitch channel to only its active ChatXPT session", async () => {
+    const api = new RecordingDataApi();
+    const directory = new SupabaseTwitchChannelSessionDirectory(api);
+
+    expect(await directory.findTwitchChannelSession("channel-123")).toBeNull();
+    api.twitchChannelSessionRow = {
+      session_id: "fixture-session",
+      broadcaster_id: "channel-123",
+      status: "live",
+      revision: 4,
+    };
+
+    expect(await directory.findTwitchChannelSession("channel-123")).toEqual({
+      sessionId: "fixture-session",
+      channelId: "channel-123",
+      status: "live",
+      revision: 4,
+    });
   });
 
   it("validates authoritative JSON loaded from the database", async () => {
