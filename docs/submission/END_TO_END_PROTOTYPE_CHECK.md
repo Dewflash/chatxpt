@@ -10,7 +10,7 @@ The repository contains a runnable local prototype that demonstrates the core id
 1. streamer-facing signal controls;
 2. exactly three generated sidequests;
 3. local screen/window activity sampling when the browser is granted capture permission, with visible motion, visual-change, tempo, confidence, rolling sample history, preview, and checksum signals;
-4. local Extension-style viewer voting through `/viewer.html`, with Twitch-chat `1`/`2`/`3` retained as a fallback/comment-ingestion proof when Twitch chat is reachable;
+4. authenticated Twitch Extension viewer voting through `/viewer.html` in Local/Hosted Test, with a signed EBS, canonical vote ledger, private acknowledgement/recovery, and Twitch-chat `1`/`2`/`3` retained as a fallback when real chat is reachable;
 5. a top Studio recording cockpit with quick capture/chat/generate/overlay actions, visible automation settings for automatic quest generation versus manual producer review, automatic overlay publishing versus streamer-approved activation, readiness state, recent flow events, and an embedded OBS output mirror;
 6. manual viewer-vote simulation as a diagnostic fallback;
 7. streamer activation and result controls;
@@ -41,7 +41,7 @@ Local demo routes:
 | `/diagnostics/ui-harness` | Fixture session showing shared Studio, Viewer, and OBS overlay view-model shape, revision, and command envelopes | fixture-only |
 | `/api/ui-gateway/fixture` | JSON fixture for the UI gateway view models | fixture-only |
 | `/api/ui-gateway/commands` | Validates fixture command envelopes and stale revisions without mutating authoritative runtime | fixture-only |
-| `/viewer.html` | Local Twitch Extension-style viewer voting screen backed by the demo participation bridge | local prototype / diagnostic |
+| `/viewer.html` | Role 5 viewer surface backed by Twitch `onAuthorized`, server-side JWT verification, channel/session mapping, and the canonical participation ledger | implemented; real Twitch delivery still unverified |
 | `/config.html`, `/live-config.html` | Twitch Extension path/readiness shells | setup diagnostic only |
 | `/quest-board/[roomCode]` | Hosted-board access shell backed by configured persistence runtime when available | diagnostic until real session evidence exists |
 | `/api/twitch/setup/readiness` | Server-safe Twitch setup readiness report | diagnostic |
@@ -56,7 +56,7 @@ Local demo routes:
 5. Connect Twitch chat to the broadcaster channel, for example `dewflash`, if a test stream is available.
 6. Wait for auto-generation or click **Generate sidequests** if the recording needs to move faster. If clicked manually, label that as prototype/demo control.
 7. Confirm exactly three Brawl Stars-safe quest cards appear. With no `OPENAI_API_KEY`, this uses the credential-free algorithmic/demo engine. If `OPENAI_API_KEY` is configured, the legacy API tries the optional OpenAI adapter and falls back to the algorithmic engine on failure. The accepted judged MVP path remains the credential-free algorithmic route recorded in D-055.
-8. Ask Joel or another viewer to open `http://localhost:3000/viewer.html`, select one of the three quests, and submit the vote. Confirm the vote increments in Studio and the leading voted quest auto-publishes to the overlay. Use Twitch chat `1`/`2`/`3` only as the fallback/comment-ingestion proof; if the viewer route is unavailable, click `+ vote` and label it as simulated diagnostic voting.
+8. Run `npm run dev:twitch`, install the Local Test version using `https://localhost:3000/`, and ask Joel or another allowlisted viewer to open the installed panel. Select one of the three quests and submit the vote. Confirm private acknowledgement and the Studio tally. Use Twitch chat `1`/`2`/`3` only as the fallback/comment-ingestion proof; if Twitch is unavailable, click `+ vote` and label it as simulated diagnostic voting.
 9. Open `http://localhost:3000/overlay` in another browser tab or OBS Browser Source to show the active quest, timer, status, and reward. If the automation is disabled, click **Activate** on the chosen quest.
 10. Return to the control room and click **Complete**, **Fail**, or **Clear** to demonstrate terminal overlay updates.
 11. Open `http://localhost:3000/diagnostics/ui-harness` separately to show the newer canonical fixture shape: one session ID, one quest-cycle ID, one revision, exactly three options, streamer/viewer/overlay views, and example command envelopes.
@@ -119,7 +119,7 @@ The newer Role 5 fixture evidence also shows Twitch, hosted-board, and OBS overl
 - Twitch broadcaster account/developer app/Extension test setup is still `owner-action-required`.
 - Two isolated viewer sessions are still `owner-action-required`.
 - OBS gameplay machine and real OBS Virtual Camera sampling are still `owner-action-required`.
-- Real Twitch Extension identity/JWT validation, Asset Hosting upload, and outbound acknowledgement are not evidenced by the local `/viewer.html` bridge.
+- Twitch Extension JWT validation, pseudonymous identity, channel/session mapping, and private acknowledgement are implemented and signed-fixture tested. Real Twitch JWT issuance, Local/Hosted Test delivery, Asset Hosting upload, and public approval are not yet evidenced.
 - Real hosted-board two-client voting against an authoritative session is not evidenced.
 - Real Supabase cloud realtime/persistence and Vercel deployment evidence are still outstanding.
 - Role 2 real-frame extraction/OCR and real gameplay asset evaluation are still blocked or incomplete until the owner records a real OBS/gameplay run.
