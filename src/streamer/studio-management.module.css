@@ -1,0 +1,417 @@
+.surface {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(14rem, 17rem) minmax(0, 1fr);
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cx-space-xl);
+  padding: var(--cx-space-xl);
+  border-right: 1px solid var(--cx-color-border);
+  background: var(--cx-color-surface);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--cx-space-md);
+}
+
+.brand > span {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: var(--cx-radius-md);
+  color: var(--cx-color-on-primary);
+  background: var(--cx-color-primary);
+  font-weight: var(--cx-font-weight-bold);
+}
+
+.brand > div {
+  display: grid;
+}
+
+.brand small,
+.sidebar p,
+.hero p,
+.heroGame small,
+.heroGame span,
+.healthCard p,
+.healthCard small,
+.contractNote,
+.sectionNote,
+.rationale,
+.definitionList dt,
+.overridePanel p,
+.questChoice small,
+.saveRow > p {
+  color: var(--cx-color-text-muted);
+}
+
+.sidebar nav {
+  display: grid;
+  gap: var(--cx-space-xs);
+}
+
+.sidebar nav a {
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: var(--cx-radius-md);
+  color: var(--cx-color-text-muted);
+  text-decoration: none;
+  font-weight: var(--cx-font-weight-medium);
+}
+
+.sidebar nav a:hover {
+  border-color: var(--cx-color-primary);
+  color: var(--cx-color-text);
+  background: var(--cx-color-primary-soft);
+}
+
+.sidebar nav a:focus-visible,
+.rangeField input:focus-visible,
+.selectField select:focus-visible,
+.checkboxField input:focus-visible,
+.questChoice input:focus-visible {
+  outline: none;
+  box-shadow: var(--cx-focus-ring);
+}
+
+.sidebar p {
+  margin-top: auto;
+  font-size: var(--cx-font-size-sm);
+}
+
+.main,
+.emptyShell {
+  width: min(100%, 92rem);
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: clamp(2rem, 4vw, 4rem);
+  padding: clamp(1rem, 3vw, 3rem);
+}
+
+.emptyShell {
+  grid-column: 1 / -1;
+  margin: auto;
+}
+
+.hero {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--cx-space-xl);
+  padding-bottom: var(--cx-space-xl);
+  border-bottom: 1px solid var(--cx-color-border);
+}
+
+.hero > div:first-child {
+  min-width: 0;
+}
+
+.hero h1,
+.sectionHeading h2,
+.settingCard h3,
+.healthCard h3,
+.questCard h3 {
+  margin: 0;
+}
+
+.hero h1 {
+  max-width: 20ch;
+  margin-top: var(--cx-space-sm);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 1.02;
+}
+
+.hero p {
+  max-width: 62ch;
+  margin-bottom: 0;
+  font-size: var(--cx-font-size-lg);
+}
+
+.heroGame {
+  min-width: min(100%, 17rem);
+  display: grid;
+  gap: var(--cx-space-xs);
+}
+
+.section {
+  min-width: 0;
+  scroll-margin-top: var(--cx-space-xl);
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--cx-space-lg);
+  margin-bottom: var(--cx-space-lg);
+}
+
+.eyebrow {
+  margin: 0 0 var(--cx-space-xs);
+  color: var(--cx-color-primary);
+  font-size: var(--cx-font-size-sm);
+  font-weight: var(--cx-font-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.settingsGrid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
+}
+
+.settingCard,
+.healthCard,
+.questCard {
+  display: grid;
+  align-content: start;
+  gap: var(--cx-space-lg);
+}
+
+.fieldStack,
+.definitionList {
+  display: grid;
+  gap: var(--cx-space-lg);
+}
+
+.rangeField,
+.selectField {
+  display: grid;
+  gap: var(--cx-space-sm);
+}
+
+.rangeField > span,
+.selectField > span {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--cx-space-md);
+  font-weight: var(--cx-font-weight-medium);
+}
+
+.rangeField output {
+  color: var(--cx-color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.rangeField input {
+  width: 100%;
+  min-height: 2.75rem;
+  accent-color: var(--cx-color-primary);
+}
+
+.selectField select {
+  min-height: 2.75rem;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--cx-color-border);
+  border-radius: var(--cx-radius-md);
+  color: var(--cx-color-text);
+  background: var(--cx-color-surface-raised);
+  font: inherit;
+}
+
+.checkboxField {
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  gap: var(--cx-space-md);
+}
+
+.checkboxField input,
+.questChoice input {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: 0 0 auto;
+  accent-color: var(--cx-color-primary);
+}
+
+.definitionList {
+  margin: 0;
+}
+
+.definitionList > div {
+  display: grid;
+  gap: var(--cx-space-xs);
+}
+
+.definitionList dt,
+.definitionList dd {
+  margin: 0;
+}
+
+.definitionList dt {
+  font-size: var(--cx-font-size-sm);
+  font-weight: var(--cx-font-weight-medium);
+}
+
+.definitionList dd {
+  overflow-wrap: anywhere;
+}
+
+.contractNote,
+.sectionNote,
+.rationale,
+.saveRow > p {
+  margin: 0;
+  font-size: var(--cx-font-size-sm);
+}
+
+.saveRow {
+  margin-top: var(--cx-space-lg);
+  padding-top: var(--cx-space-lg);
+  border-top: 1px solid var(--cx-color-border);
+}
+
+.buttonRow,
+.badgeRow,
+.noticeAction {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--cx-space-sm);
+}
+
+.overridePanel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cx-space-xl);
+  margin-bottom: var(--cx-space-md);
+  border-color: var(--cx-color-info);
+  background: var(--cx-color-info-soft);
+}
+
+.overridePanel p {
+  margin: var(--cx-space-xs) 0 0;
+}
+
+.healthGrid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+}
+
+.healthCard p,
+.healthCard small {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.healthCard small {
+  font-size: var(--cx-font-size-sm);
+}
+
+.healthCard > button {
+  align-self: end;
+}
+
+.sectionNote {
+  margin-top: var(--cx-space-md);
+}
+
+.questGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.questChoice {
+  display: flex;
+  align-items: start;
+  gap: var(--cx-space-md);
+  cursor: pointer;
+}
+
+.questChoice > span {
+  display: grid;
+  gap: var(--cx-space-sm);
+}
+
+.questChoice small,
+.rationale {
+  overflow-wrap: anywhere;
+}
+
+.manualPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--cx-space-lg);
+  margin-top: var(--cx-space-lg);
+}
+
+.questActions {
+  margin-top: var(--cx-space-lg);
+}
+
+.noticeAction {
+  margin-top: var(--cx-space-md);
+}
+
+@media (max-width: 72rem) {
+  .questGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 52rem) {
+  .surface {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+    padding: var(--cx-space-lg);
+    border-right: 0;
+    border-bottom: 1px solid var(--cx-color-border);
+  }
+
+  .sidebar nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sidebar p {
+    display: none;
+  }
+
+  .hero,
+  .sectionHeading,
+  .overridePanel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .heroGame {
+    width: 100%;
+  }
+}
+
+@media (max-width: 34rem) {
+  .buttonRow,
+  .buttonRow > button,
+  .noticeAction,
+  .noticeAction > button {
+    width: 100%;
+  }
+
+  .manualPanel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar nav a {
+    scroll-behavior: auto;
+  }
+}

@@ -18,3 +18,25 @@ export type {
 } from "../core";
 export { StudioStatusSurface } from "./studio-status";
 export type { StudioStatusSurfaceProps } from "./studio-status";
+export { StudioManagementSurface } from "./studio-management";
+export type { StudioManagementSurfaceProps } from "./studio-management";
+export { TwitchConfigSurface, TwitchLiveConfigSurface } from "./twitch-config";
+export type {
+  TwitchConfigSurfaceProps,
+  TwitchLiveConfigSurfaceProps,
+} from "./twitch-config";
+export {
+  buildEmergencyClearCommand,
+  buildProfileSettingsCommand,
+  buildQuestCommand,
+  buildQuestProgressCommand,
+  buildSetupCommand,
+  defaultStreamerCommandFactory,
+  editableDefaultsFromView,
+  profileDefaultsChanged,
+} from "./streamer-commands";
+export type {
+  EditableProfileDefaults,
+  StreamerCommandFactory,
+  StreamerUiCommand,
+} from "./streamer-commands";
