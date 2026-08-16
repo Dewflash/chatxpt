@@ -37,6 +37,7 @@ SUPABASE_SECRET_KEY=<Supabase secret key>
 TWITCH_CLIENT_SECRET=<Twitch app client secret>
 TWITCH_EXTENSION_SECRET=<Twitch Extension signing secret>
 CHATXPT_OBS_OVERLAY_SETUP_KEY=<Role 1 generated setup key>
+CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY=<Role 1 generated gameplay ingress key>
 ```
 
 Legacy Supabase projects may use `NEXT_PUBLIC_SUPABASE_ANON_KEY` and
@@ -56,7 +57,8 @@ NEXT_PUBLIC_APP_ENV=production
 ```
 
 Keep every server-only value out of client-prefixed names. Never prefix Supabase
-secret keys, Twitch secrets, or the OBS setup key with `NEXT_PUBLIC_`.
+secret keys, Twitch secrets, the OBS overlay key, or the gameplay ingress key with
+`NEXT_PUBLIC_`.
 
 ## Post-Deploy Checks
 
@@ -66,12 +68,13 @@ After each preview deployment:
 2. Confirm the response reports `deployment: "preview"`.
 3. Confirm `persistence.mode` is `supabase` when Supabase is configured.
 4. Confirm server-only values do not appear in the health response.
-5. Confirm incomplete Supabase setup returns an unhealthy report instead of
+5. Confirm `gameplayIngress.configured` reflects whether the server-only setup key is ready without exposing it.
+6. Confirm incomplete Supabase setup returns an unhealthy report instead of
    silently selecting local memory mode.
-6. Verify response headers include the CSP, Twitch frame ancestors, Supabase
+7. Verify response headers include the CSP, Twitch frame ancestors, Supabase
    HTTPS/WSS connection policy, first-party worker policy, and camera permission
    policy.
-7. Record the deployment URL, command, source revision, reviewer, and
+8. Record the deployment URL, command, source revision, reviewer, and
    limitations in `docs/evidence/manifest.json` before citing it as deployment
    evidence.
 

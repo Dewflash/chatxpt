@@ -11,6 +11,7 @@ import {
 } from "../../src/core";
 import {
   contractFixtureCandidateBatch,
+  contractFixtureGameplaySnapshot,
   contractFixtureOverlayView,
   contractFixtureQuestCycle,
   contractFixtureSession,
@@ -22,6 +23,7 @@ import {
   SupabaseDataError,
   SupabaseAcceptedVoteTallyReader,
   SupabaseDueVoteCycleReader,
+  SupabaseCurrentGameplaySnapshotRepository,
   SupabaseHostedBoardSessionDirectory,
   SupabaseRoleSnapshotPublisher,
   SupabaseSessionHistoryReader,
@@ -40,6 +42,11 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
   twitchChannelSessionRow: unknown | null = null;
   dueVoteStates: readonly unknown[] = [];
   commandReceipts: readonly unknown[] = [];
+  gameplayIngestResult: unknown = {
+    status: "accepted",
+    snapshot: contractFixtureGameplaySnapshot,
+  };
+  currentGameplaySnapshot: unknown | null = contractFixtureGameplaySnapshot;
 
   constructor() {
     super({} as SupabaseClient);
@@ -76,6 +83,14 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
   override async loadReceiptsForBroadcaster(): Promise<readonly unknown[]> {
     return this.commandReceipts;
   }
+
+  override async ingestGameplaySnapshot(): Promise<unknown> {
+    return this.gameplayIngestResult;
+  }
+
+  override async loadCurrentGameplaySnapshot(): Promise<unknown | null> {
+    return this.currentGameplaySnapshot;
+  }
 }
 
 class VoteConflictDataApi extends RecordingDataApi {
@@ -90,6 +105,33 @@ class VoteConflictDataApi extends RecordingDataApi {
 }
 
 describe("Supabase production adapters", () => {
+  it("validates and authority-filters the current gameplay snapshot boundary", async () => {
+    const api = new RecordingDataApi();
+    const repository = new SupabaseCurrentGameplaySnapshotRepository(api);
+    const identity = {
+      sessionId: contractFixtureGameplaySnapshot.envelope.sessionId,
+      questCycleId: contractFixtureGameplaySnapshot.envelope.questCycleId,
+      revision: contractFixtureGameplaySnapshot.envelope.revision,
+      evidenceClass: contractFixtureGameplaySnapshot.envelope.evidenceClass,
+    };
+
+    await expect(repository.ingest(contractFixtureGameplaySnapshot)).resolves.toMatchObject({
+      status: "accepted",
+    });
+    await expect(repository.readCurrent(identity)).resolves.toMatchObject({
+      envelope: { messageId: contractFixtureGameplaySnapshot.envelope.messageId },
+    });
+    await expect(repository.readCurrent({ ...identity, revision: identity.revision + 1 })).resolves.toBeNull();
+
+    api.gameplayIngestResult = { status: "rejected", reason: "state-mismatch" };
+    await expect(repository.ingest(contractFixtureGameplaySnapshot)).resolves.toEqual({
+      status: "rejected",
+      reason: "state-mismatch",
+    });
+    api.currentGameplaySnapshot = { invalid: true };
+    await expect(repository.readCurrent(identity)).rejects.toThrow();
+  });
+
   it("maps the database vote-identity uniqueness guard to a typed conflict", async () => {
     const repository = new SupabaseSessionStateRepository(new VoteConflictDataApi());
 

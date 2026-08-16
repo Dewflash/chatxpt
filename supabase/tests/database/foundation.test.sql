@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(21);
+select plan(25);
 
 select has_table('public', 'streamer_profiles', 'streamer_profiles exists');
 select has_table('public', 'stream_sessions', 'stream_sessions exists');
@@ -15,6 +15,7 @@ select has_table('public', 'accepted_participation', 'accepted_participation exi
 select has_table('public', 'public_session_snapshots', 'public_session_snapshots exists');
 select has_table('public', 'realtime_access_grants', 'realtime_access_grants exists');
 select has_table('public', 'session_operations', 'session_operations exists');
+select has_table('public', 'current_gameplay_snapshots', 'current_gameplay_snapshots exists');
 
 select ok(to_regclass('public.raw_chat') is null, 'raw chat is not persisted');
 select has_index(
@@ -39,7 +40,7 @@ select ok(
         'streamer_profiles', 'stream_sessions', 'quest_cycles',
         'quest_candidate_batches', 'command_receipts', 'quest_events',
         'accepted_participation', 'public_session_snapshots',
-        'realtime_access_grants', 'session_operations'
+        'realtime_access_grants', 'session_operations', 'current_gameplay_snapshots'
       )
       and not pg_class.relrowsecurity
   ),
@@ -52,6 +53,10 @@ select ok(
 select ok(
   not has_table_privilege('authenticated', 'public.public_session_snapshots', 'select'),
   'authenticated clients cannot read snapshot rows directly'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.current_gameplay_snapshots', 'select'),
+  'authenticated clients cannot read gameplay snapshot rows directly'
 );
 select ok(
   exists (
@@ -92,6 +97,18 @@ select ok(
     'execute'
   ),
   'service role can execute atomic command commits'
+);
+select ok(
+  (select prosecdef from pg_proc where oid = 'public.ingest_gameplay_snapshot(jsonb)'::regprocedure),
+  'gameplay snapshot ingestion is security definer'
+);
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.ingest_gameplay_snapshot(jsonb)',
+    'execute'
+  ),
+  'authenticated clients cannot ingest gameplay snapshots directly'
 );
 
 select * from finish();

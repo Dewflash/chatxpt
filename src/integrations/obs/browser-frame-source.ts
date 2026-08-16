@@ -25,6 +25,12 @@ export interface BrowserMediaFrameSourceOptions {
   readonly questCycleId?: string | null;
   readonly revision?: number;
   readonly evidenceClass?: FrameEvidenceClass;
+  /** Reads the latest realtime authority before each frame is stamped. */
+  readonly authority?: () => {
+    readonly questCycleId: string | null;
+    readonly revision: number;
+    readonly evidenceClass?: FrameEvidenceClass;
+  };
   readonly source?: FrameMessageSource;
   readonly frameIntervalMs?: number;
   readonly now?: () => number;
@@ -76,17 +82,18 @@ export class BrowserMediaFrameSource implements FrameSource {
   }
 
   private observation(sequence: number, capturedAt: number): GameplayFrameObservation {
-    const evidenceClass = this.options.evidenceClass ?? "live";
+    const authority = this.options.authority?.();
+    const evidenceClass = authority?.evidenceClass ?? this.options.evidenceClass ?? "live";
     const source = this.options.source ?? "obs-virtual-camera";
 
     return gameplayFrameObservationSchema.parse({
       envelope: {
         contractVersion: CONTRACT_VERSION,
         sessionId: this.options.sessionId,
-        questCycleId: this.options.questCycleId ?? null,
+        questCycleId: authority?.questCycleId ?? this.options.questCycleId ?? null,
         messageId: this.idFactory(sequence),
         correlationId: this.options.correlationId,
-        revision: this.options.revision ?? 0,
+        revision: authority?.revision ?? this.options.revision ?? 0,
         occurredAt: capturedAt,
         receivedAt: capturedAt,
         source,
@@ -123,11 +130,28 @@ export async function requestObsVirtualCameraStream(
 
   const devices = await mediaDevices.enumerateDevices();
   const obsDevice = findObsVirtualCameraDevice(devices, options.labelPattern);
-  const video = obsDevice === null
-    ? true
-    : { deviceId: { exact: obsDevice.deviceId } };
+  if (obsDevice !== null) {
+    return mediaDevices.getUserMedia({
+      audio: false,
+      video: { deviceId: { exact: obsDevice.deviceId } },
+    });
+  }
 
-  return mediaDevices.getUserMedia({ audio: false, video });
+  // Browsers commonly hide camera labels until the page receives permission.
+  // Acquire a provisional stream only to unlock labels, then require OBS
+  // explicitly so diagnostics cannot silently analyse the built-in webcam.
+  const provisional = await mediaDevices.getUserMedia({ audio: false, video: true });
+  const labelledDevices = await mediaDevices.enumerateDevices();
+  const labelledObsDevice = findObsVirtualCameraDevice(labelledDevices, options.labelPattern);
+  if (labelledObsDevice === null) {
+    for (const track of provisional.getTracks()) track.stop();
+    throw new Error("OBS Virtual Camera was not found. Start Virtual Camera in OBS, then retry.");
+  }
+  for (const track of provisional.getTracks()) track.stop();
+  return mediaDevices.getUserMedia({
+    audio: false,
+    video: { deviceId: { exact: labelledObsDevice.deviceId } },
+  });
 }
 
 export interface MediaStreamVideoFrameCaptureOptions {

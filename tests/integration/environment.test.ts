@@ -95,6 +95,7 @@ describe("Role 1 persistence environment", () => {
       deployment: "local",
       persistence: { mode: "memory", status: "ready" },
       publicRealtime: { configured: false },
+      gameplayIngress: { configured: false },
     });
 
     const preview = resolveDeploymentHealthReport(
@@ -103,6 +104,7 @@ describe("Role 1 persistence environment", () => {
         NEXT_PUBLIC_SUPABASE_URL: "https://fixture.supabase.co",
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fixture",
         SUPABASE_SECRET_KEY: "sb_secret_fixture",
+        CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY: "fixture-gameplay-ingress-key-0123456789abcdef",
       },
       CHECKED_AT,
     );
@@ -110,9 +112,11 @@ describe("Role 1 persistence environment", () => {
       deployment: "preview",
       persistence: { mode: "supabase", status: "ready" },
       publicRealtime: { configured: true, url: "https://fixture.supabase.co" },
+      gameplayIngress: { configured: true },
     });
     expect(JSON.stringify(preview)).not.toContain("sb_secret_fixture");
     expect(JSON.stringify(preview)).not.toContain("sb_publishable_fixture");
+    expect(JSON.stringify(preview)).not.toContain("fixture-gameplay-ingress-key");
 
     const broken = resolveDeploymentHealthReport({ NEXT_PUBLIC_APP_ENV: "preview" }, CHECKED_AT);
     expect(broken.persistence).toMatchObject({

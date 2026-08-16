@@ -18,6 +18,7 @@ export {
   SupabaseAcceptedVoteTallyReader,
   SupabaseCandidateBatchRepository,
   SupabaseChatXptDataApi,
+  SupabaseCurrentGameplaySnapshotRepository,
   SupabaseDataError,
   SupabaseDueVoteCycleReader,
   SupabaseHostedBoardSessionDirectory,

@@ -44,8 +44,12 @@ All values in `.env.example` are empty placeholders. Real credentials must remai
 
 | Variable | Required for basic local demo | Purpose |
 | --- | --- | --- |
-| `OPENAI_API_KEY` | No | Enables the legacy optional server-side OpenAI adapter. It is not the accepted judged-MVP path. |
-| `OPENAI_MODEL` | No | Overrides the model used only by that legacy adapter. |
+| `CHATXPT_LLM_ENABLED` | No | Explicit server-side opt-in. It defaults to `false`, so merely having a key cannot trigger provider spend. |
+| `CHATXPT_LLM_PROVIDER_ID` | No | Privacy-safe provider label used in canonical generation metadata. |
+| `CHATXPT_LLM_TIMEOUT_MS` | No | Bounded provider deadline before credential-free algorithmic fallback. |
+| `OPENAI_API_KEY` | No | Server-only credential for the controlled OpenAI Responses path. Missing credentials preserve algorithmic generation. |
+| `OPENAI_MODEL` | No | Pins the server-side model for a controlled provider run. |
+| `OPENAI_BASE_URL` | No | Optional only for an explicitly approved Responses-compatible endpoint. |
 | `NEXT_PUBLIC_SUPABASE_URL` | No | Public project URL for the accepted Supabase persistence/realtime target. Empty values select local memory mode. |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | No | Publishable Supabase client key when a project is configured. |
 | `SUPABASE_SECRET_KEY` | No | Server-only Supabase secret for privileged operations. Never expose it through `NEXT_PUBLIC_*`. |
@@ -54,6 +58,7 @@ All values in `.env.example` are empty placeholders. Real credentials must remai
 | `TWITCH_EXTENSION_CLIENT_ID` | No | Identifier for the registered Twitch Extension. |
 | `TWITCH_EXTENSION_SECRET` | For Twitch tests | Base64 Extension signing secret used only by the server to verify Twitch JWTs and derive pseudonymous, session-scoped participation identity. |
 | `CHATXPT_OBS_OVERLAY_SETUP_KEY` | No | Server-only key for the streamer-controlled OBS overlay setup boundary. |
+| `CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY` | For authenticated capture | Server-only key that bootstraps short-lived, session-scoped normalised gameplay ingress grants. It is never a client bundle value. |
 | `NEXT_PUBLIC_APP_ENV` | No | Environment label; the example uses `local`. |
 
 Legacy Supabase projects may use the aliases documented in [.env.example](.env.example), but each environment should configure only one key pair.
@@ -69,6 +74,7 @@ Legacy Supabase projects may use the aliases documented in [.env.example](.env.e
 | Twitch live controls | [http://localhost:3000/live-config.html](http://localhost:3000/live-config.html) | Compact broadcaster controls for Twitch's Live Config area. |
 | Hosted Quest Board fallback | `http://localhost:3000/quest-board/<roomCode>` | ChatXPT-hosted participation fallback when an Extension is unavailable. |
 | UI diagnostics | [http://localhost:3000/diagnostics/ui-harness](http://localhost:3000/diagnostics/ui-harness) | Clearly labelled fixture/diagnostic states for local testing, not live evidence. |
+| OBS extraction diagnostic | [http://localhost:3000/diagnostics/gameplay-extraction](http://localhost:3000/diagnostics/gameplay-extraction) | Local OBS Virtual Camera connection, exact-device selection, and bounded multi-game analysis. It never creates submission evidence automatically. |
 
 ### OBS browser-source setup
 
@@ -176,7 +182,7 @@ The repository intentionally distinguishes what can be shown locally today from 
 
 | Capability | Current runnable local behaviour | Production-shaped direction / evidence boundary |
 | --- | --- | --- |
-| Quest generation | `/api/sidequests` validates input and returns three credential-free algorithmic options. If a legacy server-side OpenAI key is configured, failure still falls back to the algorithmic route. | Role 2 exposes platform-neutral analysed signals and candidate-generation ports; Role 3 performs deterministic validation and replacement. No external model provider is adopted for the judged MVP. |
+| Quest generation | `/api/sidequests` validates input and returns three credential-free algorithmic options. The optional model path requires both explicit enablement and a server key; failure still falls back algorithmically. | Role 2 now exposes a canonical structured-output strategy over normalized gameplay, audience, and profile context. Role 3 remains the deterministic validation/replacement authority. No external model is required for the judged MVP. |
 | Viewer participation | Studio stages a local diagnostic cycle; `/viewer.html` accepts only verified Twitch Extension JWTs and routes votes through the canonical revisioned memory ledger with private acknowledgement/recovery. | Supabase adapters implement the same channel lookup, vote ledger, and private recovery boundaries. Real Twitch/Supabase evidence is claimed only after a recorded external run. |
 | Overlay state | The local overlay uses same-origin state, `BroadcastChannel`, and `/api/overlay-state` so Studio and OBS can reflect vote/quest changes. | OBS remains an output adapter driven by sanitised `OverlayViewModel` state from the orchestrator. |
 | Persistence and realtime | Blank Supabase configuration selects the credential-free memory runtime. | Role 1 includes Supabase-backed repository/realtime adapters and schema/RLS checks. A real cloud run is only claimed when recorded in `docs/evidence/manifest.json`. |
@@ -201,13 +207,15 @@ ChatXPT uses two different kinds of instructions: runtime quest-generation polic
 
 ### Runtime quest-generation instructions
 
-The submitted judged path is credential-free and algorithmic. It does not require a model prompt. The repository nevertheless includes a legacy optional OpenAI adapter and the policy that constrains both model-generated and algorithmic candidates.
+The submitted judged path remains credential-free and algorithmic. It does not require a model prompt. The repository also includes an explicitly enabled, server-only controlled provider path for owner-authorised evaluation.
 
 | File | Role | Important constraints |
 | --- | --- | --- |
 | `src/lib/openai-engine.ts` | Legacy optional server-side model adapter | Requests exactly three structured quests; infers only a broad game family; avoids invented HUD/game facts; requires distinct play patterns, short readable wording, measurable completion, and safe boundaries; validates against a strict JSON schema. |
 | `.codex/skills/chatxpt-prototype/references/quest-policy.md` | Human-readable quest policy | Defines three distinct options, signal-aware adaptation, rejection conditions, and producer approval. |
 | `src/ai/algorithmic-candidates.ts` | Accepted credential-free Role 2 strategy | Produces exactly three game-neutral candidates, filters stale/low-confidence signals, avoids recent duplicate titles, records source signal IDs, confidence, method, and generation time. |
+| `src/ai/openai-candidate-strategy.ts` | Canonical controlled provider strategy | Sends only normalized snapshots/profile preferences, excludes streamer identity and raw chat, requires exactly three strict drafts, and rejects invented signal citations. |
+| `src/ai/server.ts` | Server-only provider composition | Requires explicit enablement and a server credential, applies a bounded timeout, and retains automatic algorithmic fallback. |
 | `src/lib/mock-engine.ts` | Legacy local `/api/sidequests` fallback | Supplies the currently mounted credential-free local candidate route. Despite the filename, its response is labelled `algorithmic`; fixtures remain separate from live evidence. |
 | `src/quest-engine/validation.ts` | Deterministic authority after generation | Validates candidate safety and quality before a candidate can enter the quest lifecycle. |
 | `src/ai/PROVIDER_EVALUATION.md` | Provider integration evaluation | Compares latency, privacy, cost, structured output, and reliability without declaring a provider live. |
@@ -240,7 +248,7 @@ These agent files guide repository work; they are not hidden runtime prompts sen
 
 ### Model/provider status
 
-No external model provider is adopted or required for the judged MVP under decision D-055. The submitted flow uses credential-free algorithmic candidate generation plus deterministic Role 3 validation/replacement. The installed OpenAI SDK and `src/lib/openai-engine.ts` are a legacy optional server-side path, not proof of provider use. Groq `openai/gpt-oss-20b` is documented only as a future controlled evaluation candidate.
+No external model provider is required for the judged MVP under decision D-055. The submitted flow uses credential-free algorithmic candidate generation plus deterministic Role 3 validation/replacement. An owner-authorised controlled provider implementation now exists, but it remains disabled without `CHATXPT_LLM_ENABLED=true` and a server-side API key; its presence is not proof that a provider call occurred. No key was present and no paid request was sent during this pass.
 
 ## 4. Third-Party Libraries, Models, Datasets, and APIs
 
@@ -255,7 +263,7 @@ Exact versions are pinned in [package.json](package.json) and `package-lock.json
 | Zod | 4.4.3 | Runtime validation for domain contracts, requests, commands, view models, and structured provider output. |
 | Supabase JS | 2.111.0 | Persistence and realtime adapter for the accepted production target. Local memory remains available. |
 | `server-only` | 0.0.1 | Build-time protection for server-only integration modules and secrets. |
-| OpenAI SDK | 7.3.0 | Legacy optional server-side model adapter. Not required or adopted for the judged MVP. |
+| OpenAI SDK | 7.3.0 | Explicitly enabled server-side structured-output adapter with credential-free fallback. Not required by the judged path. |
 | Tesseract.js | 7.0.0 | Optional bounded OCR adapter for named gameplay-frame crops. Installation alone is not live OCR evidence. |
 
 Development and test tooling includes TypeScript 5.9.3, ESLint 9.39.2, Vitest 4.1.10, the Supabase CLI 2.111.0, and the corresponding Node/React type packages.
@@ -265,7 +273,7 @@ Development and test tooling includes TypeScript 5.9.3, ESLint 9.39.2, Vitest 4.
 | Model/provider | Submitted status | Data and credential boundary |
 | --- | --- | --- |
 | Credential-free algorithmic generation | Active judged-MVP path | Runs without an external model or provider credential. |
-| OpenAI model via `OPENAI_MODEL` | Legacy optional adapter only | Key remains server-side. No paid usage is authorised and its presence in source is not a claim that it was used. |
+| OpenAI model via `OPENAI_MODEL` | Controlled opt-in evaluation path | Key remains server-side; explicit enablement, timeout, strict validation, and algorithmic fallback are mandatory. No call is claimed without recorded execution. |
 | Groq `openai/gpt-oss-20b` | Future evaluation candidate only | Not adopted, configured, or required for the submitted path. |
 
 ### External services and APIs

@@ -18,6 +18,7 @@ import {
   ScriptedFixtureQuestEngine,
   SequenceFixtureMessageIds,
   contractFixtureCandidateBatch,
+  contractFixtureGameplaySnapshot,
   contractFixtureQuestCycle,
   contractFixtureSession,
 } from "../../src/core/testing";
@@ -68,7 +69,7 @@ function voteCommand(
 
 function logicDependencies(): Omit<
   OrchestratorDependencies,
-  "repository" | "candidateBatches" | "acceptedVotes" | "publisher"
+  "repository" | "candidateBatches" | "acceptedVotes" | "gameplaySnapshots" | "publisher"
 > {
   return {
     authorizer: new FixtureOnlyAllowAuthorizer(),
@@ -113,6 +114,59 @@ async function preparedRuntime() {
 }
 
 describe("production-shaped memory persistence integration", () => {
+  it("keeps one monotonic gameplay snapshot per matching active session", async () => {
+    const runtime = await preparedRuntime();
+    const first = {
+      ...structuredClone(contractFixtureGameplaySnapshot),
+      envelope: {
+        ...structuredClone(contractFixtureGameplaySnapshot.envelope),
+        occurredAt: FIXTURE_NOW + 100,
+        receivedAt: FIXTURE_NOW + 100,
+        messageId: "gameplay-current-1",
+      },
+    };
+    const newer = {
+      ...structuredClone(first),
+      envelope: {
+        ...structuredClone(first.envelope),
+        occurredAt: FIXTURE_NOW + 200,
+        receivedAt: FIXTURE_NOW + 200,
+        messageId: "gameplay-current-2",
+      },
+    };
+
+    await expect(runtime.gameplaySnapshots.ingest(first)).resolves.toMatchObject({
+      status: "accepted",
+    });
+    await expect(runtime.gameplaySnapshots.ingest(first)).resolves.toMatchObject({
+      status: "duplicate",
+    });
+    await expect(runtime.gameplaySnapshots.ingest(newer)).resolves.toMatchObject({
+      status: "accepted",
+    });
+    await expect(runtime.gameplaySnapshots.ingest(first)).resolves.toEqual({
+      status: "rejected",
+      reason: "older-snapshot",
+    });
+    await expect(
+      runtime.gameplaySnapshots.readCurrent({
+        sessionId: newer.envelope.sessionId,
+        questCycleId: newer.envelope.questCycleId,
+        revision: newer.envelope.revision,
+        evidenceClass: newer.envelope.evidenceClass,
+      }),
+    ).resolves.toMatchObject({ envelope: { messageId: "gameplay-current-2" } });
+
+    const mismatched = {
+      ...structuredClone(newer),
+      envelope: { ...structuredClone(newer.envelope), revision: 99, messageId: "gameplay-wrong-revision" },
+    };
+    await expect(runtime.gameplaySnapshots.ingest(mismatched)).resolves.toEqual({
+      status: "rejected",
+      reason: "state-mismatch",
+    });
+  });
+
   it("fingerprints commands canonically across JSONB key reordering", () => {
     const input = command("canonical-command");
     const reordered = Object.fromEntries(Object.entries(input).reverse()) as typeof input;

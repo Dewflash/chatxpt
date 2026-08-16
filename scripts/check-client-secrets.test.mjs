@@ -45,13 +45,13 @@ test("client secret scanner rejects configured secret values", async () => {
 });
 
 test("client secret scanner rejects server-only env names", async () => {
-  await withBundle("process.env.TWITCH_CLIENT_SECRET", (cwd) => {
+  await withBundle("process.env.CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY", (cwd) => {
     const result = spawnSync(process.execPath, [script], {
       cwd,
       encoding: "utf8",
     });
 
     assert.equal(result.status, 1);
-    assert.match(result.stderr, /TWITCH_CLIENT_SECRET/);
+    assert.match(result.stderr, /CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY/);
   });
 });

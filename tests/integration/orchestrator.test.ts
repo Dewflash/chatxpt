@@ -15,12 +15,14 @@ import {
   type AcceptedVoteTallyReader,
   type QuestEngineResult,
   type StatePublisher,
+  type GameplaySnapshot,
 } from "../../src/core";
 import {
   CanonicalFixtureViewProjector,
   FailingFixturePublisher,
   FixedFixtureClock,
   FixtureDenyAuthorizer,
+  FixtureCurrentGameplaySnapshotRepository,
   FixtureOnlyAllowAuthorizer,
   FixtureProjectionContextResolver,
   FixtureSessionStateRepository,
@@ -116,6 +118,7 @@ function dependencies(
     authorizer,
     candidateBatches: new StaticFixtureCandidateBatchReader(),
     acceptedVotes,
+    gameplaySnapshots: new FixtureCurrentGameplaySnapshotRepository(),
     repository,
     engine,
     projectionContext: new FixtureProjectionContextResolver({
@@ -138,6 +141,33 @@ function dependencies(
 }
 
 describe("Role 1 application orchestrator", () => {
+  it("hydrates the latest matching gameplay snapshot without a frame-level revision commit", async () => {
+    const repository = new FixtureSessionStateRepository([initialState()]);
+    const latestGameplay: GameplaySnapshot = {
+      ...structuredClone(contractFixtureGameplaySnapshot),
+      envelope: {
+        ...structuredClone(contractFixtureGameplaySnapshot.envelope),
+        messageId: "fixture-latest-gameplay",
+        occurredAt: ACCEPTED_AT - 100,
+        receivedAt: ACCEPTED_AT - 100,
+      },
+    };
+    const orchestrator = new ChatXptOrchestrator({
+      ...dependencies(repository, new RecordingFixturePublisher()),
+      gameplaySnapshots: new FixtureCurrentGameplaySnapshotRepository([latestGameplay]),
+    });
+
+    const result = await orchestrator.execute(command("hydrate-latest-gameplay"));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.receipt.state.gameplay?.envelope.messageId).toBe("fixture-latest-gameplay");
+    expect(result.receipt.state.services).toContainEqual(
+      expect.objectContaining({ service: "gameplay-extraction", status: "degraded" }),
+    );
+    expect(result.receipt.state.session.revision).toBe(1);
+  });
+
   it("persists the authoritative revision before publishing role views", async () => {
     const repository = new FixtureSessionStateRepository([initialState()]);
     let persistedRevisionAtPublish: number | null = null;

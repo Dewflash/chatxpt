@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { generationRequestSchema, type GenerationResponse } from "@/lib/domain";
 import { generateMockSidequests } from "@/lib/mock-engine";
-import { generateOpenAISidequests } from "@/lib/openai-engine";
+import {
+  generateOpenAISidequests,
+  isLegacyOpenAISidequestPathEnabled,
+} from "@/lib/openai-engine";
 
 export const runtime = "nodejs";
 
@@ -21,7 +24,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (process.env.OPENAI_API_KEY) {
+  if (isLegacyOpenAISidequestPathEnabled()) {
     try {
       const result: GenerationResponse = {
         quests: await generateOpenAISidequests(parsed.data),

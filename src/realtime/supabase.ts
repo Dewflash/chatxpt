@@ -9,6 +9,7 @@ import {
   authoritativeSessionStateSchema,
   canonicalJsonStringify,
   candidateBatchSchema,
+  gameplaySnapshotSchema,
   overlayViewModelSchema,
   serviceHealthSchema,
   streamerViewModelSchema,
@@ -23,6 +24,10 @@ import {
   type CandidateBatch,
   type CommitAuthoritativeStateInput,
   type CommitAuthoritativeStateResult,
+  type CurrentGameplaySnapshotReadInput,
+  type CurrentGameplaySnapshotRepository,
+  type GameplaySnapshot,
+  type IngestGameplaySnapshotResult,
   type RoleViewModels,
   type ServiceHealth,
   type ViewerRecoveryReadInput,
@@ -67,6 +72,16 @@ const commitResultSchema = z.discriminatedUnion("status", [
     .object({
       status: z.literal("participation-conflict"),
       reason: z.literal("vote-already-accepted"),
+    })
+    .strict(),
+]);
+
+const ingestGameplaySnapshotResultSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.enum(["accepted", "duplicate"]), snapshot: gameplaySnapshotSchema }).strict(),
+  z
+    .object({
+      status: z.literal("rejected"),
+      reason: z.enum(["session-missing", "session-inactive", "state-mismatch", "older-snapshot"]),
     })
     .strict(),
 ]);
@@ -264,6 +279,24 @@ export class SupabaseChatXptDataApi {
       .maybeSingle();
     throwIfError(error);
     return data === null ? null : rowJson(data, "payload");
+  }
+
+  async ingestGameplaySnapshot(snapshot: GameplaySnapshot): Promise<unknown> {
+    const { data, error } = await this.client.rpc("ingest_gameplay_snapshot", {
+      p_snapshot: snapshot,
+    });
+    throwIfError(error);
+    return data;
+  }
+
+  async loadCurrentGameplaySnapshot(sessionId: string): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("current_gameplay_snapshots")
+      .select("snapshot")
+      .eq("session_id", sessionId)
+      .maybeSingle();
+    throwIfError(error);
+    return data === null ? null : rowJson(data, "snapshot");
   }
 
   async loadAcceptedVotes(
@@ -646,6 +679,33 @@ export class SupabaseCandidateBatchRepository implements CandidateBatchRepositor
   }
 }
 
+export class SupabaseCurrentGameplaySnapshotRepository
+  implements CurrentGameplaySnapshotRepository
+{
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async ingest(snapshot: GameplaySnapshot): Promise<IngestGameplaySnapshotResult> {
+    const parsed = gameplaySnapshotSchema.parse(snapshot);
+    return ingestGameplaySnapshotResultSchema.parse(
+      await this.api.ingestGameplaySnapshot(parsed),
+    );
+  }
+
+  async readCurrent(input: CurrentGameplaySnapshotReadInput): Promise<GameplaySnapshot | null> {
+    const raw = await this.api.loadCurrentGameplaySnapshot(input.sessionId);
+    if (raw === null) return null;
+    const snapshot = gameplaySnapshotSchema.parse(raw);
+    if (
+      snapshot.envelope.questCycleId !== input.questCycleId ||
+      snapshot.envelope.revision !== input.revision ||
+      snapshot.envelope.evidenceClass !== input.evidenceClass
+    ) {
+      return null;
+    }
+    return snapshot;
+  }
+}
+
 function parseRoleSnapshot<Role extends SnapshotRole>(role: Role, raw: unknown): RoleViewModels[Role] {
   const schemas = {
     streamer: streamerViewModelSchema,
@@ -837,6 +897,7 @@ export function createSupabasePersistenceRuntime(
   const api = new SupabaseChatXptDataApi(createSupabaseServerClient(environment));
   const sessions = new SupabaseSessionStateRepository(api);
   const acceptedVotes = new SupabaseAcceptedVoteTallyReader(api);
+  const gameplaySnapshots = new SupabaseCurrentGameplaySnapshotRepository(api);
   const viewerRecovery = new SupabaseViewerRecoveryReader(api);
   const sessionHistory = new SupabaseSessionHistoryReader(api);
   const snapshots = new SupabaseRoleSnapshotPublisher(api);
@@ -852,6 +913,7 @@ export function createSupabasePersistenceRuntime(
     twitchChannelSessions,
     candidates: new SupabaseCandidateBatchRepository(api),
     acceptedVotes,
+    gameplaySnapshots,
     snapshots,
     accessGrants: new SupabaseRealtimeAccessGrantStore(api),
     dueVotes,

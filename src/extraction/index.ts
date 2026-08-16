@@ -78,6 +78,92 @@ export type {
   VisualActivityPolicy,
 } from "./visual-classification";
 export {
+  brawlStarsGameProfile,
+  createDefaultGameProfileRegistry,
+  gameCalibrationProfileSchema,
+  gameProfileSelectionSchema,
+  GameProfileRegistry,
+  genericActionGameProfile,
+  minecraftJavaGameProfile,
+  normalizedVisualRegionSchema,
+} from "./game-profiles";
+export type {
+  GameCalibrationProfile,
+  GameProfileSelection,
+  NormalizedVisualRegion,
+  ResolvedGameProfile,
+} from "./game-profiles";
+export { estimateGlobalTranslation, measureSpatialMotion } from "./spatial-motion";
+export type {
+  SpatialMotionCell,
+  SpatialMotionMeasurement,
+  SpatialMotionOptions,
+  TranslationEstimate,
+} from "./spatial-motion";
+export {
+  defaultMotionInterpretationPolicy,
+  interpretMotionWindow,
+} from "./motion-interpretation";
+export type {
+  MotionInterpretation,
+  MotionInterpretationPolicy,
+  ObservableMotionState,
+  TimedSpatialMotion,
+} from "./motion-interpretation";
+export {
+  cadenceNeedsBurst,
+  decideAdaptiveSampling,
+  defaultAdaptiveSamplingPolicy,
+  initialAdaptiveSamplingState,
+} from "./adaptive-sampling";
+export type {
+  AdaptiveSamplingDecision,
+  AdaptiveSamplingPolicy,
+  AdaptiveSamplingState,
+  AnalysisCadenceMode,
+} from "./adaptive-sampling";
+export { fingerprintMinecraftHud, measureRegionVisualFeatures } from "./minecraft-hud";
+export type {
+  MinecraftHudFingerprint,
+  MinecraftHudFingerprintStatus,
+  RegionVisualFeatures,
+} from "./minecraft-hud";
+export {
+  fingerprintBrawlHud,
+  parseBrawlOutcomeText,
+  parseBrawlTimerText,
+} from "./brawl-hud";
+export type {
+  BrawlHudFingerprint,
+  BrawlHudFingerprintStatus,
+} from "./brawl-hud";
+export { MultiGameVisionAnalyzer, streamMultiGameVisionAssessments } from "./multi-game-vision";
+export type {
+  GameVisionExplanation,
+  MultiGameVisionAnalyzerOptions,
+  MultiGameVisionAssessment,
+  MultiGameVisionStreamOptions,
+  MultiGameVisionStreamOutput,
+} from "./multi-game-vision";
+export { buildMultiGameGameplaySnapshot } from "./game-vision-snapshot";
+export { analyseRecordingReplay } from "./recording-replay";
+export type {
+  RecordingAnnotation,
+  RecordingAnnotationLabel,
+  RecordingReplayAssessment,
+  RecordingReplayFrame,
+  RecordingReplayResult,
+  RecordingReplaySummary,
+} from "./recording-replay";
+export { createBrowserTesseractOcr } from "./tesseract-ocr";
+export type {
+  BrowserTesseractOcrHandle,
+  BrowserTesseractOcrOptions,
+  TesseractWorkerPort,
+} from "./tesseract-ocr";
+export { createMultiGameGameplayExtractionPipeline } from "./multi-game-pipeline";
+export type { MultiGameGameplayPipelineOptions } from "./multi-game-pipeline";
+export {
   audienceEventSchema,
   audienceSnapshotSchema,
   gameplayCapabilitiesSchema,

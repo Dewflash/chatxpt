@@ -1,6 +1,6 @@
 # Brawl Stars source-sample annotations
 
-**Status:** Authorised source inspection only. These clips are suitable inputs for the pending real OBS run, but this inspection is not browser-delivered `FrameSource` evidence and does not establish extraction latency, OCR accuracy, or live readiness.
+**Status:** Authorised local diagnostic replay completed; real OBS run remains pending. The recordings were decoded locally into bounded 160×90 frames and passed through the production multi-game analyzer, but this was not browser-delivered `FrameSource` evidence and does not establish live or OCR accuracy.
 
 ## Asset handling
 
@@ -45,3 +45,14 @@ Times below are relative to each clip. During the OBS run they must be translate
 ## Remaining evidence gate
 
 Replay both samples through Role 1's merged browser `FrameSource`, measure them with the Role 2 sampler, run the approved OCR adapter on the named timer crop, record p50/p95 processing latency and practical browser resource observations, and add a privacy-reviewed sanitised real Twitch audience fixture. Until then, the samples are authorised inputs—not live extraction evidence.
+
+## 14 August local diagnostic replay
+
+The local replay decoded only the annotated windows at 10 frames per second and 160×90 RGBA, preserving segment discontinuities and keeping all decoded pixels outside Git. Results are runtime diagnostics from the current uncommitted branch, not immutable submission evidence.
+
+| Sample coverage | Frames | Analyzer p50 | Analyzer p95 | Universal tier | Calibrated Brawl HUD tier |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `IMG_9079.MP4`: 0–15 s and 34–53 s | 340 | 7.50 ms | 8.05 ms | 23 | 317 |
+| `IMG_9080.MP4`: 0–22 s | 220 | 6.61 ms | 7.59 ms | 178 | 42 |
+
+The three-anchor Brawl fingerprint confirmed sampled active-match and match-over frames while withholding calibration during matchmaking and the pre-match intro. It currently proves only standard HUD layout and match-active capability. No timer digit, score, or outcome text was emitted, and animated loading/intro sequences still do not consistently satisfy the universal settled-transition rule.
