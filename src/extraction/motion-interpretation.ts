@@ -15,6 +15,9 @@ export type ObservableMotionState =
   | "scene-transition"
   | "unknown";
 
+/** Stable, game-neutral activity vocabulary exposed to product surfaces. */
+export type GameplayActivity = "active" | "quiet" | "transition" | "unknown";
+
 export interface MotionInterpretation {
   readonly status: "known" | "unknown";
   readonly state: ObservableMotionState;
@@ -23,6 +26,21 @@ export interface MotionInterpretation {
   readonly windowStartsAt: number;
   readonly sampleCount: number;
   readonly reasons: readonly string[];
+}
+
+/**
+ * Collapses analyzer-specific motion patterns into the product vocabulary.
+ * This never upgrades unknown evidence or names a game-specific action.
+ */
+export function toGameplayActivity(
+  interpretation: Pick<MotionInterpretation, "status" | "state">,
+): GameplayActivity {
+  if (interpretation.status !== "known" || interpretation.state === "unknown") {
+    return "unknown";
+  }
+  if (interpretation.state === "stable") return "quiet";
+  if (interpretation.state === "scene-transition") return "transition";
+  return "active";
 }
 
 export interface MotionInterpretationPolicy {

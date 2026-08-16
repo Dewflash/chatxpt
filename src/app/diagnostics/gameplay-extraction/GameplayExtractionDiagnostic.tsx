@@ -6,6 +6,7 @@ import {
   MultiGameVisionAnalyzer,
   createBrowserCanvasPixelSampler,
   streamMultiGameVisionAssessments,
+  toGameplayActivity,
   type GameProfileSelection,
 } from "@/extraction";
 import {
@@ -21,13 +22,16 @@ type DiagnosticGame = "brawl-stars" | "minecraft" | "generic";
 interface LatestDiagnostic {
   readonly frameCount: number;
   readonly capturedAt: number;
+  readonly gameProfile: string;
   readonly supportTier: string;
-  readonly visualState: string;
+  readonly gameplayActivity: string;
+  readonly evidenceState: string;
   readonly confidence: number;
   readonly cadence: string;
   readonly cadenceReason: string;
   readonly hudStatus: string;
   readonly supportedSignals: readonly string[];
+  readonly detectedFacts: readonly string[];
 }
 
 function diagnosticError(caught: unknown): string {
@@ -105,14 +109,30 @@ export function GameplayExtractionDiagnostic() {
         setLatest({
           frameCount,
           capturedAt: output.frame.capturedAt,
+          gameProfile: assessment.profile.displayName,
           supportTier: assessment.supportTier,
-          visualState: assessment.interpretation.state,
+          gameplayActivity: toGameplayActivity(assessment.interpretation),
+          evidenceState:
+            assessment.interpretation.status !== "known"
+              ? "Unknown"
+              : assessment.interpretation.confidence >= 0.75
+                ? "Observed"
+                : "Low confidence",
           confidence: assessment.interpretation.confidence,
           cadence: assessment.sampling.mode,
           cadenceReason: assessment.sampling.reason,
           hudStatus:
             assessment.brawlHud?.status ?? assessment.minecraftHud?.status ?? "not-applicable",
           supportedSignals: assessment.supportedSignals,
+          detectedFacts: assessment.supportedSignals.filter(
+            (signal) =>
+              ![
+                "activity-intensity",
+                "visual-state",
+                "global-motion-pattern",
+                "scene-transition",
+              ].includes(signal),
+          ),
         });
       }
     } catch (caught) {
@@ -130,10 +150,10 @@ export function GameplayExtractionDiagnostic() {
     <main className={styles.shell}>
       <header className={styles.header}>
         <p className={styles.eyebrow}>Local diagnostic only</p>
-        <h1>OBS gameplay extraction</h1>
+        <h1>Gameplay Capture diagnostic</h1>
         <p>
-          Reads the OBS Virtual Camera at burst-capable cadence and runs the bounded multi-game
-          analyzer locally. No frame, camera image, or player identity is uploaded or persisted.
+          Reads the OBS Virtual Camera at a bounded cadence and runs game-neutral analysis locally.
+          No frame, camera image, or player identity is uploaded or persisted.
         </p>
       </header>
 
@@ -145,7 +165,7 @@ export function GameplayExtractionDiagnostic() {
           <li>Select the matching game profile below, then allow camera access.</li>
         </ol>
         <label className={styles.field}>
-          Game profile
+          Game Profile
           <select value={game} disabled={running} onChange={(event) => setGame(event.target.value as DiagnosticGame)}>
             <option value="brawl-stars">Brawl Stars — calibrated when HUD confirms</option>
             <option value="minecraft">Minecraft Java — vanilla HUD calibration</option>
@@ -165,19 +185,31 @@ export function GameplayExtractionDiagnostic() {
       {error !== null ? <p className={styles.error} role="alert">{error}</p> : null}
 
       <section className={styles.grid} aria-live="polite" aria-label="Extraction status">
-        <article className={styles.metric}><span>Status</span><strong>{running ? "Capturing" : "Stopped"}</strong></article>
+        <article className={styles.metric}><span>Capture Health</span><strong>{running ? (latest === null ? "Starting" : "Observed") : error === null ? "Unavailable" : "Permission denied"}</strong></article>
         <article className={styles.metric}><span>Frames analyzed</span><strong>{latest?.frameCount ?? 0}</strong></article>
+        <article className={styles.metric}><span>Game Profile</span><strong>{latest?.gameProfile ?? "Waiting"}</strong></article>
         <article className={styles.metric}><span>Support tier</span><strong>{latest?.supportTier ?? "Waiting"}</strong></article>
-        <article className={styles.metric}><span>HUD calibration</span><strong>{latest?.hudStatus ?? "Waiting"}</strong></article>
-        <article className={styles.metric}><span>Visual state</span><strong>{latest?.visualState ?? "Waiting"}</strong></article>
-        <article className={styles.metric}><span>Confidence</span><strong>{latest === null ? "—" : latest.confidence.toFixed(2)}</strong></article>
+        <article className={styles.metric}><span>Detected Game Facts</span><strong>{latest?.hudStatus ?? "Waiting"}</strong></article>
+        <article className={styles.metric}><span>Gameplay Activity</span><strong>{latest === null ? "Unknown" : `${latest.gameplayActivity[0].toUpperCase()}${latest.gameplayActivity.slice(1)}`}</strong></article>
+        <article className={styles.metric}><span>Evidence state</span><strong>{latest?.evidenceState ?? "Unavailable"}</strong></article>
+        <article className={styles.metric}><span>Signal Confidence</span><strong>{latest === null ? "—" : latest.confidence.toFixed(2)}</strong></article>
         <article className={styles.metric}><span>Cadence</span><strong>{latest === null ? "Waiting" : `${latest.cadence} · ${latest.cadenceReason}`}</strong></article>
-        <article className={styles.metric}><span>Last frame</span><strong>{latest === null ? "—" : new Date(latest.capturedAt).toLocaleTimeString()}</strong></article>
+        <article className={styles.metric}><span>Last observation</span><strong>{latest === null ? "—" : new Date(latest.capturedAt).toLocaleTimeString()}</strong></article>
       </section>
 
       <section className={styles.panel}>
-        <h2>Currently supported observations</h2>
-        <p>{latest?.supportedSignals.join(", ") || "Waiting for OBS frames."}</p>
+        <h2>Detected Game Facts</h2>
+        <p>
+          {latest === null
+            ? "Waiting for Gameplay Capture."
+            : latest.detectedFacts.length === 0
+              ? "No calibrated game fact is currently observed. Universal Gameplay Activity remains available."
+              : latest.detectedFacts.join(", ")}
+        </p>
+        <details>
+          <summary>Supported observations</summary>
+          <p>{latest?.supportedSignals.join(", ") || "None available."}</p>
+        </details>
       </section>
     </main>
   );

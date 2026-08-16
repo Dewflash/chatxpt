@@ -103,8 +103,10 @@ export type {
 export {
   defaultMotionInterpretationPolicy,
   interpretMotionWindow,
+  toGameplayActivity,
 } from "./motion-interpretation";
 export type {
+  GameplayActivity,
   MotionInterpretation,
   MotionInterpretationPolicy,
   ObservableMotionState,

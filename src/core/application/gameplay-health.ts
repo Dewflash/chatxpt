@@ -16,7 +16,7 @@ export function deriveGameplayServiceHealth(
       service: "gameplay-extraction",
       status: "unavailable",
       checkedAt,
-      message: "No current gameplay snapshot is available.",
+      message: "Gameplay Capture is unavailable because no current snapshot exists.",
       retryable: true,
     });
   }
@@ -38,7 +38,7 @@ export function deriveGameplayServiceHealth(
       service: "gameplay-extraction",
       status: "permission-denied",
       checkedAt,
-      message: `OBS capture permission is required for ${profile}.`,
+      message: `Gameplay Capture permission is required for ${profile}.`,
       retryable: true,
     });
   }
@@ -47,7 +47,7 @@ export function deriveGameplayServiceHealth(
       service: "gameplay-extraction",
       status: "degraded",
       checkedAt,
-      message: `Gameplay snapshot is stale (${ageMs}ms old).`,
+      message: `Gameplay Capture is stale (${ageMs}ms old).`,
       retryable: true,
     });
   }
@@ -56,7 +56,7 @@ export function deriveGameplayServiceHealth(
       service: "gameplay-extraction",
       status: "degraded",
       checkedAt,
-      message: `${profile} capture is live at ${tier}, but no signal is confident yet.`,
+      message: `Gameplay Capture is active for ${profile} at ${tier}, but Signal Confidence is still low.`,
       retryable: true,
     });
   }
@@ -64,7 +64,7 @@ export function deriveGameplayServiceHealth(
     service: "gameplay-extraction",
     status: "ready",
     checkedAt,
-    message: `${profile} capture is current at ${tier} (${knownSignalCount} known signals).`,
+    message: `Gameplay Capture is current for ${profile} at ${tier} (${knownSignalCount} observed signals).`,
     retryable: false,
   });
 }

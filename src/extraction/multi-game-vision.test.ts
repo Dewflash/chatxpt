@@ -21,7 +21,11 @@ import {
 } from "./game-profiles";
 import { buildMultiGameGameplaySnapshot } from "./game-vision-snapshot";
 import { fingerprintMinecraftHud } from "./minecraft-hud";
-import { interpretMotionWindow, type TimedSpatialMotion } from "./motion-interpretation";
+import {
+  interpretMotionWindow,
+  toGameplayActivity,
+  type TimedSpatialMotion,
+} from "./motion-interpretation";
 import { MultiGameVisionAnalyzer, streamMultiGameVisionAssessments } from "./multi-game-vision";
 import { measureSpatialMotion } from "./spatial-motion";
 import type { SampledPixelFrame } from "./visual-measurements";
@@ -229,6 +233,17 @@ describe("game calibration registry", () => {
 });
 
 describe("spatial and temporal motion analysis", () => {
+  it("maps private analyzer states to the stable gameplay-activity vocabulary", () => {
+    expect(toGameplayActivity({ status: "known", state: "stable" })).toBe("quiet");
+    expect(toGameplayActivity({ status: "known", state: "scene-transition" })).toBe(
+      "transition",
+    );
+    expect(toGameplayActivity({ status: "known", state: "mixed-local-action" })).toBe(
+      "active",
+    );
+    expect(toGameplayActivity({ status: "unknown", state: "unknown" })).toBe("unknown");
+  });
+
   it("estimates coherent global translation and removes it from local residual motion", () => {
     const previous = texturedFrame();
     const measurement = measureSpatialMotion(previous, shifted(previous, 2, 0));
