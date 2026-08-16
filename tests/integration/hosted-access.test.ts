@@ -55,6 +55,8 @@ describe("hosted board access seam", () => {
         FIXTURE_NOW + 1,
       ),
     ).toBe(true);
+    expect(await runtime.hostedBoardSessions.findHostedBoardSessionBySessionId("fixture-session"))
+      .toMatchObject({ roomCode: "ABCDEFGH", sessionId: "fixture-session" });
   });
 
   it("returns typed hosted-board access failures without granting read access", async () => {
@@ -90,6 +92,9 @@ describe("hosted board access seam", () => {
           status: "ended",
           revision: 5,
         };
+      },
+      async findHostedBoardSessionBySessionId() {
+        return null;
       },
     };
     await expect(

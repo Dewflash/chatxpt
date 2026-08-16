@@ -19,3 +19,18 @@ export {
   type ObsOverlayAuthErrorCode,
   type ObsOverlayGrant,
 } from "./obs/overlay-auth";
+export {
+  HostedBoardAuthError,
+  HostedBoardGrantAuthority,
+  type HostedBoardAuthErrorCode,
+  type HostedBoardGrant,
+} from "./hosted/board-auth";
+export {
+  TwitchEventSubError,
+  parseTwitchEventSubMessage,
+  pseudonymizeTwitchChatViewer,
+  verifyTwitchEventSubMessage,
+  type TwitchEventSubMessageType,
+  type TwitchEventSubPayload,
+  type VerifyTwitchEventSubInput,
+} from "./twitch/eventsub";

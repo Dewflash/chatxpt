@@ -59,6 +59,7 @@ export interface HostedBoardSessionRecord {
 
 export interface HostedBoardSessionDirectory {
   findHostedBoardSession(roomCode: string): Promise<HostedBoardSessionRecord | null>;
+  findHostedBoardSessionBySessionId(sessionId: string): Promise<HostedBoardSessionRecord | null>;
 }
 
 export interface TwitchChannelSessionRecord {

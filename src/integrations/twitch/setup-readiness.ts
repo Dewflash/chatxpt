@@ -2,6 +2,7 @@ import { serviceHealthSchema, type ServiceHealth } from "../../core";
 
 export const TWITCH_OAUTH_CALLBACK_PATH = "/api/twitch/oauth/callback" as const;
 export const TWITCH_SETUP_READINESS_PATH = "/api/twitch/setup/readiness" as const;
+export const TWITCH_EVENTSUB_WEBHOOK_PATH = "/api/twitch/eventsub" as const;
 
 export const TWITCH_EXTENSION_VIEWER_PATH = "/viewer.html" as const;
 export const TWITCH_EXTENSION_CONFIG_PATH = "/config.html" as const;
@@ -13,6 +14,8 @@ export interface TwitchSetupReadiness {
   readonly ok: boolean;
   readonly callbackPath: typeof TWITCH_OAUTH_CALLBACK_PATH;
   readonly callbackUrl: string | null;
+  readonly eventSubWebhookPath: typeof TWITCH_EVENTSUB_WEBHOOK_PATH;
+  readonly eventSubWebhookUrl: string | null;
   readonly extensionPaths: {
     readonly viewer: typeof TWITCH_EXTENSION_VIEWER_PATH;
     readonly config: typeof TWITCH_EXTENSION_CONFIG_PATH;
@@ -64,17 +67,21 @@ export function resolveTwitchSetupReadiness(
     ["TWITCH_CLIENT_SECRET", source.TWITCH_CLIENT_SECRET],
     ["TWITCH_EXTENSION_CLIENT_ID", source.TWITCH_EXTENSION_CLIENT_ID],
     ["TWITCH_EXTENSION_SECRET", source.TWITCH_EXTENSION_SECRET],
+    ["TWITCH_EVENTSUB_SECRET", source.TWITCH_EVENTSUB_SECRET],
   ] as const;
   const missing = required.filter(([, value]) => !hasValue(value)).map(([name]) => name);
   const appReady = !missing.includes("TWITCH_CLIENT_ID") && !missing.includes("TWITCH_CLIENT_SECRET");
   const extensionReady =
     !missing.includes("TWITCH_EXTENSION_CLIENT_ID") &&
     !missing.includes("TWITCH_EXTENSION_SECRET");
+  const eventSubReady = !missing.includes("TWITCH_EVENTSUB_SECRET");
 
   return {
     ok: missing.length === 0,
     callbackPath: TWITCH_OAUTH_CALLBACK_PATH,
     callbackUrl: baseUrl === null ? null : `${baseUrl}${TWITCH_OAUTH_CALLBACK_PATH}`,
+    eventSubWebhookPath: TWITCH_EVENTSUB_WEBHOOK_PATH,
+    eventSubWebhookUrl: baseUrl === null ? null : `${baseUrl}${TWITCH_EVENTSUB_WEBHOOK_PATH}`,
     extensionPaths: {
       viewer: TWITCH_EXTENSION_VIEWER_PATH,
       config: TWITCH_EXTENSION_CONFIG_PATH,
@@ -95,10 +102,18 @@ export function resolveTwitchSetupReadiness(
         checkedAt,
         extensionReady ? "Twitch Extension credentials are configured" : "Twitch Extension credentials are missing",
       ),
+      health(
+        "twitch-eventsub-chat",
+        eventSubReady ? "ready" : "misconfigured",
+        checkedAt,
+        eventSubReady
+          ? "Twitch EventSub webhook verification is configured"
+          : "Twitch EventSub webhook secret is missing",
+      ),
     ],
     limitations: [
       "No Twitch secrets are included in this response or rendered route.",
-      "The viewer EBS verifies Extension JWT signatures and expiry; OAuth token exchange, EventSub, and real chat ingestion remain separate work.",
+      "The viewer EBS verifies Extension JWTs and the chat webhook verifies EventSub HMAC delivery; OAuth/subscription creation and real Twitch delivery remain external setup work.",
       "Twitch Asset Hosting compliance, Local Test, or Hosted Test evidence must be recorded separately before Twitch is described as live.",
     ],
   };

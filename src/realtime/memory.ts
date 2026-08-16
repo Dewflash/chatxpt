@@ -369,6 +369,21 @@ export class MemoryChatXptPersistence
     };
   }
 
+  async findHostedBoardSessionBySessionId(sessionId: string): Promise<HostedBoardSessionRecord | null> {
+    for (const [roomCode, mappedSessionId] of this.roomSessions) {
+      if (mappedSessionId !== sessionId) continue;
+      const state = this.states.get(sessionId);
+      if (state === undefined) return null;
+      return {
+        sessionId,
+        roomCode,
+        status: state.session.status,
+        revision: state.session.revision,
+      };
+    }
+    return null;
+  }
+
   async findTwitchChannelSession(channelId: string): Promise<TwitchChannelSessionRecord | null> {
     const sessionId = this.broadcasterActiveSessions.get(channelId);
     if (sessionId === undefined) return null;

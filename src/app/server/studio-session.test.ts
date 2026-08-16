@@ -74,7 +74,7 @@ describe("StudioSessionApplication", () => {
       gameName: null,
     });
     expect(reopened.view.session.sessionId).toBe(started.view.session.sessionId);
-    expect(reopened.roomCode).toBeNull();
+    expect(reopened.roomCode).toBe(started.roomCode);
   });
 
   it("accepts authoritative profile commands through the HttpOnly grant identity", async () => {

@@ -363,6 +363,16 @@ export class SupabaseChatXptDataApi {
     return data;
   }
 
+  async loadHostedBoardSessionBySessionId(sessionId: string): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("stream_sessions")
+      .select("session_id, room_code, status, revision")
+      .eq("session_id", sessionId)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
+  }
+
   async loadTwitchChannelSession(channelId: string): Promise<unknown | null> {
     const { data, error } = await this.client
       .from("stream_sessions")
@@ -737,6 +747,18 @@ export class SupabaseHostedBoardSessionDirectory implements HostedBoardSessionDi
 
   async findHostedBoardSession(roomCode: string): Promise<HostedBoardSessionRecord | null> {
     const raw = await this.api.loadHostedBoardSession(roomCode);
+    if (raw === null) return null;
+    const row = hostedBoardSessionRowSchema.parse(raw);
+    return {
+      sessionId: row.session_id,
+      roomCode: row.room_code,
+      status: row.status,
+      revision: row.revision,
+    };
+  }
+
+  async findHostedBoardSessionBySessionId(sessionId: string): Promise<HostedBoardSessionRecord | null> {
+    const raw = await this.api.loadHostedBoardSessionBySessionId(sessionId);
     if (raw === null) return null;
     const row = hostedBoardSessionRowSchema.parse(raw);
     return {

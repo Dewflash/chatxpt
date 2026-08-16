@@ -14,6 +14,7 @@ import {
   TWITCH_EXTENSION_HELPER_SCRIPT_URL,
   TWITCH_EXTENSION_LIVE_CONFIG_PATH,
   TWITCH_EXTENSION_VIEWER_PATH,
+  TWITCH_EVENTSUB_WEBHOOK_PATH,
   TWITCH_OAUTH_CALLBACK_PATH,
   resolveTwitchSetupReadiness,
 } from "../../src/integrations";
@@ -38,6 +39,8 @@ describe("Twitch setup readiness", () => {
       ok: false,
       callbackPath: TWITCH_OAUTH_CALLBACK_PATH,
       callbackUrl: "https://preview.example.test/api/twitch/oauth/callback",
+      eventSubWebhookPath: TWITCH_EVENTSUB_WEBHOOK_PATH,
+      eventSubWebhookUrl: "https://preview.example.test/api/twitch/eventsub",
       extensionPaths: {
         viewer: TWITCH_EXTENSION_VIEWER_PATH,
         config: TWITCH_EXTENSION_CONFIG_PATH,
@@ -49,9 +52,11 @@ describe("Twitch setup readiness", () => {
         "TWITCH_CLIENT_SECRET",
         "TWITCH_EXTENSION_CLIENT_ID",
         "TWITCH_EXTENSION_SECRET",
+        "TWITCH_EVENTSUB_SECRET",
       ],
     });
     expect(readiness.services.map((service) => service.status)).toEqual([
+      "misconfigured",
       "misconfigured",
       "misconfigured",
     ]);
@@ -65,15 +70,17 @@ describe("Twitch setup readiness", () => {
         TWITCH_CLIENT_SECRET: "fixture-client-secret",
         TWITCH_EXTENSION_CLIENT_ID: "fixture-extension",
         TWITCH_EXTENSION_SECRET: "fixture-extension-secret",
+        TWITCH_EVENTSUB_SECRET: "fixture-eventsub-secret-that-is-long-enough",
       },
       { checkedAt: CHECKED_AT },
     );
 
     expect(readiness.ok).toBe(true);
     expect(readiness.missing).toEqual([]);
-    expect(readiness.services.map((service) => service.status)).toEqual(["ready", "ready"]);
+    expect(readiness.services.map((service) => service.status)).toEqual(["ready", "ready", "ready"]);
     expect(JSON.stringify(readiness)).not.toContain("fixture-client-secret");
     expect(JSON.stringify(readiness)).not.toContain("fixture-extension-secret");
+    expect(JSON.stringify(readiness)).not.toContain("fixture-eventsub-secret");
   });
 
   it("exposes a no-store setup readiness API", async () => {
@@ -81,6 +88,7 @@ describe("Twitch setup readiness", () => {
     vi.stubEnv("TWITCH_CLIENT_SECRET", "fixture-client-secret");
     vi.stubEnv("TWITCH_EXTENSION_CLIENT_ID", "fixture-extension");
     vi.stubEnv("TWITCH_EXTENSION_SECRET", "fixture-extension-secret");
+    vi.stubEnv("TWITCH_EVENTSUB_SECRET", "fixture-eventsub-secret-that-is-long-enough");
 
     const response = await twitchSetupReadinessGET(
       new Request("https://preview.example.test/api/twitch/setup/readiness"),
@@ -92,6 +100,8 @@ describe("Twitch setup readiness", () => {
     expect(body).toMatchObject({
       ok: true,
       callbackUrl: "https://preview.example.test/api/twitch/oauth/callback",
+      eventSubWebhookPath: "/api/twitch/eventsub",
+      eventSubWebhookUrl: "https://preview.example.test/api/twitch/eventsub",
       extensionPaths: {
         viewer: "/viewer.html",
         config: "/config.html",
@@ -102,6 +112,7 @@ describe("Twitch setup readiness", () => {
     });
     expect(JSON.stringify(body)).not.toContain("fixture-client-secret");
     expect(JSON.stringify(body)).not.toContain("fixture-extension-secret");
+    expect(JSON.stringify(body)).not.toContain("fixture-eventsub-secret");
   });
 
   it("keeps the OAuth callback reserved and safe before token exchange exists", async () => {

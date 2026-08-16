@@ -616,7 +616,7 @@ export function ChatFallbackInstructions({ view, now }: ChatFallbackInstructions
           </ol>
         ) : waitingForResult ? (
           <Notice title="Server confirmation pending" tone="info" politeness="polite">
-            ChatXPT will announce the winner, tie resolution, or no-vote outcome in Twitch chat.
+            The broadcast overlay will show the winner, tie resolution, or no-vote outcome.
           </Notice>
         ) : presentation.phase === "active" && activeOption ? (
           <Notice title={activeOption.title} tone="success" politeness="polite">
@@ -634,7 +634,7 @@ export function ChatFallbackInstructions({ view, now }: ChatFallbackInstructions
         )}
         <p className={styles.statusLine}>
           {voting && !waitingForResult
-            ? "Send only 1, 2, or 3. ChatXPT replies with counted, duplicate, rejected, or late status after Twitch receives the message."
+            ? "Send only 1, 2, or 3. Votes are counted silently to avoid chat spam; watch the broadcast overlay for the result."
             : "Sidequest and result updates come from ChatXPT. No separate viewer account is needed."}
         </p>
       </Panel>

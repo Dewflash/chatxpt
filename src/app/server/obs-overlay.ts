@@ -10,8 +10,10 @@ import {
   identifierSchema,
   overlayViewModelSchema,
   serviceHealthSchema,
+  systemVoteCloseCommandSchema,
   type AuthoritativeSessionState,
   type OverlayViewModel,
+  type ProjectionContextResolver,
 } from "@/core";
 import {
   createObsBrowserSourceDescriptor,
@@ -22,9 +24,9 @@ import {
   ObsOverlayGrantAuthority,
   readObsOverlayBearerToken,
 } from "@/integrations/server";
-import type { ChatXptPersistenceRuntime } from "@/realtime";
+import type { ChatXptPersistenceRuntime, VerifiedCommandActor } from "@/realtime";
 
-import { getChatXptServerRuntime } from "./runtime";
+import { getChatXptServerRuntime, type ChatXptServerRuntime } from "./runtime";
 
 const grantRequestSchema = z
   .object({
@@ -58,7 +60,7 @@ export class ObsOverlayApplicationError extends Error {
 }
 
 export interface ObsOverlayApplicationDependencies {
-  readonly persistence: ChatXptPersistenceRuntime;
+  readonly runtime: ChatXptServerRuntime;
   readonly setupKey: string;
   readonly now?: () => number;
   readonly nextId?: () => string;
@@ -88,11 +90,13 @@ function authError(caught: unknown): ObsOverlayApplicationError {
 }
 
 export class ObsOverlayApplication {
+  private readonly persistence: ChatXptPersistenceRuntime;
   private readonly grants: ObsOverlayGrantAuthority;
   private readonly now: () => number;
   private readonly nextId: () => string;
 
   constructor(private readonly dependencies: ObsOverlayApplicationDependencies) {
+    this.persistence = dependencies.runtime.persistence;
     this.grants = new ObsOverlayGrantAuthority(dependencies.setupKey);
     this.now = dependencies.now ?? Date.now;
     this.nextId = dependencies.nextId ?? randomUUID;
@@ -166,13 +170,14 @@ export class ObsOverlayApplication {
         "OBS overlay grant does not belong to the requested session",
       );
     }
-    const state = await this.loadSession(grant.sessionId);
+    let state = await this.loadSession(grant.sessionId);
     if (state.session.broadcasterId !== grant.broadcasterId) {
       throw new ObsOverlayApplicationError(
         "forbidden",
         "OBS overlay grant no longer belongs to this broadcaster",
       );
     }
+    state = await this.closeVoteIfDue(state);
     const now = this.now();
     const projected = new CanonicalViewProjector().project({
       envelope: {
@@ -214,7 +219,7 @@ export class ObsOverlayApplication {
   private async loadSession(sessionId: string): Promise<AuthoritativeSessionState> {
     let state;
     try {
-      state = await this.dependencies.persistence.sessions.load(sessionId);
+      state = await this.persistence.sessions.load(sessionId);
     } catch {
       throw new ObsOverlayApplicationError(
         "dependency-unavailable",
@@ -227,6 +232,64 @@ export class ObsOverlayApplication {
     }
     return state;
   }
+
+  private async closeVoteIfDue(state: AuthoritativeSessionState): Promise<AuthoritativeSessionState> {
+    if (
+      state.questCycle.status !== "voting" ||
+      state.questCycle.endsAt === null ||
+      state.questCycle.endsAt > this.now() ||
+      state.questCycle.envelope.questCycleId === null
+    ) {
+      return state;
+    }
+    const actor: VerifiedCommandActor = {
+      kind: "system",
+      actorId: "chatxpt-vote-close",
+      expiresAt: null,
+      moderatorForBroadcasterIds: [],
+      voterKey: null,
+      participationModes: [],
+    };
+    const projectionContext: ProjectionContextResolver = {
+      resolve: () => ({
+        participationMode: "unavailable",
+        viewerId: null,
+        sessionPoints: 0,
+        acceptedCandidateId: null,
+        connection: serviceHealthSchema.parse({
+          service: "obs-overlay",
+          status: "ready",
+          checkedAt: this.now(),
+          message: "OBS overlay closed the due authoritative vote",
+          retryable: false,
+        }),
+      }),
+    };
+    const result = await this.dependencies.runtime.execute(
+      systemVoteCloseCommandSchema.parse({
+        contractVersion: CONTRACT_VERSION,
+        sessionId: state.session.sessionId,
+        questCycleId: state.questCycle.envelope.questCycleId,
+        commandId: `overlay-vote-close-${this.nextId()}`,
+        correlationId: state.questCycle.envelope.correlationId,
+        expectedRevision: state.session.revision,
+        issuedAt: this.now(),
+        actor: { kind: "system", actorId: actor.actorId },
+        type: "system.vote-close",
+      }),
+      actor,
+      projectionContext,
+    );
+    if (result.ok) return result.receipt.state;
+    if (result.error.code === "stale-revision") {
+      return (await this.persistence.sessions.load(state.session.sessionId)) ?? state;
+    }
+    throw new ObsOverlayApplicationError(
+      "dependency-unavailable",
+      result.error.message,
+      result.error.retryable,
+    );
+  }
 }
 
 const applicationKey = Symbol.for("chatxpt.obsOverlayApplication.v1");
@@ -237,7 +300,7 @@ const globalApplication = globalThis as typeof globalThis & {
 export function getObsOverlayApplication(): ObsOverlayApplication {
   if (globalApplication[applicationKey] !== undefined) return globalApplication[applicationKey];
   globalApplication[applicationKey] = new ObsOverlayApplication({
-    persistence: getChatXptServerRuntime().persistence,
+    runtime: getChatXptServerRuntime(),
     setupKey: process.env.CHATXPT_OBS_OVERLAY_SETUP_KEY ?? "",
   });
   return globalApplication[applicationKey];

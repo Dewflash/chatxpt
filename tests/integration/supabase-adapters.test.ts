@@ -72,6 +72,10 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
     return this.hostedBoardSessionRow;
   }
 
+  override async loadHostedBoardSessionBySessionId(): Promise<unknown | null> {
+    return this.hostedBoardSessionRow;
+  }
+
   override async loadTwitchChannelSession(): Promise<unknown | null> {
     return this.twitchChannelSessionRow;
   }
@@ -229,6 +233,12 @@ describe("Supabase production adapters", () => {
     api.hostedBoardSessionRow = hostedRow;
 
     expect(await directory.findHostedBoardSession("ABCDEFGH")).toEqual({
+      sessionId: "fixture-session",
+      roomCode: "ABCDEFGH",
+      status: "live",
+      revision: 3,
+    });
+    expect(await directory.findHostedBoardSessionBySessionId("fixture-session")).toEqual({
       sessionId: "fixture-session",
       roomCode: "ABCDEFGH",
       status: "live",

@@ -336,7 +336,7 @@ describe("Role 5 viewer surfaces", () => {
     expect(html).toContain("Send <strong>1</strong>");
     expect(html).toContain("Send <strong>2</strong>");
     expect(html).toContain("Send <strong>3</strong>");
-    expect(html).toContain("ChatXPT replies with counted, duplicate, rejected, or late status");
+    expect(html).toContain("Votes are counted silently to avoid chat spam");
   });
 
   it("keeps active and terminal quest status consistent in the chat fallback", () => {

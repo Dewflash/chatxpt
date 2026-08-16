@@ -215,6 +215,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       }
       setView(payload.view);
       setReadiness(payload.readiness);
+      setRoomCode(payload.roomCode ?? null);
       setRequiresBootstrap(false);
       setError(null);
     } catch (caught) {
@@ -266,6 +267,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       }
       setView(payload.view);
       setReadiness(payload.readiness);
+      setRoomCode(payload.roomCode ?? null);
       setRoomCode(payload.roomCode ?? null);
       setRequiresBootstrap(false);
       setMessage("Broadcaster session started. Twitch surfaces can now map the signed channel JWT to this session.");
@@ -385,7 +387,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       {view !== null ? <StudioCaptureAndOverlaySetup sessionId={view.session.sessionId} /> : null}
       {roomCode ? (
         <div className={styles.roomBanner}>
-          Hosted Quest Board code: <strong>{roomCode}</strong>. Copy it now; it is intentionally not placed in browser storage.
+          Hosted Quest Board: <strong>{roomCode}</strong> · <a href={`/quest-board/${encodeURIComponent(roomCode)}`} target="_blank" rel="noreferrer">Open viewer link</a>
         </div>
       ) : null}
     </>

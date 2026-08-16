@@ -28,7 +28,7 @@ async function context() {
     gameName: null,
   });
   const overlay = new ObsOverlayApplication({
-    persistence,
+    runtime: new ChatXptServerRuntime({ persistence, clock: { now: () => NOW } }),
     setupKey: OVERLAY_KEY,
     now: () => NOW,
     nextId: () => `overlay-${++id}`,

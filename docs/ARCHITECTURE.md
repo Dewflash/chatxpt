@@ -18,8 +18,8 @@ Twitch is the only implemented platform for the MVP. YouTube, Discord, and other
 ## Data flow
 
 ```text
-Twitch adapter                         OBS Virtual Camera
-chat + identity + session events       ephemeral raw-game frames
+Twitch adapters                        OBS Virtual Camera
+Extension JWT + signed EventSub chat   ephemeral raw-game frames
               \                         /
                v                       v
              normalised Role 1 input contracts
@@ -78,7 +78,7 @@ One broadcaster may have one preparing/live ChatXPT session. Preparing sessions 
 
 Credential-free local work uses the same application ports with in-memory state and permissions. This is a functional developer fallback, not shared-cloud or multi-browser evidence. Vercel hosting and the real Supabase Free project activation remain separately evidenced deployment work.
 
-All viewer clients use one private participation service. No UI owns authoritative vote, lifecycle, scoring, or reward rules.
+All viewer clients use one private participation service. The Twitch Extension uses a verified Twitch JWT, the hosted board uses a signed HttpOnly anonymous grant, and EventSub chat messages are HMAC-verified then pseudonymized before exact `1`/`2`/`3` votes enter the same ledger. No UI or adapter owns authoritative vote, lifecycle, scoring, or reward rules.
 
 ## Gameplay capture and extraction
 

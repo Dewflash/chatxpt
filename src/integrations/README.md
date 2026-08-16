@@ -4,13 +4,16 @@ Role 1 owns this directory. Twitch and OBS adapters publish only the normalised 
 
 The entrypoint is additive foundation. It does not claim that Twitch authentication, real OBS capture, or any live adapter is executed until the evidence manifest records a real run.
 
-`chat-fallback.ts` provides the UI-X07 chat fallback formatting and receipt
-policy used by Role 5 presentation and future Twitch outbound delivery. It maps
-the authoritative three visible options to `1`/`2`/`3`, formats poll-open and
-final-result announcements, and describes counted/duplicate/rejected/late/
-unavailable receipt states. It deliberately does not parse Twitch chat, send
-messages, bypass Role 1 vote authority, or promise per-vote chat
-acknowledgement spam.
+`chat-fallback.ts` provides the UI-X07 chat fallback presentation policy.
+`twitch/chat-votes.ts` maps only exact `1`/`2`/`3` messages into canonical
+commands, and `twitch/eventsub.ts` verifies Twitch's HMAC over the exact raw
+webhook body before extracting a bounded chat event. The server pseudonymizes
+the raw chatter ID per ChatXPT session and sends the vote through the same
+private ledger and orchestrator as every other viewer surface. Ordinary chat is
+ignored by this voting boundary; raw Twitch IDs and message text are not
+persisted here. Poll-open/result formatters remain ready for a later outbound
+sender. Per-vote replies are intentionally disabled to avoid chat spam, so
+viewers watch the broadcast overlay for the result.
 
 ## OBS browser capture
 

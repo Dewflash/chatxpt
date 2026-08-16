@@ -10,15 +10,15 @@ export class BoundedJsonError extends Error {
   }
 }
 
-/** Reads a small JSON command body without allowing an advertised oversized payload. */
-export async function readBoundedJson(request: Request, maximumBytes: number): Promise<unknown> {
+/** Reads a small request body without allowing an advertised oversized payload. */
+export async function readBoundedText(request: Request, maximumBytes: number): Promise<string> {
   const advertisedLength = Number(request.headers.get("content-length"));
   if (Number.isFinite(advertisedLength) && advertisedLength > maximumBytes) {
     throw new BoundedJsonError("too-large", "Request body exceeds the allowed size");
   }
   const reader = request.body?.getReader();
   if (reader === undefined) {
-    throw new BoundedJsonError("invalid-json", "Request body must be valid JSON");
+    throw new BoundedJsonError("invalid-json", "Request body is required");
   }
   const chunks: Uint8Array[] = [];
   let receivedBytes = 0;
@@ -32,7 +32,12 @@ export async function readBoundedJson(request: Request, maximumBytes: number): P
     }
     chunks.push(chunk.value);
   }
-  const body = Buffer.concat(chunks).toString("utf8");
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+/** Reads a small JSON command body without allowing an advertised oversized payload. */
+export async function readBoundedJson(request: Request, maximumBytes: number): Promise<unknown> {
+  const body = await readBoundedText(request, maximumBytes);
   try {
     return JSON.parse(body) as unknown;
   } catch {

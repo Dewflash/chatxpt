@@ -82,12 +82,12 @@ export class StudioSessionApplicationError extends Error {
 export interface StudioSurfaceState {
   readonly view: StreamerViewModel;
   readonly readiness: StreamerReadinessView;
+  readonly roomCode: string | null;
 }
 
 export interface StudioSessionStartResult extends StudioSurfaceState {
   readonly grant: string;
   readonly expiresAt: number;
-  readonly roomCode: string | null;
 }
 
 interface AuthorizedStudioSession {
@@ -181,7 +181,6 @@ export class StudioSessionApplication {
     }
 
     let state: AuthoritativeSessionState;
-    let roomCode: string | null = null;
     const existing = await this.persistence.twitchChannelSessions.findTwitchChannelSession(
       parsed.data.channelId,
     );
@@ -278,7 +277,6 @@ export class StudioSessionApplication {
       if (!created.ok) {
         throw commandError(created.error.code, created.error.message, created.error.retryable);
       }
-      roomCode = created.value.roomCode;
       const started = await lifecycle.start(
         sessionId,
         0,
@@ -300,7 +298,7 @@ export class StudioSessionApplication {
       expiresAt,
     });
     const surface = await this.surfaceState(state, false);
-    return { ...surface, grant, expiresAt, roomCode };
+    return { ...surface, grant, expiresAt };
   }
 
   async read(cookieGrant: string | null, authorizationHeader: string | null): Promise<StudioSurfaceState> {
@@ -548,6 +546,10 @@ export class StudioSessionApplication {
     return {
       view,
       readiness: await this.readiness(state, twitchVerified, at),
+      roomCode:
+        (await this.persistence.hostedBoardSessions.findHostedBoardSessionBySessionId(
+          state.session.sessionId,
+        ))?.roomCode ?? null,
     };
   }
 

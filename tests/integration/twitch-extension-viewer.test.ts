@@ -95,6 +95,11 @@ describe("authenticated Twitch Extension viewer application", () => {
       outcome: "committed",
       view: { communityHype: 1, canReact: true },
     });
+    const duplicateReaction = await application.react(firstHeader, {
+      commandId: "viewer-one-reaction",
+      reaction: "hype",
+    });
+    expect(duplicateReaction).toMatchObject({ ok: true, outcome: "duplicate" });
 
     const accepted = await application.vote(firstHeader, {
       commandId: "viewer-one-vote",

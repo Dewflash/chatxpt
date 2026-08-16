@@ -26,6 +26,14 @@ direct viewer path plus copy/QR payload data. Invalid, missing, inactive,
 expired, and temporarily unavailable states are typed so Role 5 can render
 recovery without reading product tables or inventing access state.
 
+The mounted `/quest-board/[roomCode]` surface exchanges a valid room code for a
+12-hour, signed HttpOnly anonymous grant. Refreshes in the same browser reuse
+the same private voter key, so reloading cannot mint a second vote. The client
+reads and commands through `/api/hosted-board/*`, uses the same
+accepted-participation ledger as the Twitch Extension, and never writes product
+tables directly. Real cross-device recovery still depends on the configured
+Supabase runtime.
+
 ## Authoritative vote ledger
 
 All three MVP participation paths converge on the same private ledger. A vote

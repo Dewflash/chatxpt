@@ -454,6 +454,20 @@ export class TwitchExtensionViewerApplication {
       throw applicationError("invalid-command", "Reaction command is invalid");
     }
     const authorized = await this.authorize(authorizationHeader);
+    const existing = await this.persistence.sessions.findReceipt(parsedInput.data.commandId);
+    if (existing !== null) {
+      const command = existing.command;
+      if (
+        command.type !== "viewer.react" ||
+        command.sessionId !== authorized.state.session.sessionId ||
+        command.reaction !== parsedInput.data.reaction ||
+        command.actor.kind !== authorized.actor.kind ||
+        command.actor.actorId !== authorized.actor.actorId
+      ) {
+        throw applicationError("invalid-command", "Reaction command ID was already used");
+      }
+      return { ok: true, outcome: "duplicate", view: await this.projectViewer(authorized) };
+    }
     const result = await this.executeTrusted(
       viewerReactionCommandSchema.parse({
         contractVersion: CONTRACT_VERSION,
