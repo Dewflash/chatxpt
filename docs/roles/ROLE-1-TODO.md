@@ -98,6 +98,12 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 - Memory and Supabase readers derive history from accepted command receipts; they exclude raw chat, viewer identifiers, and private vote receipts.
 - Mixed/non-live receipt evidence downgrades the snapshot to `diagnostic` rather than claiming live history.
 
+## Current architecture and codebase guide pass
+
+- `role-1/architecture-codebase-guide` adds `docs/CODEBASE_GUIDE.md`, a source-grounded explanation of the canonical architecture, the retained mounted prototype, end-to-end runtime flow, routes, ownership boundaries, and each major implementation file.
+- The guide records only source-inspection evidence. It does not upgrade fixture tests, static SQL, or local compatibility paths into real Twitch, OBS, Supabase Cloud, or Vercel runtime claims.
+- `README.md` and `docs/ARCHITECTURE.md` link to the implementation guide so contributors can move from the product overview to the detailed code map.
+
 ## Decisions Role 1 still owns
 
 - Shared contract acceptance and breaking changes

@@ -1,5 +1,7 @@
 # ChatXPT Architecture
 
+For a source-grounded walkthrough of the current implementation, including the mounted legacy path, canonical runtime flow, routes, and major-file reference, see [`CODEBASE_GUIDE.md`](CODEBASE_GUIDE.md).
+
 ## Accepted MVP shape
 
 ChatXPT is one game-neutral Next.js/TypeScript product with a platform-neutral core and replaceable input/output adapters. It does not host livestream video. Twitch remains the viewing platform; ChatXPT adds analysis, quest orchestration, participation, and broadcast visuals.
