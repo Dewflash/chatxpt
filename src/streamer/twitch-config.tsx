@@ -219,15 +219,15 @@ function CompactHealth({ view, readiness }: {
       </ControlRow>
       <div className={styles.healthList}>
         <div>
-          <span>OBS</span>
+          <span>Capture Health</span>
           <StatusBadge tone={obs ? serviceTone(obs.health.status) : "neutral"}>{obs ? titleCase(obs.health.status) : "Unknown"}</StatusBadge>
         </div>
         <div>
-          <span>Gameplay</span>
+          <span>Gameplay Activity</span>
           <StatusBadge tone={gameplay.tone}>{gameplay.label}</StatusBadge>
         </div>
         <div>
-          <span>AI</span>
+          <span>Sidequests</span>
           <StatusBadge tone={generation.tone}>{generation.label}</StatusBadge>
         </div>
         <div>
@@ -306,7 +306,7 @@ export function TwitchLiveConfigSurface({
 
         {currentView.emergencyPaused ? (
           <Notice tone="danger" title="Emergency pause active" politeness="assertive">
-            New quests stay blocked until cleared.
+            New sidequests stay blocked until cleared.
             <div className={styles.noticeActions}>
               <Button
                 variant="secondary"
@@ -323,13 +323,13 @@ export function TwitchLiveConfigSurface({
 
         <section className={styles.compactSection} aria-labelledby="live-quest-heading">
           <ControlRow>
-            <h2 id="live-quest-heading">Quest</h2>
+            <h2 id="live-quest-heading">Sidequest</h2>
             <StatusBadge tone="info">{titleCase(cycle.status)}</StatusBadge>
           </ControlRow>
 
           {active ? (
             <Card className={styles.activeQuest}>
-              <small>Active quest</small>
+              <small>Active sidequest</small>
               <strong>{active.title}</strong>
               <p>{active.instruction}</p>
             </Card>
@@ -351,7 +351,7 @@ export function TwitchLiveConfigSurface({
               ))}
             </div>
           ) : (
-            <Notice title="No three-option proposal">Waiting for the authoritative runtime.</Notice>
+            <Notice title="No three-option sidequest proposal">Waiting for the authoritative runtime.</Notice>
           )}
 
           {cycle.progress ? (
@@ -394,13 +394,13 @@ export function TwitchLiveConfigSurface({
             <StatusBadge tone="info">Follows saved</StatusBadge>
           </ControlRow>
           <label className={styles.disabledRange}>
-            <span>Quest intensity <output>{`${Math.round((currentView.profile.experience.intensity ?? 0.5) * 100)}%`}</output></span>
+            <span>Sidequest intensity <output>{`${Math.round((currentView.profile.experience.intensity ?? 0.5) * 100)}%`}</output></span>
             <input type="range" min="0" max="1" value={currentView.profile.experience.intensity ?? 0.5} disabled readOnly />
           </label>
           <p>Temporary intensity stays disabled until the runtime supplies a session override and reset command. The saved default is not changed here.</p>
         </section>
 
-        <section className={styles.actionSection} aria-label="Authorised quest actions">
+        <section className={styles.actionSection} aria-label="Authorised sidequest actions">
           <div className={styles.actionGrid}>
             {regularActions.map((action) => (
               <Button
@@ -426,10 +426,10 @@ export function TwitchLiveConfigSurface({
 
         {confirmAction ? (
           <Notice tone="danger" title={`Confirm ${questLabels[confirmAction].toLocaleLowerCase()}`} politeness="assertive">
-            The current quest remains unchanged until confirmation.
+            The current sidequest remains unchanged until confirmation.
             <div className={styles.noticeActions}>
               <Button variant="danger" disabled={pending} onClick={() => emitAction(confirmAction)}>Confirm</Button>
-              <Button variant="ghost" onClick={() => setConfirmation(null)}>Keep quest</Button>
+              <Button variant="ghost" onClick={() => setConfirmation(null)}>Keep sidequest</Button>
             </div>
           </Notice>
         ) : null}

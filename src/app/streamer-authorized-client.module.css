@@ -1,0 +1,75 @@
+.bootstrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background:
+    radial-gradient(circle at 15% 5%, rgba(122, 82, 255, 0.24), transparent 30rem),
+    #0c0912;
+  color: #f8f6ff;
+}
+
+.bootstrapCard {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 18px;
+  padding: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 18px;
+  background: rgba(25, 20, 38, 0.94);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.36);
+}
+
+.bootstrapCard h1,
+.bootstrapCard p { margin: 0; }
+.bootstrapCard p { color: #aaa2bd; line-height: 1.5; }
+.bootstrapCard form { display: grid; gap: 14px; }
+.bootstrapCard label { display: grid; gap: 7px; color: #d6d0e4; font-size: 13px; }
+.bootstrapCard input {
+  width: 100%;
+  padding: 11px 12px;
+  color: #f8f6ff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: #100c18;
+}
+.bootstrapCard button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  color: #0c0912;
+  background: #d7ff52;
+  font-weight: 800;
+  cursor: pointer;
+}
+.bootstrapCard button:disabled { opacity: 0.58; cursor: wait; }
+.error { color: #ff887d !important; }
+.grantNote {
+  padding: 12px;
+  border: 1px solid rgba(215, 255, 82, 0.22);
+  border-radius: 10px;
+  color: #d7ff52 !important;
+  background: rgba(215, 255, 82, 0.06);
+  font-size: 12px;
+}
+
+.roomBanner {
+  position: fixed;
+  z-index: 20;
+  right: 16px;
+  bottom: 16px;
+  max-width: 310px;
+  padding: 12px 14px;
+  border: 1px solid rgba(215, 255, 82, 0.42);
+  border-radius: 10px;
+  color: #f8f6ff;
+  background: rgba(12, 9, 18, 0.96);
+  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.4);
+  font-size: 12px;
+}
+.roomBanner strong { color: #d7ff52; }
+
+@media (max-width: 560px) {
+  .bootstrap { padding: 14px; }
+  .bootstrapCard { padding: 20px; }
+}

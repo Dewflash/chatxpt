@@ -55,16 +55,16 @@ export interface StudioManagementSurfaceProps {
 
 const experienceLabels: Readonly<Record<string, string>> = {
   creativity: "Personality: playful creativity",
-  intensity: "Quest intensity",
+  intensity: "Sidequest intensity",
 };
 
 const actionLabels: Readonly<Record<StreamerQuestAction, string>> = {
   approve: "Approve selected",
   reject: "Reject selected",
   start: "Start selected",
-  pause: "Pause quest",
-  cancel: "Cancel quest",
-  skip: "Skip quest",
+  pause: "Pause sidequest",
+  cancel: "Cancel sidequest",
+  skip: "Skip sidequest",
   succeed: "Mark succeeded",
   fail: "Mark failed",
   "emergency-pause": "Emergency pause",
@@ -226,15 +226,15 @@ function SavedDefaultsEditor({
           </div>
         </SettingGroup>
 
-        <SettingGroup title="Challenge preferences" badge="Saved · view only">
+        <SettingGroup title="Sidequest preferences" badge="Saved · view only">
           <dl className={styles.definitionList}>
             <div>
               <dt>Prefer</dt>
-              <dd>{view.profile.preferredQuestTypes.join(", ") || "No preferred challenge types"}</dd>
+              <dd>{view.profile.preferredQuestTypes.join(", ") || "No preferred sidequest types"}</dd>
             </div>
             <div>
               <dt>Avoid</dt>
-              <dd>{view.profile.forbiddenQuestTypes.join(", ") || "No extra forbidden types"}</dd>
+              <dd>{view.profile.forbiddenQuestTypes.join(", ") || "No extra forbidden sidequest types"}</dd>
             </div>
             <div>
               <dt>Safety limits</dt>
@@ -362,7 +362,7 @@ function SessionOverridePanel({ view }: { readonly view: StreamerViewModel }) {
       </div>
       <Panel className={styles.overridePanel}>
         <div>
-          <strong>{`Quest intensity · ${savedIntensity}%`}</strong>
+          <strong>{`Sidequest intensity · ${savedIntensity}%`}</strong>
           <p>Effective source: saved default. No session-only value is present in the current authoritative view.</p>
         </div>
         <div className={styles.buttonRow}>
@@ -473,18 +473,18 @@ function HealthAndRecovery({
       </div>
       <CardGrid className={styles.healthGrid}>
         <HealthCard {...serviceCard("Twitch", twitch, "Twitch setup health is not in this snapshot.")} />
-        <HealthCard {...serviceCard("OBS capture", obs, "OBS permission and source health are unknown.")} />
+        <HealthCard {...serviceCard("Gameplay Capture", obs, "Capture permission and source health are unknown.")} />
         <HealthCard
-          title="Gameplay understanding"
+          title="Signal Confidence"
           badge={gameplayHealth.label}
           tone={gameplayHealth.tone}
           detail={view.gameplay === null
-            ? "No authorised gameplay snapshot is available. Manual quest controls remain usable."
-            : `${titleCase(view.gameplay.capabilities.tier)} · ${gameplayHealth.knownCount} known, ${gameplayHealth.unknownCount} unknown, ${gameplayHealth.staleCount} stale, ${gameplayHealth.unavailableCount} unavailable of ${gameplayHealth.totalCount} signals.`}
+            ? "No authorised gameplay snapshot is available. Manual sidequest controls remain usable."
+            : `${titleCase(view.gameplay.capabilities.tier)} · ${gameplayHealth.knownCount} observed, ${gameplayHealth.unknownCount} unknown, ${gameplayHealth.staleCount} stale, ${gameplayHealth.unavailableCount} unavailable of ${gameplayHealth.totalCount} Detected Game Facts.`}
           meta={gameplayMeta}
         />
         <HealthCard
-          {...serviceCard("AI intelligence", intelligence, "Intelligence service health is unknown.")}
+          {...serviceCard("Sidequest generation", intelligence, "Sidequest-generation health is unknown.")}
           badge={generation?.label ?? (intelligence ? healthLabel(intelligence.health.status) : "Unknown")}
           tone={generation?.tone ?? (intelligence ? healthTone(intelligence.health.status) : "neutral")}
           detail={generation === null
@@ -566,7 +566,7 @@ function QuestManagement({
     <section className={styles.section} aria-labelledby="live-quests-heading">
       <div className={styles.sectionHeading}>
         <div>
-          <p className={styles.eyebrow}>Live quests</p>
+          <p className={styles.eyebrow}>Live sidequests</p>
           <h2 id="live-quests-heading">Review and recover without hidden authority</h2>
         </div>
         <div className={styles.badgeRow}>
@@ -603,8 +603,8 @@ function QuestManagement({
           ))}
         </CardGrid>
       ) : (
-        <Notice title="No authorised three-option proposal">
-          Studio will wait for the runtime instead of creating local quest choices.
+        <Notice title="No authorised three-option sidequest proposal">
+          Studio will wait for the runtime instead of creating local sidequest choices.
         </Notice>
       )}
 
@@ -620,7 +620,7 @@ function QuestManagement({
       {cycle.status === "active" && cycle.completionRule?.mode === "manual" ? (
         <Panel className={styles.manualPanel}>
           <RangeSetting
-            label="Manual quest progress"
+            label="Manual sidequest progress"
             value={manualProgress}
             disabled={onCommand === undefined || pending}
             onChange={setManualProgress}
@@ -661,12 +661,12 @@ function QuestManagement({
 
       {confirmAction ? (
         <Notice tone="danger" title={`Confirm ${actionLabels[confirmAction].toLocaleLowerCase()}`} politeness="assertive">
-          This changes the authoritative quest outcome. The current quest stays unchanged until you confirm.
+          This changes the authoritative sidequest outcome. The current sidequest stays unchanged until you confirm.
           <div className={styles.noticeAction}>
             <Button variant="danger" disabled={pending} onClick={() => emitAction(confirmAction)}>
               Confirm {actionLabels[confirmAction].toLocaleLowerCase()}
             </Button>
-            <Button variant="ghost" onClick={() => setConfirmAction(null)}>Keep current quest</Button>
+            <Button variant="ghost" onClick={() => setConfirmAction(null)}>Keep current sidequest</Button>
           </div>
         </Notice>
       ) : null}
@@ -711,7 +711,7 @@ export function StudioManagementSurface({
           <a href="#profile-defaults-heading">Profile &amp; defaults</a>
           <a href="#session-overrides-heading">This session</a>
           <a href="#health-recovery-heading">Health &amp; recovery</a>
-          <a href="#live-quests-heading">Live quests</a>
+          <a href="#live-quests-heading">Live sidequests</a>
         </nav>
         <p>Full management lives here. Twitch Live Config stays compact for stream-time control.</p>
       </aside>
@@ -721,7 +721,7 @@ export function StudioManagementSurface({
           <div>
             <div className={styles.badgeRow}>
               <StatusBadge tone={view.envelope.evidenceClass === "live" ? "success" : "diagnostic"}>
-                {view.envelope.evidenceClass === "live" ? "Live authorised data" : `${titleCase(view.envelope.evidenceClass)} data`}
+                {view.envelope.evidenceClass === "live" ? "Live session mode" : `${titleCase(view.envelope.evidenceClass)} data`}
               </StatusBadge>
               <StatusBadge tone={view.session.status === "live" ? "success" : "neutral"}>{titleCase(view.session.status)}</StatusBadge>
               <StatusBadge tone="diagnostic">{`Revision ${view.envelope.revision}`}</StatusBadge>
@@ -733,13 +733,13 @@ export function StudioManagementSurface({
           <Panel className={styles.heroGame}>
             <small>Selected game profile</small>
             <strong>{view.profile.gameName ?? "No game selected"}</strong>
-            <span>{view.gameplay ? titleCase(view.gameplay.capabilities.tier) : "Gameplay signals unknown"}</span>
+            <span>{view.gameplay ? titleCase(view.gameplay.capabilities.tier) : "Gameplay Activity unknown"}</span>
           </Panel>
         </header>
 
         {view.envelope.evidenceClass !== "live" ? (
           <Notice tone="warning" title="Not live workflow evidence">
-            This management surface is rendering {view.envelope.evidenceClass} data. It does not prove real Twitch, OBS, AI, persistence, or realtime behaviour.
+            This management surface is rendering {view.envelope.evidenceClass} data. It does not prove real Twitch, Gameplay Capture, intelligence, persistence, or realtime behaviour.
           </Notice>
         ) : null}
 

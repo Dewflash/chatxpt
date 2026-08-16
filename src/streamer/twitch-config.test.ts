@@ -50,13 +50,13 @@ describe("TwitchLiveConfigSurface", () => {
 
     expect(html).toContain("Twitch Live Config");
     expect(html).toContain("Live health");
-    expect(html).toContain("OBS");
-    expect(html).toContain("Gameplay");
+    expect(html).toContain("Capture Health");
+    expect(html).toContain("Gameplay Activity");
     expect(html).toContain("Low confidence");
-    expect(html).toContain("AI");
+    expect(html).toContain("Sidequests");
     expect(html).toContain("Realtime");
     expect(html).toContain("Fallback active");
-    expect(html).toContain("Quest");
+    expect(html).toContain("Sidequest");
   });
 
   it("shows a warning label for a mixed AI and fallback candidate batch", () => {
@@ -117,7 +117,7 @@ describe("TwitchLiveConfigSurface", () => {
       onCommand: () => undefined,
     }));
 
-    expect(html).toContain("Active quest");
+    expect(html).toContain("Active sidequest");
     expect(html).toContain("Manual progress");
     expect(html).toContain(">Update<");
     expect(html).toContain(">Succeeded<");
@@ -134,6 +134,6 @@ describe("TwitchLiveConfigSurface", () => {
 
     expect(html).toContain("Loading live controls");
     expect(html).toContain("Open full Studio");
-    expect(html).not.toContain("Quest intensity");
+    expect(html).not.toContain("Sidequest intensity");
   });
 });

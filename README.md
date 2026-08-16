@@ -59,6 +59,7 @@ All values in `.env.example` are empty placeholders. Real credentials must remai
 | `TWITCH_EXTENSION_SECRET` | For Twitch tests | Base64 Extension signing secret used only by the server to verify Twitch JWTs and derive pseudonymous, session-scoped participation identity. |
 | `CHATXPT_OBS_OVERLAY_SETUP_KEY` | No | Server-only key for the streamer-controlled OBS overlay setup boundary. |
 | `CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY` | For authenticated capture | Server-only key that bootstraps short-lived, session-scoped normalised gameplay ingress grants. It is never a client bundle value. |
+| `CHATXPT_STUDIO_SETUP_KEY` | For canonical Studio | Server-only key of at least 32 characters used for the manual broadcaster-session bootstrap. It is exchanged for an HttpOnly, expiring session grant and is never bundled. |
 | `NEXT_PUBLIC_APP_ENV` | No | Environment label; the example uses `local`. |
 
 Legacy Supabase projects may use the aliases documented in [.env.example](.env.example), but each environment should configure only one key pair.
@@ -67,7 +68,8 @@ Legacy Supabase projects may use the aliases documented in [.env.example](.env.e
 
 | Surface | URL | Purpose |
 | --- | --- | --- |
-| Streamer Studio / control room | [http://localhost:3000](http://localhost:3000) | Configure the session, inspect detected context, generate or review quests, control the vote, and inspect analytics. |
+| ChatXPT Studio | [http://localhost:3000/studio](http://localhost:3000/studio) | Canonical authenticated management surface for starting the broadcaster session, saved defaults, integration health, and sidequest control. |
+| Legacy diagnostic control room | [http://localhost:3000](http://localhost:3000) | Preserved diagnostic surface during parity verification; it is not the canonical finals workflow. |
 | OBS overlay | [http://127.0.0.1:3000/overlay?obs=1](http://127.0.0.1:3000/overlay?obs=1) | Transparent browser-source output for vote and active-quest states. |
 | Viewer Twitch Extension panel | [https://localhost:3000/viewer.html](https://localhost:3000/viewer.html) | Authenticated viewer voting surface when opened by Twitch Local Test. Direct browser access intentionally cannot vote. |
 | Twitch configuration page | [http://localhost:3000/config.html](http://localhost:3000/config.html) | Local Twitch Extension configuration path. |
@@ -106,7 +108,7 @@ Trust the one-time local certificate warning in the test browser, then configure
 | Panel Viewer Path | `viewer.html` |
 | Extension type | Panel; enable additional video placements only if they are intentionally being tested |
 
-Install and activate that Local Test version on the broadcaster's channel. Generate three quests in Studio, then open the installed Extension as a viewer. Twitch `onAuthorized` supplies a refreshable JWT; ChatXPT verifies its signature and expiry, binds its channel to the staged local diagnostic cycle, derives a non-reversible session voter key, and routes the vote through the canonical orchestrator and Role 3 engine. A direct `/viewer.html` tab is expected to show an authorization recovery message because browser-created identities are no longer accepted.
+Set `CHATXPT_STUDIO_SETUP_KEY` to a private value of at least 32 characters. Open `/studio`, enter the numeric Twitch channel ID and setup key, and start the broadcaster session. The key is used only for that HTTPS request; the server returns an HttpOnly, expiring session cookie and creates the authoritative channel-to-session mapping. Then install and activate the Local Test version on the broadcaster's channel. Twitch `onAuthorized` supplies refreshable broadcaster and viewer JWTs: Config and Live Config require the signed broadcaster role, while the viewer surface derives a non-reversible session voter key and routes votes through the canonical orchestrator and Role 3 engine. A direct `.html` tab is expected to show an authorization recovery message because browser-created identities are not accepted.
 
 The upload package under `twitch-extension/` uses a build-owned exact EBS origin in `assets/environment.js`; replace it with the deployed HTTPS ChatXPT origin before Hosted Test and add that domain to Twitch's URL-fetching allowlist. Automated signed-token tests and local diagnostic state are not proof of a real Twitch run, public approval, or cloud persistence; record real Local/Hosted Test evidence separately.
 

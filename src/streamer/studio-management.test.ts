@@ -39,7 +39,7 @@ describe("StudioManagementSurface", () => {
     expect(html).toContain("Profile &amp; defaults");
     expect(html).toContain("Saved profile · revision");
     expect(html).toContain("Streamer personality");
-    expect(html).toContain("Challenge preferences");
+    expect(html).toContain("Sidequest preferences");
     expect(html).toContain("Game &amp; accessibility");
     expect(html).toContain("Voting");
     expect(html).toContain("Rewards");
@@ -48,17 +48,17 @@ describe("StudioManagementSurface", () => {
     expect(html).toContain("Session override contract required");
   });
 
-  it("shows OBS, gameplay, provider-neutral intelligence, and realtime health independently", () => {
+  it("shows Capture Health, Signal Confidence, generation, and realtime independently", () => {
     const view = createFixtureUiGatewaySnapshot().views.streamer;
     const readiness = contractFixtureUiX01ReadinessCatalog["r4.setup.permission-denied.v1"];
     const html = renderToStaticMarkup(h(StudioManagementSurface, { view, readiness }));
 
-    expect(html).toContain("OBS capture");
+    expect(html).toContain("Gameplay Capture");
     expect(html).toContain("Permission denied");
     expect(html).toContain("Allow capture");
-    expect(html).toContain("Gameplay understanding");
+    expect(html).toContain("Signal Confidence");
     expect(html).toContain("Low confidence");
-    expect(html).toContain("AI intelligence");
+    expect(html).toContain("Sidequest generation");
     expect(html).toContain("Fallback active");
     expect(html).toContain("Realtime");
     expect(html).toContain("There is no combined readiness percentage");
@@ -85,7 +85,7 @@ describe("StudioManagementSurface", () => {
       onCommand: () => undefined,
     }));
 
-    expect(html).toContain("Cancel quest");
+    expect(html).toContain("Cancel sidequest");
     expect(html).toContain("Emergency pause");
     expect(html).not.toContain("Approve selected");
     expect(html).not.toContain("Mark succeeded");
@@ -118,11 +118,11 @@ describe("StudioManagementSurface", () => {
       onCommand: () => undefined,
     }));
 
-    expect(html).toContain("Manual quest progress");
+    expect(html).toContain("Manual sidequest progress");
     expect(html).toContain("Update progress");
     expect(html).toContain("Mark succeeded");
     expect(html).toContain("Mark failed");
-    expect(html).toContain("Skip quest");
+    expect(html).toContain("Skip sidequest");
     expect(html).toContain("Clear emergency pause");
   });
 

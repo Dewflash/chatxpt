@@ -38,6 +38,7 @@ TWITCH_CLIENT_SECRET=<Twitch app client secret>
 TWITCH_EXTENSION_SECRET=<Twitch Extension signing secret>
 CHATXPT_OBS_OVERLAY_SETUP_KEY=<Role 1 generated setup key>
 CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY=<Role 1 generated gameplay ingress key>
+CHATXPT_STUDIO_SETUP_KEY=<Role 1 generated Studio bootstrap key, at least 32 characters>
 ```
 
 Legacy Supabase projects may use `NEXT_PUBLIC_SUPABASE_ANON_KEY` and
@@ -57,8 +58,8 @@ NEXT_PUBLIC_APP_ENV=production
 ```
 
 Keep every server-only value out of client-prefixed names. Never prefix Supabase
-secret keys, Twitch secrets, the OBS overlay key, or the gameplay ingress key with
-`NEXT_PUBLIC_`.
+secret keys, Twitch secrets, the OBS overlay key, gameplay ingress key, or Studio
+bootstrap key with `NEXT_PUBLIC_`.
 
 ## Post-Deploy Checks
 
