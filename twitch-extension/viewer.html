@@ -19,13 +19,18 @@
         <span id="connection-state" class="pill">Connecting</span>
       </header>
       <p id="countdown" class="countdown" hidden></p>
-      <section id="quest-list" class="quest-list" aria-label="Quest choices">
+      <section id="quest-list" class="quest-list" aria-label="Sidequest choices">
         <div class="empty-state">
           <strong>No vote is open.</strong>
-          <span>Generate quests in ChatXPT Studio first.</span>
+          <span>Generate sidequests in ChatXPT Studio first.</span>
         </div>
       </section>
-      <button id="submit-vote" class="submit-vote" disabled>Submit vote</button>
+      <button id="submit-vote" class="submit-vote" disabled>Vote</button>
+      <section class="viewer-engagement" aria-label="Viewer engagement">
+        <div><span>Community hype</span><strong id="community-hype">0</strong></div>
+        <div><span>Your session points</span><strong id="session-points">0</strong></div>
+        <button id="send-hype" type="button" disabled>Send hype</button>
+      </section>
       <p id="vote-status" class="status-line" aria-live="polite">Waiting for Twitch authorization.</p>
       <p class="api-note">Backend: <span id="api-base-label">auto</span></p>
     </main>

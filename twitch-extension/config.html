@@ -6,19 +6,18 @@
     <title>ChatXPT Config</title>
     <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
     <link rel="stylesheet" href="assets/extension.css">
+    <script defer src="assets/environment.js"></script>
+    <script defer src="assets/broadcaster.js"></script>
   </head>
   <body data-surface="config">
-    <main class="shell" aria-label="ChatXPT configuration surface">
-      <p class="kicker">ChatXPT Config</p>
-      <h1>Configuration surface reserved</h1>
-      <p>
-        Use this file as the Configuration Path during Twitch Extension tests. Full setup controls
-        remain in ChatXPT Studio until the embedded configuration module is connected.
-      </p>
-      <section class="status" aria-label="Current status">
-        <span>Setup shell</span>
-        <strong>Not connected</strong>
-      </section>
+    <main class="shell control-shell" aria-label="ChatXPT configuration surface">
+      <header class="voter-header">
+        <div><p class="kicker">Twitch Config</p><h1>Install once, manage in Studio</h1></div>
+        <span id="connection-state" class="pill">Connecting</span>
+      </header>
+      <p id="control-message" class="status-line" aria-live="polite">Waiting for Twitch broadcaster authorization.</p>
+      <div id="broadcaster-content" class="control-content"></div>
+      <a id="studio-link" class="studio-link" href="#" target="_blank" rel="noreferrer">Open full Studio</a>
     </main>
   </body>
 </html>

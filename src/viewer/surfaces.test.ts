@@ -135,7 +135,7 @@ describe("Role 5 viewer surfaces", () => {
       }),
     );
 
-    expect(html).toContain("The quest changed");
+    expect(html).toContain("The sidequest changed");
     expect(html).toContain("Your selection is preserved while ChatXPT refreshes.");
     expect(html).toContain("Selected");
     expect(html).toContain("Retry connection");
@@ -206,11 +206,11 @@ describe("Role 5 viewer surfaces", () => {
 
     expect(active).toBeDefined();
     expect(inactive).toBeDefined();
-    expect(html).toContain("Quest active");
+    expect(html).toContain("Sidequest active");
     expect(html).toContain("Winner");
     expect(html).toContain(active?.title);
     expect(html).not.toContain(inactive?.title);
-    expect(html).toContain("Winner confirmed. The quest is now active.");
+    expect(html).toContain("Winner confirmed. The sidequest is now active.");
     expect(html).toContain("75%");
     expect(html).toContain("Live game progress");
     expect(html).toContain("Send hype");
@@ -253,19 +253,19 @@ describe("Role 5 viewer surfaces", () => {
       }),
     );
 
-    expect(html).toContain("Quest result");
-    expect(html).toContain("Quest completed");
+    expect(html).toContain("Sidequest result");
+    expect(html).toContain("Sidequest completed");
     expect(html).toContain("Awarded 100 pts.");
     expect(html).toContain("Community hype");
     expect(html).toContain("Your session points");
-    expect(html).toContain("The authoritative quest result is shown above.");
+    expect(html).toContain("The authoritative sidequest result is shown above.");
   });
 
   it.each([
-    ["r5.quest.failed.v1", "Quest attempt ended"],
-    ["r5.quest.cancelled.v1", "Quest cancelled"],
-    ["r5.quest.skipped.v1", "Quest skipped"],
-    ["r5.quest.expired.v1", "Quest expired"],
+    ["r5.quest.failed.v1", "Sidequest attempt ended"],
+    ["r5.quest.cancelled.v1", "Sidequest cancelled"],
+    ["r5.quest.skipped.v1", "Sidequest skipped"],
+    ["r5.quest.expired.v1", "Sidequest expired"],
   ] as const)("distinguishes the authoritative %s outcome", (fixtureId, title) => {
     const view = contractFixtureUiX06RoleViewCatalog[fixtureId].viewer;
     const html = renderToStaticMarkup(h(TwitchExtensionViewerSurface, { view, now: NOW }));
@@ -354,9 +354,9 @@ describe("Role 5 viewer surfaces", () => {
     const activeHtml = renderToStaticMarkup(h(ChatFallbackInstructions, { view: active }));
     const resultHtml = renderToStaticMarkup(h(ChatFallbackInstructions, { view: result }));
 
-    expect(activeHtml).toContain("Quest active");
+    expect(activeHtml).toContain("Sidequest active");
     expect(activeHtml).toContain(options[0].title);
-    expect(resultHtml).toContain("Quest cancelled");
+    expect(resultHtml).toContain("Sidequest cancelled");
     expect(resultHtml).toContain("No separate viewer account is needed.");
   });
 });
@@ -366,7 +366,7 @@ describe("Role 5 OBS overlay surface", () => {
     const html = renderToStaticMarkup(h(ObsQuestOverlaySurface, { view: contractFixtureOverlayView }));
 
     expect(html).not.toContain("Overlay ready");
-    expect(html).not.toContain("Waiting for quests");
+    expect(html).not.toContain("Waiting for sidequests");
     expect(html).toContain('aria-hidden="true"');
   });
 
@@ -423,7 +423,7 @@ describe("Role 5 OBS overlay surface", () => {
     const view = contractFixtureUiX06RoleViewCatalog["r5.quest.cancelled.v1"].overlay;
     const html = renderToStaticMarkup(h(ObsQuestOverlaySurface, { view, now: NOW }));
 
-    expect(html).toContain("Quest cancelled");
+    expect(html).toContain("Sidequest cancelled");
     expect(html).toContain("Fixture streamer cancellation.");
     expect(html).not.toContain("Awarded");
     expect(html).not.toContain("<button");
@@ -442,7 +442,7 @@ describe("Role 5 OBS overlay surface", () => {
     const html = renderToStaticMarkup(h(ObsQuestOverlaySurface, { view, now: NOW }));
 
     expect(html).toContain("Overlay reconnecting");
-    expect(html).toContain("latest safe quest stays visible");
+    expect(html).toContain("latest safe sidequest stays visible");
     expect(html).not.toContain("<button");
   });
 

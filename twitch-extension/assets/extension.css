@@ -223,6 +223,52 @@ p {
   font-size: 12px;
 }
 
+.viewer-engagement {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.viewer-engagement div {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .03);
+}
+
+.viewer-engagement span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.viewer-engagement strong {
+  color: var(--lime);
+}
+
+.viewer-engagement button {
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid var(--violet);
+  border-radius: 8px;
+  color: var(--text);
+  background: rgba(141, 99, 255, .16);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.viewer-engagement button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
 .api-note {
   color: #766f87;
   overflow-wrap: anywhere;
@@ -278,4 +324,213 @@ p {
 .quest-result span {
   color: var(--muted);
   font-size: 12px;
+}
+
+.control-shell {
+  width: min(100%, 720px);
+  align-content: start;
+}
+
+.control-content,
+.control-options,
+.control-actions {
+  display: grid;
+  gap: 9px;
+}
+
+.control-card,
+.control-note,
+.control-progress,
+.control-heading,
+.control-health,
+.control-summary {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .035);
+}
+
+.control-card,
+.control-note {
+  display: grid;
+  gap: 6px;
+}
+
+.control-card.active {
+  border-color: rgba(215, 255, 82, .4);
+  background: rgba(215, 255, 82, .065);
+}
+
+.control-card > span,
+.control-note > strong,
+.control-heading > span,
+.control-progress > span,
+.control-summary span,
+.control-health span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.control-row,
+.control-heading,
+.control-progress {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.control-row strong,
+.control-heading strong,
+.control-progress strong,
+.control-health strong {
+  color: var(--lime);
+}
+
+.control-summary,
+.control-health {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.control-summary div,
+.control-health div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.control-summary strong,
+.control-health strong {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.control-health strong[data-health="permission-denied"],
+.control-health strong[data-health="unavailable"],
+.control-health strong[data-health="misconfigured"] {
+  color: #ff887d;
+}
+
+.control-option,
+.control-action,
+.studio-link {
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--text);
+  background: rgba(255, 255, 255, .035);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.manual-progress {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .03);
+}
+
+.manual-progress label {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.manual-progress input {
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: var(--lime);
+}
+
+.manual-progress button {
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid var(--lime);
+  border-radius: 8px;
+  color: #0c0912;
+  background: var(--lime);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.control-option {
+  display: grid;
+  gap: 4px;
+}
+
+.control-option span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.control-option:hover,
+.control-option.selected {
+  border-color: rgba(215, 255, 82, .5);
+  background: rgba(215, 255, 82, .075);
+}
+
+.control-actions {
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+}
+
+.control-action {
+  text-align: center;
+  font-weight: 800;
+}
+
+.control-action.danger {
+  border-color: rgba(255, 111, 97, .4);
+  color: #ff887d;
+}
+
+.control-action:disabled,
+.control-option:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.control-progress progress {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 6px;
+  accent-color: var(--lime);
+}
+
+.studio-link {
+  display: grid;
+  place-items: center;
+  color: #0c0912;
+  border-color: var(--lime);
+  background: var(--lime);
+  font-weight: 900;
+  text-align: center;
+  text-decoration: none;
+}
+
+@media (max-width: 460px) {
+  .viewer-engagement {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .viewer-engagement button {
+    grid-column: 1 / -1;
+  }
+
+  .control-summary,
+  .control-health {
+    grid-template-columns: 1fr;
+  }
 }

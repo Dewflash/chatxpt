@@ -80,10 +80,21 @@ describe("authenticated Twitch Extension viewer application", () => {
     expect(beforeVote).toMatchObject({
       participationMode: "twitch-extension",
       canVote: true,
+      canReact: true,
       acceptedCandidateId: null,
       questCycle: { status: "voting", voteTallies: [] },
     });
     expect(beforeVote.questCycle.options).toHaveLength(3);
+
+    const reacted = await application.react(firstHeader, {
+      commandId: "viewer-one-reaction",
+      reaction: "hype",
+    });
+    expect(reacted).toMatchObject({
+      ok: true,
+      outcome: "committed",
+      view: { communityHype: 1, canReact: true },
+    });
 
     const accepted = await application.vote(firstHeader, {
       commandId: "viewer-one-vote",

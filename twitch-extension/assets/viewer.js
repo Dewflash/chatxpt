@@ -10,6 +10,9 @@
   const connectionState = document.getElementById("connection-state");
   const apiBaseLabel = document.getElementById("api-base-label");
   const countdown = document.getElementById("countdown");
+  const communityHype = document.getElementById("community-hype");
+  const sessionPoints = document.getElementById("session-points");
+  const sendHypeButton = document.getElementById("send-hype");
 
   let apiBase = null;
   let token = null;
@@ -17,6 +20,7 @@
   let selectedCandidateId = null;
   let pendingCandidateId = null;
   let refreshInFlight = false;
+  let reactionPending = false;
 
   function trustedApiBase(value) {
     try {
@@ -48,8 +52,8 @@
       .replaceAll("'", "&#039;");
   }
 
-  function makeCommandId() {
-    return `twx-vote-${crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)}`;
+  function makeCommandId(prefix) {
+    return `twx-${prefix}-${crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)}`;
   }
 
   function phase() {
@@ -104,13 +108,18 @@
         token &&
         apiBase,
     );
+    const canReact = Boolean(view && view.canReact && token && apiBase);
+    communityHype.textContent = view ? String(view.communityHype) : "0";
+    sessionPoints.textContent = view ? String(view.sessionPoints) : "0";
+    sendHypeButton.disabled = !canReact || reactionPending;
+    sendHypeButton.textContent = reactionPending ? "Sending hype…" : "Send hype";
     submitButton.disabled =
       !canVote || pendingCandidateId !== null || selectedCandidateId === null;
     submitButton.textContent = acceptedCandidateId
       ? "Vote counted"
       : pendingCandidateId
         ? "Sending..."
-        : "Submit vote";
+        : "Vote";
 
     if (options.length === 0) {
       questList.innerHTML = [
@@ -142,7 +151,7 @@
           `<strong>${escapeHtml(candidate.title)}</strong>`,
           `<small>${escapeHtml(candidate.instruction)}</small>`,
           `<em>${escapeHtml(candidate.difficulty)} · ${candidate.durationSeconds}s · ${candidate.rewardPoints} pts${tally}</em>`,
-          active ? "<mark>Winning quest</mark>" : "",
+          active ? "<mark>Winning sidequest</mark>" : "",
           "</span>",
           "</button>",
         ].join("");
@@ -153,13 +162,13 @@
       const percent = Math.round(view.questCycle.progress.value * 100);
       questList.insertAdjacentHTML(
         "beforeend",
-        `<div class="quest-progress"><span>Quest progress</span><strong>${percent}%</strong><progress max="100" value="${percent}">${percent}%</progress></div>`,
+        `<div class="quest-progress"><span>Sidequest progress</span><strong>${percent}%</strong><progress max="100" value="${percent}">${percent}%</progress></div>`,
       );
     }
     if (view.questCycle.result) {
       questList.insertAdjacentHTML(
         "beforeend",
-        `<div class="quest-result"><strong>Quest ${escapeHtml(view.questCycle.result.outcome)}</strong><span>${escapeHtml(view.questCycle.result.reason)} · ${view.questCycle.result.rewardPointsAwarded} pts awarded</span></div>`,
+        `<div class="quest-result"><strong>Sidequest ${escapeHtml(view.questCycle.result.outcome)}</strong><span>${escapeHtml(view.questCycle.result.reason)} · ${view.questCycle.result.rewardPointsAwarded} pts awarded</span></div>`,
       );
     }
 
@@ -167,7 +176,7 @@
       button.addEventListener("click", () => {
         selectedCandidateId = button.dataset.candidateId;
         const candidate = options.find((item) => item.candidateId === selectedCandidateId);
-        setStatus(candidate ? `${candidate.title} selected.` : "Quest selected.", "Ready");
+        setStatus(candidate ? `${candidate.title} selected.` : "Sidequest selected.", "Ready");
         render();
       });
     });
@@ -206,11 +215,11 @@
         selectedCandidateId = view.acceptedCandidateId;
         setStatus("Vote accepted. Live tallies are visible.", "Counted");
       } else if (phase() === "voting") {
-        setStatus("Pick one quest, then submit your vote.", "Ready");
+        setStatus("Select one sidequest, then vote.", "Ready");
       } else if (phase() === "active") {
-        setStatus("Winner confirmed. Quest in progress.", "Live");
+        setStatus("Winner confirmed. Sidequest in progress.", "Live");
       } else if (phase() === "result") {
-        setStatus("Authoritative quest result received.", "Complete");
+        setStatus("Authoritative sidequest result received.", "Complete");
       } else {
         setStatus("Waiting for the next sidequest.", "Ready");
       }
@@ -233,7 +242,7 @@
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          commandId: makeCommandId(),
+          commandId: makeCommandId("vote"),
           candidateId: selectedCandidateId,
         }),
       });
@@ -257,7 +266,36 @@
     }
   }
 
+  async function submitReaction() {
+    if (!view || !view.canReact || reactionPending) return;
+    reactionPending = true;
+    render();
+    try {
+      const response = await authorizedFetch("/api/twitch/extension/commands", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ commandId: makeCommandId("reaction"), reaction: "hype" }),
+      });
+      const payload = await response.json();
+      if (payload.view) view = payload.view;
+      if (!response.ok || !payload.ok) {
+        setStatus(
+          payload.error && payload.error.message ? payload.error.message : "Hype reaction was not accepted.",
+          "Ready",
+        );
+      } else {
+        setStatus("Hype added to the community meter.", "Counted");
+      }
+    } catch {
+      setStatus("Reaction response interrupted. Reconnecting…", "Offline");
+    } finally {
+      reactionPending = false;
+      render();
+    }
+  }
+
   submitButton.addEventListener("click", submitVote);
+  sendHypeButton.addEventListener("click", submitReaction);
   window.setInterval(refresh, 1500);
   window.setInterval(renderCountdown, 250);
   document.addEventListener("visibilitychange", () => {

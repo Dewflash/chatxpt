@@ -110,13 +110,13 @@ function connectionLabel(status: string | undefined) {
 function connectionRecoveryCopy(status: string | undefined) {
   switch (status) {
     case "degraded":
-      return "We are reconnecting. Your latest safe quest stays visible, but voting and reactions are paused.";
+      return "We are reconnecting. Your latest safe sidequest stays visible, but voting and reactions are paused.";
     case "permission-denied":
       return "ChatXPT needs permission before this panel can send votes or reactions.";
     case "unavailable":
-      return "Voting is temporarily unavailable. The latest safe quest stays visible while ChatXPT recovers.";
+      return "Voting is temporarily unavailable. The latest safe sidequest stays visible while ChatXPT recovers.";
     case "misconfigured":
-      return "This viewer surface needs streamer setup before it can reconnect. Your latest safe quest stays visible.";
+      return "This viewer surface needs streamer setup before it can reconnect. Your latest safe sidequest stays visible.";
     default:
       return "Voting is paused while ChatXPT reconnects.";
   }
@@ -125,11 +125,11 @@ function connectionRecoveryCopy(status: string | undefined) {
 function overlayRecoveryCopy(status: string | undefined) {
   switch (status) {
     case "degraded":
-      return "Reconnecting to ChatXPT. The latest safe quest stays visible.";
+      return "Reconnecting to ChatXPT. The latest safe sidequest stays visible.";
     case "permission-denied":
-      return "Overlay access needs to be restored. The latest safe quest stays visible.";
+      return "Overlay access needs to be restored. The latest safe sidequest stays visible.";
     case "unavailable":
-      return "Overlay updates are temporarily unavailable. The latest safe quest stays visible.";
+      return "Overlay updates are temporarily unavailable. The latest safe sidequest stays visible.";
     case "misconfigured":
       return "Overlay setup needs attention before live updates can resume.";
     default:
@@ -158,7 +158,7 @@ function commandErrorCopy(error: DomainError): {
       };
     case "stale-revision":
       return {
-        title: "The quest changed",
+        title: "The sidequest changed",
         body: `${error.message} Your selection is preserved while ChatXPT refreshes.`,
         tone: "warning",
       };
@@ -204,7 +204,7 @@ function commandErrorCopy(error: DomainError): {
 function phaseTitle(phase: ReturnType<typeof presentViewer>["phase"]): string {
   switch (phase) {
     case "loading":
-      return "Loading quest";
+      return "Loading sidequest";
     case "offline":
       return "Stream offline";
     case "ended":
@@ -214,11 +214,11 @@ function phaseTitle(phase: ReturnType<typeof presentViewer>["phase"]): string {
     case "voting":
       return "Choose the sidequest";
     case "active":
-      return "Quest active";
+      return "Sidequest active";
     case "result":
-      return "Quest result";
+      return "Sidequest result";
     case "waiting":
-      return "Waiting for quests";
+      return "Waiting for sidequests";
     case "cooldown":
       return "Next vote soon";
   }
@@ -241,15 +241,15 @@ function resultCopy(result: NonNullable<ReturnType<typeof presentViewer>["result
 } {
   switch (result.outcome) {
     case "succeeded":
-      return { title: "Quest completed", tone: "success" };
+      return { title: "Sidequest completed", tone: "success" };
     case "failed":
-      return { title: "Quest attempt ended", tone: "warning" };
+      return { title: "Sidequest attempt ended", tone: "warning" };
     case "cancelled":
-      return { title: "Quest cancelled", tone: "warning" };
+      return { title: "Sidequest cancelled", tone: "warning" };
     case "skipped":
-      return { title: "Quest skipped", tone: "info" };
+      return { title: "Sidequest skipped", tone: "info" };
     case "expired":
-      return { title: "Quest expired", tone: "warning" };
+      return { title: "Sidequest expired", tone: "warning" };
   }
 }
 
@@ -384,8 +384,8 @@ function ViewerShell({
     (presentation.connection?.retryable === true || commandError?.retryable === true);
   const resultDetails = presentation.result ? resultCopy(presentation.result) : null;
   const voteStatus = (() => {
-    if (presentation.phase === "active") return "Winner confirmed. The quest is now active.";
-    if (presentation.phase === "result") return "The authoritative quest result is shown above.";
+    if (presentation.phase === "active") return "Winner confirmed. The sidequest is now active.";
+    if (presentation.phase === "result") return "The authoritative sidequest result is shown above.";
     if (presentation.phase === "cooldown") return "The next vote opens after the official cooldown.";
     if (waitingForResult) return "Awaiting the official result.";
     if (accepted) return "Vote accepted. Live tallies are now visible.";
@@ -479,7 +479,7 @@ function ViewerShell({
           {presentation.progress ? (
             <div className={styles.progressBlock}>
               <Progress
-                label="Quest progress"
+                label="Sidequest progress"
                 value={presentation.progress.value}
                 max={1}
                 valueLabel={`${Math.round(presentation.progress.value * 100)}%`}
@@ -576,7 +576,7 @@ export function ChatFallbackInstructions({ view, now }: ChatFallbackInstructions
   const title = (() => {
     if (!available) return "Chat voting inactive";
     if (waitingForResult) return "Awaiting the official result";
-    if (presentation.phase === "active") return "Quest active";
+    if (presentation.phase === "active") return "Sidequest active";
     if (presentation.phase === "result" && resultDetails) return resultDetails.title;
     if (presentation.phase === "cooldown") return "Next vote soon";
     return voting ? "Vote in Twitch chat" : "Chat voting inactive";
@@ -635,7 +635,7 @@ export function ChatFallbackInstructions({ view, now }: ChatFallbackInstructions
         <p className={styles.statusLine}>
           {voting && !waitingForResult
             ? "Send only 1, 2, or 3. ChatXPT replies with counted, duplicate, rejected, or late status after Twitch receives the message."
-            : "Quest and result updates come from ChatXPT. No separate viewer account is needed."}
+            : "Sidequest and result updates come from ChatXPT. No separate viewer account is needed."}
         </p>
       </Panel>
     </DesignSystemRoot>

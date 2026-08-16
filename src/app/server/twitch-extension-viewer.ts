@@ -13,6 +13,7 @@ import {
   domainErrorSchema,
   serviceHealthSchema,
   viewerViewModelSchema,
+  viewerReactionCommandSchema,
   viewerVoteCommandSchema,
   streamerQuestCommandSchema,
   streamerQuestProgressCommandSchema,
@@ -40,15 +41,21 @@ import {
   type ChatXptPersistenceRuntime,
   type VerifiedCommandActor,
 } from "@/realtime";
-import {
-  createConfiguredPersistenceRuntime,
-  resolveServerPersistenceEnvironment,
-} from "@/realtime/server";
+import { resolveServerPersistenceEnvironment } from "@/realtime/server";
+
+import { getChatXptServerRuntime } from "./runtime";
 
 export const twitchExtensionVoteRequestSchema = z
   .object({
     commandId: z.string().trim().min(1).max(128),
     candidateId: z.string().trim().min(1).max(128),
+  })
+  .strict();
+
+export const twitchExtensionReactionRequestSchema = z
+  .object({
+    commandId: z.string().trim().min(1).max(128),
+    reaction: z.literal("hype"),
   })
   .strict();
 
@@ -78,6 +85,11 @@ export type LocalDiagnosticCandidate = z.infer<typeof localDiagnosticCandidatesS
 export interface TwitchExtensionVoteRequest {
   readonly commandId: string;
   readonly candidateId: string;
+}
+
+export interface TwitchExtensionReactionRequest {
+  readonly commandId: string;
+  readonly reaction: "hype";
 }
 
 export type TwitchExtensionViewerApplicationErrorCode =
@@ -433,6 +445,48 @@ export class TwitchExtensionViewerApplication {
     throw applicationError("dependency-unavailable", "Vote processing is unavailable", true);
   }
 
+  async react(
+    authorizationHeader: string | null,
+    input: TwitchExtensionReactionRequest,
+  ): Promise<TwitchExtensionVoteResult> {
+    const parsedInput = twitchExtensionReactionRequestSchema.safeParse(input);
+    if (!parsedInput.success) {
+      throw applicationError("invalid-command", "Reaction command is invalid");
+    }
+    const authorized = await this.authorize(authorizationHeader);
+    const result = await this.executeTrusted(
+      viewerReactionCommandSchema.parse({
+        contractVersion: CONTRACT_VERSION,
+        sessionId: authorized.state.session.sessionId,
+        questCycleId: authorized.state.questCycle.envelope.questCycleId,
+        commandId: parsedInput.data.commandId,
+        correlationId: `twitch-extension-${parsedInput.data.commandId}`,
+        expectedRevision: authorized.state.session.revision,
+        issuedAt: this.now(),
+        actor: {
+          kind: authorized.actor.kind,
+          actorId: authorized.actor.actorId,
+        },
+        type: "viewer.react",
+        reaction: parsedInput.data.reaction,
+      }),
+      authorized.actor,
+      authorized.viewerId,
+    );
+    if (result.ok) {
+      return {
+        ok: true,
+        outcome: result.outcome,
+        view: await this.readViewer(authorizationHeader),
+      };
+    }
+    return {
+      ok: false,
+      error: domainErrorSchema.parse(result.error),
+      view: await this.readViewer(authorizationHeader),
+    };
+  }
+
   private async authorize(authorizationHeader: string | null): Promise<AuthorizedSession> {
     let authorization: TwitchExtensionAuthorization;
     try {
@@ -606,7 +660,7 @@ export class TwitchExtensionViewerApplication {
           twitchChatVoting: true,
           twitchIdentity: true,
           anonymousParticipation: true,
-          reactions: false,
+          reactions: true,
         },
       },
       profile: {
@@ -851,9 +905,8 @@ const globalApplication = globalThis as typeof globalThis & {
 export function getTwitchExtensionViewerApplication(): TwitchExtensionViewerApplication {
   if (globalApplication[applicationKey] !== undefined) return globalApplication[applicationKey];
   const environment = resolveServerPersistenceEnvironment(process.env);
-  const persistence = createConfiguredPersistenceRuntime(environment);
   globalApplication[applicationKey] = new TwitchExtensionViewerApplication({
-    persistence,
+    persistence: getChatXptServerRuntime().persistence,
     extensionSecret: process.env.TWITCH_EXTENSION_SECRET ?? "",
     localDiagnostics: environment.mode === "memory" && environment.deployment === "local",
   });

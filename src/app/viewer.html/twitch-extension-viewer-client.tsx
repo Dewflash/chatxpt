@@ -53,10 +53,10 @@ function responseError(payload: ViewerResponse, fallback: string): DomainError {
   });
 }
 
-function commandId(): string {
+function commandId(prefix = "vote"): string {
   return typeof window.crypto?.randomUUID === "function"
-    ? `twx-vote-${window.crypto.randomUUID()}`
-    : `twx-vote-${Date.now().toString(36)}`;
+    ? `twx-${prefix}-${window.crypto.randomUUID()}`
+    : `twx-${prefix}-${Date.now().toString(36)}`;
 }
 
 export function TwitchExtensionViewerClient() {
@@ -207,6 +207,34 @@ export function TwitchExtensionViewerClient() {
     }
   }, [refresh]);
 
+  const submitReaction = useCallback(async (reaction: string) => {
+    const activeToken = latestToken.current;
+    if (activeToken === null) return;
+    try {
+      const response = await fetch("/api/twitch/extension/commands", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${activeToken}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ commandId: commandId("reaction"), reaction }),
+      });
+      const payload = (await response.json()) as ViewerResponse;
+      if (payload.view !== undefined) setView(payload.view);
+      if (!response.ok || !payload.ok) {
+        setCommandError(responseError(payload, "The reaction could not be accepted."));
+      }
+    } catch {
+      setCommandError(
+        domainErrorSchema.parse({
+          code: "dependency-unavailable",
+          message: "The reaction response was interrupted. ChatXPT is reconnecting.",
+          retryable: true,
+        }),
+      );
+    }
+  }, []);
+
   return (
     <TwitchExtensionViewerSurface
       view={view}
@@ -219,6 +247,7 @@ export function TwitchExtensionViewerClient() {
         setCommandError(null);
       }}
       onVoteCandidate={(candidateId) => void submitVote(candidateId)}
+      onReact={(reaction) => void submitReaction(reaction)}
     />
   );
 }

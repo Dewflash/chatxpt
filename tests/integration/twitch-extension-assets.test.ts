@@ -21,6 +21,7 @@ describe("Twitch Extension upload package", () => {
       "assets/extension.css",
       "assets/environment.js",
       "assets/viewer.js",
+      "assets/broadcaster.js",
     ];
 
     for (const entry of expectedEntries) {
@@ -49,11 +50,11 @@ describe("Twitch Extension upload package", () => {
       const expectedScripts =
         file === "viewer.html"
           ? [twitchHelperUrl, "assets/environment.js", "assets/viewer.js"]
-          : [twitchHelperUrl];
+          : [twitchHelperUrl, "assets/environment.js", "assets/broadcaster.js"];
 
       expect(scriptSources).toEqual(expectedScripts);
       expect(source.indexOf("<script")).toBeLessThan(source.indexOf('href="assets/extension.css"'));
-      expect(source).not.toMatch(/<script(?![^>]*src="(?:https:\/\/extension-files\.twitch\.tv\/helper\/v1\/twitch-ext\.min\.js|assets\/environment\.js|assets\/viewer\.js)"[^>]*><\/script>)/i);
+      expect(source).not.toMatch(/<script(?![^>]*src="(?:https:\/\/extension-files\.twitch\.tv\/helper\/v1\/twitch-ext\.min\.js|assets\/environment\.js|assets\/(?:viewer|broadcaster)\.js)"[^>]*><\/script>)/i);
       expect(source).not.toMatch(/\sstyle=/i);
       expect(source).not.toMatch(/<style\b/i);
       expect(source.match(/https?:\/\//g)).toEqual(["https://"]);
@@ -73,6 +74,7 @@ describe("Twitch Extension upload package", () => {
     const readme = readAsset("README.md");
     const combinedHtml = htmlFiles.map((file) => readAsset(file)).join("\n");
     const viewerJs = readAsset("assets/viewer.js");
+    const broadcasterJs = readAsset("assets/broadcaster.js");
     const environmentJs = readAsset("assets/environment.js");
 
     expect(readme).toContain("do not by themselves prove a real Twitch Local Test");
@@ -87,6 +89,12 @@ describe("Twitch Extension upload package", () => {
     expect(viewerJs).not.toContain("/api/demo-participation");
     expect(viewerJs).not.toContain("localStorage");
     expect(viewerJs).not.toContain("voterKey");
+    expect(broadcasterJs).toContain("onAuthorized");
+    expect(broadcasterJs).toContain("/api/studio/session");
+    expect(broadcasterJs).toContain("/api/studio/commands");
+    expect(broadcasterJs).toContain("authorization: `Bearer ${token}`");
+    expect(broadcasterJs).not.toContain("localStorage");
+    expect(broadcasterJs).toContain('type: "streamer.quest"');
     expect(combinedHtml).toContain("Vote for the sidequest");
     expect(combinedHtml).not.toContain("Role 1");
     expect(combinedHtml).not.toContain("Role 4");
