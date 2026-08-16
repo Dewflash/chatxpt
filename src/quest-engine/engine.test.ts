@@ -891,43 +891,32 @@ describe("DefaultQuestEngine", () => {
     ]);
   });
 
-  it("keeps automatic value 1 non-terminal until manual completion", () => {
-    const progressResult = decision(
-      new DefaultQuestEngine().decide({
-        currentState: activeProgressState(),
-        command: progressCommand({ requestedValue: 1 }),
-        candidateBatch: null,
-        questProgressValidationContext: {
-          profile: progressProfile,
-          session: progressSession,
-          gameplay: progressGameplay({ value: 1 }),
-          audience: null,
-          completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
-        },
-        now: ROLE_3_FIXTURE_TIME + 1_000,
-      }),
-    );
-
-    expect(progressResult.nextState).toMatchObject({
-      status: "active",
-      progress: {
-        value: 1,
-        method: "automatic",
-        evidenceSignalIds: ["role-3-progress-signal"],
+  it("rejects automatic value 1 until a predicate-bearing completion rule exists", () => {
+    const automaticResult = new DefaultQuestEngine().decide({
+      currentState: activeProgressState(),
+      command: progressCommand({ requestedValue: 1 }),
+      candidateBatch: null,
+      questProgressValidationContext: {
+        profile: progressProfile,
+        session: progressSession,
+        gameplay: progressGameplay({ value: 1 }),
+        audience: null,
+        completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
       },
-      completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
-      result: null,
+      now: ROLE_3_FIXTURE_TIME + 1_000,
     });
-    expect(progressResult.events).toEqual([
-      {
-        eventType: "quest-cycle.progress-updated",
-        attributes: { method: "automatic", value: 1 },
+
+    expect(automaticResult).toMatchObject({
+      ok: false,
+      error: {
+        code: "validation",
+        details: { reason: "completion-predicate-unavailable" },
       },
-    ]);
+    });
 
     const completionResult = decision(
       new DefaultQuestEngine().decide({
-        currentState: progressResult.nextState,
+        currentState: activeProgressState(),
         command: role3StreamerCommand("succeed"),
         candidateBatch: null,
         now: ROLE_3_FIXTURE_TIME + 2_000,

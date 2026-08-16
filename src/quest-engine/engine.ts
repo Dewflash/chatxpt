@@ -246,6 +246,14 @@ function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
       reason: progressDecision.reason,
     });
   }
+  // The current canonical rule names only allowed signal kinds. D-060 requires an
+  // explicit predicate (target plus comparison) before validated automatic evidence may reach 1.
+  // Until Core publishes that predicate-bearing contract, system progress stays partial.
+  if (input.command.type === "system.quest-progress" && input.command.requestedValue === 1) {
+    return error("validation", "Quest progress update was rejected", {
+      reason: "completion-predicate-unavailable",
+    });
+  }
 
   return accept(
     input.currentState,
