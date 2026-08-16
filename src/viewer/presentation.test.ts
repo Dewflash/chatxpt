@@ -43,6 +43,7 @@ describe("Role 5 presentation boundary", () => {
     expect(presentOverlay(null)).toMatchObject({
       readOnly: true,
       phase: "loading",
+      options: [],
       activeQuest: null,
     });
   });
@@ -64,6 +65,7 @@ describe("Role 5 presentation boundary", () => {
     ["ended", "hosted-board", "idle", "ended"],
     ["live", "unavailable", "idle", "unavailable"],
     ["live", "twitch-extension", "succeeded", "result"],
+    ["live", "twitch-extension", "cooldown", "cooldown"],
   ] as const)(
     "maps authoritative session %s, mode %s, and cycle %s to %s",
     (sessionStatus, participationMode, cycleStatus, phase) => {
@@ -157,11 +159,41 @@ describe("Role 5 presentation boundary", () => {
 
     expect(presentation.readOnly).toBe(true);
     expect(presentation.phase).toBe("active");
+    expect(presentation.options).toHaveLength(3);
     expect(presentation.activeQuest?.candidateId).toBe(fixtureOptions[2].candidateId);
     expect(presentation.progress).toEqual({
       value: 0.5,
       updatedAt: contractFixtureOverlayView.envelope.occurredAt + 5_000,
       method: "automatic",
     });
+  });
+
+  it("passes all three authoritative choices and tallies to the read-only voting overlay", () => {
+    const view = overlayViewModelSchema.parse({
+      ...contractFixtureOverlayView,
+      session: {
+        ...contractFixtureOverlayView.session,
+        status: "live",
+      },
+      questCycle: {
+        ...contractFixtureOverlayView.questCycle,
+        status: "voting",
+        options: fixtureOptions,
+        voteTallies: [
+          { candidateId: fixtureOptions[0].candidateId, votes: 4 },
+          { candidateId: fixtureOptions[1].candidateId, votes: 2 },
+          { candidateId: fixtureOptions[2].candidateId, votes: 0 },
+        ],
+        startsAt: contractFixtureOverlayView.envelope.occurredAt,
+        endsAt: contractFixtureOverlayView.envelope.occurredAt + 30_000,
+      },
+    });
+
+    const presentation = presentOverlay(view);
+
+    expect(presentation.phase).toBe("voting");
+    expect(presentation.activeQuest).toBeNull();
+    expect(presentation.options).toHaveLength(3);
+    expect(presentation.options.map((option) => option.votes)).toEqual([4, 2, 0]);
   });
 });

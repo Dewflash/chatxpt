@@ -91,6 +91,12 @@
   min-width: 0;
 }
 
+.optionBody {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
 .winnerReveal {
   animation: winner-reveal 600ms var(--cx-motion-easing) both;
 }
@@ -190,6 +196,18 @@
   opacity: 0.78;
 }
 
+.progressBlock {
+  display: grid;
+  gap: 4px;
+}
+
+.progressMeta {
+  margin: 0;
+  color: var(--cx-color-text-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
 .engagement {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, auto);
@@ -264,6 +282,34 @@
   min-width: 280px;
 }
 
+.overlayVotingList {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.overlayVotingOption {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 7px 0;
+  border-top: 1px solid var(--cx-color-border);
+}
+
+.overlayVotingOption:first-child {
+  border-top: 0;
+}
+
+.overlayTally {
+  color: var(--cx-color-text-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
 .overlayEmpty {
   width: 1px;
   height: 1px;
@@ -290,10 +336,23 @@
 
   .header {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .optionFooter {
     gap: 4px;
+  }
+
+  .engagement {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .overlayVotingOption {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .overlayTally {
+    grid-column: 2;
   }
 }
 
