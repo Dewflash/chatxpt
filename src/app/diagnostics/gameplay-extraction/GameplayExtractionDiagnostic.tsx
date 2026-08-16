@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  buildMultiGameGameplaySnapshot,
   MultiGameVisionAnalyzer,
   createBrowserCanvasPixelSampler,
   streamMultiGameVisionAssessments,
@@ -34,6 +35,26 @@ interface LatestDiagnostic {
   readonly detectedFacts: readonly string[];
 }
 
+interface GameplayIngressAuthority {
+  readonly sessionId: string;
+  readonly broadcasterId: string;
+  readonly questCycleId: string | null;
+  readonly revision: number;
+  readonly evidenceClass: "live" | "diagnostic" | "fixture";
+}
+
+interface GameplayIngressPayload {
+  readonly ok: boolean;
+  readonly grant?: {
+    readonly token: string;
+    readonly expiresAt: number;
+    readonly authority: GameplayIngressAuthority;
+  };
+  readonly authority?: GameplayIngressAuthority;
+  readonly result?: { readonly status: string; readonly reason?: string };
+  readonly error?: { readonly message?: string; readonly retryable?: boolean };
+}
+
 function diagnosticError(caught: unknown): string {
   if (caught instanceof DOMException && caught.name === "NotAllowedError") {
     return "Camera access is blocked by macOS. Allow camera access for the browser running this diagnostic, then retry.";
@@ -59,11 +80,14 @@ function selectionFor(game: DiagnosticGame): GameProfileSelection {
   };
 }
 
-export function GameplayExtractionDiagnostic() {
+export function GameplayExtractionDiagnostic({ initialSessionId = "" }: { readonly initialSessionId?: string }) {
   const [game, setGame] = useState<DiagnosticGame>("brawl-stars");
   const [running, setRunning] = useState(false);
   const [latest, setLatest] = useState<LatestDiagnostic | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState(initialSessionId);
+  const [ingressStatus, setIngressStatus] = useState("Diagnostic only");
+  const [acceptedSnapshots, setAcceptedSnapshots] = useState(0);
   const controllerRef = useRef<AbortController | null>(null);
   const selectedProfile = useMemo(() => selectionFor(game), [game]);
 
@@ -73,24 +97,75 @@ export function GameplayExtractionDiagnostic() {
     setRunning(false);
   }
 
-  useEffect(() => () => controllerRef.current?.abort(), []);
+  useEffect(() => {
+    return () => controllerRef.current?.abort();
+  }, []);
 
-  async function start() {
+  async function start(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     if (running) return;
+    const data = new FormData(event.currentTarget);
+    const requestedSessionId = sessionId.trim();
+    const setupKey = String(data.get("gameplaySetupKey") ?? "");
     const controller = new AbortController();
     controllerRef.current = controller;
     setError(null);
     setLatest(null);
+    setAcceptedSnapshots(0);
     setRunning(true);
     let mediaStream: MediaStream | null = null;
+    let ingressGrant: { token: string; expiresAt: number } | null = null;
+    let ingressAuthority: GameplayIngressAuthority | null = null;
     try {
+      const issueIngressGrant = async (): Promise<{
+        readonly grant: { readonly token: string; readonly expiresAt: number };
+        readonly authority: GameplayIngressAuthority;
+      }> => {
+        const response = await fetch("/api/gameplay/ingress/grant", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-chatxpt-gameplay-setup-key": setupKey,
+          },
+          cache: "no-store",
+          signal: controller.signal,
+          body: JSON.stringify({ sessionId: requestedSessionId }),
+        });
+        const payload = (await response.json()) as GameplayIngressPayload;
+        if (!response.ok || !payload.ok || payload.grant === undefined) {
+          throw new Error(payload.error?.message ?? "Gameplay Capture authorization failed.");
+        }
+        setIngressStatus("Authorized; waiting for OBS Virtual Camera");
+        return {
+          grant: { token: payload.grant.token, expiresAt: payload.grant.expiresAt },
+          authority: payload.grant.authority,
+        };
+      };
+
+      if (requestedSessionId.length > 0) {
+        if (setupKey.trim().length === 0) {
+          throw new Error("Enter the server-only Gameplay Capture setup key.");
+        }
+        const issued = await issueIngressGrant();
+        ingressGrant = issued.grant;
+        ingressAuthority = issued.authority;
+      } else {
+        setIngressStatus("Diagnostic only; no authoritative session selected");
+      }
       mediaStream = await requestObsVirtualCameraStream();
       const capture = new MediaStreamVideoFrameCapture(mediaStream, { stopStreamOnEnd: true });
       const source = new BrowserMediaFrameSource({
-        sessionId: "obs-extraction-diagnostic",
-        correlationId: "obs-extraction-diagnostic",
+        sessionId: requestedSessionId || "obs-extraction-diagnostic",
+        correlationId: `obs-gameplay-capture-${Date.now()}`,
         capture,
-        evidenceClass: "diagnostic",
+        evidenceClass: ingressAuthority?.evidenceClass ?? "diagnostic",
+        authority: requestedSessionId.length === 0
+          ? undefined
+          : () => ({
+              questCycleId: ingressAuthority?.questCycleId ?? null,
+              revision: ingressAuthority?.revision ?? 0,
+              evidenceClass: ingressAuthority?.evidenceClass ?? "diagnostic",
+            }),
         source: "obs-virtual-camera",
         frameIntervalMs: 100,
       });
@@ -106,6 +181,44 @@ export function GameplayExtractionDiagnostic() {
         if (output.status !== "ready") continue;
         frameCount += 1;
         const assessment = output.assessment;
+        if (requestedSessionId.length > 0) {
+          if (ingressGrant === null || ingressGrant.expiresAt <= Date.now() + 30_000) {
+            const issued = await issueIngressGrant();
+            ingressGrant = issued.grant;
+            ingressAuthority = issued.authority;
+          }
+          const currentGrant = ingressGrant;
+          if (currentGrant === null) throw new Error("Gameplay Capture grant is unavailable.");
+          const snapshot = buildMultiGameGameplaySnapshot(output);
+          const response = await fetch("/api/gameplay/ingress/snapshot", {
+            method: "POST",
+            headers: {
+              authorization: `Bearer ${currentGrant.token}`,
+              "content-type": "application/json",
+            },
+            cache: "no-store",
+            signal: controller.signal,
+            body: JSON.stringify(snapshot),
+          });
+          const payload = (await response.json()) as GameplayIngressPayload;
+          if (payload.authority !== undefined) ingressAuthority = payload.authority;
+          if (!response.ok || !payload.ok) {
+            if (payload.result?.reason === "state-mismatch") {
+              setIngressStatus("Session changed; capture authority refreshed");
+            } else if (response.status === 429) {
+              setIngressStatus("Capture cadence throttled; retrying safely");
+            } else {
+              throw new Error(payload.error?.message ?? "Gameplay snapshot was rejected.");
+            }
+          } else {
+            setAcceptedSnapshots((count) => count + (payload.result?.status === "duplicate" ? 0 : 1));
+            setIngressStatus(
+              payload.result?.status === "duplicate"
+                ? "Connected; duplicate safely ignored"
+                : "Connected; normalized game facts accepted",
+            );
+          }
+        }
         setLatest({
           frameCount,
           capturedAt: output.frame.capturedAt,
@@ -149,11 +262,12 @@ export function GameplayExtractionDiagnostic() {
   return (
     <main className={styles.shell}>
       <header className={styles.header}>
-        <p className={styles.eyebrow}>Local diagnostic only</p>
-        <h1>Gameplay Capture diagnostic</h1>
+        <p className={styles.eyebrow}>{sessionId.trim() ? "Authoritative session input" : "Local diagnostic only"}</p>
+        <h1>Gameplay Capture</h1>
         <p>
           Reads the OBS Virtual Camera at a bounded cadence and runs game-neutral analysis locally.
-          No frame, camera image, or player identity is uploaded or persisted.
+          No frame, camera image, or player identity is uploaded or persisted. When connected to a
+          session, only normalized game facts and their confidence are sent to ChatXPT Core.
         </p>
       </header>
 
@@ -164,21 +278,34 @@ export function GameplayExtractionDiagnostic() {
           <li>Click <strong>Start Virtual Camera</strong> in OBS.</li>
           <li>Select the matching game profile below, then allow camera access.</li>
         </ol>
-        <label className={styles.field}>
-          Game Profile
-          <select value={game} disabled={running} onChange={(event) => setGame(event.target.value as DiagnosticGame)}>
-            <option value="brawl-stars">Brawl Stars — calibrated when HUD confirms</option>
-            <option value="minecraft">Minecraft Java — vanilla HUD calibration</option>
-            <option value="generic">Generic — universal visual signals only</option>
-          </select>
-        </label>
-        <div className={styles.actions}>
-          <button type="button" disabled={running} onClick={() => void start()}>Start diagnostic</button>
-          <button type="button" disabled={!running} onClick={stop}>Stop</button>
-        </div>
+        <form onSubmit={(event) => void start(event)}>
+          <label className={styles.field}>
+            ChatXPT session ID (leave empty for diagnostic-only analysis)
+            <input value={sessionId} disabled={running} autoComplete="off" onChange={(event) => setSessionId(event.target.value)} />
+          </label>
+          {sessionId.trim() ? (
+            <label className={styles.field}>
+              Server-only Gameplay Capture setup key
+              <input name="gameplaySetupKey" type="password" disabled={running} required autoComplete="off" />
+            </label>
+          ) : null}
+          <label className={styles.field}>
+            Game Profile
+            <select value={game} disabled={running} onChange={(event) => setGame(event.target.value as DiagnosticGame)}>
+              <option value="brawl-stars">Brawl Stars — calibrated when HUD confirms</option>
+              <option value="minecraft">Minecraft Java — vanilla HUD calibration</option>
+              <option value="generic">Generic — universal visual signals only</option>
+            </select>
+          </label>
+          <div className={styles.actions}>
+            <button type="submit" disabled={running}>{sessionId.trim() ? "Connect Gameplay Capture" : "Start diagnostic"}</button>
+            <button type="button" disabled={!running} onClick={stop}>Stop</button>
+          </div>
+        </form>
         <p className={styles.boundary}>
-          This route produces diagnostic input, not judged live-extraction evidence and not
-          authoritative quest progress.
+          Diagnostic-only analysis is not judged live-extraction evidence. A connected session
+          uses real OBS Virtual Camera frames and the authoritative ingress boundary; it still
+          does not claim what game fact exists when confidence is insufficient.
         </p>
       </section>
 
@@ -186,6 +313,8 @@ export function GameplayExtractionDiagnostic() {
 
       <section className={styles.grid} aria-live="polite" aria-label="Extraction status">
         <article className={styles.metric}><span>Capture Health</span><strong>{running ? (latest === null ? "Starting" : "Observed") : error === null ? "Unavailable" : "Permission denied"}</strong></article>
+        <article className={styles.metric}><span>Core ingress</span><strong>{ingressStatus}</strong></article>
+        <article className={styles.metric}><span>Snapshots accepted</span><strong>{acceptedSnapshots}</strong></article>
         <article className={styles.metric}><span>Frames analyzed</span><strong>{latest?.frameCount ?? 0}</strong></article>
         <article className={styles.metric}><span>Game Profile</span><strong>{latest?.gameProfile ?? "Waiting"}</strong></article>
         <article className={styles.metric}><span>Support tier</span><strong>{latest?.supportTier ?? "Waiting"}</strong></article>

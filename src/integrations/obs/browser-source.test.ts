@@ -28,6 +28,9 @@ describe("OBS browser source descriptor", () => {
       sessionId: "fixture-session",
       accessToken: "fixture-overlay-token-0001",
     });
+    const url = new URL(descriptor.url);
+    expect(url.searchParams.has("overlayAccessToken")).toBe(false);
+    expect(url.hash).toContain("overlayAccessToken=");
   });
 
   it("allows localhost during development but requires HTTPS elsewhere", () => {
@@ -37,7 +40,7 @@ describe("OBS browser source descriptor", () => {
         sessionId: "fixture-session",
         accessToken: "fixture-overlay-token-0001",
       }).url,
-    ).toContain("http://localhost:3000/overlay");
+    ).toContain("http://localhost:3000/obs-overlay");
 
     expect(() =>
       createObsBrowserSourceDescriptor({
@@ -57,7 +60,7 @@ describe("OBS browser source descriptor", () => {
 
     const redacted = redactObsBrowserSourceUrl(descriptor.url);
 
-    expect(redacted).toContain("overlayAccessToken=redacted");
+    expect(redacted).toContain("#overlayAccessToken=redacted");
     expect(redacted).not.toContain("fixture-overlay-token-0001");
   });
 });

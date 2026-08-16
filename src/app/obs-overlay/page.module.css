@@ -1,0 +1,18 @@
+.root {
+  min-height: 100vh;
+  background: transparent;
+}
+
+.error {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  max-width: 440px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 111, 97, 0.7);
+  border-radius: 10px;
+  color: #fff;
+  background: rgba(12, 9, 18, 0.88);
+  font: 600 13px/1.4 system-ui, sans-serif;
+}

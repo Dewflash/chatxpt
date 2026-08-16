@@ -27,7 +27,7 @@ The final submission is not complete until the project owner records/uploads the
 | Evidence rules and manifest | `docs/evidence/GOLDEN_REHEARSAL_RUNBOOK.md`, `docs/evidence/manifest.json` | Ready for recorded evidence | Current manifest has inspection-only and fixture-only evidence; add real recording entries only after privacy-reviewed runs. |
 | Twitch Extension test package | `release/chatxpt-twitch-extension-finals.zip`, `twitch-extension/README.md` | Ready for Local/Hosted Test configuration | Uses Twitch `onAuthorized`, a build-owned exact EBS origin, and signed canonical viewer/vote routes; not real Twitch delivery or public approval evidence. |
 | UI/control-room state for recording | `http://localhost:3000/` | Ready locally | Top cockpit has two status bars, four main actions, and ribbon toggles for Studio, Stream analytics, Game signals, and Vote / overlay. |
-| OBS overlay URL | `http://localhost:3000/overlay?obs=1` | Ready locally | Add as OBS Browser Source above gameplay/screen capture. |
+| OBS overlay URL | Generated inside `/studio` for `/obs-overlay` | Implemented; external run required | Enter the server-only overlay setup key, generate the session-scoped read URL, and add it as an OBS Browser Source above gameplay capture. Never expose the fragment token. |
 | Viewer voting URL | `https://localhost:3000/viewer.html` through Twitch Local Test | Implemented; external run required | Direct browser access cannot invent a viewer identity. Joel/viewer votes through the installed panel; Twitch chat `1`/`2`/`3` remains the final fallback. |
 
 ## Five-Minute Video Contents To Capture

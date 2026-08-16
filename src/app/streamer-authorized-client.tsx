@@ -39,6 +39,119 @@ interface SurfacePayload {
   readonly error?: { readonly message?: string; readonly retryable?: boolean };
 }
 
+interface ObsDescriptorPayload {
+  readonly ok: boolean;
+  readonly descriptor?: {
+    readonly url: string;
+    readonly width: number;
+    readonly height: number;
+  };
+  readonly expiresAt?: number;
+  readonly error?: { readonly message?: string };
+}
+
+function StudioCaptureAndOverlaySetup({ sessionId }: { readonly sessionId: string }) {
+  const [descriptor, setDescriptor] = useState<ObsDescriptorPayload["descriptor"]>(undefined);
+  const [expiresAt, setExpiresAt] = useState<number | null>(null);
+  const [pending, setPending] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
+  const [copyMessage, setCopyMessage] = useState<string | null>(null);
+
+  async function generateOverlay(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    setPending(true);
+    setSetupError(null);
+    setCopyMessage(null);
+    try {
+      const response = await fetch("/api/obs/overlay/grant", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-chatxpt-obs-overlay-setup-key": String(data.get("overlaySetupKey") ?? ""),
+        },
+        body: JSON.stringify({
+          sessionId,
+          width: Number(data.get("overlayWidth")),
+          height: Number(data.get("overlayHeight")),
+        }),
+      });
+      const payload = (await response.json()) as ObsDescriptorPayload;
+      if (!response.ok || !payload.ok || payload.descriptor === undefined) {
+        setSetupError(payload.error?.message ?? "OBS Browser Source setup failed.");
+        return;
+      }
+      setDescriptor(payload.descriptor);
+      setExpiresAt(payload.expiresAt ?? null);
+    } catch {
+      setSetupError("OBS Browser Source setup was interrupted.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function copyUrl() {
+    if (descriptor === undefined) return;
+    try {
+      await navigator.clipboard.writeText(descriptor.url);
+      setCopyMessage("Secure OBS Browser Source URL copied.");
+    } catch {
+      setCopyMessage("Copy the URL from the field manually.");
+    }
+  }
+
+  return (
+    <aside className={styles.integrationSetup} aria-label="Stream input and broadcast output setup">
+      <section>
+        <p className={styles.setupEyebrow}>Stream input</p>
+        <h2>Gameplay Capture</h2>
+        <p>
+          Open the capture surface, choose the game profile, and connect OBS Virtual Camera. Only
+          normalized game facts are sent to this session; frames stay in the browser.
+        </p>
+        <a href={`/diagnostics/gameplay-extraction?sessionId=${encodeURIComponent(sessionId)}`}>
+          Open Gameplay Capture
+        </a>
+      </section>
+      <section>
+        <p className={styles.setupEyebrow}>Broadcast output</p>
+        <h2>OBS Browser Source</h2>
+        <p>
+          Generate a read-only overlay URL for this live session, then paste it into an OBS Browser
+          Source. This output never accepts votes or streamer commands.
+        </p>
+        <form onSubmit={generateOverlay}>
+          <label>
+            Server-only OBS overlay setup key
+            <input name="overlaySetupKey" type="password" required autoComplete="off" />
+          </label>
+          <div className={styles.dimensionRow}>
+            <label>Width<input name="overlayWidth" type="number" defaultValue="1920" min="1" max="7680" required /></label>
+            <label>Height<input name="overlayHeight" type="number" defaultValue="1080" min="1" max="4320" required /></label>
+          </div>
+          <button type="submit" disabled={pending}>{pending ? "Generating…" : "Generate secure URL"}</button>
+        </form>
+        {descriptor !== undefined ? (
+          <div className={styles.descriptor}>
+            <label>
+              OBS Browser Source URL
+              <input value={descriptor.url} readOnly aria-label="OBS Browser Source URL" />
+            </label>
+            <button type="button" onClick={() => void copyUrl()}>Copy URL</button>
+            <small>
+              {descriptor.width}×{descriptor.height}; transparent; read-only
+              {expiresAt === null ? "" : `; expires ${new Date(expiresAt).toLocaleString()}`}.
+              Treat this URL like a password and regenerate it if exposed.
+            </small>
+          </div>
+        ) : null}
+        {setupError ? <p className={styles.setupError} role="alert">{setupError}</p> : null}
+        {copyMessage ? <p className={styles.copyMessage} role="status">{copyMessage}</p> : null}
+      </section>
+    </aside>
+  );
+}
+
 export function StreamerAuthorizedClient({ surface }: { readonly surface: Surface }) {
   const [token, setToken] = useState<string | null>(null);
   const [view, setView] = useState<StreamerViewModel | null>(null);
@@ -269,6 +382,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
         commandMessage={commandMessage}
         onCommand={(command) => void dispatchCommand(command)}
       />
+      {view !== null ? <StudioCaptureAndOverlaySetup sessionId={view.session.sessionId} /> : null}
       {roomCode ? (
         <div className={styles.roomBanner}>
           Hosted Quest Board code: <strong>{roomCode}</strong>. Copy it now; it is intentionally not placed in browser storage.

@@ -61,6 +61,7 @@
 }
 
 .field select,
+.field input,
 .actions button {
   min-height: 44px;
   border: 1px solid #3a4564;
@@ -70,7 +71,8 @@
   font: inherit;
 }
 
-.field select {
+.field select,
+.field input {
   padding: 0 12px;
 }
 

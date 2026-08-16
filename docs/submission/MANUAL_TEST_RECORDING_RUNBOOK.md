@@ -140,7 +140,7 @@ Joel should turn this into a shot list with exact transitions, narration, and wh
 If Twitch and OBS are ready, record a second short clip:
 
 1. Start OBS with a raw game scene and no recursive ChatXPT overlay in the analysed capture source.
-2. Add `http://localhost:3000/overlay` as an OBS Browser Source for broadcast visuals.
+2. In Studio, generate the session-scoped **OBS Browser Source** URL and paste that complete `/obs-overlay` URL into OBS. Do not record or expose the fragment token.
 3. Start a Twitch test stream or local Twitch Extension test mode.
 4. Open one broadcaster/studio browser and two isolated viewer browsers.
 5. Submit one vote from each viewer path available.

@@ -47,9 +47,9 @@ export function createObsBrowserSourceDescriptor(
 
   const sessionId = identifierSchema.parse(input.sessionId);
   const accessToken = overlayAccessTokenSchema.parse(input.accessToken);
-  const url = new URL(input.path ?? "/overlay", baseUrl);
+  const url = new URL(input.path ?? "/obs-overlay", baseUrl);
   url.searchParams.set("sessionId", sessionId);
-  url.searchParams.set("overlayAccessToken", accessToken);
+  url.hash = new URLSearchParams({ overlayAccessToken: accessToken }).toString();
 
   return obsBrowserSourceDescriptorSchema.parse({
     url: url.toString(),
@@ -66,16 +66,19 @@ export function createObsBrowserSourceDescriptor(
 
 export function parseObsBrowserSourceRequest(input: string | URL): ObsBrowserSourceRequest {
   const url = typeof input === "string" ? new URL(input) : input;
+  const fragment = new URLSearchParams(url.hash.replace(/^#/, ""));
   return {
     sessionId: identifierSchema.parse(url.searchParams.get("sessionId")),
-    accessToken: overlayAccessTokenSchema.parse(url.searchParams.get("overlayAccessToken")),
+    accessToken: overlayAccessTokenSchema.parse(fragment.get("overlayAccessToken")),
   };
 }
 
 export function redactObsBrowserSourceUrl(input: string | URL): string {
   const url = typeof input === "string" ? new URL(input) : new URL(input.toString());
-  if (url.searchParams.has("overlayAccessToken")) {
-    url.searchParams.set("overlayAccessToken", "redacted");
+  const fragment = new URLSearchParams(url.hash.replace(/^#/, ""));
+  if (fragment.has("overlayAccessToken")) {
+    fragment.set("overlayAccessToken", "redacted");
+    url.hash = fragment.toString();
   }
   return url.toString();
 }

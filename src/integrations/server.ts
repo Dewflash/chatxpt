@@ -12,3 +12,10 @@ export {
   StudioSessionGrantAuthority,
   type StudioSessionGrant,
 } from "./twitch/studio-session-auth";
+export {
+  ObsOverlayAuthError,
+  ObsOverlayGrantAuthority,
+  readObsOverlayBearerToken,
+  type ObsOverlayAuthErrorCode,
+  type ObsOverlayGrant,
+} from "./obs/overlay-auth";
