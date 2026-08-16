@@ -167,6 +167,8 @@ Every AI or algorithmic candidate is untrusted input until the quest engine acce
 
 ## Slide 15 - Future work turns one Twitch MVP into a cross-platform stream director
 
+- Required finals-roadmap point: ChatXPT starts with the Twitch MVP and can later adapt to esports watch parties, campaign activations, and community events after the core loop is proven.
+- Possible Garena-relevant applications: creator missions, esports co-stream engagement, campaign livestream activations, community/offline events, and safe community participation.
 - Persistent streamer accounts, personalities, boundaries, game preferences, and cross-stream memory.
 - Streamer engagement analytics: quest timing, vetoes, completions, audience response, and creator growth experiments.
 - Viewer profiles and analytics: participation history, preferences, reconnect continuity, and privacy-safe community insights.
@@ -176,7 +178,7 @@ Every AI or algorithmic candidate is untrusted input until the quest engine acce
 
 **Closing:** Prove the interaction on Twitch. Carry the intelligence, safety, and participation engine everywhere streams already happen.
 
-**Repo lens:** `src/integrations/` | `src/core/` | `docs/ARCHITECTURE.md` | `docs/DECISIONS.md`
+**Repo lens:** `src/integrations/` | `src/core/` | `docs/ARCHITECTURE.md` | `docs/DECISIONS.md` | `docs/FUTURE.md`
 
 ## External Research Sources
 

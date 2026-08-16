@@ -22,6 +22,7 @@ The final submission is not complete until the project owner records/uploads the
 | Editable competition deck | `docs/submission/chatxpt-slide-deck-proposal.pptx` | Ready | Editable 16:9 PowerPoint with speaker-note source blocks and local product visuals. |
 | Competition deck PDF | `docs/submission/chatxpt-slide-deck-proposal.pdf` | Ready | Submission-ready 15-page PDF; visually verified after PowerPoint export. |
 | Five-minute video plan | `docs/submission/MANUAL_TEST_RECORDING_RUNBOOK.md` | Ready | Includes Joel handoff, required screen list, timing, what to claim, and what not to claim. |
+| Finals demo migration plan | `docs/submission/FINALS_DEMO_MIGRATION_PLAN.md` | Ready for owner route decision | Defines how to promote the canonical path as the official story while retaining the working local prototype as a labelled fallback until parity is proven. |
 | Prototype truth table | `docs/submission/END_TO_END_PROTOTYPE_CHECK.md` | Ready | States what the current local prototype can demonstrate and which live evidence claims remain unproved. |
 | Repository completeness check | `docs/submission/REPOSITORY_SUBMISSION_CHECK.md` | Ready, but dated to earlier merged main check | It truthfully lists remaining live-evidence and owner-action gaps. |
 | Evidence rules and manifest | `docs/evidence/GOLDEN_REHEARSAL_RUNBOOK.md`, `docs/evidence/manifest.json` | Ready for recorded evidence | Current manifest has inspection-only and fixture-only evidence; add real recording entries only after privacy-reviewed runs. |

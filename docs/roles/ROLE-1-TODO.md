@@ -106,3 +106,65 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 - UI client/harness/test-stack choices, per-viewer recovery, hosted discovery, and chat delivery policy
 - Integration overrides and cross-role disputes
 - Submission operations and any later changes to the accepted participation-rate KPI, owner-called freeze authority, or deferred demo-narrative scope
+
+## Pre-submission future-roadmap considerations
+
+Role 1 should consider these five Garena-relevant future application cases before final submission and deck freeze. These are roadmap/pitch-positioning considerations, not accepted MVP scope or implemented non-Twitch platform support.
+
+1. **Creator Program / Streamer Missions:** position ChatXPT as a live layer for safer, measurable creator missions with vote participation, completion, hype, and reaction metrics.
+2. **Free Fire Esports / Co-Stream Engagement:** frame official esports usage as spectator/caster prompts and watch-party engagement, not instructions that interfere with competitive players.
+3. **Live Campaign Activations:** explore campaign templates for event themes, approved language, restrictions, and non-monetary reward labels.
+4. **Community Events / Offline Activations:** use hosted-board/room-code participation and OBS/projector output as a low-setup event mode.
+5. **Safe Community Participation:** highlight deterministic safety, streamer controls, no gambling, no harmful dares, no harassment, and privacy-safe session rewards.
+
+Required slide implication: the final deck must include a future roadmap section stating that ChatXPT can later adapt to esports watch parties, campaign activations, and community events after the Twitch MVP proves the core loop.
+
+## Finals demo migration consideration
+
+Role 1 should follow `docs/submission/FINALS_DEMO_MIGRATION_PLAN.md` before deck/video freeze: make the canonical architecture the official finals story, promote canonical surfaces only after they prove demo parity, and keep the current working local OBS/prototype path rehearsed as a labelled fallback until the live route is chosen.
+
+## Executive-decision TODO: OBS game-state upgrade
+
+This is understood as a revamp and upgrade of the existing OBS/gameplay-intelligence path, not a requirement to throw away the working local OBS demo before finals. The project owner will make the executive decision later on timing and scope.
+
+Primary ownership/context:
+
+- The core implementation belongs to the game data analysis segment: Role 2 extraction/intelligence should own OBS frame interpretation, genre state packs, calibrated adapters, OCR experiments, confidence thresholds, and unknown handling behind the accepted Role 1 frame/source contract.
+- Role 1 is involved only where the upgrade changes shared contracts, capability fields, evidence requirements, route wiring, or final submission positioning.
+- Role 3 is involved only when new game facts become quest dependencies that affect validation, feasibility, completion, rewards, or safety.
+- Role 4/5 are involved only when the streamer, viewer, or overlay surfaces need to display game capability status, selected-game packs, unsupported facts, or fallback/unknown states.
+- If this remains a finals slide/roadmap point, it does not require immediate cross-role implementation.
+
+Current understanding:
+
+- Game states differ widely by genre. A racing game has laps, sectors, and position; a MOBA has objectives, lanes, and cooldowns; a shooter has health, ammo, round, and site state; Brawl Stars has mode-specific objective states.
+- The legacy mounted demo uses fixed fields in `src/lib/domain.ts`: `game`, `phase`, `health`, `squadStatus`, and `recentEvent`. This remains useful for the current demo but is battle-royale/action-game shaped and does not fit every game cleanly.
+- The canonical model in `src/core/contracts/signals.ts` is the better long-term architecture: `GameplaySnapshot`, capabilities, named signals, confidence, provenance, and `known`/`unknown`/`stale`/`unavailable` observations.
+- The accepted direction is universal signals first, game-specific fields only when a game adapter proves them.
+
+Built now:
+
+- Generic frame/pixel analysis.
+- Broad activity classification.
+- Game category selection in the legacy control room.
+- Game name/category affecting quest wording.
+- Canonical support for game capability tiers.
+- Selective OCR plumbing.
+
+Not fully built or proven:
+
+- A real live calibrated adapter that can reliably emit facts such as a Brawl Stars timer or Free Fire health value.
+- A full per-genre game-state registry.
+- A polished UI for choosing game-specific capability packs.
+
+Recommended upgrade path after the owner decides:
+
+1. Create a game capability registry for games such as `brawl-stars`, `free-fire`, `valorant`, `mario-kart`, and `custom`, where each entry declares supported universal signals, optional HUD regions, supported facts, unsupported facts, and confidence requirements.
+2. Add genre state packs for arena action, battle royale, tactical shooter, MOBA, racing, strategy, and platformer.
+3. Separate quest context from raw game facts by converting observations into quest-useful states such as `high-pressure`, `downtime`, `transition`, `objective-window`, `recovery-needed`, `audience-hype`, and `audience-boredom`.
+4. Keep specific HUD facts optional. Facts such as `health`, `timer`, `score`, `ammo`, and `objective-progress` may be used only when the selected adapter supports them with evidence.
+5. Add or preserve a slide section explaining: “Why OBS scanning: game-neutral first, calibrated later.”
+
+Recommended slide wording:
+
+> “The MVP does not pretend to understand every HUD. It reads broad gameplay rhythm generically through OBS, then uses streamer-selected game/category settings to shape safer quests. Future calibrated adapters can add reliable game-specific facts where evidence supports them.”
