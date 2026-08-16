@@ -354,7 +354,11 @@ function terminalTransition(
   );
 }
 
-function idleAfterCooldown(input: QuestEngineInput, previousOutcome: string): QuestEngineResult {
+function idleAfterCooldown(
+  input: QuestEngineInput,
+  previousOutcome: string,
+  precedingEvents: readonly QuestEngineEventDraft[] = [],
+): QuestEngineResult {
   return accept(
     input.currentState,
     {
@@ -369,7 +373,39 @@ function idleAfterCooldown(input: QuestEngineInput, previousOutcome: string): Qu
       completionRule: null,
       result: null,
     },
-    [event("quest-cycle.cooldown-ended", { previousOutcome })],
+    [...precedingEvents, event("quest-cycle.cooldown-ended", { previousOutcome })],
+  );
+}
+
+function advanceTerminalTick(
+  input: QuestEngineInput,
+  precedingEvents: readonly QuestEngineEventDraft[] = [],
+): QuestEngineResult {
+  const result = input.currentState.result;
+  if (result === null || result.outcome !== input.currentState.status) {
+    return error("validation", "Terminal quest tick requires a matching authoritative result");
+  }
+  const cooldownEndsAt = defaultCooldownEndsAt(result.occurredAt);
+  if (cooldownEndsAt === null) {
+    return error("validation", "Quest cooldown deadline exceeds supported time");
+  }
+  const cooldownStarted = event("quest-cycle.cooldown-started", {
+    cooldownEndsAt,
+    previousOutcome: result.outcome,
+  });
+  if (input.now >= cooldownEndsAt) {
+    return idleAfterCooldown(input, result.outcome, [...precedingEvents, cooldownStarted]);
+  }
+  return accept(
+    input.currentState,
+    {
+      status: "cooldown",
+      availableStreamerActions: [...actionsByStatus.cooldown],
+      startsAt: result.occurredAt,
+      endsAt: cooldownEndsAt,
+      completionRule: null,
+    },
+    [...precedingEvents, cooldownStarted],
   );
 }
 
@@ -385,42 +421,38 @@ function transitionQuestTick(input: QuestEngineInput): QuestEngineResult {
     if (input.now < input.currentState.endsAt) {
       return accept(input.currentState, {}, []);
     }
-    return terminalTransition(input, "expired");
-  }
-
-  if (["succeeded", "failed", "cancelled", "skipped", "expired"].includes(input.currentState.status)) {
-    const result = input.currentState.result;
-    if (result === null || result.outcome !== input.currentState.status) {
-      return error("validation", "Terminal quest tick requires a matching authoritative result");
-    }
-    const cooldownEndsAt = defaultCooldownEndsAt(result.occurredAt);
-    if (cooldownEndsAt === null) {
-      return error("validation", "Quest cooldown deadline exceeds supported time");
-    }
-    if (input.now >= cooldownEndsAt) {
-      return idleAfterCooldown(input, result.outcome);
-    }
-    return accept(
-      input.currentState,
-      {
-        status: "cooldown",
-        availableStreamerActions: [...actionsByStatus.cooldown],
-        startsAt: result.occurredAt,
-        endsAt: cooldownEndsAt,
-        completionRule: null,
-      },
-      [event("quest-cycle.cooldown-started", { cooldownEndsAt, previousOutcome: result.outcome })],
+    const expiryDeadline = input.currentState.endsAt;
+    const expired = terminalTransition({ ...input, now: expiryDeadline }, "expired");
+    if (!expired.ok || input.now === expiryDeadline) return expired;
+    return advanceTerminalTick(
+      { ...input, currentState: expired.decision.nextState },
+      expired.decision.events,
     );
   }
 
+  if (["succeeded", "failed", "cancelled", "skipped", "expired"].includes(input.currentState.status)) {
+    return advanceTerminalTick(input);
+  }
+
   if (input.currentState.status === "cooldown") {
-    if (input.currentState.endsAt === null) {
-      return error("validation", "Cooldown tick requires an authoritative deadline");
+    const result = input.currentState.result;
+    if (result === null) {
+      return error("validation", "Cooldown tick requires an authoritative terminal result");
     }
-    if (input.now < input.currentState.endsAt) {
+    const expectedCooldownEndsAt = defaultCooldownEndsAt(result.occurredAt);
+    if (expectedCooldownEndsAt === null) {
+      return error("validation", "Quest cooldown deadline exceeds supported time");
+    }
+    if (
+      input.currentState.startsAt !== result.occurredAt ||
+      input.currentState.endsAt !== expectedCooldownEndsAt
+    ) {
+      return error("validation", "Cooldown state does not match its authoritative terminal result");
+    }
+    if (input.now < expectedCooldownEndsAt) {
       return accept(input.currentState, {}, []);
     }
-    return idleAfterCooldown(input, input.currentState.result?.outcome ?? "unknown");
+    return idleAfterCooldown(input, result.outcome);
   }
 
   return accept(input.currentState, {}, []);

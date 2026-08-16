@@ -72,7 +72,7 @@ Role 3 is complete when:
 
 **Acceptance:** Legal transitions work; illegal, duplicate, and stale-revision commands return typed decisions/errors; time and randomness are injectable; events carry correlation/revision data expected by the Role 1 orchestrator.
 
-**Implementation record (2026-08-16):** The merged `system.quest-tick` seam now deterministically expires active quests at their absolute deadline, moves terminal outcomes into the accepted 120-second cooldown, skips directly to idle when a delayed tick arrives after that cooldown, and resets elapsed cooldown state to idle. Early ticks emit no state change or event, and incomplete active/terminal/cooldown state fails closed. Role 1 retains scheduling, deduplication, revisions, persistence, and broadcast.
+**Implementation record (2026-08-16):** The merged `system.quest-tick` seam now deterministically expires active quests at their recorded absolute deadline, moves terminal outcomes into the accepted 120-second cooldown, and resets elapsed cooldown state to idle. A delayed active tick traverses every elapsed boundary in one decision while preserving terminal/history, cooldown-started, and cooldown-ended events. Early ticks emit no state change or event; incomplete or internally inconsistent active/terminal/cooldown state fails closed. Role 1 retains scheduling, deduplication, revisions, persistence, and broadcast.
 
 ## Phase 2: Intervention and streamer control
 
