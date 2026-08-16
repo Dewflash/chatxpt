@@ -71,4 +71,18 @@ describe("Twitch EventSub boundary", () => {
     expect(first).not.toBe(pseudonymizeTwitchChatViewer(SECRET, "session-2", "raw-viewer-1"));
     expect(first).not.toContain("raw-viewer-1");
   });
+
+  it("rejects webhook secrets that Twitch cannot register", () => {
+    const input = {
+      messageId: "delivery-1",
+      messageTimestamp: TIMESTAMP,
+      messageSignature: `sha256=${"0".repeat(64)}`,
+      rawBody: "{}",
+      now: NOW,
+    };
+    expect(() => verifyTwitchEventSubMessage({ ...input, secret: "x".repeat(101) }))
+      .toThrow("32 to 100 printable ASCII");
+    expect(() => verifyTwitchEventSubMessage({ ...input, secret: `${"x".repeat(31)}é` }))
+      .toThrow("32 to 100 printable ASCII");
+  });
 });

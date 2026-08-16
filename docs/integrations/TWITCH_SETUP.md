@@ -26,7 +26,7 @@ TWITCH_CLIENT_ID
 TWITCH_CLIENT_SECRET
 TWITCH_EXTENSION_CLIENT_ID
 TWITCH_EXTENSION_SECRET  # base64 Extension signing secret
-TWITCH_EVENTSUB_SECRET   # independent webhook HMAC secret, 32+ characters
+TWITCH_EVENTSUB_SECRET   # independent webhook HMAC secret, 32-100 printable ASCII characters
 CHATXPT_STUDIO_SETUP_KEY # private value of at least 32 characters
 CHATXPT_HOSTED_BOARD_SECRET
 CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY
@@ -44,7 +44,8 @@ Full Twitch OAuth and EventSub subscription automation remains an explicit later
 3. The server creates one authoritative live session for that channel, maps Twitch JWT `channel_id` to it, and exchanges the setup key for an HttpOnly grant that expires after 12 hours.
 4. The browser does not store either secret or grant in local/session storage. Config and Live Config use Twitch's broadcaster JWT instead of the Studio cookie.
 5. Start Gameplay Capture and request its separate session-scoped ingress grant. A session start alone is not proof that Twitch or Gameplay Capture ran.
-6. Create the `channel.chat.message` EventSub subscription against `/api/twitch/eventsub` using the same `TWITCH_EVENTSUB_SECRET`. This external subscription step is required before real chat votes can arrive.
+6. Authorise the chat user with Twitch's required `user:read:chat` scope. If the webhook subscription is created with an app access token, Twitch additionally requires `user:bot` for that chat user and either broadcaster `channel:bot` authorisation or moderator status.
+7. Create the version `1` `channel.chat.message` EventSub webhook subscription against `/api/twitch/eventsub`, with `broadcaster_user_id` set to the channel and `user_id` set to the authorised chat user. Use the same `TWITCH_EVENTSUB_SECRET`; Twitch requires webhook subscription creation with an app access token. This external subscription step and successful signed challenge are required before real chat votes can arrive.
 
 ## Verification
 

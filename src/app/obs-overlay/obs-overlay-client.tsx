@@ -38,6 +38,8 @@ export function ObsOverlayClient() {
     }
     tokenRef.current = token;
     sessionIdRef.current = sessionId;
+    url.hash = "";
+    window.history.replaceState(null, document.title, `${url.pathname}${url.search}`);
     return () => {
       tokenRef.current = null;
       sessionIdRef.current = null;

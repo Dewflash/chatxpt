@@ -56,10 +56,10 @@ export class TwitchEventSubError extends Error {
 
 function secretBytes(secret: string): Buffer {
   const value = secret.trim();
-  if (value.length < 32) {
+  if (value.length < 32 || value.length > 100 || !/^[\x20-\x7E]+$/.test(value)) {
     throw new TwitchEventSubError(
       "misconfigured",
-      "Twitch EventSub webhook secret must contain at least 32 characters",
+      "Twitch EventSub webhook secret must contain 32 to 100 printable ASCII characters",
     );
   }
   return Buffer.from(value, "utf8");

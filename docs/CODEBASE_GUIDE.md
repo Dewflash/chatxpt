@@ -2,14 +2,14 @@
 
 This guide explains how ChatXPT is structured, how data moves through the system, and what the major files do. It is an implementation companion to [`ARCHITECTURE.md`](ARCHITECTURE.md), which defines the higher-level target architecture, and [`build-plans/INTEGRATION-CONTRACT.md`](build-plans/INTEGRATION-CONTRACT.md), which defines the binding role-to-role seams.
 
-**Evidence basis:** source inspection of `main` at `3446551` on 16 August 2026, before this documentation change.
+**Evidence basis:** source inspection of the finals integration branch through `ad82747` on 17 August 2026. Runtime and external-service proof remain separately tracked in `docs/evidence/manifest.json`.
 
 ## 1. Read this first: implementation status
 
 ChatXPT currently contains two paths that must not be confused:
 
-1. **The mounted local prototype path** powers the root control room, the local sidequest endpoint, and part of the OBS overlay flow. It is useful for development and diagnostics, but it still uses retained files in `src/components/` and `src/lib/`, process-local state, and browser storage.
-2. **The canonical production-shaped path** provides versioned contracts, deterministic quest authority, revisioned orchestration, memory and Supabase persistence adapters, Twitch Extension authentication, private viewer vote recovery, role-specific views, and role-owned UI modules. Parts of this path are mounted today—most notably the authenticated Twitch viewer—but it has not fully replaced every legacy route.
+1. **The retained local prototype path** powers `/`, `/overlay`, `/api/sidequests`, `/api/demo-participation`, and `/api/overlay-state`. It remains available as a labelled diagnostic/rehearsal fallback under D-064, but it still uses files in `src/components/` and `src/lib/`, process-local compatibility state, and browser storage.
+2. **The canonical production-shaped path** now mounts Studio, Twitch Config and Live Config, the Twitch viewer, the hosted Quest Board, signed Twitch-chat ingestion, Gameplay Capture ingress, and the read-only OBS overlay. These surfaces share versioned contracts, one deterministic quest authority, one revisioned orchestrator, memory/Supabase persistence adapters, authenticated commands, and role-specific views. Source and automated checks are complete for this boundary; external Twitch, OBS, Supabase Cloud, and Vercel evidence is still required before describing it as a proven production deployment.
 
 The status labels used below mean:
 
@@ -131,37 +131,48 @@ The `/` route mounts `ControlRoom`, a retained all-in-one client component. It c
 
 This path is **mounted and useful**, but it is not the final composition. Candidate generation still passes through `src/lib/mock-engine.ts` or the legacy optional OpenAI adapter. Some vote/overlay state is process-local or browser-local, and the overlay derives a local display clock. It must not be described as durable multi-client authority or live extraction proof.
 
-### Authenticated Twitch viewer
+### Canonical management and participation surfaces
 
-`/viewer.html` is closer to the target architecture. Twitch's Extension Helper supplies a JWT; the server verifies the HS256 signature, expiry, channel, and opaque/anonymous viewer identity. Reads and votes pass through `TwitchExtensionViewerApplication`, the canonical orchestrator, Role 3's engine, and the selected memory/Supabase persistence runtime.
+`/studio`, `/config.html`, and `/live-config.html` mount Role 4's canonical management surfaces. A broadcaster starts or recovers a channel-bound session through the secure D-065 manual bootstrap, then receives a signed, `HttpOnly`, `SameSite=Strict` Studio grant. Studio owns persistent configuration and setup; Live Config exposes only the compact stream-time command set. Twitch Config and Live Config can also authenticate the broadcaster through Twitch's Extension JWT.
 
-The current Studio can stage a clearly labelled local diagnostic cycle so the Twitch viewer path can be exercised. Real Twitch Local/Hosted Test and Supabase Cloud claims still require external configuration and recorded evidence.
+`/viewer.html` uses Twitch's Extension Helper JWT. The server verifies its HS256 signature, expiry, channel, role, and opaque/anonymous viewer identity. Reads, votes, and reactions pass through `TwitchExtensionViewerApplication`, the shared persistence runtime, and the canonical orchestrator. Voting is select-then-confirm and first accepted vote is final.
 
-### Studio, hosted board, Live Config, and overlay modules
+`/quest-board/[roomCode]` is the first fallback. It exchanges a room code for a scoped, signed, `HttpOnly` anonymous viewer grant, derives a stable browser voter identity, and uses the same viewer projection, vote ledger, reaction commands, countdown, result, and recovery behaviour as the Extension. It does not create a second source of vote truth.
 
-Role-owned canonical presentation components exist for Studio status/setup and the viewer surfaces. Their thin route shells are at different integration stages:
+`POST /api/twitch/eventsub` is the final `1`/`2`/`3` fallback input. It verifies Twitch's raw-body HMAC, timestamp and message freshness, challenge requests, and notification type before exact vote messages enter the same first-vote-final ledger. Ordinary chat and raw Twitch identities are not stored by this boundary; votes are counted silently and the result is shown on the overlay.
 
-- `/config.html` and `/live-config.html` currently provide reserved diagnostic shells with setup-readiness information; they do not yet implement the final streamer controls.
-- `/quest-board/[roomCode]` resolves a hosted-board room and viewer access grant; the complete hosted multi-client voting delivery remains partial.
-- `/overlay` still mounts the legacy overlay component even though a canonical Role 5 overlay surface exists.
-- `/diagnostics/ui-harness` renders canonical fixture states for UI integration work and is explicitly non-live.
+### Canonical OBS and gameplay paths
+
+`/obs-overlay` mounts Role 5's canonical transparent overlay. Studio issues a short-lived, session-bound setup URL whose signed access token is carried in the URL fragment rather than the query string. The client moves it into an `Authorization` header, and the read-only state endpoint projects committed overlay state. An overlay read also asks the trusted scheduler path to close a due vote, so chat-only participation does not require a viewer browser to own the timer.
+
+`/diagnostics/gameplay-extraction` remains visibly diagnostic when used with fixtures, but it can also select a real OBS Virtual Camera, sample frames locally, derive universal activity/capture-health observations, and submit only normalised snapshots through a signed, session-bound Gameplay Capture grant. Raw frames stay in the browser. Calibrated HUD facts remain diagnostic until separately proven.
+
+`/diagnostics/ui-harness` remains fixture-only. Real Twitch Local/Hosted Test, EventSub delivery, OBS capture, Supabase Cloud, and Vercel claims still require external configuration and recorded evidence.
 
 ## 6. Routes and external surfaces
 
 | Route | Major entry file | Purpose and current status |
 | --- | --- | --- |
 | `/` | `src/app/page.tsx` | Mounts the retained local control room. **Mounted, legacy/diagnostic composition.** |
-| `/overlay` | `src/app/overlay/page.tsx` | Mounts the retained browser overlay. **Mounted; local transport is not authoritative production realtime.** |
-| `/viewer.html` | `src/app/viewer.html/page.tsx` | Mounts the authenticated Role 5 Twitch Extension viewer client. **Mounted over the canonical vote path.** |
-| `/config.html` | `src/app/config.html/page.tsx` | Reserved Twitch configuration shell with setup-readiness information. **Mounted diagnostic shell; final Role 4 UI is not implemented here.** |
-| `/live-config.html` | `src/app/live-config.html/page.tsx` | Reserved Twitch Live Config shell with setup-readiness information. **Mounted diagnostic shell; final stream-time controls are not implemented here.** |
-| `/quest-board/[roomCode]` | `src/app/quest-board/[roomCode]/page.tsx` | Resolves hosted-board access and renders access/recovery status. **Mounted access seam; full fallback participation is partial.** |
+| `/studio` | `src/app/studio/page.tsx` | Mounts the canonical full Studio management surface and secure manual broadcaster-session start/recovery. **Mounted canonical path.** |
+| `/config.html` | `src/app/config.html/page.tsx` | Mounts the canonical Twitch Extension configuration surface for setup and persistent management. **Mounted canonical path.** |
+| `/live-config.html` | `src/app/live-config.html/page.tsx` | Mounts the compact Twitch Creator Dashboard live-control surface. **Mounted canonical path.** |
+| `/viewer.html` | `src/app/viewer.html/page.tsx` | Mounts the authenticated Role 5 Twitch Extension viewer client for reads, final votes, recovery, and reactions. **Mounted canonical path.** |
+| `/quest-board/[roomCode]` | `src/app/quest-board/[roomCode]/page.tsx` | Mounts the signed anonymous hosted fallback over the shared participation service. **Mounted canonical fallback.** |
+| `/obs-overlay` | `src/app/obs-overlay/page.tsx` | Mounts the read-only, authenticated, transparent Role 5 OBS overlay. **Mounted canonical output.** |
+| `/overlay` | `src/app/overlay/page.tsx` | Mounts the retained local overlay. **Legacy/diagnostic compatibility only.** |
+| `/diagnostics/gameplay-extraction` | `src/app/diagnostics/gameplay-extraction/page.tsx` | Runs fixture diagnostics or authenticated real-camera Gameplay Capture; real and simulated states are labelled separately. |
 | `/diagnostics/ui-harness` | `src/app/diagnostics/ui-harness/page.tsx` | Shows canonical UI fixture states. **Diagnostic only.** |
 | `POST /api/sidequests` | `src/app/api/sidequests/route.ts` | Validates legacy generation input and returns exactly three local algorithmic quests, optionally trying the legacy OpenAI adapter first. |
 | `GET/POST /api/demo-participation` | `src/app/api/demo-participation/route.ts` | Bridges the local control room to a staged diagnostic cycle, votes, progress, and results. Process-local helper state is not durable evidence. |
 | `GET/POST /api/overlay-state` | `src/app/api/overlay-state/route.ts` | Process-local compatibility transport for the retained overlay. |
-| `GET /api/twitch/extension/viewer` | `src/app/api/twitch/extension/viewer/route.ts` | Authenticates a Twitch viewer and returns a sanitised canonical view. |
-| `POST /api/twitch/extension/commands` | `src/app/api/twitch/extension/commands/route.ts` | Authenticates and submits Twitch viewer commands, currently voting. |
+| `/api/studio/session*`, `/api/studio/commands` | `src/app/api/studio/` | Starts/recovers a channel session, returns the canonical streamer projection, and submits authorised streamer commands. |
+| `GET /api/twitch/extension/viewer` | `src/app/api/twitch/extension/viewer/route.ts` | Authenticates a Twitch viewer and returns a sanitised canonical view plus that viewer's private vote recovery. |
+| `POST /api/twitch/extension/commands` | `src/app/api/twitch/extension/commands/route.ts` | Authenticates and submits canonical Twitch viewer vote and reaction commands. |
+| `POST /api/twitch/eventsub` | `src/app/api/twitch/eventsub/route.ts` | Verifies raw Twitch EventSub webhook messages and adapts exact chat votes into canonical commands. |
+| `/api/hosted-board/*` | `src/app/api/hosted-board/` | Exchanges a room code for signed anonymous access and serves hosted viewer reads, votes, reactions, and recovery. |
+| `/api/obs/overlay/grant`, `GET /api/obs/overlay/state` | `src/app/api/obs/overlay/` | Issues a read-only OBS setup descriptor and returns session-bound canonical overlay state. |
+| `/api/gameplay/ingress/grant`, `POST /api/gameplay/ingress/snapshot` | `src/app/api/gameplay/ingress/` | Issues a session-bound Gameplay Capture grant and accepts only validated normalised snapshots. |
 | `GET /api/twitch/setup/readiness` | `src/app/api/twitch/setup/readiness/route.ts` | Reports Twitch environment/setup readiness without exposing secrets. |
 | `GET /api/twitch/oauth/callback` | `src/app/api/twitch/oauth/callback/route.ts` | Reserved OAuth callback boundary that currently reports token exchange as unavailable. |
 | `/api/ui-gateway/*` | `src/app/api/ui-gateway/` | Serves canonical diagnostic fixtures and validates authorised command examples for UI development. |
@@ -207,10 +218,18 @@ The following tables cover files that define architecture, runtime behaviour, co
 | `src/components/overlay-stage.tsx` | Renders the retained OBS overlay, polls diagnostic participation, reads the local store, and derives a display timer. | Mounted; client timer is not canonical authority. |
 | `src/app/api/overlay-state/route.ts` | Stores one active quest in the Next.js server process for compatibility. | Non-durable local state. |
 | `src/app/api/demo-participation/route.ts` | Stages diagnostic cycles and bridges local quest/vote/progress/result actions into the canonical Twitch viewer application when possible. | Local diagnostic bridge; not a public participation API. |
-| `src/app/server/twitch-extension-viewer.ts` | Server composition root for authenticated viewer reads/votes, environment-selected persistence, channel/session lookup, stale-revision retry, and local diagnostic staging. | Mounted canonical viewer path; one of the largest integration files. |
-| `src/app/viewer.html/twitch-extension-viewer-client.tsx` | Connects to Twitch's Extension Helper, refreshes JWT-backed views, submits votes, handles retry/recovery, and renders the Role 5 surface. | Mounted. |
-| `src/app/twitch-extension-shell.tsx` | Reserved diagnostic shell for Twitch configuration and live-configuration routes; loads the Extension Helper and shows setup readiness/limitations. | Mounted placeholder; no final streamer controls. |
-| `src/app/quest-board/hosted-board-shell.tsx` | Presents hosted-room access, direct link/QR payload, and typed unavailable/recovery states. | Access seam implemented; complete voting client remains partial. |
+| `src/app/server/runtime.ts` | Owns the process-shared persistence runtime and constructs the sole canonical orchestrator with a request-scoped verified actor. | Mounted server composition root. |
+| `src/app/server/studio-session.ts` | Authenticates manual setup or Twitch broadcaster JWTs, starts/recovers sessions, projects Studio state, persists configuration, and submits streamer controls. | Mounted canonical management path. |
+| `src/app/server/twitch-extension-viewer.ts` | Authenticates viewer reads, votes, and reactions; binds channel/session identity; recovers the current viewer's receipt; and retries one stale vote safely. | Mounted canonical viewer path. |
+| `src/app/server/hosted-board.ts` | Exchanges room codes for signed anonymous grants, derives stable private voter keys, and routes hosted reads/commands through the same participation authority. | Mounted canonical fallback. |
+| `src/app/server/twitch-chat.ts` | Applies verified EventSub chat notifications to exact `1`/`2`/`3` vote adaptation and the shared ledger without retaining raw text or Twitch user IDs. | Mounted inbound chat fallback. |
+| `src/app/server/obs-overlay.ts` | Issues session-scoped read-only overlay grants, closes due votes through the trusted system command, and projects canonical overlay state. | Mounted canonical output. |
+| `src/app/server/gameplay-ingress.ts` | Issues Gameplay Capture grants and commits validated normalised gameplay snapshots to the authoritative session. Raw frames never cross this boundary. | Mounted canonical input. |
+| `src/app/streamer-authorized-client.tsx` | Connects Studio, Config, and Live Config to their authenticated server state and authorised command endpoints. | Mounted reusable client shell. |
+| `src/app/viewer.html/twitch-extension-viewer-client.tsx` | Connects to Twitch's Extension Helper, refreshes JWT-backed views, submits confirmed votes/reactions, handles recovery, and renders the Role 5 surface. | Mounted. |
+| `src/app/quest-board/[roomCode]/hosted-board-client.tsx` | Bootstraps signed anonymous room access and renders the same canonical Role 5 participation surface for hosted fallback users. | Mounted. |
+| `src/app/obs-overlay/obs-overlay-client.tsx` | Reads the fragment-held OBS token, removes it from browser history, sends authenticated polling requests, and renders the transparent canonical overlay. | Mounted. |
+| `src/app/diagnostics/gameplay-extraction/GameplayExtractionDiagnostic.tsx` | Separates fixture diagnostics from real camera capture and submits only normalised snapshots when linked to an authorised session. | Mounted; evidence classification remains explicit. |
 | `src/app/diagnostics/ui-harness/page.tsx` | Mounts canonical streamer/viewer fixture states for development review. | Explicitly diagnostic. |
 | `src/app/globals.css` | App-level and retained-prototype styling. | Contains legacy presentation alongside app-wide rules. |
 
@@ -253,12 +272,17 @@ The following tables cover files that define architecture, runtime behaviour, co
 | --- | --- |
 | `src/integrations/index.ts` | Public integration entrypoint. |
 | `src/integrations/obs/browser-frame-source.ts` | Browser `FrameSource` that selects an OBS Virtual Camera with `getUserMedia`, draws sampled video frames to a canvas, emits canonical frame observations, and exposes cleanup hooks. |
-| `src/integrations/obs/browser-source.ts` | Creates a read-only OBS Browser Source setup descriptor for the overlay URL and canvas dimensions. It does not control OBS itself. |
+| `src/integrations/obs/browser-source.ts` | Creates a read-only OBS Browser Source descriptor whose access grant is placed in the URL fragment, not a server-visible query. It does not control OBS itself. |
+| `src/integrations/obs/overlay-auth.ts` | Signs and verifies short-lived HMAC grants scoped to one broadcaster session and OBS read-only access. |
+| `src/integrations/obs/gameplay-ingress-auth.ts` | Signs and verifies separate short-lived grants for normalised Gameplay Capture writes. Overlay and gameplay capabilities are not interchangeable. |
 | `src/integrations/twitch/extension-auth.ts` | Verifies Twitch Extension HS256 JWTs, expiry, channel and role claims; parses bearer tokens; derives pseudonymous session-scoped viewer identities. |
+| `src/integrations/twitch/studio-session-auth.ts` | Signs, verifies, and serialises secure Studio session cookies after manual setup or Twitch broadcaster authentication. |
+| `src/integrations/twitch/eventsub.ts` | Verifies EventSub raw-body HMAC signatures, timestamps, replay freshness, challenge messages, and supported chat-notification payloads. |
 | `src/integrations/twitch/chat-votes.ts` | Converts exact trusted Twitch chat messages `1`, `2`, or `3` into canonical vote commands and privacy-bounded audience events with deterministic delivery IDs. |
 | `src/integrations/twitch/chat-announcements.ts` | Formats bounded poll-open, result, and acknowledgement messages. It does not send them to Twitch. |
 | `src/integrations/chat-fallback.ts` | Maps authoritative vote state and receipts into platform-neutral chat-fallback presentation and delivery policy. |
-| `src/integrations/twitch/setup-readiness.ts` | Reports configured, missing, or unavailable Twitch setup capabilities and expected Extension paths without returning secrets. |
+| `src/integrations/hosted/board-auth.ts` | Signs hosted-board viewer grants and derives browser-local, session-scoped pseudonymous voter identities. |
+| `src/integrations/twitch/setup-readiness.ts` | Reports Twitch application, Extension, and EventSub configuration plus the expected callback/surface paths without returning secrets. OBS, Gameplay Capture, persistence, and hosted-board readiness are enforced at their separate server boundaries. |
 | `twitch-extension/` | Static upload package for Twitch's viewer/config/live-config surfaces. Its EBS origin must match the deployed HTTPS application before Hosted Test. |
 
 ### 7.6 Realtime and persistence
@@ -324,6 +348,8 @@ The following tables cover files that define architecture, runtime behaviour, co
 | `src/design-system/design-system.module.css` | Visual implementation of the shared tokens, focus treatment, target sizes, responsive behaviour, and reduced-motion handling. |
 | `src/streamer/studio-setup-shell.tsx` | Renders first-time and returning Studio setup, profile/intelligence settings, service checklist, navigation, and capability-aware unavailable controls. |
 | `src/streamer/studio-status.tsx` | Renders compact/full connection health, observed signals, quest status, and emergency state for Studio and live-control contexts. |
+| `src/streamer/studio-management.tsx` | Implements the full persistent Studio management surface, session controls, profile/settings panels, integration health, history, and output/input setup cards. |
+| `src/streamer/twitch-config.tsx` | Implements the Twitch Config setup companion and deliberately compact Live Config stream-time controls. |
 | `src/viewer/presentation.ts` | Converts canonical viewer/overlay views into safe display models, phases, labels, and unavailable/reconnect states without calculating authority. |
 | `src/viewer/surfaces.tsx` | Implements Twitch viewer, hosted viewer, chat-instruction, and OBS overlay surfaces. Event handlers emit commands; the component does not own vote truth. |
 | `src/viewer/surfaces.module.css` | Responsive, low-distraction viewer/overlay layout, focus, state, progress, countdown, and reduced-motion styles. |
@@ -346,6 +372,7 @@ The following tables cover files that define architecture, runtime behaviour, co
 | `scripts/check-client-secrets.mjs` | Scans source/build output for server-only environment names and configured secret values that must not reach browser bundles. |
 | `scripts/check-evidence-manifest.mjs` | Validates evidence records, privacy fields, immutable revisions, evidence classes, and artifact references. |
 | `scripts/check-demo-runbook.mjs` | Checks that the golden rehearsal runbook preserves required resources, phases, real/fixture distinctions, revision proof, and safety guardrails. |
+| `scripts/smoke-canonical-runtime.mjs` | Exercises the built app's canonical Studio, Twitch readiness, hosted-board, EventSub challenge, Gameplay Capture grant, OBS overlay grant/state, and page mounts with explicit memory-backed limitations. |
 | `tests/integration/orchestrator.test.ts` | Primary cross-role command tests for ordering, stale/duplicate/concurrent handling, persistence, projection, broadcast, and recovery. |
 | `tests/integration/persistence.test.ts` and `supabase-adapters.test.ts` | Run the same persistence expectations against memory and Supabase-shaped adapters. |
 | `tests/integration/twitch-extension-viewer.test.ts` | Exercises signed viewer tokens, channel binding, vote finality, identity privacy, refresh, duplicate handling, and stale-revision recovery. |
@@ -401,13 +428,13 @@ The production deployment target is Vercel plus Supabase. The repository contain
 
 ## 10. Known architectural gaps and risks
 
-1. **Legacy composition remains visible.** The root control room and overlay still bypass some canonical Role 1/2/3/4/5 seams.
+1. **Legacy composition remains visible.** The root control room and `/overlay` remain as diagnostic/rehearsal fallbacks until the canonical seven-step demo completes twice without manual repair under D-064 and D-069.
 2. **Large composition files carry integration risk.** `control-room.tsx`, `twitch-extension-viewer.ts`, `orchestrator.ts`, `validation.ts`, and the realtime adapters are substantial and should be changed through focused public seams and tests.
-3. **Local compatibility state is non-durable.** Process restarts clear memory and overlay/demo state; separate server instances would not share it.
-4. **Hosted participation is incomplete.** Room discovery/access exists, but the full multi-client hosted voting/reconnect experience is not yet proven.
-5. **Twitch chat delivery is incomplete.** Parsing and message policy exist; real inbound/outbound integration, rate limiting, and live acknowledgements remain open.
+3. **Memory mode is non-durable.** Process restarts clear canonical memory and legacy compatibility state; multi-instance deployment requires the configured Supabase runtime.
+4. **Hosted participation needs deployment proof.** The signed shared-ledger path is source-complete, but multi-browser behaviour over a deployed Supabase/realtime environment has not been externally proven.
+5. **Twitch chat needs external subscription proof.** Signed inbound EventSub handling and exact vote adaptation are implemented. Subscription creation, real delivery, and any future outbound announcements/rate-limit policy remain external or deferred; per-vote chat replies are intentionally absent.
 6. **External production proof remains separate.** Twitch Local/Hosted Test, Supabase Cloud, Vercel, and real OBS runs require credentials/resources and evidence-manifest entries.
-7. **Provider adoption is open.** The repository evaluates optional providers but has not adopted one for the judged MVP. The algorithmic path remains mandatory.
+7. **Full self-service Twitch OAuth remains deferred.** D-065 accepts secure manual broadcaster-session bootstrap for the finals slice; automated installation, token exchange, EventSub subscription management, and offline lifecycle automation remain product follow-up.
 8. **Migration decisions remain open.** `docs/DECISIONS.md` and the legacy inventory must be consulted before moving or deleting retained prototype behaviour.
 
 ## 11. How to make a safe change
