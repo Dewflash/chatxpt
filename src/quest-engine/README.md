@@ -8,7 +8,7 @@ Role 1 created this additive boundary under the recorded integration override. I
 
 Role 1 also owns duplicate-command detection. The engine rejects stale revisions, but it cannot identify duplicate command IDs because its pure input contains no processed-command ledger.
 
-The accepted Core direction in issue #36 adds an authoritative timer/tick command, but that contract is not yet on `main`. The engine therefore refuses to bypass cooldown through `system.intelligence-ready` and does not invent a private command to advance terminal states.
+The merged Core direction from issue #36 supplies an authoritative `system.quest-tick` command. The engine uses only `QuestEngineInput.now`: early ticks are no-ops, active quests expire at their absolute deadline, terminal results enter the accepted 120-second cooldown, delayed ticks may complete an already elapsed cooldown directly, and an elapsed cooldown resets the cycle to idle. Malformed active, terminal, or cooldown state fails closed. Role 1 still owns tick authentication, scheduling, deduplication, revision stamping, persistence, and broadcast.
 
 This is component evidence, not a completed live quest workflow. Candidate validation and vote-close resolution now pass independently, but live composition still requires Role 1's accepted intervention, timer, and emergency seams plus end-to-end evidence.
 

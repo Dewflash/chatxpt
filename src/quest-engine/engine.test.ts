@@ -8,6 +8,7 @@ import {
   questCycleStateSchema,
   streamSessionSchema,
   streamerProfileSchema,
+  systemQuestTickCommandSchema,
   systemQuestProgressCommandSchema,
   type GameplaySnapshot,
   type QuestCompletionRule,
@@ -138,6 +139,23 @@ function progressCommand(overrides: Partial<ReturnType<typeof systemQuestProgres
     type: "system.quest-progress",
     requestedValue: 0.5,
     evidenceSignalIds: ["role-3-progress-signal"],
+    ...overrides,
+  });
+}
+
+function tickCommand(
+  overrides: Partial<ReturnType<typeof systemQuestTickCommandSchema.parse>> = {},
+) {
+  return systemQuestTickCommandSchema.parse({
+    contractVersion: "1.0.0",
+    sessionId: role3FixtureIdleState.envelope.sessionId,
+    questCycleId: role3FixtureIdleState.envelope.questCycleId,
+    commandId: "role-3-tick-command",
+    correlationId: "role-3-tick-correlation",
+    expectedRevision: 0,
+    issuedAt: ROLE_3_FIXTURE_TIME,
+    actor: { kind: "system", actorId: "role-3-tick-system" },
+    type: "system.quest-tick",
     ...overrides,
   });
 }
@@ -1155,6 +1173,209 @@ describe("DefaultQuestEngine", () => {
     expect(result).toMatchObject({
       ok: false,
       error: { code: "forbidden", details: { status: "cooldown" } },
+    });
+  });
+
+  it("keeps early active ticks as deterministic no-ops", () => {
+    const currentState = activeProgressState();
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        currentState,
+        command: tickCommand(),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 59_999,
+      }),
+    );
+
+    expect(result.nextState).toEqual(currentState);
+    expect(result.events).toEqual([]);
+  });
+
+  it("expires an active quest at its authoritative deadline", () => {
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        currentState: activeProgressState({
+          value: 0.5,
+          updatedAt: ROLE_3_FIXTURE_TIME + 10_000,
+          method: "manual",
+          evidenceSignalIds: [],
+        }),
+        command: tickCommand(),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 60_000,
+      }),
+    );
+
+    expect(result.nextState).toMatchObject({
+      status: "expired",
+      availableStreamerActions: [],
+      endsAt: ROLE_3_FIXTURE_TIME + 60_000,
+      progress: { value: 0.5, method: "manual" },
+      completionRule: null,
+      result: {
+        outcome: "expired",
+        occurredAt: ROLE_3_FIXTURE_TIME + 60_000,
+        rewardPointsAwarded: 0,
+        reason: "The active quest reached its authoritative deadline.",
+      },
+    });
+    expect(result.events).toEqual([
+      {
+        eventType: "quest-cycle.terminal",
+        attributes: {
+          outcome: "expired",
+          rewardPointsAwarded: 0,
+          hypeDelta: 0,
+          historyCandidateId: "role-3-candidate-1",
+          cooldownEndsAt: ROLE_3_FIXTURE_TIME + 180_000,
+        },
+      },
+    ]);
+  });
+
+  it("moves terminal state through cooldown and resets to idle at the absolute deadline", () => {
+    const engine = new DefaultQuestEngine();
+    const expired = decision(
+      engine.decide({
+        currentState: activeProgressState(),
+        command: tickCommand(),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 60_000,
+      }),
+    ).nextState;
+    const cooldown = decision(
+      engine.decide({
+        currentState: expired,
+        command: tickCommand(),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 60_001,
+      }),
+    );
+
+    expect(cooldown.nextState).toMatchObject({
+      status: "cooldown",
+      startsAt: ROLE_3_FIXTURE_TIME + 60_000,
+      endsAt: ROLE_3_FIXTURE_TIME + 180_000,
+      result: { outcome: "expired" },
+    });
+    expect(cooldown.events).toEqual([
+      {
+        eventType: "quest-cycle.cooldown-started",
+        attributes: {
+          cooldownEndsAt: ROLE_3_FIXTURE_TIME + 180_000,
+          previousOutcome: "expired",
+        },
+      },
+    ]);
+
+    const earlyTick = decision(
+      engine.decide({
+        currentState: cooldown.nextState,
+        command: tickCommand(),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 179_999,
+      }),
+    );
+    expect(earlyTick.nextState).toEqual(cooldown.nextState);
+    expect(earlyTick.events).toEqual([]);
+
+    const idle = decision(
+      engine.decide({
+        currentState: cooldown.nextState,
+        command: tickCommand(),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 180_000,
+      }),
+    );
+    expect(idle.nextState).toMatchObject({
+      status: "idle",
+      options: [],
+      activeCandidateId: null,
+      availableStreamerActions: [],
+      voteTallies: [],
+      startsAt: null,
+      endsAt: null,
+      progress: null,
+      completionRule: null,
+      result: null,
+    });
+    expect(idle.events).toEqual([
+      {
+        eventType: "quest-cycle.cooldown-ended",
+        attributes: { previousOutcome: "expired" },
+      },
+    ]);
+  });
+
+  it("skips an already elapsed cooldown when a terminal tick arrives late", () => {
+    const terminalState = questCycleStateSchema.parse({
+      ...activeProgressState(),
+      status: "failed",
+      availableStreamerActions: [],
+      endsAt: ROLE_3_FIXTURE_TIME,
+      completionRule: null,
+      result: {
+        outcome: "failed",
+        occurredAt: ROLE_3_FIXTURE_TIME,
+        reason: "Fixture terminal result.",
+        rewardPointsAwarded: 0,
+      },
+    });
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        currentState: terminalState,
+        command: tickCommand(),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 120_000,
+      }),
+    );
+
+    expect(result.nextState.status).toBe("idle");
+    expect(result.events).toEqual([
+      {
+        eventType: "quest-cycle.cooldown-ended",
+        attributes: { previousOutcome: "failed" },
+      },
+    ]);
+  });
+
+  it.each([
+    [
+      "active state without a deadline",
+      questCycleStateSchema.parse({ ...activeProgressState(), endsAt: null }),
+      "Active quest tick requires an authoritative deadline",
+    ],
+    [
+      "terminal state without a result",
+      questCycleStateSchema.parse({
+        ...activeProgressState(),
+        status: "failed",
+        availableStreamerActions: [],
+        completionRule: null,
+        result: null,
+      }),
+      "Terminal quest tick requires a matching authoritative result",
+    ],
+    [
+      "cooldown state without a deadline",
+      questCycleStateSchema.parse({
+        ...role3FixtureIdleState,
+        status: "cooldown",
+        endsAt: null,
+      }),
+      "Cooldown tick requires an authoritative deadline",
+    ],
+  ] as const)("fails closed for %s", (_label, currentState, message) => {
+    const result = new DefaultQuestEngine().decide({
+      currentState,
+      command: tickCommand(),
+      candidateBatch: null,
+      now: ROLE_3_FIXTURE_TIME + 60_000,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "validation", message },
     });
   });
 
