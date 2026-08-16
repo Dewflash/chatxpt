@@ -72,6 +72,8 @@ Role 3 is complete when:
 
 **Acceptance:** Legal transitions work; illegal, duplicate, and stale-revision commands return typed decisions/errors; time and randomness are injectable; events carry correlation/revision data expected by the Role 1 orchestrator.
 
+**Implementation record (2026-08-16):** The merged `system.quest-tick` seam now deterministically expires active quests at their recorded absolute deadline, moves terminal outcomes into the accepted 120-second cooldown, and resets elapsed cooldown state to idle. A delayed active tick traverses every elapsed boundary in one decision while preserving terminal/history, cooldown-started, and cooldown-ended events. Early ticks emit no state change or event; incomplete or internally inconsistent active/terminal/cooldown state fails closed. Role 1 retains scheduling, deduplication, revisions, persistence, and broadcast.
+
 ## Phase 2: Intervention and streamer control
 
 ### L0pch decision gate
@@ -102,6 +104,8 @@ Role 3 is complete when:
 - Define emergency and changed-gameplay behaviour.
 
 **Acceptance:** Available actions derive from engine state; UI does not invent permissions; every action has a tested transition/result.
+
+**Implementation record (2026-08-16):** Intervention timing now derives deterministic busy-gameplay and suitability thresholds from the saved `experience.intensity` profile value. Intensity zero waits for quieter, stronger opportunities; intensity one tolerates more activity and a lower suitability score; missing intensity retains the neutral 0.5 policy. Lifecycle, emergency, safety, freshness, confidence, and unknown-evidence gates still run first and cannot be weakened by profile intensity.
 
 ## Phase 3: Validation and exactly-three assembly
 
@@ -190,8 +194,8 @@ Role 1 owns vote authentication, acceptance, storage, and deduplication. Role 3 
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D3-16 | Manual versus automatic progress and completion policy | Accepted | Manual progress/completion is the MVP default and must be monotonic. Automatic progress is accepted only when a deterministic quest rule names the allowed gameplay signal kind and every cited signal is known, supported, no older than 15 seconds, and at least 0.75 confidence; missing, audience-only, unknown, unsupported, disallowed, stale, or weak evidence cannot advance progress. The policy remains pure until Role 1 lands a canonical progress command/context seam. |
-| D3-17 | Success, failure, cancellation, skip, and expiry semantics | Accepted | Success requires an active candidate, sets manual progress to 1, and awards that candidate's points. Failure preserves observed progress. Cancellation, skip, and expiry remain distinct zero-point terminal results with authoritative time and reason; cancellation includes safety/emergency invalidation, skip is an intentional streamer choice, and expiry is deadline-driven through the accepted future tick seam. |
+| D3-16 | Manual versus automatic progress and completion policy | Accepted | Manual progress/completion is the MVP default and must be monotonic. Automatic progress is accepted only when a deterministic quest rule names the allowed gameplay signal kind and every cited signal is known, supported, no older than 15 seconds, and at least 0.75 confidence. Conflicting, cross-game, menu, cutscene, transition, inactive-match, missing, audience-only, unknown, unsupported, disallowed, stale, or weak evidence cannot advance progress. Broad universal visual observations cannot independently prove completion. Per D-060, allowed signal kinds alone cannot prove completion: automatic value 1 remains non-terminal and manual completion remains authoritative until the persisted active rule carries an explicit target/comparison predicate matched exactly by validation context. Automatic failure is never inferred, so insufficient evidence preserves manual controls. Issue #50 tracks that predicate-bearing Core contract. |
+| D3-17 | Success, failure, cancellation, skip, and expiry semantics | Accepted | Success requires an active candidate and, until D-060's predicate-bearing rule exists, an explicit manual succeed action; it sets progress to 1 through the manual method and awards that candidate's points. Failure preserves observed progress. Cancellation, skip, and expiry remain distinct zero-point terminal results with authoritative time and reason; cancellation includes safety/emergency invalidation, skip is an intentional streamer choice, and expiry is deadline-driven through the accepted future tick seam. |
 | D3-18 | Session-point and hype formulas | Accepted | Award the candidate's configured session points only on success. Emit deterministic session-scoped hype deltas of +10 for success, +2 for a completed failed attempt, and 0 for cancellation, skip, or expiry. Rewards are non-monetary, non-wagering, and never create persistent viewer balances; Role 1 stamps/persists/broadcasts canonical reward events. |
 | D3-19 | Cooldown/history effects on future intervention and candidates | Accepted | Every terminal outcome calculates the existing 120-second cooldown. Record the active candidate in recent history for any post-activation outcome so it cannot be immediately repeated; a batch cancelled or skipped before activation records no fabricated active quest. The accepted five-cycle/30-minute repetition window remains unchanged. |
 

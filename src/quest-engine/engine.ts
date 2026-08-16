@@ -17,9 +17,11 @@ import {
   type QuestEngineEventDraft,
   type QuestEngineInput,
   type QuestEngineResult,
+  type QuestProgress,
   type StreamerQuestAction,
 } from "../core";
 import { decideAutomaticProgress, decideManualProgress, decideQuestOutcome } from "./outcomes";
+import { defaultCooldownEndsAt } from "./intervention";
 import { validateCandidateAtVoteClose } from "./validation";
 
 export const DEFAULT_VOTING_MILLISECONDS = 30_000;
@@ -137,6 +139,21 @@ function validateCandidateBatch(input: QuestEngineInput): QuestEngineResult | nu
   return null;
 }
 
+function completionRulesMatch(
+  activeRule: QuestCycleState["completionRule"],
+  suppliedRule: QuestCycleState["completionRule"],
+): boolean {
+  return (
+    activeRule !== null &&
+    suppliedRule !== null &&
+    activeRule.mode === suppliedRule.mode &&
+    activeRule.allowedSignalKinds.length === suppliedRule.allowedSignalKinds.length &&
+    activeRule.allowedSignalKinds.every(
+      (kind, index) => suppliedRule.allowedSignalKinds[index] === kind,
+    )
+  );
+}
+
 function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
   if (input.command.type !== "streamer.quest-progress" && input.command.type !== "system.quest-progress") {
     return error("internal", "Progress transition received another command type");
@@ -148,16 +165,46 @@ function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
       ? decideManualProgress(input.currentState.progress, input.command.requestedValue, input.now)
       : (() => {
           const context = input.questProgressValidationContext;
-          const completionRule = context?.completionRule ?? null;
           if (
             context === null ||
             context === undefined ||
-            context.gameplay === null ||
-            completionRule?.mode !== "signal"
+            context.gameplay === null
           ) {
             return {
               accepted: false as const,
               reason: "missing-evidence" as const,
+            };
+          }
+          const activeCompletionRule = input.currentState.completionRule;
+          if (activeCompletionRule === null || activeCompletionRule.mode !== "signal") {
+            return {
+              accepted: false as const,
+              reason: "completion-rule-unavailable" as const,
+            };
+          }
+          if (!completionRulesMatch(activeCompletionRule, context.completionRule)) {
+            return {
+              accepted: false as const,
+              reason: "completion-rule-mismatch" as const,
+            };
+          }
+          const profile = streamerProfileSchema.safeParse(context.profile);
+          const session = streamSessionSchema.safeParse(context.session);
+          if (
+            !profile.success ||
+            !session.success ||
+            session.data.sessionId !== input.currentState.envelope.sessionId ||
+            profile.data.streamerId !== session.data.broadcasterId
+          ) {
+            return {
+              accepted: false as const,
+              reason: "unknown-evidence" as const,
+            };
+          }
+          if (session.data.status !== "live") {
+            return {
+              accepted: false as const,
+              reason: "blocked-gameplay-context" as const,
             };
           }
           const intelligence = intelligenceSnapshotSchema.safeParse({
@@ -187,7 +234,8 @@ function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
             currentProgress: input.currentState.progress,
             requestedValue: input.command.requestedValue,
             evidenceSignalIds: input.command.evidenceSignalIds,
-            allowedSignalKinds: completionRule.allowedSignalKinds,
+            allowedSignalKinds: activeCompletionRule.allowedSignalKinds,
+            expectedGameId: profile.data.gameId,
             intelligence: intelligence.data,
             now: input.now,
           });
@@ -239,11 +287,12 @@ function transitionIntelligenceReady(input: QuestEngineInput): QuestEngineResult
 
 function terminalTransition(
   input: QuestEngineInput,
-  outcome: "succeeded" | "failed" | "cancelled" | "skipped",
+  outcome: "succeeded" | "failed" | "cancelled" | "skipped" | "expired",
   reasonOverride?: string,
   eventType = "quest-cycle.terminal",
   eventAttributes: QuestEngineEventDraft["attributes"] = {},
   statePatch: Omit<Partial<QuestCycleState>, "envelope"> = {},
+  completedProgressOverride: QuestProgress | null = null,
 ): QuestEngineResult {
   const activeCandidate = input.currentState.options.find(
     (candidate) => candidate.candidateId === input.currentState.activeCandidateId,
@@ -256,18 +305,24 @@ function terminalTransition(
   if (outcomeDecision === null) {
     return error("internal", "Quest outcome policy rejected an invalid terminal transition");
   }
-  const completedProgress =
-    outcome === "succeeded"
+  const completedProgressDecision =
+    outcome === "succeeded" && completedProgressOverride === null
       ? decideManualProgress(input.currentState.progress, 1, input.now)
       : null;
-  if (completedProgress !== null && !completedProgress.accepted) {
+  if (completedProgressDecision !== null && !completedProgressDecision.accepted) {
     return error("internal", "Quest completion produced invalid manual progress");
   }
+  const completedProgress =
+    completedProgressOverride ??
+    (completedProgressDecision?.accepted === true
+      ? completedProgressDecision.progress
+      : null);
   const reasonByOutcome = {
     succeeded: "Streamer marked the active quest as succeeded.",
     failed: "Streamer marked the active quest as failed.",
     cancelled: "Streamer cancelled the quest cycle.",
     skipped: "Streamer skipped the quest cycle.",
+    expired: "The active quest reached its authoritative deadline.",
   } as const;
 
   return accept(
@@ -277,10 +332,7 @@ function terminalTransition(
       status: outcome,
       availableStreamerActions: [...actionsByStatus[outcome]],
       endsAt: input.now,
-      progress:
-        completedProgress?.accepted === true
-          ? completedProgress.progress
-          : input.currentState.progress,
+      progress: completedProgress ?? input.currentState.progress,
       completionRule: null,
       result: {
         outcome,
@@ -300,6 +352,110 @@ function terminalTransition(
       }),
     ],
   );
+}
+
+function idleAfterCooldown(
+  input: QuestEngineInput,
+  previousOutcome: string,
+  precedingEvents: readonly QuestEngineEventDraft[] = [],
+): QuestEngineResult {
+  return accept(
+    input.currentState,
+    {
+      status: "idle",
+      options: [],
+      activeCandidateId: null,
+      availableStreamerActions: [...actionsByStatus.idle],
+      voteTallies: [],
+      startsAt: null,
+      endsAt: null,
+      progress: null,
+      completionRule: null,
+      result: null,
+    },
+    [...precedingEvents, event("quest-cycle.cooldown-ended", { previousOutcome })],
+  );
+}
+
+function advanceTerminalTick(
+  input: QuestEngineInput,
+  precedingEvents: readonly QuestEngineEventDraft[] = [],
+): QuestEngineResult {
+  const result = input.currentState.result;
+  if (result === null || result.outcome !== input.currentState.status) {
+    return error("validation", "Terminal quest tick requires a matching authoritative result");
+  }
+  const cooldownEndsAt = defaultCooldownEndsAt(result.occurredAt);
+  if (cooldownEndsAt === null) {
+    return error("validation", "Quest cooldown deadline exceeds supported time");
+  }
+  const cooldownStarted = event("quest-cycle.cooldown-started", {
+    cooldownEndsAt,
+    previousOutcome: result.outcome,
+  });
+  if (input.now >= cooldownEndsAt) {
+    return idleAfterCooldown(input, result.outcome, [...precedingEvents, cooldownStarted]);
+  }
+  return accept(
+    input.currentState,
+    {
+      status: "cooldown",
+      availableStreamerActions: [...actionsByStatus.cooldown],
+      startsAt: result.occurredAt,
+      endsAt: cooldownEndsAt,
+      completionRule: null,
+    },
+    [...precedingEvents, cooldownStarted],
+  );
+}
+
+function transitionQuestTick(input: QuestEngineInput): QuestEngineResult {
+  if (input.command.type !== "system.quest-tick") {
+    return error("internal", "Quest-tick transition received another command type");
+  }
+
+  if (input.currentState.status === "active") {
+    if (input.currentState.endsAt === null) {
+      return error("validation", "Active quest tick requires an authoritative deadline");
+    }
+    if (input.now < input.currentState.endsAt) {
+      return accept(input.currentState, {}, []);
+    }
+    const expiryDeadline = input.currentState.endsAt;
+    const expired = terminalTransition({ ...input, now: expiryDeadline }, "expired");
+    if (!expired.ok || input.now === expiryDeadline) return expired;
+    return advanceTerminalTick(
+      { ...input, currentState: expired.decision.nextState },
+      expired.decision.events,
+    );
+  }
+
+  if (["succeeded", "failed", "cancelled", "skipped", "expired"].includes(input.currentState.status)) {
+    return advanceTerminalTick(input);
+  }
+
+  if (input.currentState.status === "cooldown") {
+    const result = input.currentState.result;
+    if (result === null) {
+      return error("validation", "Cooldown tick requires an authoritative terminal result");
+    }
+    const expectedCooldownEndsAt = defaultCooldownEndsAt(result.occurredAt);
+    if (expectedCooldownEndsAt === null) {
+      return error("validation", "Quest cooldown deadline exceeds supported time");
+    }
+    if (
+      input.currentState.startsAt !== result.occurredAt ||
+      input.currentState.endsAt !== expectedCooldownEndsAt
+    ) {
+      return error("validation", "Cooldown state does not match its authoritative terminal result");
+    }
+    if (input.now < expectedCooldownEndsAt) {
+      return accept(input.currentState, {}, []);
+    }
+    return idleAfterCooldown(input, result.outcome);
+  }
+
+  return accept(input.currentState, {}, []);
 }
 
 function stableHash(value: string): number {
@@ -592,10 +748,7 @@ export class DefaultQuestEngine implements QuestEngine {
       case "system.vote-close":
         return transitionVoteClose(input);
       case "system.quest-tick":
-        return error(
-          "unavailable-capability",
-          "Quest tick expiry and cooldown policy awaits the Role 3 implementation",
-        );
+        return transitionQuestTick(input);
       case "streamer.quest-progress":
       case "system.quest-progress":
         return transitionQuestProgress(input);

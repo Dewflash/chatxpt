@@ -8,8 +8,10 @@ import {
   questCycleStateSchema,
   streamSessionSchema,
   streamerProfileSchema,
+  systemQuestTickCommandSchema,
   systemQuestProgressCommandSchema,
   type GameplaySnapshot,
+  type QuestCompletionRule,
   type QuestEngineInput,
   type QuestEngineResult,
   type QuestProgress,
@@ -104,7 +106,13 @@ const voteCloseSession = streamSessionSchema.parse({
   },
 });
 
-function activeProgressState(progress: QuestProgress | null = null) {
+function activeProgressState(
+  progress: QuestProgress | null = null,
+  completionRule: QuestCompletionRule | null = {
+    mode: "signal",
+    allowedSignalKinds: ["objective-progress"],
+  },
+) {
   return questCycleStateSchema.parse({
     ...role3FixtureIdleState,
     status: "active",
@@ -114,7 +122,7 @@ function activeProgressState(progress: QuestProgress | null = null) {
     startsAt: ROLE_3_FIXTURE_TIME,
     endsAt: ROLE_3_FIXTURE_TIME + 60_000,
     progress,
-    completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+    completionRule,
   });
 }
 
@@ -135,13 +143,33 @@ function progressCommand(overrides: Partial<ReturnType<typeof systemQuestProgres
   });
 }
 
+function tickCommand(
+  overrides: Partial<ReturnType<typeof systemQuestTickCommandSchema.parse>> = {},
+) {
+  return systemQuestTickCommandSchema.parse({
+    contractVersion: "1.0.0",
+    sessionId: role3FixtureIdleState.envelope.sessionId,
+    questCycleId: role3FixtureIdleState.envelope.questCycleId,
+    commandId: "role-3-tick-command",
+    correlationId: "role-3-tick-correlation",
+    expectedRevision: 0,
+    issuedAt: ROLE_3_FIXTURE_TIME,
+    actor: { kind: "system", actorId: "role-3-tick-system" },
+    type: "system.quest-tick",
+    ...overrides,
+  });
+}
+
 function progressGameplay(
   patch: {
     readonly status?: "known" | "unknown";
     readonly kind?: string;
+    readonly value?: string | number | boolean;
+    readonly unknownReason?: "not-observed" | "conflicting";
     readonly confidence?: number;
     readonly observedAt?: number;
     readonly supportedSignals?: readonly string[];
+    readonly gameId?: string | null;
   } = {},
 ): GameplaySnapshot {
   const status = patch.status ?? "known";
@@ -160,7 +188,7 @@ function progressGameplay(
     },
     capabilities: {
       tier: "calibrated-hud",
-      gameId: "role-3-progress-game",
+      gameId: patch.gameId === undefined ? "role-3-progress-game" : patch.gameId,
       adapterId: "role-3-progress-adapter",
       supportedSignals: patch.supportedSignals ?? ["objective-progress"],
     },
@@ -170,8 +198,8 @@ function progressGameplay(
         kind: patch.kind ?? "objective-progress",
         observation:
           status === "known"
-            ? { status, value: 0.5, provenance }
-            : { status, reason: "not-observed", provenance },
+            ? { status, value: patch.value ?? 0.5, provenance }
+            : { status, reason: patch.unknownReason ?? "not-observed", provenance },
       },
     ],
   });
@@ -863,9 +891,141 @@ describe("DefaultQuestEngine", () => {
     ]);
   });
 
+  it("keeps automatic value 1 non-terminal until manual completion", () => {
+    const progressResult = decision(
+      new DefaultQuestEngine().decide({
+        currentState: activeProgressState(),
+        command: progressCommand({ requestedValue: 1 }),
+        candidateBatch: null,
+        questProgressValidationContext: {
+          profile: progressProfile,
+          session: progressSession,
+          gameplay: progressGameplay({ value: 1 }),
+          audience: null,
+          completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+        },
+        now: ROLE_3_FIXTURE_TIME + 1_000,
+      }),
+    );
+
+    expect(progressResult.nextState).toMatchObject({
+      status: "active",
+      progress: {
+        value: 1,
+        method: "automatic",
+        evidenceSignalIds: ["role-3-progress-signal"],
+      },
+      completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+      result: null,
+    });
+    expect(progressResult.events).toEqual([
+      {
+        eventType: "quest-cycle.progress-updated",
+        attributes: { method: "automatic", value: 1 },
+      },
+    ]);
+
+    const completionResult = decision(
+      new DefaultQuestEngine().decide({
+        currentState: progressResult.nextState,
+        command: role3StreamerCommand("succeed"),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 2_000,
+      }),
+    );
+
+    expect(completionResult.nextState).toMatchObject({
+      status: "succeeded",
+      progress: { value: 1, method: "manual" },
+      completionRule: null,
+      result: {
+        outcome: "succeeded",
+        rewardPointsAwarded: 100,
+        reason: "Streamer marked the active quest as succeeded.",
+      },
+    });
+    expect(completionResult.events).toEqual([
+      {
+        eventType: "quest-cycle.terminal",
+        attributes: {
+          outcome: "succeeded",
+          rewardPointsAwarded: 100,
+          hypeDelta: 10,
+          historyCandidateId: "role-3-candidate-1",
+          cooldownEndsAt: ROLE_3_FIXTURE_TIME + 122_000,
+        },
+      },
+    ]);
+  });
+
+  it.each([
+    [
+      "null active rule",
+      null,
+      { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+      "completion-rule-unavailable",
+    ],
+    [
+      "manual active rule",
+      { mode: "manual", allowedSignalKinds: [] },
+      { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+      "completion-rule-unavailable",
+    ],
+    [
+      "mismatched context rule",
+      { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+      { mode: "signal", allowedSignalKinds: ["another-progress"] },
+      "completion-rule-mismatch",
+    ],
+  ] as const)(
+    "fails closed when automatic progress receives %s",
+    (_label, activeRule, contextRule, reason) => {
+      const activeCompletionRule: QuestCompletionRule | null =
+        activeRule === null
+          ? null
+          : { mode: activeRule.mode, allowedSignalKinds: [...activeRule.allowedSignalKinds] };
+      const suppliedCompletionRule: QuestCompletionRule = {
+        mode: contextRule.mode,
+        allowedSignalKinds: [...contextRule.allowedSignalKinds],
+      };
+      const result = new DefaultQuestEngine().decide({
+        currentState: activeProgressState(null, activeCompletionRule),
+        command: progressCommand({ requestedValue: 1 }),
+        candidateBatch: null,
+        questProgressValidationContext: {
+          profile: progressProfile,
+          session: progressSession,
+          gameplay: progressGameplay({ value: 1 }),
+          audience: null,
+          completionRule: suppliedCompletionRule,
+        },
+        now: ROLE_3_FIXTURE_TIME + 1_000,
+      });
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: "validation", details: { reason } },
+      });
+    },
+  );
+
   it.each([
     ["missing-evidence", { gameplay: null }],
     ["unknown-evidence", { gameplay: progressGameplay({ status: "unknown" }) }],
+    [
+      "contradictory-evidence",
+      { gameplay: progressGameplay({ status: "unknown", unknownReason: "conflicting" }) },
+    ],
+    [
+      "blocked-gameplay-context",
+      {
+        gameplay: progressGameplay({
+          kind: "scene-transition",
+          value: true,
+          supportedSignals: ["scene-transition"],
+        }),
+      },
+    ],
     ["unsupported-evidence", { gameplay: progressGameplay({ supportedSignals: [] }) }],
     [
       "disallowed-evidence",
@@ -913,6 +1073,63 @@ describe("DefaultQuestEngine", () => {
     });
   });
 
+  it("keeps broad visual completion evidence on the manual fallback path", () => {
+    const result = new DefaultQuestEngine().decide({
+      currentState: activeProgressState(null, {
+        mode: "signal",
+        allowedSignalKinds: ["activity-intensity"],
+      }),
+      command: progressCommand({ requestedValue: 1 }),
+      candidateBatch: null,
+      questProgressValidationContext: {
+        profile: progressProfile,
+        session: progressSession,
+        gameplay: progressGameplay({
+          kind: "activity-intensity",
+          value: 1,
+          supportedSignals: ["activity-intensity"],
+        }),
+        audience: null,
+        completionRule: { mode: "signal", allowedSignalKinds: ["activity-intensity"] },
+      },
+      now: ROLE_3_FIXTURE_TIME + 1_000,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        code: "validation",
+        details: { reason: "ambiguous-completion-evidence" },
+      },
+    });
+  });
+
+  it("rejects calibrated progress evidence from another saved game", () => {
+    const expectedGameProfile = streamerProfileSchema.parse({
+      ...progressProfile,
+      gameId: "expected-game",
+      gameName: "Expected Game",
+    });
+    const result = new DefaultQuestEngine().decide({
+      currentState: activeProgressState(),
+      command: progressCommand(),
+      candidateBatch: null,
+      questProgressValidationContext: {
+        profile: expectedGameProfile,
+        session: progressSession,
+        gameplay: progressGameplay({ gameId: "another-game" }),
+        audience: null,
+        completionRule: { mode: "signal", allowedSignalKinds: ["objective-progress"] },
+      },
+      now: ROLE_3_FIXTURE_TIME + 1_000,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "validation", details: { reason: "cross-game-evidence" } },
+    });
+  });
+
   it("keeps automatic progress monotonic at the engine transition boundary", () => {
     const currentProgress = {
       value: 0.75,
@@ -956,6 +1173,291 @@ describe("DefaultQuestEngine", () => {
     expect(result).toMatchObject({
       ok: false,
       error: { code: "forbidden", details: { status: "cooldown" } },
+    });
+  });
+
+  it("keeps early active ticks as deterministic no-ops", () => {
+    const currentState = activeProgressState();
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        currentState,
+        command: tickCommand(),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 59_999,
+      }),
+    );
+
+    expect(result.nextState).toEqual(currentState);
+    expect(result.events).toEqual([]);
+  });
+
+  it("expires an active quest at its authoritative deadline", () => {
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        currentState: activeProgressState({
+          value: 0.5,
+          updatedAt: ROLE_3_FIXTURE_TIME + 10_000,
+          method: "manual",
+          evidenceSignalIds: [],
+        }),
+        command: tickCommand(),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 60_000,
+      }),
+    );
+
+    expect(result.nextState).toMatchObject({
+      status: "expired",
+      availableStreamerActions: [],
+      endsAt: ROLE_3_FIXTURE_TIME + 60_000,
+      progress: { value: 0.5, method: "manual" },
+      completionRule: null,
+      result: {
+        outcome: "expired",
+        occurredAt: ROLE_3_FIXTURE_TIME + 60_000,
+        rewardPointsAwarded: 0,
+        reason: "The active quest reached its authoritative deadline.",
+      },
+    });
+    expect(result.events).toEqual([
+      {
+        eventType: "quest-cycle.terminal",
+        attributes: {
+          outcome: "expired",
+          rewardPointsAwarded: 0,
+          hypeDelta: 0,
+          historyCandidateId: "role-3-candidate-1",
+          cooldownEndsAt: ROLE_3_FIXTURE_TIME + 180_000,
+        },
+      },
+    ]);
+  });
+
+  it("moves terminal state through cooldown and resets to idle at the absolute deadline", () => {
+    const engine = new DefaultQuestEngine();
+    const expired = decision(
+      engine.decide({
+        currentState: activeProgressState(),
+        command: tickCommand(),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 60_000,
+      }),
+    ).nextState;
+    const cooldown = decision(
+      engine.decide({
+        currentState: expired,
+        command: tickCommand(),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 60_001,
+      }),
+    );
+
+    expect(cooldown.nextState).toMatchObject({
+      status: "cooldown",
+      startsAt: ROLE_3_FIXTURE_TIME + 60_000,
+      endsAt: ROLE_3_FIXTURE_TIME + 180_000,
+      result: { outcome: "expired" },
+    });
+    expect(cooldown.events).toEqual([
+      {
+        eventType: "quest-cycle.cooldown-started",
+        attributes: {
+          cooldownEndsAt: ROLE_3_FIXTURE_TIME + 180_000,
+          previousOutcome: "expired",
+        },
+      },
+    ]);
+
+    const earlyTick = decision(
+      engine.decide({
+        currentState: cooldown.nextState,
+        command: tickCommand(),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 179_999,
+      }),
+    );
+    expect(earlyTick.nextState).toEqual(cooldown.nextState);
+    expect(earlyTick.events).toEqual([]);
+
+    const idle = decision(
+      engine.decide({
+        currentState: cooldown.nextState,
+        command: tickCommand(),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 180_000,
+      }),
+    );
+    expect(idle.nextState).toMatchObject({
+      status: "idle",
+      options: [],
+      activeCandidateId: null,
+      availableStreamerActions: [],
+      voteTallies: [],
+      startsAt: null,
+      endsAt: null,
+      progress: null,
+      completionRule: null,
+      result: null,
+    });
+    expect(idle.events).toEqual([
+      {
+        eventType: "quest-cycle.cooldown-ended",
+        attributes: { previousOutcome: "expired" },
+      },
+    ]);
+  });
+
+  it("anchors a delayed active expiry to its deadline and traverses every elapsed boundary", () => {
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        currentState: activeProgressState(),
+        command: tickCommand(),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 180_000,
+      }),
+    );
+
+    expect(result.nextState).toMatchObject({
+      status: "idle",
+      options: [],
+      activeCandidateId: null,
+      startsAt: null,
+      endsAt: null,
+      result: null,
+    });
+    expect(result.events).toEqual([
+      {
+        eventType: "quest-cycle.terminal",
+        attributes: {
+          outcome: "expired",
+          rewardPointsAwarded: 0,
+          hypeDelta: 0,
+          historyCandidateId: "role-3-candidate-1",
+          cooldownEndsAt: ROLE_3_FIXTURE_TIME + 180_000,
+        },
+      },
+      {
+        eventType: "quest-cycle.cooldown-started",
+        attributes: {
+          cooldownEndsAt: ROLE_3_FIXTURE_TIME + 180_000,
+          previousOutcome: "expired",
+        },
+      },
+      {
+        eventType: "quest-cycle.cooldown-ended",
+        attributes: { previousOutcome: "expired" },
+      },
+    ]);
+  });
+
+  it("skips an already elapsed cooldown when a terminal tick arrives late", () => {
+    const terminalState = questCycleStateSchema.parse({
+      ...activeProgressState(),
+      status: "failed",
+      availableStreamerActions: [],
+      endsAt: ROLE_3_FIXTURE_TIME,
+      completionRule: null,
+      result: {
+        outcome: "failed",
+        occurredAt: ROLE_3_FIXTURE_TIME,
+        reason: "Fixture terminal result.",
+        rewardPointsAwarded: 0,
+      },
+    });
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        currentState: terminalState,
+        command: tickCommand(),
+        candidateBatch: null,
+        now: ROLE_3_FIXTURE_TIME + 120_000,
+      }),
+    );
+
+    expect(result.nextState.status).toBe("idle");
+    expect(result.events).toEqual([
+      {
+        eventType: "quest-cycle.cooldown-started",
+        attributes: {
+          cooldownEndsAt: ROLE_3_FIXTURE_TIME + 120_000,
+          previousOutcome: "failed",
+        },
+      },
+      {
+        eventType: "quest-cycle.cooldown-ended",
+        attributes: { previousOutcome: "failed" },
+      },
+    ]);
+  });
+
+  it.each([
+    [
+      "active state without a deadline",
+      questCycleStateSchema.parse({ ...activeProgressState(), endsAt: null }),
+      "Active quest tick requires an authoritative deadline",
+    ],
+    [
+      "terminal state without a result",
+      questCycleStateSchema.parse({
+        ...activeProgressState(),
+        status: "failed",
+        availableStreamerActions: [],
+        completionRule: null,
+        result: null,
+      }),
+      "Terminal quest tick requires a matching authoritative result",
+    ],
+    [
+      "cooldown state without a terminal result",
+      questCycleStateSchema.parse({
+        ...role3FixtureIdleState,
+        status: "cooldown",
+        endsAt: null,
+      }),
+      "Cooldown tick requires an authoritative terminal result",
+    ],
+    [
+      "cooldown state with a result timestamp that does not match its start",
+      questCycleStateSchema.parse({
+        ...role3FixtureIdleState,
+        status: "cooldown",
+        startsAt: ROLE_3_FIXTURE_TIME + 1,
+        endsAt: ROLE_3_FIXTURE_TIME + 120_000,
+        result: {
+          outcome: "failed",
+          occurredAt: ROLE_3_FIXTURE_TIME,
+          reason: "Fixture terminal result.",
+          rewardPointsAwarded: 0,
+        },
+      }),
+      "Cooldown state does not match its authoritative terminal result",
+    ],
+    [
+      "cooldown state with a deadline that does not match its result",
+      questCycleStateSchema.parse({
+        ...role3FixtureIdleState,
+        status: "cooldown",
+        startsAt: ROLE_3_FIXTURE_TIME,
+        endsAt: ROLE_3_FIXTURE_TIME + 120_001,
+        result: {
+          outcome: "failed",
+          occurredAt: ROLE_3_FIXTURE_TIME,
+          reason: "Fixture terminal result.",
+          rewardPointsAwarded: 0,
+        },
+      }),
+      "Cooldown state does not match its authoritative terminal result",
+    ],
+  ] as const)("fails closed for %s", (_label, currentState, message) => {
+    const result = new DefaultQuestEngine().decide({
+      currentState,
+      command: tickCommand(),
+      candidateBatch: null,
+      now: ROLE_3_FIXTURE_TIME + 60_000,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "validation", message },
     });
   });
 

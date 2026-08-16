@@ -10,6 +10,20 @@ import { MAXIMUM_SIGNAL_AGE_MILLISECONDS } from "./validation";
 
 export const AUTOMATIC_PROGRESS_MINIMUM_CONFIDENCE = 0.75;
 
+const AMBIGUOUS_VISUAL_COMPLETION_SIGNAL_KINDS = new Set([
+  "activity-intensity",
+  "global-motion-pattern",
+  "scene-transition",
+  "visual-state",
+]);
+
+const BLOCKING_VISUAL_STATES = new Set([
+  "cutscene",
+  "menu",
+  "scene-transition",
+  "transition",
+]);
+
 export type ProgressUpdateRejection =
   | "invalid-time"
   | "invalid-value"
@@ -18,10 +32,18 @@ export type ProgressUpdateRejection =
   | "missing-evidence"
   | "duplicate-evidence"
   | "unknown-evidence"
+  | "unavailable-evidence"
+  | "contradictory-evidence"
   | "unsupported-evidence"
   | "disallowed-evidence"
   | "low-confidence-evidence"
-  | "stale-evidence";
+  | "stale-evidence"
+  | "cross-game-evidence"
+  | "blocked-gameplay-context"
+  | "completion-rule-unavailable"
+  | "completion-rule-mismatch"
+  | "unproven-progress-value"
+  | "ambiguous-completion-evidence";
 
 export type ProgressUpdateDecision =
   | { readonly accepted: true; readonly progress: QuestProgress }
@@ -33,6 +55,8 @@ export interface AutomaticProgressInput {
   readonly evidenceSignalIds: readonly string[];
   /** Signal kinds explicitly permitted by the quest's deterministic completion rule. */
   readonly allowedSignalKinds: readonly string[];
+  /** Saved game identity, when known, used to isolate calibrated evidence across games. */
+  readonly expectedGameId?: string | null;
   readonly intelligence: IntelligenceSnapshot;
   readonly now: number;
 }
@@ -101,14 +125,56 @@ export function decideAutomaticProgress(input: AutomaticProgressInput): Progress
     return { accepted: false, reason: "duplicate-evidence" };
   }
 
+  const gameplay = input.intelligence.gameplay;
+  if (
+    input.expectedGameId != null &&
+    gameplay.capabilities.gameId !== input.expectedGameId
+  ) {
+    return { accepted: false, reason: "cross-game-evidence" };
+  }
+
+  const allowedKinds = new Set(input.allowedSignalKinds);
+  if (
+    gameplay.signals.some(
+      (signal) =>
+        allowedKinds.has(signal.kind) &&
+        signal.observation.status === "unknown" &&
+        signal.observation.reason === "conflicting",
+    )
+  ) {
+    return { accepted: false, reason: "contradictory-evidence" };
+  }
+
+  if (hasBlockingGameplayContext(gameplay.signals, input.now)) {
+    return { accepted: false, reason: "blocked-gameplay-context" };
+  }
+
+  const citedSignalKinds: string[] = [];
+  let requestedValueProven = false;
+
   for (const signalId of input.evidenceSignalIds) {
-    const signal = input.intelligence.gameplay.signals.find(
+    const signal = gameplay.signals.find(
       (candidate) => candidate.signalId === signalId,
     );
-    if (signal === undefined || signal.observation.status !== "known") {
+    if (signal === undefined) {
       return { accepted: false, reason: "unknown-evidence" };
     }
-    if (!input.intelligence.gameplay.capabilities.supportedSignals.includes(signal.kind)) {
+    if (signal.observation.status === "unknown") {
+      return {
+        accepted: false,
+        reason:
+          signal.observation.reason === "conflicting"
+            ? "contradictory-evidence"
+            : "unknown-evidence",
+      };
+    }
+    if (signal.observation.status === "stale") {
+      return { accepted: false, reason: "stale-evidence" };
+    }
+    if (signal.observation.status === "unavailable") {
+      return { accepted: false, reason: "unavailable-evidence" };
+    }
+    if (!gameplay.capabilities.supportedSignals.includes(signal.kind)) {
       return { accepted: false, reason: "unsupported-evidence" };
     }
     if (!input.allowedSignalKinds.includes(signal.kind)) {
@@ -121,6 +187,22 @@ export function decideAutomaticProgress(input: AutomaticProgressInput): Progress
     if (age < 0 || age > MAXIMUM_SIGNAL_AGE_MILLISECONDS) {
       return { accepted: false, reason: "stale-evidence" };
     }
+    citedSignalKinds.push(signal.kind);
+    requestedValueProven ||= signalProvesRequestedValue(
+      signal.observation.value,
+      input.requestedValue,
+    );
+  }
+
+  if (!requestedValueProven) {
+    return { accepted: false, reason: "unproven-progress-value" };
+  }
+
+  if (
+    input.requestedValue === 1 &&
+    citedSignalKinds.every((kind) => AMBIGUOUS_VISUAL_COMPLETION_SIGNAL_KINDS.has(kind))
+  ) {
+    return { accepted: false, reason: "ambiguous-completion-evidence" };
   }
 
   return {
@@ -132,6 +214,62 @@ export function decideAutomaticProgress(input: AutomaticProgressInput): Progress
       evidenceSignalIds: [...input.evidenceSignalIds],
     }),
   };
+}
+
+function normalisedSignalString(value: string | number | boolean): string | null {
+  return typeof value === "string" ? value.trim().toLocaleLowerCase() : null;
+}
+
+function signalProvesRequestedValue(
+  value: string | number | boolean,
+  requestedValue: number,
+): boolean {
+  if (typeof value === "number") {
+    return value >= 0 && value <= 1 && value >= requestedValue;
+  }
+  return typeof value === "boolean" && value && requestedValue === 1;
+}
+
+function hasBlockingGameplayContext(
+  signals: IntelligenceSnapshot["gameplay"]["signals"],
+  now: number,
+): boolean {
+  return signals.some((signal) => {
+    const isBlockingKind = [
+      "cutscene-state",
+      "match-active",
+      "menu-state",
+      "scene-transition",
+      "visual-state",
+    ].includes(signal.kind);
+    if (
+      isBlockingKind &&
+      signal.observation.status === "unknown" &&
+      signal.observation.reason === "conflicting"
+    ) {
+      return true;
+    }
+    if (signal.observation.status !== "known") return false;
+    const age = now - signal.observation.provenance.observedAt;
+    if (
+      signal.observation.provenance.confidence < AUTOMATIC_PROGRESS_MINIMUM_CONFIDENCE ||
+      age < 0 ||
+      age > MAXIMUM_SIGNAL_AGE_MILLISECONDS
+    ) {
+      return false;
+    }
+    const value = signal.observation.value;
+    if (signal.kind === "scene-transition") return value === true;
+    if (signal.kind === "menu-state" || signal.kind === "cutscene-state") {
+      return value === true || normalisedSignalString(value) === "true";
+    }
+    if (signal.kind === "match-active") return value === false;
+    if (signal.kind === "visual-state") {
+      const state = normalisedSignalString(value);
+      return state !== null && BLOCKING_VISUAL_STATES.has(state);
+    }
+    return false;
+  });
 }
 
 export function decideQuestOutcome(
