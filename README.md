@@ -201,7 +201,7 @@ The repository intentionally distinguishes what can be shown locally today from 
 - Secrets stay server-side; client bundles are scanned for configured secret values and forbidden environment names.
 - Synthetic gameplay/chat data is restricted to automated tests and clearly labelled diagnostics.
 
-The deeper architecture description, including contracts and migration state, is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/build-plans/INTEGRATION-CONTRACT.md](docs/build-plans/INTEGRATION-CONTRACT.md).
+The deeper target-architecture description is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), the implementation and major-file walkthrough is in [docs/CODEBASE_GUIDE.md](docs/CODEBASE_GUIDE.md), and the binding role-to-role seams are in [docs/build-plans/INTEGRATION-CONTRACT.md](docs/build-plans/INTEGRATION-CONTRACT.md).
 
 ## 3. Prompts and Agent Configurations
 
