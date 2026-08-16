@@ -75,8 +75,15 @@ interface KnownSignalValue {
 const MINIMUM_SIGNAL_CONFIDENCE = 0.65;
 const MAX_GAMEPLAY_AGE_MILLISECONDS = 15_000;
 const MAX_AUDIENCE_AGE_MILLISECONDS = 30_000;
-const BUSY_ACTIVITY_THRESHOLD = 0.75;
-const SUITABILITY_THRESHOLD = 0.6;
+const DEFAULT_PROFILE_INTENSITY = 0.5;
+
+function profileTimingThresholds(profile: StreamerProfile) {
+  const intensity = profile.experience.intensity ?? DEFAULT_PROFILE_INTENSITY;
+  return {
+    busyActivity: 0.65 + 0.2 * intensity,
+    suitability: 0.7 - 0.2 * intensity,
+  };
+}
 
 function reject(reason: InterventionReason): InterventionDecision {
   return { shouldPropose: false, score: 0, reasons: [reason], evidenceSignalIds: [] };
@@ -176,6 +183,7 @@ export class DefaultInterventionPolicy {
     if (input.emergencyPaused) return reject("emergency-paused");
 
     const gameplaySignals = intelligence.data.gameplay.signals;
+    const timingThresholds = profileTimingThresholds(profile.data);
     const activity = signalByKind(
       gameplaySignals,
       "activity-intensity",
@@ -185,7 +193,7 @@ export class DefaultInterventionPolicy {
     const activityValue = numericSignal(activity);
     if (activityValue === null) return reject("insufficient-gameplay-evidence");
     if (
-      activityValue >= BUSY_ACTIVITY_THRESHOLD ||
+      activityValue >= timingThresholds.busyActivity ||
       truthySignal(signalByKind(gameplaySignals, "fight", input.now, MAX_GAMEPLAY_AGE_MILLISECONDS))
     ) {
       return reject("busy-gameplay");
@@ -214,7 +222,7 @@ export class DefaultInterventionPolicy {
     const score = Number(
       (0.5 * (1 - activityValue) + 0.3 * audienceOpportunity + 0.2 * averageConfidence).toFixed(4),
     );
-    if (score < SUITABILITY_THRESHOLD) {
+    if (score < timingThresholds.suitability) {
       return {
         shouldPropose: false,
         score,

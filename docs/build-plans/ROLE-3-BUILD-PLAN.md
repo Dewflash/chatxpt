@@ -105,6 +105,8 @@ Role 3 is complete when:
 
 **Acceptance:** Available actions derive from engine state; UI does not invent permissions; every action has a tested transition/result.
 
+**Implementation record (2026-08-16):** Intervention timing now derives deterministic busy-gameplay and suitability thresholds from the saved `experience.intensity` profile value. Intensity zero waits for quieter, stronger opportunities; intensity one tolerates more activity and a lower suitability score; missing intensity retains the neutral 0.5 policy. Lifecycle, emergency, safety, freshness, confidence, and unknown-evidence gates still run first and cannot be weakened by profile intensity.
+
 ## Phase 3: Validation and exactly-three assembly
 
 ### L0pch decision gate

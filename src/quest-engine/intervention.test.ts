@@ -247,6 +247,56 @@ describe("DefaultInterventionPolicy", () => {
       reasons: ["below-suitability-threshold"],
     });
   });
+
+  it("adapts intervention timing to the streamer's saved intensity", () => {
+    const snapshot = intelligence(
+      [knownSignal("activity", "activity-intensity", 0.7)],
+      [knownSignal("hype", "audience-hype", 0.8)],
+    );
+    const lowIntensity = streamerProfileSchema.parse({
+      ...fixtureProfile,
+      experience: { intensity: 0 },
+    });
+    const highIntensity = streamerProfileSchema.parse({
+      ...fixtureProfile,
+      experience: { intensity: 1 },
+    });
+    const policy = new DefaultInterventionPolicy();
+
+    expect(policy.decide({ ...policyInput(snapshot), profile: lowIntensity })).toMatchObject({
+      shouldPropose: false,
+      reasons: ["busy-gameplay"],
+    });
+    expect(policy.decide({ ...policyInput(snapshot), profile: highIntensity })).toEqual({
+      shouldPropose: true,
+      score: 0.57,
+      reasons: ["eligible"],
+      evidenceSignalIds: ["activity", "hype"],
+    });
+  });
+
+  it("uses the neutral timing default when legacy profiles omit intensity", () => {
+    const snapshot = intelligence(
+      [knownSignal("activity", "activity-intensity", 0.1)],
+      [knownSignal("boredom", "audience-boredom", 0.7)],
+    );
+    const legacyProfile = streamerProfileSchema.parse({
+      ...fixtureProfile,
+      experience: {},
+    });
+
+    expect(
+      new DefaultInterventionPolicy().decide({
+        ...policyInput(snapshot),
+        profile: legacyProfile,
+      }),
+    ).toEqual({
+      shouldPropose: true,
+      score: 0.84,
+      reasons: ["eligible"],
+      evidenceSignalIds: ["activity", "boredom"],
+    });
+  });
 });
 
 describe("Phase 2 timing and interruption policy", () => {
