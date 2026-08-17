@@ -107,6 +107,12 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 - Integration overrides and cross-role disputes
 - Submission operations and any later changes to the accepted participation-rate KPI, owner-called freeze authority, or deferred demo-narrative scope
 
+## Role 1 review posture
+
+Per D-062, Role 1 should not block ordinary in-scope role work. If a role PR stays inside its owner scope, preserves accepted public contracts, includes the required evidence/change fragment, and does not touch safety, credentials, cost, platform scope, final claims, destructive changes, or cross-role ownership, Role 1 should approve quickly without asking for extra product decisions.
+
+Role 1 still pauses or requests changes for shared-contract changes, safety or quest-policy risk, auth/credential/deployment changes, external services or cost, role-boundary violations, missing required evidence, destructive changes, or any attempt to present fixture/diagnostic work as live proof.
+
 ## Pre-submission future-roadmap considerations
 
 Role 1 should consider these five Garena-relevant future application cases before final submission and deck freeze. These are roadmap/pitch-positioning considerations, not accepted MVP scope or implemented non-Twitch platform support.

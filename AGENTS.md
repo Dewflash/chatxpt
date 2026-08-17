@@ -329,6 +329,7 @@ Keep provider payloads, Twitch payloads, component-local UI state, and persisten
 - Never push directly to `main`; use a pull request for every change.
 - Keep branches short-lived, sync current `main` before review, and integrate the smallest vertical slice after every wave and at least daily.
 - Role 1 controls final integration and merging. A pull request that touches another role's files requires that role owner's review.
+- Under D-062, Role 1 should fast-approve ordinary in-scope role pull requests and handoffs instead of becoming a default blocker. This applies only when the work stays within the owning role's scope, preserves accepted public contracts, includes required evidence/change fragments, and does not affect safety, credentials, cost, platform scope, final claims, destructive changes, or cross-role ownership.
 - Maintain `CODEOWNERS` for role directories and require automated checks before merge.
 - Do not edit another role's implementation or make decisions for that role, except through the recorded Role 1 integration override or the scoped D-016 Role 2 planning grant.
 - Route cross-role proposals to the owning role for comparison and notify the project owner before adoption.
