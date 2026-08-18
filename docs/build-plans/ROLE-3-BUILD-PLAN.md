@@ -262,6 +262,27 @@ Role 1 owns vote authentication, acceptance, storage, and deduplication. Role 3 
 
 **Acceptance:** Role 3 consumer/producer contract tests pass against Role 1/2 canonical examples; no UI implements lifecycle, validation, tie, reward, timer authority, or permission rules; the engine has no Supabase/Twitch/UI imports; real golden workflow reaches every terminal state needed for evidence.
 
+## Phase 7: Live Director deterministic half
+
+D-075 activates the research-bounded Live Director scope and assigns Role 3 five isolated passes. The self-contained owner brief is `docs/roles/ROLE-3-LIVE-DIRECTOR-BRIEF.md`; the complete ten-pass file/dependency/acceptance matrix is `docs/build-plans/LIVE-DIRECTOR-IMPLEMENTATION-PLAN.md`. These passes extend the existing intervention and exactly-three engine authority; they do not create a second quest lifecycle.
+
+| Pass | Role 3 outcome | Merge boundary |
+| --- | --- | --- |
+| `LD-R3-01` / R3-009 | Deterministic cue suitability and attention budget return `stay-silent`, `wait`, or `offer-cue` only after hard gates | Consume Role 1's canonical context contract; use proposed fixtures only until that seam merges |
+| `LD-R3-02` / R3-010 | Cue lifecycle/actions cover acknowledge, one-resurface Later, dismiss, convert, stale, expiry, and cancellation | Role 1 owns command identity, revisions, server time, persistence, and broadcast |
+| `LD-R3-03` / R3-011 | Converted cues reuse exactly-three validation/replacement and streamer approval | Role 2 still generates candidates; no direct cue-to-viewer publication |
+| `LD-R3-04` / R3-012 | Context invalidation, emergency, cooldown, reconnect, and history rules remain deterministic | No scheduler, persistence, UI authority, or automatic-completion expansion |
+| `LD-R3-05` / R3-013 | Failure-oriented evaluation, fixtures, public seam examples, and limitations reach Role 1 | Role 1 separately proves real Twitch/OBS/provider/runtime behaviour |
+
+### Phase 7 acceptance
+
+- Hard lifecycle, emergency, safety, support, freshness, confidence, and `unknown` gates remain stronger than cue-scoring or profile intensity.
+- Sparse, ambiguous, conflicting, sarcastic, stale, and high-focus cases wait or stay silent rather than fabricating audience consensus or suitability.
+- Exactly three validated options—or a typed no-publication result—remain the only cue conversion result.
+- Provider, algorithmic, and deterministic provenance never weaken Role 3 validation; the credential-free path remains usable.
+- The engine imports no Twitch, Supabase, UI, or provider implementation and emits only stable state/events/allowed actions for Role 1 composition.
+- Each pass rebases current `main`, deconflicts the corresponding Role 1 wave, adds one change fragment, receives independent review, and reports fixture-only evidence truthfully.
+
 ## Coordinate with Role 1 when
 
 - A canonical contract changes; implementation may proceed with affected producer/consumer tests, and the author plus independent reviewer deconflict it before merge with Role 1 available to assist.

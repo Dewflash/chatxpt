@@ -371,6 +371,20 @@ Run this loop throughout every phase:
 
 **Acceptance:** The same session/cycle revision and authoritative timestamps appear in Studio, two viewer clients, persistence, and OBS; results, limitations, screenshots/recordings, commands, and failures are recorded; no simulated run is presented as live evidence.
 
+## Phase 4B: Live Director Role 1 half
+
+D-075 activates five Role 1 passes paired with Role 3's deterministic half. The authoritative pass/file/test/exclusion matrix is `docs/build-plans/LIVE-DIRECTOR-IMPLEMENTATION-PLAN.md`; Role 3's pickup brief is `docs/roles/ROLE-3-LIVE-DIRECTOR-BRIEF.md`.
+
+| Pass | Role 1 outcome | Paired Role 3 seam |
+| --- | --- | --- |
+| `LD-R1-01` / R1-023 | Canonical authority, privacy, commands, expiry, fixtures, and streamer/viewer/OBS projections | `LD-R3-01` consumes source-labelled context through the public contract |
+| `LD-R1-02` / R1-024 | Declared intent, privacy-safe Chat Pointer, and private Live Context composition | `LD-R3-02` consumes fresh context and emits authorised cue actions |
+| `LD-R1-03` / R1-025 | Studio/Live Config controls plus private browser pop-out/OBS Dock delivery | `LD-R3-03` owns exactly-three conversion mechanics |
+| `LD-R1-04` / R1-026 | Extension Vote/Active/Result, P1 Catch-up experiment, hosted parity, and compressed public OBS payoff | `LD-R3-04` owns invalidation, emergency, cooldown, and history effects |
+| `LD-R1-05` / R1-027 | P1 intervention-specific brief, golden integration, and comparative value evidence | `LD-R3-05` supplies the stable deterministic evaluation/handoff |
+
+**Acceptance:** Every wave rebases current `main`, preserves the sole Role 1 runtime authority and private/public projection boundary, deconflicts its counterpart PR, and records fixture-only versus real evidence. Exactly-three validation, the credential-free algorithmic path, Role 3 deterministic fallback, Twitch Extension primary participation, hosted-board fallback, and Twitch-chat fallback remain operational. Failed Catch-up, Session Brief, cue, or burden-reduction hypotheses are narrowed or removed instead of presented as validated value.
+
 ## Phase 5: Owner-called freeze and submit
 
 ### R1-P14 — Release evidence and submission
