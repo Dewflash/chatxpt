@@ -14,6 +14,10 @@ Before starting a pass, read in this order:
 6. `docs/build-plans/INTEGRATION-CONTRACT.md`
 7. Your build plan in this directory
 
+## Evidence-gated expansion plan
+
+`LIVE-DIRECTOR-IMPLEMENTATION-PLAN.md` records the project-owner-requested isolated-pass sequence for the proposed Live Director expansion and the accepted D-074 three-surface rule. It is planning evidence, not active source authority: `LD-P01` and later passes begin only after the secondary-research `LD-P00` gate produces an accepted keep/defer/reject scope. The existing Role 1-5 plans remain the implementation authority until that activation record exists.
+
 ## Responsibility for the plans
 
 - Role 1 defines required phases, order, outcomes, deadlines, acceptance criteria, and integration boundaries for Roles 1-3.

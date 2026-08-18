@@ -4,7 +4,7 @@
 
 This file records evidence for problem-solution fit, originality, expected impact, and trade-offs. It must distinguish observations from team hypotheses and must not contain unnecessary personal information.
 
-**Current discovery status:** the Live Director expansion below is a proposed, evidence-gated product direction. It is a recorded discovery backlog, not an accepted implementation plan or proof that the named pain points are prevalent. Role implementation queues must not treat it as committed scope until the secondary-research gate and project-owner review are complete.
+**Current discovery status:** D-074 settles the three-surface responsibility rule, and `docs/build-plans/LIVE-DIRECTOR-IMPLEMENTATION-PLAN.md` records the requested isolated-pass implementation sequence. The proposed feature scope and value claims remain evidence-gated: the plan is not active implementation authority or proof that the named pain points are prevalent. Role implementation queues must not treat the additions as committed scope until the secondary-research gate and project-owner keep/defer/reject review are complete.
 
 ## Current validation method
 
@@ -15,7 +15,7 @@ Primary interviews are not part of the current Live Director discovery pass. Val
 - A current capability audit of Twitch and relevant streamer tools so ChatXPT does not duplicate existing analytics, polls, overlays, or dashboards.
 - Source-by-source limitations, dates, sample characteristics, and a clear separation between documented behaviour, documented pain, and the team's inference.
 
-The evidence gate may support a credible problem thesis, but it may not claim universal product-market fit or that small streamers are simply executing badly. If evidence is weak or contradictory, narrow, defer, or reject the corresponding feature before implementation planning.
+The evidence gate may support a credible problem thesis, but it may not claim universal product-market fit or that small streamers are simply executing badly. If evidence is weak or contradictory, narrow, defer, or reject the corresponding feature before activating an implementation pass.
 
 ## Proposed Live Director expansion
 
@@ -36,12 +36,27 @@ streamer-declared goal + detected gameplay state + aggregated audience signals
 
 `Sidequest` remains ChatXPT's core domain term and flagship participation action under D-067. The proposal broadens what ChatXPT understands and explains; it does not yet authorise unrelated engagement mechanics or a generic streamer-management suite.
 
+### Settled surface-value boundary
+
+D-074 accepts the responsibility boundary below for every feature that survives research. The surfaces may show the same authoritative session or sidequest state, but they must not duplicate the same full interface.
+
+| Surface | Audience | Product job | Value that the other surfaces cannot supply |
+| --- | --- | --- | --- |
+| ChatXPT Studio / Twitch Live Config | Broadcaster and authorised moderators | Private decision support and control | Source-labelled Live Context, Chat Pointers, confidence/freshness/`unknown`, Director Cues, exactly-three proposal review, safety/lifecycle controls, and later aggregate history |
+| OBS Browser Source | Everyone receiving the broadcast | Universal shared awareness and payoff | A glanceable public vote, winner, active sidequest, progress, hype, result, and reconnect state even when a viewer has not opened the Extension |
+| Twitch Extension | Each viewer individually | Optional depth, interaction, and personal continuity | Catch-up, expanded quest details, select-then-confirm voting, private receipt, reactions, personal points, late-join state, and reconnect restoration without cluttering the broadcast |
+
+OBS answers “what must everyone understand now?”, the Extension answers “what can I understand or do?”, and Studio/Live Config answers “what should the streamer privately decide, and why?”. OBS is a public read-only scoreboard; the Extension is a viewer companion; Studio/Live Config is the producer surface. Internal cue reasoning, raw chat, usernames, private viewer identity, and personal receipts never appear in OBS.
+
+A Chat Pointer or summarised chat feed is not sufficient differentiation. The incremental value thesis to test is whether ChatXPT can reduce engagement-operation effort by connecting streamer-declared intent, fresh gameplay state, aggregated audience intent, deterministic safety, exactly-three quest orchestration, individual viewer participation, universal broadcast payoff, and intervention-specific reflection into one closed loop. Twitch supplies several of the underlying primitives; ChatXPT must prove that its composition and timing add value rather than merely rearranging them.
+
 ### Proposed streamer-side additions
 
 | Surface | Addition to validate | Intended pain addressed | Scope boundary |
 | --- | --- | --- | --- |
 | ChatXPT Studio, before stream | Session Goal, Current Objective, desired audience involvement, and hard safety/boundary review | The system needs an explicit account of what the streamer says they are doing instead of inventing intent from frames or chat | Manual/selectable intent is P0 candidate; continuous microphone transcription is later-only unless separately justified |
 | Twitch Live Config, during stream | Private Live Context showing `Streamer says`, `ChatXPT detects`, and `Chat suggests`, with provenance, freshness, confidence, and honest `unknown` | The streamer cannot continually reconcile gameplay, chat, and tool state while playing | Compact live surface; no raw chat dump, provider name, or fabricated consensus |
+| Twitch Live Config, during stream | A Chat Pointer showing the relevant topic, unique-participant count, qualifying-message count, time window, and optional short-lived evidence | An ordinary chat feed still requires the streamer to notice repetition, judge relevance, and connect it to gameplay | One viewer is never labelled as consensus; deduplicate spam, show ambiguity, expire stale pointers, and retain only approved aggregates in product history |
 | Twitch Live Config, during stream | One Director Cue with a short reason and `Acknowledge`, `Turn into vote`, `Later`, and `Dismiss` actions | The streamer needs one actionable audience-backed opportunity rather than another dashboard | Engagement-aware advice, not general optimal-gameplay coaching |
 | Streamer-private cue channel | A glanceable cue outside the public broadcast, with delivery options evaluated separately | A streamer in fullscreen gameplay may not see Studio, Twitch Live Config, or the OBS preview | See the private-visibility feasibility question below; do not reuse the public OBS overlay as private UI |
 | ChatXPT Studio, after stream | Automatic Session Brief and an annotated timeline connecting game phase, chat aggregate, cue/quest, participation, and result | Generic metrics do not explain what ChatXPT did or what happened around an intervention | Correlation only; never claim an intervention caused retention without appropriate evidence |
@@ -51,10 +66,10 @@ streamer-declared goal + detected gameplay state + aggregated audience signals
 
 | Surface | Addition to validate | Intended pain addressed | Scope boundary |
 | --- | --- | --- | --- |
-| Twitch Extension viewer | Expandable Catch-up Card showing declared stream goal, detected current phase, important recent event, current audience decision, and active sidequest/progress | Late or quiet viewers may not understand what is happening when the streamer is not narrating | Source labels and `unknown` are mandatory; no invented plot, intent, or game fact |
-| Twitch Extension viewer | Audience-decision context that explains why a vote is appearing before the existing select-then-confirm three-option vote | Voting is more meaningful when viewers understand the situation they are influencing | Exactly three validated sidequests remain the current activation path |
-| Twitch Extension viewer | Late-join recovery for the current goal, winning choice, quest status, and result | Viewers can arrive mid-cycle and otherwise lack the shared context | Consume the same authoritative revision; do not create viewer-local quest truth |
-| OBS Browser Source | Short broadcast-safe context updates plus existing voting, winner, progress, and result visuals | Viewers watching the video need glanceable shared state without opening the Extension | Public, read-only, low-distraction output; not a configuration surface and not a private streamer HUD |
+| Twitch Extension viewer | A four-state companion: Catch-up, Vote, Active, and Result | A voting-only Extension becomes irrelevant between polls and cannot help late joiners or preserve personal participation state | Catch-up and result remain optional depth; exactly three validated sidequests remain the activation path |
+| Twitch Extension viewer | Expandable Catch-up showing the public-safe stream goal, detected phase, important recent event, current audience decision, and active sidequest/progress | Late or quiet viewers may not understand what is happening when the streamer is not narrating | Source labels and `unknown` are mandatory; no invented plot, intent, game fact, or private Director Cue evidence |
+| Twitch Extension viewer | Personal participation state: select-then-confirm vote, accepted receipt, reaction, session points, and late-join/reconnect recovery | OBS can show shared state but cannot receive a command or reveal one viewer's private accepted choice and recovery | Consume server-authorised state; do not calculate votes, rewards, timers, winners, or lifecycle locally |
+| OBS Browser Source | Compressed public projection of material context, voting, winner, progress, hype, result, and reconnect | Every viewer needs the shared headline and payoff even when the Extension is closed | Public, read-only, low-distraction output; no private rationale, raw chat, personal fields, or configuration controls |
 | Hosted Quest Board fallback | Catch-up and decision context equivalent to the Twitch Extension where capabilities allow | Fallback viewers should not lose the meaning of the interaction | Same participation service and revision; no separate product logic |
 | Twitch-chat fallback | Bounded numbered choice and result wording only | Preserve last-resort participation when interactive UI is unavailable | Do not attempt to reproduce the full Catch-up Card in chat or spam per-viewer acknowledgements |
 
@@ -84,7 +99,8 @@ The current discovery recommendation is to validate Live Config/OBS Dock plus an
 | LD-V07 | READY | Decide the private streamer cue channel after comparing second-screen Live Config, OBS Dock, private audio/hotkeys, and an always-on-top companion. | Project-owner go/no-go with platform, accessibility, capture-recursion, anti-cheat, and implementation-risk notes. |
 | LD-V08 | READY | Define the minimum intervention-specific Session Brief and the exact moments it appears. | Post-stream and next-stream information hierarchy that does not duplicate Twitch Analytics or overstate causality. |
 | LD-V09 | READY | Produce a keep/defer/reject scope recommendation for every proposed streamer and viewer addition. | Evidence-to-feature traceability and an explicit judgement of whether the expansion remains one coherent Live Director product. |
-| LD-V10 | WAITING | Create the isolated cross-role implementation plan only after LD-V01 through LD-V09 and project-owner scope acceptance. | Later owner request, accepted scope, contract impact, isolated passes, role queues, dependencies, and acceptance evidence. |
+| LD-V10 | DONE | Record the requested evidence-gated isolated cross-role implementation plan without activating source work. | `docs/build-plans/LIVE-DIRECTOR-IMPLEMENTATION-PLAN.md` records the surface boundary, candidate contract spine, pass order, dependencies, evaluation matrix, and kill criteria. |
+| LD-V11 | WAITING | Activate only the retained implementation passes after LD-V01 through LD-V09 and project-owner scope acceptance. | Accepted keep/defer/reject scope is copied into the plan, affected role queues and coordination rows are updated, and rejected features are removed before source work begins. |
 
 ## Optional later conversation / usability guide
 
@@ -113,6 +129,10 @@ This is a claim framework, not a completed market study. Verify concrete competi
 
 | Existing approach | Useful today | Typical gap ChatXPT tests | Evidence required |
 | --- | --- | --- | --- |
+| Twitch Chat & Events | Gives creators a live chat/activity surface and current channel-event controls | Whether prioritising a privacy-safe audience signal against gameplay and converting it into a complete streamer-controlled interaction reduces work beyond reading the feed | Current official documentation, workflow decomposition, third-party capability audit, and counterevidence |
+| Twitch Polls and Predictions | Supply familiar native participation mechanics | Whether automatically grounding an interaction in the current game moment, streamer boundaries, exactly-three sidequests, progress, and OBS payoff is materially better than launching a generic native interaction | Current official documentation plus feature-to-pain and effort comparison |
+| Twitch Extension framework | Supplies embedded viewer, panel/component/overlay, identity, and interaction capabilities | It is ChatXPT's delivery platform, not differentiation by itself; compare whether the proposed companion behaviour is already supplied by current Extensions | Current framework documentation plus an audit of relevant live Extensions and tools |
+| OBS overlay | Gives every broadcast viewer the same public visual state | Cannot receive a personal vote/reaction, restore one viewer's receipt, or offer optional depth without adding broadcast clutter | Surface-capability comparison and implemented projection evidence |
 | Static poll | Viewers choose among predefined options | Does not automatically connect live gameplay, current audience behaviour, and saved streamer boundaries | Product documentation plus observed streamer workflow |
 | Manual chat suggestion | Flexible and socially familiar | High-volume suggestions are hard to structure and evaluate while playing | Streamer/viewer observation |
 | Fixed reward redemption | Predictable and easy to moderate | Repeats predefined actions without contextual sidequest generation | Product documentation plus workflow comparison |
