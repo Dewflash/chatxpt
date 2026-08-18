@@ -3,7 +3,9 @@
  *
  * This module does not select or call a provider and is not part of the runtime
  * quest lifecycle. Role 2 supplies measured provider results; Role 3 applies
- * these quest-quality gates and scores before the joint recommendation.
+ * these quest-quality gates and scores for the D-072-approved path. Provider
+ * adoption is already settled, but real quality remains unproven until Role 2
+ * supplies an authorised operational trial.
  */
 
 export const PROVIDER_QUALITY_SCORE_MAXIMUM = 4 as const;
