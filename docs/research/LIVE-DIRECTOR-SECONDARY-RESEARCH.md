@@ -2,11 +2,11 @@
 
 **Owner:** Role 1 (`Dewflash`)
 
-**Date:** 18 August 2026
+**Date:** 18 August 2026; evidence hierarchy corrected 19 August 2026
 
 **Method:** Secondary research only
 
-**Decision status:** Research complete; keep/defer/reject recommendations await project-owner acceptance
+**Decision status:** Research and evidence ledger complete; keep/defer/reject recommendations await project-owner acceptance; no proposed source pass is active
 
 ## Executive conclusion
 
@@ -24,14 +24,25 @@ The defensible product wedge is therefore:
 
 This is an experience-level differentiation, not a durable technical moat. A competitor can copy it. ChatXPT must prove that the complete loop requires less streamer attention and produces more meaningful participation than a manual Twitch poll, reward, or chat prompt.
 
-The research recommends:
+### Evidence hierarchy correction
+
+The reviewed research establishes different things at different strengths:
+
+1. **Pain evidence:** divided attention, audience-management work, nonlinear chat overload, and some late-join context difficulty are documented.
+2. **Adjacent intervention evidence:** CatchLive changed behavioural participation proxies in a small comparison, and large observational deployments show that viewers can use optional Extension content. These systems are not ChatXPT.
+3. **Feasibility and category evidence:** gameplay signals can support bounded phase inference, and social participation matters to some viewers. This does not prove product value.
+4. **Direct ChatXPT solution evidence:** none yet. No reviewed source evaluates ChatXPT's exact private-cue -> safe exactly-three sidequest -> Twitch vote -> OBS payoff loop.
+
+Therefore, every `P0` recommendation below means **the first hypothesis worth testing**, not **a research-proven feature**. Direct claims about reduced streamer effort, increased meaningful participation, retention, growth, subscriptions, revenue, or product-market fit remain unsupported. The quantitative source results, limitations, and ChatXPT implications are preserved in [`LIVE-DIRECTOR-EVIDENCE-MATRIX.md`](./LIVE-DIRECTOR-EVIDENCE-MATRIX.md).
+
+If the project owner chooses to test the product thesis, the research recommends:
 
 - Keep the streamer-declared Session Goal, source-separated private Live Context, a narrowly bounded Chat Pointer, one Director Cue, exactly-three sidequest conversion, Extension Vote/Active/Result states, and the existing public OBS quest projection as the P0 loop.
 - Treat a late-join Catch-up Card and intervention-specific Session Brief as P1 experiments with explicit kill criteria.
 - Use Twitch Live Config pop-out or an OBS Custom Dock as the first private cue delivery options. Defer private audio/hotkeys. Reject an always-on-top desktop companion from the MVP.
 - Reject generic gameplay coaching, a generic AI cohost, a full chat summary window, a broad growth analytics suite, a full stream-summary timeline, and viewer-paid direct game control from this product expansion.
 
-No source reviewed establishes product-market fit, a retention lift, or a universal small-streamer playbook. Those remain unproven.
+No source reviewed establishes ChatXPT's direct solution fit, product-market fit, a retention lift, or a universal small-streamer playbook. Those remain unproven.
 
 ## 1. Research questions and evidence standard
 
@@ -301,6 +312,8 @@ ChatXPT turns a suitable gameplay moment and privacy-safe audience signal into o
 - The differentiator is a workflow composition and can be copied. Reliability, trust, restraint, and execution are therefore part of product value rather than implementation details.
 
 ## 14. Source ledger
+
+The expanded quantitative ledger, including adjacent-treatment, Extension, audience-influence, newcomer, viewer-heterogeneity, counterevidence, and current 2026 gameplay-behaviour studies, is maintained in [`LIVE-DIRECTOR-EVIDENCE-MATRIX.md`](./LIVE-DIRECTOR-EVIDENCE-MATRIX.md). This shorter table remains the source index used by the narrative above.
 
 | Source | Method/capability | Supports | Does not support | Evidence grade |
 | --- | --- | --- | --- | --- |

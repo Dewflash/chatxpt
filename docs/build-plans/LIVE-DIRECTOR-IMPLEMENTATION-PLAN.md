@@ -4,7 +4,7 @@
 
 **Responsibility leads:** Role 2 for intelligence, Role 3 for intervention and quest mechanics, Role 4 for streamer UX, and Role 5 for viewer/overlay UX
 
-**Status:** Secondary research complete; project-owner keep/defer/reject decision pending; not active implementation authority
+**Status:** Secondary research and quantitative evidence ledger complete; direct ChatXPT solution fit unproven; project-owner keep/defer/reject decision pending; not active implementation authority
 
 **Authority:** D-007, D-008, D-012, D-024, D-030, D-041, D-052, D-067, D-068, D-071, D-073, and D-074
 
@@ -12,7 +12,7 @@
 
 This plan records how the proposed Live Director expansion would be implemented if its value survives the secondary-research gate. It does not by itself authorise source implementation.
 
-`docs/research/LIVE-DIRECTOR-SECONDARY-RESEARCH.md` completes `LD-V01` through `LD-V06` and `LD-V08`, and supplies owner-ready recommendations for `LD-V07` and `LD-V09`. The evidence supports a narrow audience-to-sidequest orchestration wedge rather than a generic AI stream director. Project-owner acceptance and the resulting scope rewrite remain outstanding.
+`docs/research/LIVE-DIRECTOR-SECONDARY-RESEARCH.md` completes `LD-V01` through `LD-V06` and `LD-V08`, and supplies owner-ready recommendations for `LD-V07` and `LD-V09`. `docs/research/LIVE-DIRECTOR-EVIDENCE-MATRIX.md` makes the evidence hierarchy explicit: the bounded pain is supported, adjacent mechanisms have mixed support, and ChatXPT's exact solution effect is unproven. Any retained `P0` item is therefore the first falsifiable product hypothesis, not an externally validated feature. Project-owner acceptance and the resulting scope rewrite remain outstanding.
 
 Before `LD-P01` begins:
 
