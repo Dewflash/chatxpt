@@ -6,7 +6,7 @@ Update only this role's statuses and evidence. Raise shared-contract needs throu
 
 Execute these outcomes through `docs/build-plans/ROLE-2-BUILD-PLAN.md`; its decision gates belong to Joelyrk unless explicitly marked joint or escalated.
 
-**Next pass:** execute `role-2/real-input-evidence` against Role 1's merged browser `FrameSource`: two authorised gameplay samples with separate annotations, quiet/action/transition measurements, one selective-OCR run, latency/resource observations, sanitised real-chat fixtures, and honest unknown behaviour. D2-07 through D2-11 are approved; replace diagnostic calibration with the resulting live-labelled policy only after the evidence bundle passes its real-input gate.
+**Next pass:** execute `role-2/real-input-evidence` against Role 1's merged browser `FrameSource` using vanilla Minecraft as the rehearsed demo target: two authorised gameplay samples with separate annotations, quiet/action/transition measurements, one selective-OCR or template run, latency/resource observations, sanitised real-chat fixtures, and honest unknown behaviour. D2-07 through D2-11 are approved; inject a live-labelled policy only after the matching evidence bundle passes its real-input gate.
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
@@ -14,9 +14,9 @@ Execute these outcomes through `docs/build-plans/ROLE-2-BUILD-PLAN.md`; its deci
 | R2-009 | P0 | DONE | Decide and deliver separate but synchronised current-MVP build plans for Roles 4 and 5 under D-016. | Current prototype; D-016; integration contract | Plans share deadlines/dependency matrix and define view models, commands, fixture states, route mounts, public entries, P0/P1/exclusions, acceptance evidence, and early design-system handoff; each owner provided one feasibility review, Role 2 accepted both without a scope revision, and Role 1 was notified through issues #15/#16. |
 | R2-002 | P0 | BLOCKED | Implement tiered real-frame extraction from Role 1's OBS Virtual Camera interface. | Shared extraction contract and real frame source | Universal activity signals work across multiple owned action-game examples; calibrated adapters emit specific HUD facts only when supported; confidence/capabilities/unknown and resource measurements are evidenced. |
 | R2-003 | P0 | IN PROGRESS | Implement audience/gameplay snapshot and behavioural intelligence. | R2-002; audience contract | Timestamped/confidence-scored output for energy, sentiment, intent, humour, risk, boredom, hype, and repeated requests. |
-| R2-004 | P0 | IN PROGRESS | Define provider evaluation criteria with Role 3. | Accepted D-014 | Joint comparison covers OpenRouter and alternatives, latency, cost, privacy, reliability, structured output, quest quality, and fallback. |
-| R2-005 | P0 | BLOCKED | Implement chosen provider adapter and model-ready context. | Joint recommendation accepted by Role 1 | Server-only provider path returns validated structured output; no vendor payload leaks into core. |
-| R2-006 | P0 | BLOCKED | Produce exactly three candidate quests plus metadata for Role 3. | R2-003 and R2-005 | Candidate output conforms to contract and includes confidence, reason, provider/fallback, and traceable inputs. |
+| R2-004 | P0 | DONE | Define provider evaluation criteria and settle the MVP provider path. | D-072 in issue #132 | The recorded decision pins OpenAI `gpt-5.6-terra`, approved-credit/no-new-spend conditions, privacy limits, one-attempt/eight-second recovery, and the mandatory credential-free path. |
+| R2-005 | P0 | IN PROGRESS | Implement chosen provider adapter and model-ready context. | D-072 in issue #132 | Server-only provider path returns validated structured output; no vendor payload leaks into core. Component tests pass; Role 1 runtime wiring and a privacy-reviewed provider run remain. |
+| R2-006 | P0 | IN PROGRESS | Produce exactly three candidate quests plus metadata for Role 3. | R2-003 and R2-005 | Candidate output conforms to contract and includes confidence, reason, provider/fallback, and traceable inputs. Fixture transport passes; real-input provider output still requires Role 3 validation evidence. |
 | R2-007 | P0 | IN PROGRESS | Build credential-free and malformed/provider-failure behaviour. | Current mock engine | Tests demonstrate deterministic fallback and clear provider status. |
 | R2-008 | P1 | IN PROGRESS | Create representative AI/extraction evaluation cases and evidence. | Ongoing | Multiple game genres, audience moods, unsafe/noisy cases, latency results, and documented limitations. |
 
@@ -27,7 +27,7 @@ Execute these outcomes through `docs/build-plans/ROLE-2-BUILD-PLAN.md`; its deci
 - Audience-analysis methods and prompts
 - Provider adapter design and evaluation method
 
-Provider/model adoption is a joint Role 2/Role 3 recommendation and requires Role 1 awareness because it affects cost and external services.
+Provider/model adoption was settled by D-072 in issue #132. Any payment, new spend, model/provider change, or privacy expansion still requires Role 1 awareness and a new durable decision.
 
 ## Current R2-001 evidence
 
@@ -54,7 +54,16 @@ Provider/model adoption is a joint Role 2/Role 3 recommendation and requires Rol
 - `role-2/provider-fallback-evaluation` defines the Role 2 operational trial matrix aligned to Role 3's provider-quality rubric without selecting a provider or model.
 - The provider-neutral strategy enforces a configurable timeout and canonical exactly-three/provider-label validation, preserves caller cancellation, and invokes an injected credential-free algorithmic strategy after classified provider failures.
 - Privacy-safe observations and summaries cover success, malformed output, timeout, refusal, rate limiting, unavailability, error, fallback outcome, and p50/p95 latency without retaining raw provider payloads.
-- Fixture tests cover valid, partial, overfull, invalid, duplicate, incorrectly labelled, timeout, refusal, rate-limited, unavailable, generic-error, cancellation, invalid-fallback, and metrics cases. Real provider/model trials, Role 3 scoring, and the joint D23 recommendation remain open.
+- D-072 in issue #132 selects the OpenAI Responses API with exact model `gpt-5.6-terra`, an opt-in server-only team credential, existing team-owned credit only, one attempt, an eight-second timeout, `store: false`, and algorithmic recovery for missing credential/credit/quota or provider failure.
+- The server-only adapter sends bounded normalised context, excludes identities/raw chat/raw frames/secrets, validates exactly three structured drafts, and accepts only fresh, high-confidence source citations shared with the algorithmic path. Fixture tests cover stale, future-dated, weak, invented, and duplicate citations plus disabled, missing-credential, success, refusal, rate-limit, malformed, unavailable, timeout, cancellation, and recovery behaviour.
+- No external provider request or spend is claimed. A privacy-reviewed real provider run and Role 3 quest-quality scoring remain open.
+
+## Current issue #132 Minecraft/extraction evidence
+
+- Vanilla Minecraft is the rehearsed demo target; Brawl Stars remains evaluation-only and shared contracts stay game-neutral.
+- The bounded multi-game pipeline consumes canonical ephemeral frames, releases every frame, retains only a capped downsample plus numeric history, and keeps modded, hidden, unrecognised, or unsupported Minecraft facts unknown.
+- Known motion or HUD output requires an injected policy matching the frame evidence class, at least two calibration source IDs, confidence 0.75 or higher, freshness no longer than three seconds, and explicit profile approval. No live policy is bundled, so diagnostic or fixture calibration cannot classify a live-labelled frame.
+- Fixture tests prove policy mismatch/freshness/confidence behaviour only. A real browser-delivered Minecraft `FrameSource` run, live calibration evidence, resource observations, privacy review, artifact, and evidence-manifest entry remain required.
 
 ## Current R2-003 evidence
 

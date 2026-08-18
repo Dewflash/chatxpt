@@ -18,7 +18,7 @@ Role 2 is complete when:
 - Real team-owned gameplay from OBS Virtual Camera produces timestamped, confidence-scored, game-neutral observations.
 - Real Twitch chat produces privacy-aware audience intelligence.
 - OCR and visual algorithms run selectively; unavailable facts are `unknown`.
-- A free provider path can contribute structured quest generation when available.
+- The opt-in server-side OpenAI path can contribute structured quest generation when the approved team credential and credit are available.
 - A credential-free algorithmic path operates on the same real inputs when the provider is unavailable.
 - Role 2 emits exactly three candidate quests with source/reason/confidence/provider metadata.
 - Role 3 can validate or replace candidates without importing Role 2 internals.
@@ -30,7 +30,7 @@ Role 2 is complete when:
 - Do not implement Twitch/OBS integration, quest lifecycle, deterministic safety enforcement, voting, rewards, or UI code.
 - Do not fabricate live health, kills, combat, phase, or other gameplay state.
 - Raw frames are ephemeral. Raw Twitch chat may be retained for at most 24 hours under D-024.
-- AI must be free for the MVP; no paid provider usage is authorised.
+- No contributor buys quota. The approved `gpt-5.6-terra` path may use only existing team-owned prepaid or promotional credit; payment or new spend requires another owner decision.
 - Test fixtures may be simulated or annotated, but only real-frame/real-chat runs count as live evidence.
 - Expose Role 2 through documented public ports from `src/extraction/` and `src/ai/`; do not import another role's internals.
 - Request shared dependencies through Role 1 so multiple roles do not conflict in `package.json` or the lockfile.
@@ -151,7 +151,7 @@ Role 2 is complete when:
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
 | D2-07 | Frame sampling cadence and adaptive-trigger strategy | Resolved by Joelyrk | Consume Role 1's current two-frame-per-second `FrameSource`, run bounded universal measurements on each delivered frame with at most one analysis in flight, and start rate-limited three-frame selective-OCR bursts only after meaningful activity/transition changes. Role 2 does not require a capture-control contract change for P0. |
-| D2-08 | Universal visual feature set versus calibrated HUD-adapter feature set used in P0 | Resolved by Joelyrk | P0 universal signals are quiet, action, and transition derived from frame-difference intensity plus temporal stability. The Brawl Stars calibrated adapter may expose one named timer/outcome or other HUD fact only after the real OCR/template trial proves it reliable; every unsupported or ambiguous specific fact remains `unknown`. |
+| D2-08 | Universal visual feature set versus calibrated HUD-adapter feature set used in P0 | Resolved by Joelyrk; demo target revised by D-072 | P0 universal signals are quiet, action, and transition derived from frame-difference intensity plus temporal stability. Vanilla Minecraft is the rehearsed demo target. A Minecraft adapter may expose a named HUD fact only after matching live calibration proves it reliable; modded, hidden, unrecognised, unsupported, or ambiguous facts remain `unknown`. Brawl Stars remains evaluation-only evidence. |
 | D2-09 | OCR engine, preprocessing, region-selection, and temporal confirmation strategy | Resolved by Joelyrk | Request Tesseract.js from Role 1 as the leading free local/browser OCR dependency through [issue #70](https://github.com/Dewflash/chatxpt/issues/70), with no installation until approved. OCR runs only on named calibrated crops after local grayscale/contrast/upscale preprocessing, never on every full frame, and requires two matching readings in a three-reading window at confidence 0.75 or higher. PaddleOCR-compatible or native binaries remain fallback experiments only if the browser path fails. |
 | D2-10 | Confidence fusion, stale-data expiry, contradiction handling, and `unknown` thresholds | Resolved by Joelyrk | Derive visual thresholds from two separately annotated authorised samples instead of guessing fixed pixel cutoffs. Use quiet p95 versus action p50 and transition p50 only when quiet/action distributions separate; otherwise collect more evidence. Require confidence 0.75, treat candidates within 0.10 as conflicting/`unknown`, and expire visual observations after three seconds. Diagnostic calibration may not be applied to or presented as live evidence. |
 | D2-11 | Whether a free vision model materially improves P0 beyond algorithms/OCR | Resolved by Joelyrk | Exclude free vision AI from P0 by default. Reconsider only after algorithms/OCR have real baseline evidence and a genuinely free, privacy-acceptable trial materially improves annotated accuracy without unacceptable latency or reliability; missing vision AI never blocks the credential-free path. |
@@ -256,35 +256,37 @@ Raw chat is processed in memory by default. If Joelyrk's D2-15 choice requires t
 
 **Acceptance:** Snapshot is bounded, traceable, game-neutral, and consumable by both algorithmic and provider candidate generation.
 
-## Phase 5: Free AI and exactly three candidates
+## Phase 5: Server-side AI and exactly three candidates
 
 ### Joint Joelyrk/L0pch decision gate
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D23-01 | Free provider/model comparison and final recommendation to Role 1 | Open | — |
+| D23-01 | Provider/model comparison and final recommendation to Role 1 | Resolved by D-072 in issue #132 | Use the OpenAI Responses API with exact model `gpt-5.6-terra`, opt-in server-only `OPENAI_API_KEY`, and only existing team-owned credit. Missing credential, credit, quota, or availability uses the credential-free algorithmic path. |
 | D23-02 | Structured candidate schema details and quest-quality rubric | Open | — |
-| D23-03 | Provider timeout/malformed response threshold before algorithmic fallback | Open | — |
+| D23-03 | Provider timeout/malformed response threshold before algorithmic fallback | Resolved by D-072 in issue #132 | Make one provider attempt with an eight-second timeout. Refusal, malformed output, rate limit, outage, timeout, missing credential, credit, or quota immediately uses algorithmic recovery; caller cancellation propagates. |
 
 ### Joelyrk-only decision gate
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D2-16 | Model-ready context construction and signal prioritisation | Open | — |
-| D2-17 | Provider adapter, structured-output validation, retry, and observability design | Open | — |
+| D2-16 | Model-ready context construction and signal prioritisation | Resolved by Joelyrk under D-072 | Send only bounded normalised game capabilities, fresh/high-confidence accepted gameplay and audience signals, streamer safety/preferences, and recent titles. Never send raw frames, raw chat, viewer identity, Twitch IDs, usernames, secrets, or unavailable facts. |
+| D2-17 | Provider adapter, structured-output validation, retry, and observability design | Resolved by Joelyrk under D-072 | Pin the server-only adapter to `gpt-5.6-terra`, `store: false`, one attempt, and an eight-second timeout. Require strict exactly-three structured validation and fresh/confident source citations. Retain privacy-safe status/latency observations only; never retain prompts, outputs, or vendor payloads. |
 | D2-18 | Algorithmic candidate generation when free AI is unavailable | Resolved by Role 1 deadline override | Use a credential-free deterministic strategy that emits exactly three game-neutral candidate quests from validated intelligence, streamer profile, and recent quest titles. It rotates a curated safe template set by session/cycle/revision, avoids recent titles when alternatives exist, labels every candidate as `algorithmic` with `provider: null`, and cites only fresh, high-confidence known canonical signal IDs compatible with Role 3 validation. Missing, stale, weak, unknown, unsupported, or unavailable observations are omitted rather than fabricated. Role 3 remains the deterministic validation, safety, feasibility, scoring, and replacement authority before any candidate reaches voting or overlay surfaces. |
 
 ### R2-P10 — Provider evaluation and adapter
 
-**Outcome:** One free provider/model path is recommended jointly and isolated behind a validated adapter.
+**Outcome:** The owner-approved provider/model path is isolated behind a validated server-only adapter.
 
-**Evaluation:** Integration effort, free availability, latency, privacy, structured output, reliability, quest quality, game fit, and fallback behaviour.
+**Evaluation:** Integration effort, approved-credit availability, latency, privacy, structured output, reliability, quest quality, game fit, and fallback behaviour.
 
-**Acceptance:** No client secret; runtime validation; clear provider status; no paid calls; recommendation recorded with Role 3 and sent to Role 1.
+**Acceptance:** No client secret; runtime validation; clear provider status; no unapproved spend; the credential-free path remains mandatory; the decision is recorded in issue #132.
 
 **Progress (6 August 2026):** `role-2/provider-fallback-evaluation` adds a provider-neutral, injected trial/fallback strategy plus privacy-safe operational observations and summary metrics. Fixture tests cover valid provider output, malformed/partial/overfull/incorrectly-labelled output, timeout, refusal, rate limiting, unavailability, generic failure, cancellation, and invalid algorithmic recovery. No external provider call, provider/model selection, or joint recommendation is claimed; D23-01 through D23-03 and D2-16 through D2-17 remain open.
 
 **Progress (9 August 2026):** `codex/role-2-algorithmic-candidate-strategy` implements the accepted D2-18 credential-free strategy with exactly-three output, recent-title avoidance, provider-null algorithmic metadata, and Role 3-compatible source-signal citation filtering. Fixture tests cover deterministic output, duplicate-title avoidance, raw-chat exclusion, low-confidence omission, stale-signal omission, and validating provider compatibility. This is component evidence only; no external provider call or real-input candidate run is claimed.
+
+**Decision revision (19 August 2026):** D-072 in issue #132 supersedes the conflicting provider/cost portions of D-014, D-021, and this plan's earlier free-only language. It selects the exact server-side OpenAI configuration above and vanilla Minecraft as the rehearsed demo game. Role 3 remains the deterministic quest safety, feasibility, evidence, lifecycle, and replacement authority.
 
 ### R2-P11 — Context and candidate generation
 
