@@ -67,7 +67,7 @@ npm run ...
 
 ## Review requests and integration
 
-- [ ] Relevant responsibility leads were requested for role-specific context; their response is advisory, not an edit/push permission gate.
-- [ ] Role 1 reviewed integration impact.
-- [ ] Two reviewers were requested for shared contracts, authentication, safety, or demo-critical integration.
-- [ ] Current `main` and overlapping branches/PRs were checked; textual and semantic conflicts were deconflicted before merge.
+- [ ] Relevant responsibility leads and Role 1 were notified when their context would help; their response is advisory, not an edit/push/merge gate.
+- [ ] Current `main` and overlapping branches/PRs were checked; textual and semantic conflicts were deconflicted before merge or direct integration.
+- [ ] Relevant checks were run, or the exact not-run reason and remaining risk are documented above.
+- [ ] No unresolved material safety, security, privacy, data-loss, external-cost, or golden-workflow risk remains.

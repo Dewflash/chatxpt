@@ -28,7 +28,7 @@ Before planning or editing, read:
 
 ## Pull requests
 
-- Never push directly to `main`. After independent review, any contributor with repository merge permission may merge the pull request; Role 1 is not the exclusive merger.
+- Use branches and pull requests by default. Direct pushes to `main` are allowed only as deliberate, deconflicted integration actions by contributors with repository permission under D-076. Any contributor with repository write or merge permission may merge; Role 1 is not the exclusive merger.
 - Explain the user-visible outcome and risk.
 - Include screenshots or a short capture for UI changes.
 - Include evaluation/test evidence for AI or quest-engine changes.
@@ -37,7 +37,7 @@ Before planning or editing, read:
 - Update your role TODO and add a fragment under `changes/role-<n>/`.
 - Keep secrets and real viewer data out of code, fixtures, screenshots, and logs.
 - Request affected responsibility-lead context for cross-role files and notify Role 1 for integration support; neither is a personal approval gate.
-- Obtain two independent reviewers for shared types, authentication, safety, or demo-critical behaviour.
+- Request advisory review for shared types, authentication, safety, or demo-critical behaviour when it would improve the work. Review is not a merge gate under D-076.
 
 ## Definition of done
 

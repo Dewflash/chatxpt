@@ -4,11 +4,11 @@ This is the required operating procedure for all five contributors and their Cha
 
 ## The four rules that prevent most team disasters
 
-1. Never work directly on `main`.
+1. Use a branch and pull request by default; direct `main` integration is only for deliberate, deconflicted landing by someone with repository permission.
 2. Never pull, switch branches, merge, or rebase while uncommitted work exists.
 3. Anyone may edit any role's files, but must preserve module boundaries, disclose cross-role scope, deconflict overlapping work with affected contributors, and notify Role 1 for integration visibility.
 4. Never push secrets, `.env.local`, real viewer data, or credentials.
-5. Any contributor with repository merge permission may merge an independently reviewed pull request; Role 1 is not the exclusive merger.
+5. Any contributor with repository write or merge permission may merge or directly land deconflicted work under D-076; Role 1 is not the exclusive merger.
 
 If a command reports a conflict or something unexpected, stop. Do not force-push, reset, delete files, or guess. Ask your role's Codex to explain the exact state and notify Role 1 if shared work is affected.
 
@@ -226,7 +226,7 @@ Read the diff. Do not approve a commit you do not understand.
 
 ### 4. Commit and push
 
-After the contributor and Codex review the diff, request the relevant responsibility leads' review and then commit and push. Their response is useful but is not required to publish the branch:
+After the contributor and Codex review the diff, notify the relevant responsibility leads when their context would help, then commit and push. Their response is useful but is not required to publish the branch:
 
 ```bash
 git add <reviewed-files>
@@ -236,11 +236,11 @@ git push -u origin role-<n>/<short-summary>
 
 Use `fix`, `docs`, `test`, or `chore` instead of `feat` when appropriate. Never use `git add .` until Codex has shown that every untracked and modified file belongs to the task.
 
-### 5. Open the pull request
+### 5. Open or land the work
 
-Fill every section of `.github/PULL_REQUEST_TEMPLATE.md`. Link any relevant issue, request the responsibility leads, and notify Role 1. The author does not self-approve; review may come from any qualified contributor rather than a specific role owner.
+Fill every relevant section of `.github/PULL_REQUEST_TEMPLATE.md` when using a pull request. Link any relevant issue, request responsibility-lead context when useful, and notify Role 1 for integration visibility. Review may come from any qualified contributor, but it is advisory under D-076 rather than a merge requirement.
 
-After the required independent review, any contributor with repository merge permission may merge. Confirm automated checks and branch protection, current/deconflicted `main`, the change fragment/evidence, and no unresolved material safety, security, privacy, data-loss, external-cost, or golden-workflow issue. Role 1 is the default integration helper, not a required approver. If a requested responsibility lead is unavailable, use another qualified reviewer so integration does not stall.
+Any contributor with repository write or merge permission may merge a pull request or directly land a deliberate integration commit. Confirm current/deconflicted `main`, relevant checks or documented not-run reason, the change fragment/evidence, and no unresolved material safety, security, privacy, data-loss, external-cost, or golden-workflow issue. Role 1 is the default integration helper, not a required approver.
 
 ## Resolving conflicts safely
 

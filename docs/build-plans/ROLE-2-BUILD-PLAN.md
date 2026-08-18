@@ -26,7 +26,7 @@ Role 2 is complete when:
 
 ## Architecture and evidence boundaries
 
-- Canonical types remain in `src/core/`. Any contributor may edit them; notify Role 1, add affected producer/consumer tests, and deconflict the change with the author/reviewer before merge. Role 1 approval is not a gate.
+- Canonical types remain in `src/core/`. Any contributor may edit them; notify Role 1, add affected producer/consumer tests, and deconflict the change before merge. Role 1 approval is not a gate.
 - Twitch/OBS integration, quest lifecycle, deterministic safety enforcement, voting, rewards, and UI code remain outside `src/ai/` and `src/extraction/`. A Role 2 contributor may implement them in their corresponding modules under the repository-wide open-contribution rule.
 - Do not fabricate live health, kills, combat, phase, or other gameplay state.
 - Raw frames are ephemeral. Raw Twitch chat may be retained for at most 24 hours under D-024.
@@ -344,7 +344,7 @@ Raw chat is processed in memory by default. If Joelyrk's D2-15 choice requires t
 
 ## Coordinate with Role 1 when
 
-- A canonical contract changes; implementation may proceed with affected producer/consumer tests, and the author plus independent reviewer deconflict it before merge with Role 1 available to assist.
+- A canonical contract changes; implementation may proceed with affected producer/consumer tests, and the contributor landing it deconflicts it before merge with Role 1 available to assist.
 - A paid service or new external account is proposed.
 - Retention/privacy exceeds accepted limits.
 - Role 4/5 feasibility feedback changes product scope.

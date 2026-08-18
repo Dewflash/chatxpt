@@ -32,7 +32,7 @@ ChatXPT is a Top 10 finalist. `docs/submission/FINALS-2026.md` records the non-s
 | Role 4 | `JYL1m` | Streamer Studio, Twitch Live Config, shared visual system, and streamer UX |
 | Role 5 | `drdexe` | Twitch viewer Extension, hosted viewer fallback, viewer overlay visuals, and viewer UX |
 
-Role 1 is the final product-direction authority and actively deconflicts, redirects, or assists work under `AGENTS.md`. Under D-071 and D-073, every contributor may implement in any role area, and any contributor with repository permission may merge independently reviewed work. The table names responsibility leads and review context, not file, push, approval, or merge gates.
+Role 1 is the final product-direction authority and actively deconflicts, redirects, or assists work under `AGENTS.md`. Under D-071 and D-076, every contributor may implement in any role area, and any contributor with repository permission may merge or directly land deconflicted work without mandatory review or branch protection. The table names responsibility leads and advisory context, not file, push, approval, review, or merge gates.
 
 ## Immediate coordinated assignment
 

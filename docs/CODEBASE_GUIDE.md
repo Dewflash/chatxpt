@@ -68,7 +68,7 @@ The dependency rule is deliberately one-way:
 | Role 4 — streamer UI | Studio, Live Config experience, setup/status presentation, and the shared visual system | `src/streamer/`, `src/design-system/` |
 | Role 5 — viewer UI | Twitch viewer, hosted viewer, chat instructions, active-quest/result presentation, and overlay visuals | `src/viewer/` |
 
-`AGENTS.md` defines the model, `.github/CODEOWNERS` routes review context, and `scripts/check-role-boundaries.mjs` enforces dependency direction. Under D-071, any contributor may edit any area without prior role approval; the mapped responsibility, public entrypoints, and import boundaries still determine where code belongs. The retained `src/lib/` and `src/components/` trees are explicitly treated as legacy until the open migration decisions are settled.
+`AGENTS.md` defines the model, `docs/DECISIONS.md` records D-076's trusted merge policy, and `scripts/check-role-boundaries.mjs` enforces dependency direction. Under D-071 and D-076, any contributor may edit any area and land deconflicted work without prior role approval, mandatory review, branch protection, or CODEOWNERS. The mapped responsibility, public entrypoints, and import boundaries still determine where code belongs. The retained `src/lib/` and `src/components/` trees are explicitly treated as legacy until the open migration decisions are settled.
 
 ## 4. The canonical end-to-end flow
 
@@ -199,7 +199,6 @@ The following tables cover files that define architecture, runtime behaviour, co
 | `tsconfig.json` | Enables strict TypeScript settings and the `@/* -> src/*` import alias. |
 | `vitest.config.mts` | Configures the test environment, aliases, and test discovery. |
 | `vercel.json` | Defines the Vercel install and build commands. It does not prove a deployment exists. |
-| `.github/CODEOWNERS` | Routes default responsibility and integration-review context. It is not an edit or merge-permission map under D-071/D-073. |
 
 ### 7.2 Next.js composition and compatibility files
 

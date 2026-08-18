@@ -98,7 +98,7 @@ Use these branches in order:
 | D | Invalidation/history | Extension/OBS projections | No private leakage and no UI-owned lifecycle authority |
 | E | Evaluation/handoff | Session Brief, real integration, and value evidence | Role 3 publishes deterministic evidence first; Role 1 records real Twitch/OBS results |
 
-Nobody waits for personal permission. You may advance against canonical fixtures while the counterpart pass is under review. Before merge, fetch current `main`, inspect overlap, notify the affected contributor, and deconflict both textual and semantic changes. Obtain independent review; no role label is a veto under D-071/D-073.
+Nobody waits for personal permission. You may advance against canonical fixtures while the counterpart pass is still in progress. Before merge or direct integration, fetch current `main`, inspect overlap, notify the affected contributor, and deconflict both textual and semantic changes. Advisory review is useful when it improves the work, but it is not required; no role label is a veto under D-071/D-076.
 
 ## First pickup
 
@@ -118,4 +118,4 @@ Overlap/deconfliction performed:
 Known limitations / next owner:
 ```
 
-Role 1 will coordinate and deconflict the merge seams; any contributor may merge after independent review and objective checks under D-073. Your job is to make the deterministic mechanics explicit enough that Role 1 and the surfaces never have to guess.
+Role 1 will coordinate and deconflict the merge seams; any contributor with repository permission may merge or directly land deconflicted work under D-076 after running relevant checks or documenting why they were not run. Your job is to make the deterministic mechanics explicit enough that Role 1 and the surfaces never have to guess.

@@ -67,9 +67,9 @@ Each contributor has one coordination home and each role has a responsibility le
 
 Open contribution does not erase the product architecture. Code still belongs in the directory that represents its runtime responsibility, modules still integrate through public seams, and product code still may not import another module's private files. A contributor working across roles must understand the relevant role guide and plan, disclose every cross-role file changed, run the affected producer/consumer tests, and preserve rather than overwrite concurrent work.
 
-The project owner remains the primary authority for overall product direction, priorities, accepted architecture, safety, and external cost. Role 1 coordinates integration order when branches overlap, but does not hold an exclusive merge gate. Responsibility leads remain the first reviewers and advisers for their areas, but they cannot block implementation, pushing a branch, opening a pull request, or an independently reviewed merge merely because another role made the change.
+The project owner remains the primary authority for overall product direction, priorities, accepted architecture, safety, and external cost. Role 1 coordinates integration order when branches overlap, but does not hold an exclusive merge gate. Responsibility leads remain advisers for their areas, but they cannot block implementation, pushing a branch, opening a pull request, direct integration, or merge merely because another role made the change.
 
-Under D-073, any contributor with repository merge permission may merge a pull request after its author obtains the required independent review and the objective merge gates pass. Those gates are required automated checks and branch protection, branch synchronisation/deconfliction, and resolution of material safety, security, privacy, data-loss, external-cost, or golden-workflow risk. Role identity, a missing responsibility-lead response, or Role 1 availability is not a merge blocker.
+Under D-076, any contributor with repository write or merge permission may merge a pull request or land a deliberate integration commit without required branch protection, CODEOWNERS, or independent-review approval. Pull requests remain the normal coordination record, and advisory review is encouraged for risky work, but it is not a merge gate. Before landing work, the contributor must inspect the diff, sync or deconflict current `main` and overlapping branches, run the relevant checks or document why they were not run, update required TODO/change/evidence records, and stop only for unresolved material safety, security, privacy, data-loss, external-cost, or broken golden-workflow risk. Role identity, a missing responsibility-lead response, Role 1 availability, absent branch protection, or absent review approval is not a merge blocker.
 
 When work crosses role responsibilities:
 
@@ -133,7 +133,7 @@ The agent must instead:
 7. After the owner answers, record the decisions in the role execution record and continue through the current bounded pass without asking for repeated permission for ordinary in-scope edits and tests. Never cross into the next phase before the current exit is accepted.
 8. Stop and escalate only for a material product-scope change, safety/privacy/security, external cost/service choice, destructive action, missing credentials, or a genuine blocker that cannot be handled safely. A shared-contract edit is allowed, but it must be coordinated, tested on both sides, and deconflicted with Role 1.
 9. If another role's module is required, notify its responsibility lead and Role 1, then either implement the smallest coherent cross-role slice or keep the UI on the accepted fixture/disabled path. Use a `cross-role` issue when it improves coordination; do not make the novice owner design another module's solution.
-10. At the end, run the required checks, capture UI evidence, update the role TODO/execution record/change fragment, review the diff in plain language, and ask one final question: whether to commit, push, and open the pull request. The author does not self-approve; after independent review, any other contributor with merge permission may merge under D-073.
+10. At the end, run the required checks, capture UI evidence, update the role TODO/execution record/change fragment, review the diff in plain language, and ask one final question: whether to commit, push, open a pull request, or land the integration under D-076.
 
 The agent should minimise questions, not owner authority or design thinking. Role 4 still decides its visual and streamer interaction choices; Role 5 still decides its viewer and overlay interaction choices. Codex actively helps the owner consider relevant alternatives instead of merely reading a preset list. When a non-visual pass genuinely creates no owner decision, the agent explains the UX implications it checked and proceeds.
 
@@ -146,7 +146,7 @@ The five contributors work from separate computers and repository clones. GitHub
 - Assign or mention the target owner and mention `@Dewflash` in the issue.
 - The target owner records comparison with their current approach, trade-offs, recommendation, and affected contracts.
 - The project owner may discuss or resolve an issue through the primary Codex task. Role 1 must copy the settled outcome back into the GitHub Issue or `docs/DECISIONS.md` so every computer receives it.
-- Record the outcome as `accepted`, `rejected`, or `deferred`. A missing target-owner or Role 1 response is not an implementation, push, or merge blocker. The author and independent reviewer resolve documented overlap and escalate only a material product/safety conflict that cannot be settled from repository authority.
+- Record the outcome as `accepted`, `rejected`, or `deferred`. A missing target-owner or Role 1 response is not an implementation, push, or merge blocker. The contributor landing the work resolves documented overlap and escalates only a material product/safety conflict that cannot be settled from repository authority.
 - If an accepted proposal changes product direction, architecture, provider choice, ownership, or another durable rule, also record it in `docs/DECISIONS.md`.
 
 ### Role 1: Integrations and shared platform
@@ -327,17 +327,17 @@ Keep provider payloads, Twitch payloads, component-local UI state, and persisten
 
 - Work from separate local clones. Personal ChatGPT/Codex context and uncommitted changes are not shared.
 - Read `docs/TEAM_CONTEXT.md` before starting shared-contract or demo-critical work, and update its coordination board when claiming such work.
-- Start each task from current `main` and use `role-<n>/<short-summary>` branches.
-- Never push directly to `main`; use a pull request for every change.
+- Start each task from current `main` and use `role-<n>/<short-summary>` branches by default.
+- Pull requests are the normal coordination record. Direct pushes to `main` are allowed only as deliberate, deconflicted integration actions by contributors with repository permission under D-076.
 - Keep branches short-lived, sync current `main` before review, and integrate the smallest vertical slice after every wave and at least daily.
-- Any contributor with repository merge permission may merge an independently reviewed pull request. Role 1 coordinates integration and overlapping landing order by default but is not the mandatory approver or exclusive merger.
-- Maintain `CODEOWNERS` for role directories and require automated checks before merge.
+- Any contributor with repository write or merge permission may merge or directly land deconflicted work. Role 1 coordinates integration and overlapping landing order by default but is not the mandatory approver or exclusive merger.
+- `CODEOWNERS`, branch protection, and required reviews are not repository-policy gates. Responsibility routing lives in this guide, role guides, TODOs, build plans, issues, and pull request notes.
 - Contributors may edit any role's implementation. Preserve the destination module's accepted responsibilities, document significant judgement, and invite its lead to review.
 - Notify relevant leads and Role 1 of substantial cross-role work; use issues for durable coordination, not permission.
 - Use GitHub Issues as the persistent cross-role handoff record. If the owner resolves something through Codex, Role 1 records the result back in the repository or issue.
 - Public-contract changes require affected producer/consumer tests and project-owner awareness before merge; no responsibility lead has a role-based veto over implementation or push.
 - Keep pull requests small and include screenshots or recordings for UI changes.
-- Obtain one independent reviewer and two for shared contracts, safety logic, authentication, or demo-critical integration. The reviewers may be any qualified contributors; responsibility-lead or Role 1 silence is not a personal veto. Actual branch-protection requirements, automated checks, deconfliction, and material-risk gates remain mandatory.
+- Request advisory review when it would improve shared contracts, safety logic, authentication, or demo-critical integration, but do not treat missing review as a merge blocker. Automated checks should run when relevant; if they cannot run, document the reason and the remaining risk before landing. Deconfliction and unresolved material-risk gates remain mandatory.
 - State what was actually verified; never upgrade source inspection into runtime proof.
 - Record every runtime run, screenshot, recording, evaluation, or inspection used as project evidence in `docs/evidence/manifest.json`; the evidence class, actual input, immutable source revision, command/interaction, artifact reference, reviewer, and limitations must pass `npm run check:evidence`.
 - Update `docs/DECISIONS.md` when the team settles Twitch scope, Supabase, AI provider/routing, gameplay extraction, identity, or rewards.

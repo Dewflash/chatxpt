@@ -2,11 +2,11 @@
 
 **Owner:** `L0pch`
 
-Keep this role's statuses and evidence current. Any contributor may update affected rows. Shared-contract or UI work may be implemented immediately in the appropriate module with Role 1 notification, affected tests, and author/reviewer pre-merge deconfliction; Role 1 assists but is not an approval gate. Use a `cross-role` issue only for durable unresolved coordination.
+Keep this role's statuses and evidence current. Any contributor may update affected rows. Shared-contract or UI work may be implemented immediately in the appropriate module with Role 1 notification, affected tests, and pre-merge deconfliction by the contributor landing the work; Role 1 assists but is not an approval gate. Use a `cross-role` issue only for durable unresolved coordination.
 
 Execute these outcomes through `docs/build-plans/ROLE-3-BUILD-PLAN.md`; its decision gates belong to L0pch unless explicitly marked joint or escalated.
 
-**Next pass:** claim [issue #150](https://github.com/Dewflash/chatxpt/issues/150) and begin R3-009 (`LD-R3-01`) from current `main` using `docs/roles/ROLE-3-LIVE-DIRECTOR-BRIEF.md`. R3-007's automatic-terminal predicate remains independently open; it does not block the assigned Live Director half. Role 1 will deconflict each integration wave, and no role label is a permission, push, review, or merge veto under D-071/D-073.
+**Next pass:** claim [issue #150](https://github.com/Dewflash/chatxpt/issues/150) and begin R3-009 (`LD-R3-01`) from current `main` using `docs/roles/ROLE-3-LIVE-DIRECTOR-BRIEF.md`. R3-007's automatic-terminal predicate remains independently open; it does not block the assigned Live Director half. Role 1 will deconflict each integration wave, and no role label is a permission, push, review, branch-protection, or merge veto under D-071/D-076.
 
 **Current bounded pass:** no Live Director source pass is claimed yet. R3-009 is the next pickup. The existing adaptive-timing baseline remains authoritative: streamer intensity adjusts only busy-gameplay and suitability thresholds, while hard lifecycle, emergency, safety, freshness, confidence, and unknown-evidence gates always run first.
 

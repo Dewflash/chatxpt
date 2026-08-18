@@ -33,12 +33,12 @@ Before broad migration, Role 1 publishes the provisional public contracts/orches
 ## Branch and merge policy
 
 - Start from current `main`.
-- Use `role-<n>/<short-summary>` branches and never push directly to `main`.
+- Use `role-<n>/<short-summary>` branches by default. Direct pushes to `main` are allowed only as deliberate, deconflicted integration actions by contributors with repository permission under D-076.
 - Keep branches under one day when possible.
 - Sync current `main` before requesting review.
-- Submit every change through a pull request; after independent review, any contributor with repository merge permission may merge it.
-- Request the affected responsibility leads when a pull request touches their modules; a missing response does not block branch work or pushing.
-- Obtain one independent reviewer and two for domain contracts or demo-critical changes. Reviewers may be any qualified contributors; unavailable responsibility leads or Role 1 do not create a personal veto. Automated checks and actual branch-protection rules remain required.
+- Use a pull request as the normal coordination record. Any contributor with repository write or merge permission may merge a pull request or directly land deconflicted integration work.
+- Request the affected responsibility leads when a pull request touches their modules; a missing response does not block branch work, pushing, direct integration, or merging.
+- Request advisory review for domain contracts or demo-critical changes when it would improve the work. Missing review, unavailable responsibility leads, Role 1 silence, CODEOWNERS, and branch-protection settings are not merge gates under D-076.
 - Before integration, fetch current `main`, identify overlapping branches/pull requests, and deconflict both textual and semantic changes. Role 1 actively assists and decides the safest landing order.
 - Do not force-push a branch another teammate is using without agreement.
 

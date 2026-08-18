@@ -28,7 +28,7 @@ Role 3 is complete when:
 ## Architecture and evidence boundaries
 
 - Extraction, audience analysis, provider-adapter code, Twitch/OBS integration, persistence, and UI code remain outside `src/quest-engine/`. A Role 3 contributor may implement them in their corresponding modules under the repository-wide open-contribution rule.
-- Canonical contracts remain in `src/core/`. Any contributor may edit them; notify Role 1, add affected producer/consumer tests, and deconflict the change with the author/reviewer before merge. Role 1 approval is not a gate.
+- Canonical contracts remain in `src/core/`. Any contributor may edit them; notify Role 1, add affected producer/consumer tests, and deconflict the change before merge. Role 1 approval is not a gate.
 - Do not trust AI output without deterministic validation.
 - Do not infer missing real gameplay facts. Consume Role 2 confidence/unknown values and degrade safely.
 - Return deterministic state/events/allowed actions through the public `QuestEngine` port; do not persist, broadcast, authenticate, or call integration services.
@@ -281,11 +281,11 @@ D-075 activates the research-bounded Live Director scope and assigns Role 3 five
 - Exactly three validated options—or a typed no-publication result—remain the only cue conversion result.
 - Provider, algorithmic, and deterministic provenance never weaken Role 3 validation; the credential-free path remains usable.
 - The engine imports no Twitch, Supabase, UI, or provider implementation and emits only stable state/events/allowed actions for Role 1 composition.
-- Each pass rebases current `main`, deconflicts the corresponding Role 1 wave, adds one change fragment, receives independent review, and reports fixture-only evidence truthfully.
+- Each pass rebases current `main`, deconflicts the corresponding Role 1 wave, adds one change fragment, requests advisory review when useful, and reports fixture-only evidence truthfully.
 
 ## Coordinate with Role 1 when
 
-- A canonical contract changes; implementation may proceed with affected producer/consumer tests, and the author plus independent reviewer deconflict it before merge with Role 1 available to assist.
+- A canonical contract changes; implementation may proceed with affected producer/consumer tests, and the contributor landing it deconflicts it before merge with Role 1 available to assist.
 - A mechanic changes accepted product scope or another module's runtime responsibility; Role 1 settles the durable decision before merge.
 - Safety, privacy, monetary, or wagering risk appears.
 - The provider recommendation introduces cost or a new external service.

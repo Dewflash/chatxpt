@@ -6,7 +6,7 @@
 
 **Status:** Active implementation authority under D-075. Secondary research and the quantitative evidence ledger are complete; the retained P0 capabilities and bounded P1 experiments are authorised as falsifiable product hypotheses, not proven solution fit.
 
-**Authority:** D-007, D-008, D-012, D-024, D-030, D-041, D-052, D-067, D-068, D-071, D-073, D-074, and D-075
+**Authority:** D-007, D-008, D-012, D-024, D-030, D-041, D-052, D-067, D-068, D-071, D-074, D-075, and D-076
 
 ## Activation decision
 
@@ -129,7 +129,7 @@ Every streamer, viewer, and overlay projection is built server-side from these f
 
 ## Isolated implementation passes
 
-The implementation is divided into ten independently reviewable passes: five driven by Role 1 and five driven by Role 3. This is an even split by bounded pass and coherent responsibility, not a promise of identical line counts. Role 3 owns the complete deterministic cue-to-quest policy half; Role 1 owns the canonical authority, product delivery, integration, and evidence half. Under D-071 and D-073 these assignments are responsibility and pickup clarity, not permission or merge gates.
+The implementation is divided into ten independently reviewable passes: five driven by Role 1 and five driven by Role 3. This is an even split by bounded pass and coherent responsibility, not a promise of identical line counts. Role 3 owns the complete deterministic cue-to-quest policy half; Role 1 owns the canonical authority, product delivery, integration, and evidence half. Under D-071 and D-076 these assignments are responsibility and pickup clarity, not permission, review, branch-protection, or merge gates.
 
 Each pass uses a short-lived `role-1/` or `role-3/` branch and one pull request where practical. Every pass must sync current `main`, inspect overlapping branches, add one change fragment, run affected producer/consumer tests, and disclose fixture-only versus real evidence. Role 1 deconflicts textual or semantic overlap before the affected pull requests merge.
 

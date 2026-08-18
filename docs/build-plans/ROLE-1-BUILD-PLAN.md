@@ -2,7 +2,7 @@
 
 **Owner:** `Dewflash`
 
-**Authority:** Project owner and default integration/deconfliction coordinator; merge authority is shared under D-073
+**Authority:** Project owner and default integration/deconfliction coordinator; trusted merge authority is shared under D-076
 
 **Primary directories:** `src/core/`, `src/integrations/`, `src/realtime/`
 
@@ -64,7 +64,7 @@ Run this loop throughout every phase:
 **Work:**
 
 - Publish this shared framework and the three role plans.
-- Wire them into onboarding, CODEOWNERS, role guides, TODOs, and team context.
+- Wire them into onboarding, role guides, TODOs, and team context.
 - Preserve all decisions from the owner grill.
 
 **Acceptance:** Plans are linked from repository authority; affected responsibility leads are requested for context; Role 1 can complete integration review without waiting indefinitely; checks pass.
@@ -126,7 +126,7 @@ Run this loop throughout every phase:
 
 **Scope note:** This migration pass preserves existing Role 2 algorithms, Role 3 mechanics, and Role 4/5 UX. A contributor may redesign those areas only in a separately scoped and documented pass.
 
-**Acceptance:** Existing routes build; imports resolve; CODEOWNERS matches responsibility paths; public entry points exist; no contributor must wait for another role before starting a coherent slice.
+**Acceptance:** Existing routes build; imports resolve; responsibility paths are documented; public entry points exist; no contributor must wait for another role before starting a coherent slice.
 
 ### R1-P03A — Day-one external and capture feasibility spikes
 
