@@ -2,9 +2,9 @@
 
 **Owner:** `JYL1m`
 
-**Baseline-plan owner:** Role 2 (`joelyrk`) under D-016
+**Baseline-plan responsibility lead:** Role 2 (`joelyrk`) under D-016 and D-071
 
-This is the Role 4-owned working record. Codex updates it after the owner answers a decision batch and after every completed pass. Role 4 does not edit Role 2's baseline plan; requested plan corrections go through the feasibility-review issue.
+This is the Role 4 responsibility record. Any contributor may update it after a settled decision or completed pass. Role 2 maintains the baseline plan, which any contributor may edit with coordination; the feasibility issue is optional for unresolved durable choices.
 
 ## Current position
 
@@ -13,7 +13,7 @@ This is the Role 4-owned working record. Codex updates it after the owner answer
 | Plan | `docs/build-plans/ROLE-4-BUILD-PLAN.md` plus the shared delivery matrix |
 | Current phase | R4-P05 integrated resilience and real-workflow evidence |
 | Current TODO | R4-003 through R4-005 remain integration/evidence work; R4-006 is mounted and `DONE` |
-| Source editing allowed now | Yes inside Role 4 ownership; Role 1 mounted the public modules under the approved D-063 integration override |
+| Source editing allowed now | Yes across all role directories under D-071; keep streamer/design-system logic in their public modules and deconflict with Role 1 before merge |
 | Persistent handoff | [PR #43](https://github.com/Dewflash/chatxpt/pull/43), [PR #98](https://github.com/Dewflash/chatxpt/pull/98), UI-X01 [#17](https://github.com/Dewflash/chatxpt/issues/17), UI-X02 [#18](https://github.com/Dewflash/chatxpt/issues/18), UI-X05 [#21](https://github.com/Dewflash/chatxpt/issues/21), and UI-X09 [#25](https://github.com/Dewflash/chatxpt/issues/25) |
 | Current implementation branch | Integrated by Role 1 on `role-1/finals-isolated-passes` |
 

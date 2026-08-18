@@ -25,10 +25,10 @@ Role 3 is complete when:
 - UI consumers receive stable state/events and never implement engine rules themselves.
 - All lifecycle paths and the real-input golden integration have evidence.
 
-## Non-negotiable boundaries
+## Architecture and evidence boundaries
 
-- Do not implement extraction, audience analysis, provider-adapter code, Twitch/OBS integration, persistence, or UI code.
-- Do not edit canonical contracts in `src/core/`; propose changes to Role 1.
+- Extraction, audience analysis, provider-adapter code, Twitch/OBS integration, persistence, and UI code remain outside `src/quest-engine/`. A Role 3 contributor may implement them in their corresponding modules under the repository-wide open-contribution rule.
+- Canonical contracts remain in `src/core/`. Any contributor may edit them; notify Role 1, add affected producer/consumer tests, and deconflict the change before merge.
 - Do not trust AI output without deterministic validation.
 - Do not infer missing real gameplay facts. Consume Role 2 confidence/unknown values and degrade safely.
 - Return deterministic state/events/allowed actions through the public `QuestEngine` port; do not persist, broadcast, authenticate, or call integration services.
@@ -262,10 +262,10 @@ Role 1 owns vote authentication, acceptance, storage, and deduplication. Role 3 
 
 **Acceptance:** Role 3 consumer/producer contract tests pass against Role 1/2 canonical examples; no UI implements lifecycle, validation, tie, reward, timer authority, or permission rules; the engine has no Supabase/Twitch/UI imports; real golden workflow reaches every terminal state needed for evidence.
 
-## Escalate to Role 1 when
+## Coordinate with Role 1 when
 
-- A canonical contract must change.
-- A mechanic changes accepted product scope or another role's ownership.
+- A canonical contract changes; implementation may proceed with affected producer/consumer tests, but Role 1 deconflicts it before merge.
+- A mechanic changes accepted product scope or another module's runtime responsibility; Role 1 settles the durable decision before merge.
 - Safety, privacy, monetary, or wagering risk appears.
 - The provider recommendation introduces cost or a new external service.
 - UI requirements cannot be expressed through current engine state.

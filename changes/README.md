@@ -6,7 +6,7 @@ Every pull request adds exactly one Markdown fragment under the submitting role'
 changes/role-<n>/YYYY-MM-DD-short-summary.md
 ```
 
-Only the owning role edits its directory. Role 1 compiles fragments into `CHANGELOG.md` at integration, demo, or submission checkpoints.
+The directory names the primary responsibility affected, not who may edit the fragment. Any contributor may add or update it. Role 1 coordinates compilation into `CHANGELOG.md` at integration, demo, or submission checkpoints and deconflicts concurrent compilation work.
 
 Use this template:
 
@@ -26,5 +26,5 @@ Rules:
 
 - Describe the outcome, not every file touched.
 - Never include secrets or personal viewer data.
-- Link a cross-role issue when another role is affected.
-- Do not edit `CHANGELOG.md` unless you are Role 1 compiling fragments.
+- Link a cross-role issue when one exists; creating one is optional unless an unresolved durable decision needs tracking.
+- Any contributor may compile `CHANGELOG.md`; check for overlap and coordinate the collision-prone edit with Role 1 before merge.

@@ -14,12 +14,12 @@ Before starting a pass, read in this order:
 6. `docs/build-plans/INTEGRATION-CONTRACT.md`
 7. Your build plan in this directory
 
-## Ownership of the plans
+## Responsibility for the plans
 
 - Role 1 defines required phases, order, outcomes, deadlines, acceptance criteria, and integration boundaries for Roles 1-3.
 - Joelyrk decides the Role 2 component choices named at each Role 2 decision gate.
 - L0pch decides the Role 3 component choices named at each Role 3 decision gate.
-- A role owner may propose a better sequence or scope, but must not silently depart from the accepted plan. Role 1 resolves the proposal.
+- Any contributor may propose or implement a better sequence or scope, but must record departures from the accepted plan. Role 1 resolves remaining product or integration conflicts before merge.
 - Role 2 separately authors the Role 4 and Role 5 plans under D-016. Those plans must use the same phase/pass/decision/evidence structure.
 
 ## Concurrent execution model
@@ -53,7 +53,7 @@ Every pass:
 
 - Has one owner and one acceptance signal.
 - Fits in one short-lived `role-<n>/<summary>` branch and one pull request where practical.
-- Changes only the owning role's files unless a cross-role proposal is accepted.
+- Places code in the directory matching its runtime responsibility; any contributor may change multiple role directories without prior approval.
 - Begins by asking the phase's open owner decisions in one batch.
 - Uses fixtures at the role boundary so another unfinished role does not block progress.
 - Exposes one documented public entry point and never imports another role's private modules.
@@ -68,10 +68,10 @@ At the start of a phase, the role's Codex agent must:
 1. Read the current build-plan decision table.
 2. Ask only the open decisions assigned to that owner, in one consolidated batch.
 3. Give a recommendation and implementation consequence for each.
-4. Record the owner's settled answers before implementation. Roles 1-3 update their owned plan; Roles 4/5 update their role-owned execution record while Role 2 retains the baseline-plan file.
+4. Record settled answers when the pass depends on them. Any contributor may update the relevant plan or execution record while notifying its responsibility lead.
 5. Send shared-contract, cost, safety, privacy, or scope decisions to Role 1.
 
-Internal decisions do not require Role 1 approval unless they cross those boundaries. Role 1 remains informed through the pull request and may redirect work under the recorded integration override.
+Internal decisions do not require Role 1 approval. Product direction, architecture, cost, safety, and privacy decisions still require project-owner settlement before merge. Role 1 remains informed through the pull request and actively helps deconflict cross-role implementation.
 
 ## Integration waves
 

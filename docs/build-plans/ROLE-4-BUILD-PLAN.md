@@ -1,8 +1,8 @@
 # Role 4 Build Plan: Streamer Studio and Twitch Live Config
 
-**Implementation owner:** Role 4 (`JYL1m`)
+**Implementation responsibility lead:** Role 4 (`JYL1m`)
 
-**Plan owner:** Role 2 (`joelyrk`) under D-016
+**Plan responsibility lead:** Role 2 (`joelyrk`) under D-016 and D-071
 
 **Status:** Accepted after Role 4's consolidated feasibility review in [issue #15](https://github.com/Dewflash/chatxpt/issues/15) and [PR #30](https://github.com/Dewflash/chatxpt/pull/30); no scope revision was required
 
@@ -20,7 +20,7 @@ Role 4 implements one phase at a time.
 
 1. Complete every P0 deliverable and exit check in the current phase.
 2. Record the commands, fixtures, screenshots, and limitations actually verified.
-3. Resolve or formally defer every blocking contract gap with its owner.
+3. Record every contract gap, notify the relevant leads, and either implement the cross-role slice, use a labelled fixture, or defer it for a stated technical reason.
 4. Begin the next phase only after the current phase exit is reviewable.
 
 Role 4 may split a phase into small pull requests, but may not start later-phase product work to bypass an incomplete exit. Role 5 may progress concurrently once the Phase 1 design-system handoff is stable.
@@ -31,7 +31,7 @@ The decision tables below are starter prompts and minimum areas to consider, not
 
 Codex explains the visible result and trade-off first, recommends a default, and then selects the appropriate implementation technique. It must never ask a jargon-only question such as `Flexbox or Grid?`: Role 4 decides whether the content should feel like cards, sections, a sidebar, or another understandable arrangement; Codex decides whether Grid, Flexbox, or another implementation produces that result. Role 4 may reply `Approve all recommendations`.
 
-Role 2 owns this baseline plan. Role 4's settled answers are recorded in `docs/roles/ROLE-4-EXECUTION.md`, so Role 4 does not edit another owner's plan. Codex checks that record to avoid repeating settled choices, then asks only the relevant unresolved choices for the current pass.
+Role 2 maintains this baseline plan. Role 4's settled answers are recorded in `docs/roles/ROLE-4-EXECUTION.md`. Any contributor may edit either record, while coordinating plan-level changes with Role 2 and preserving the execution record as the source of settled UX choices. Codex checks that record to avoid repeating settled choices, then asks only the relevant unresolved choices for the current pass.
 
 ## Definition of done
 
@@ -139,16 +139,16 @@ Codex first prepares the technical feasibility review itself, then uses these as
 - Return one consolidated response covering conflicts, missing requirements, route/harness needs, dependency requests, viewport/accessibility risks, and the smallest viable recovery for each issue.
 - Compare UI-X01 through UI-X06 and UI-X09 with available Role 1/2/3 work.
 - Confirm the minimum design-system handoff Role 5 can consume during Phase 1.
-- Identify any package request with purpose, version, client/server impact, bundle/runtime risk, and no-package fallback; Role 1 owns installation.
+- Identify any package change with purpose, version, client/server impact, bundle/runtime risk, and no-package fallback; any contributor may implement it and Role 1 deconflicts shared files.
 
 ### Exit evidence
 
 - One written feasibility review is posted to [issue #15](https://github.com/Dewflash/chatxpt/issues/15), where Role 2 and Role 1 can compare it.
 - Role 2 records one revision or explicitly records that no revision was needed.
-- Every blocker has an owner and required-by phase.
-- No source implementation starts before this exit.
+- Every gap has a responsibility area, available contributor, and required-by phase.
+- The feasibility record may be completed alongside source work; it is not an edit or push permission gate under D-071.
 
-**Acceptance record (4 August 2026):** Role 2 accepted Role 4's review without changing phase, priority, ownership, or scope. The existing UI-X01 through UI-X06, UI-X09, and UI-X10 assignments preserve every reported dependency, and Role 4 may proceed through its role-owned execution record without inventing upstream behaviour.
+**Acceptance record (4 August 2026):** Role 2 accepted Role 4's review without changing phase, priority, responsibility, or scope. The existing UI-X01 through UI-X06, UI-X09, and UI-X10 assignments preserve every reported dependency. Under D-071, any contributor may implement upstream behaviour in its proper module while the UI remains non-authoritative.
 
 ## Phase 1 / R4-P02: Public UI boundary and shared design foundation
 
@@ -320,7 +320,7 @@ All `r4.quest.*`, `r4.error.command-set.v1`, `r4.realtime.reconnecting.v1`, and 
 
 **Cutoff:** 7 August 2026, 18:00 SGT
 
-This phase starts only if Phase 4 has passed and Role 1 agrees the work cannot destabilise the golden workflow.
+This phase starts after Phase 4 stability evidence passes. No role-owner approval gate applies; the contributor must preserve the golden workflow and deconflict shared changes with Role 1.
 
 ### Owner design gate
 
@@ -359,10 +359,10 @@ Requested plan revision (one consolidated list):
 
 Role 2 compares the response with this plan, records one revision, and notifies Role 1. Detailed visual, interaction, accessibility, component, and code choices then remain with Role 4 as long as they preserve the accepted plan.
 
-## Escalate to Role 1 when
+## Coordinate with Role 1 when
 
-- A canonical view, command, profile, health, setup, history, or error contract must change.
-- Twitch Extension route/asset/CSP/auth behaviour or OBS setup requires Role 1 implementation.
-- A package, lockfile, app route, environment value, or integration test must change.
-- A decision changes scope, safety, privacy, cost, ownership, or the golden workflow.
+- A canonical view, command, profile, health, setup, history, or error contract changes; any contributor may implement it with affected tests and Role 1 deconfliction.
+- Twitch Extension route/asset/CSP/auth behaviour or OBS setup changes; any contributor may implement the proper integration module while Role 1 coordinates safety and overlap.
+- A package, lockfile, app route, environment value, or integration test changes; any contributor may edit it after checking overlap and coordinating before merge.
+- A decision changes scope, safety, privacy, cost, responsibility, or the golden workflow; the project owner settles that durable decision before merge.
 - P0 cannot meet the shared schedule or real-evidence requirement.

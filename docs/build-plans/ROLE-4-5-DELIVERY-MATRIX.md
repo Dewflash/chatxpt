@@ -1,6 +1,6 @@
 # Role 4/5 Shared UI Delivery Matrix
 
-**Plan owner:** Role 2 (`joelyrk`)
+**Plan responsibility lead:** Role 2 (`joelyrk`)
 
 **Implementers:** Role 4 (`JYL1m`) and Role 5 (`drdexe`)
 
@@ -8,7 +8,7 @@
 
 **Approved Role 2 decisions:** D2-01, D2-02, D2-03, and D2-03A on 3 August 2026
 
-**Acceptance record:** Role 4's review was accepted through issue #15 and PR #30 on 4 August 2026. Role 2 [accepted Role 5's review and settled UX baseline](https://github.com/Dewflash/chatxpt/issues/16#issuecomment-5189664413) on 5 August 2026. All reported upstream gaps remain assigned to UI-X01 through UI-X10 with fixture, disabled, or unavailable interim paths; neither UI role gains backend or lifecycle authority.
+**Acceptance record:** Role 4's review was accepted through issue #15 and PR #30 on 4 August 2026. Role 2 [accepted Role 5's review and settled UX baseline](https://github.com/Dewflash/chatxpt/issues/16#issuecomment-5189664413) on 5 August 2026. All reported upstream gaps remain assigned to UI-X01 through UI-X10 with fixture, disabled, or unavailable interim paths. Backend and lifecycle authority stay outside UI modules, but any contributor may implement those responsibilities in their corresponding directories.
 
 This matrix is authoritative for the dependencies shared by `ROLE-4-BUILD-PLAN.md` and `ROLE-5-BUILD-PLAN.md`. The two plans remain standalone implementation guides. This file prevents their route, fixture, contract, and deadline assumptions from drifting.
 
@@ -16,7 +16,7 @@ This matrix is authoritative for the dependencies shared by `ROLE-4-BUILD-PLAN.m
 
 - Each role implements its own phases strictly in order. A phase starts only after the previous phase's exit evidence is recorded.
 - Role 4 and Role 5 may work concurrently. Sequential phases inside one plan do not require the other role to finish its entire plan.
-- A missing upstream seam is a named blocker or fixture boundary, not permission to implement backend, AI, quest, permission, timer, persistence, or fallback-selection logic in a UI module.
+- A missing upstream seam does not block contribution. Use a labelled fixture boundary or implement the smallest coherent backend/AI/quest slice in its corresponding module; do not place authority inside a UI module.
 - Role 4 publishes the minimum design-system handoff during its Phase 1. Role 5 begins its Phase 1 consumption after that handoff and does not wait for the complete Studio.
 - Fixtures are for tests, diagnostics, and offline reproducibility only. They are never presented as live Twitch, extraction, AI, realtime, or multi-device evidence.
 
@@ -41,7 +41,7 @@ All deadlines use Singapore time and inherit the integration exits in `docs/buil
 | --- | --- | --- | --- | --- | --- |
 | Canonical `1.0.0` role view/command/error schemas and fixture baseline | Role 1 | Roles 4/5 | Phase 1 | Implemented on `main` | Consume `@/core`/role public entries only |
 | Memory persistence, sanitised role snapshots, reconnect subscriber, and permission classes | Role 1 | Roles 4/5 through thin wiring | Phase 1 integration | Implemented foundation; browser command client/harness pending | Canonical fixture wrappers; no direct persistence |
-| Config/Live Config/viewer/hosted/OBS local harness, UI verification stack, and authorised command dispatcher (UI-X05) | Role 1 | Roles 4/5 | Phase 1 exit | Required request | Render-only components against fixture callbacks; no role independently adds shared test dependencies |
+| Config/Live Config/viewer/hosted/OBS local harness, UI verification stack, and authorised command dispatcher (UI-X05) | Role 1 | Roles 4/5 | Phase 1 exit | Required request | Render-only components against fixture callbacks; any contributor adding shared test dependencies coordinates package/lockfile deconfliction with Role 1 |
 | Minimum tokens/base components from `@/design-system` | Role 4 | Role 5 | 4 Aug, 12:00 | Required early handoff | Role 5 may define public props/fixtures first, but does not copy temporary tokens |
 | Streamer setup/profile/session seams (UI-X01–UI-X03) | Roles 1/3 | Role 4 | Phase 2 | Required requests | Disabled/fixture-labelled adapters only; no competing canonical command |
 | Intelligence/provider/unknown examples (UI-X09) | Role 2 | Role 4 and evidence consumers | Phase 2 | Planned in R2-P03/R2-P03A | Existing minimal unknown-safe Core fixture |
@@ -55,7 +55,7 @@ All deadlines use Singapore time and inherit the integration exits in `docs/buil
 
 ## Public modules and Role 1 mount requests
 
-These are requested mounts. Role 1 owns every file under `src/app/`, Twitch Extension registration/packaging, authentication, and secure route wiring.
+These are requested mounts. Role 1 maintains and deconflicts `src/app/`, Twitch Extension registration/packaging, authentication, and secure route wiring. Any contributor may implement these files while keeping route shells thin and coordinating overlaps with Role 1.
 
 | Surface | Owning role/public entry | Requested Role 1 mount | Input | Output | Plan phase |
 | --- | --- | --- | --- | --- | --- |
@@ -87,7 +87,7 @@ Exact Extension view types and asset paths remain Role 1 decision D1-08. OBS cap
 
 ## Required upstream seam requests
 
-These are contract requirements discovered during planning, not accepted schema changes. The owning role must compare them with its implementation and record the outcome before the dependent phase exits.
+These are contract requirements discovered during planning, not accepted schema changes. The responsibility lead contributes comparison context, but implementation may proceed in parallel. Before merge, Role 1 reconciles the outcome with accepted architecture and affected producer/consumer tests.
 
 | Request ID | Owner | Required capability | Why existing contract is insufficient | Required by |
 | --- | --- | --- | --- | --- |
@@ -102,7 +102,7 @@ These are contract requirements discovered during planning, not accepted schema 
 | [UI-X09 / #25](https://github.com/Dewflash/chatxpt/issues/25) | Role 2 | Canonical intelligence examples for known, low-confidence, unknown, stale, capture denied, provider available, algorithmic, and fallback states | Current Core fixtures contain only a minimal unknown-safe case | R4 Phase 2 and UI evidence |
 | [UI-X10 / #26](https://github.com/Dewflash/chatxpt/issues/26) | Role 1 | Private per-viewer command receipt/read model for accepted choice and session points, including authenticated/anonymous reconnect behaviour | Shared viewer broadcasts correctly remove identity, personal points, and accepted choice; Role 5 otherwise cannot restore or safely display personal acknowledgement | R5 Phase 2 |
 
-Any request that changes `src/core/` requires a `cross-role` issue and Role 1 coordination before implementation. Until accepted, UI owners may create component-level adapters and explicitly labelled fixtures matching the last accepted public contract, but may not create competing canonical types.
+Any contributor may change `src/core/` after checking for overlap and notifying Role 1. A `cross-role` issue is optional unless an unresolved decision needs a durable record. Add affected producer/consumer tests and deconflict before merge. UI modules may use component adapters and explicitly labelled fixtures matching the last accepted public contract, but must not create competing canonical types.
 
 ## Authoritative, derived, fixture-only, and excluded data
 
@@ -190,13 +190,13 @@ Role 4 Phase 1 publishes a stable `@/design-system` entry point before completin
 - Base button/icon-button, field/label, card/panel, status badge, progress, notice, and visually-hidden primitives needed by both roles.
 - Light/dark/Twitch-hosted theme adaptation without using Twitch marks as ChatXPT branding.
 - Keyboard focus, contrast, target-size, and reduced-motion conventions.
-- An additive-change rule: breaking token/component changes require Role 5 review after the handoff.
+- An additive-change rule: breaking token/component changes request Role 5 context and require consumer tests; Role 1 may complete integration review if Role 5 is unavailable.
 
-Role 5 consumes only the public entry point and never copies or edits `src/design-system/` internals. If the final component list needs a shared dependency, Role 4 proposes it to Role 1 before editing `package.json`.
+Viewer product code consumes only the public entry point and never copies or privately imports `src/design-system/` internals. Any contributor may edit the design system. If the final component list needs a shared dependency, record its purpose/version/risk/fallback and coordinate the package/lockfile edit with Role 1.
 
 ## Shared UI verification and evidence path
 
-Role 1 selects and installs one compatible component-interaction test path plus one real-browser screenshot/end-to-end path under UI-X05. The preferred minimal direction is a DOM-capable React testing setup for fast component behaviour and Playwright for browser, responsive, accessibility, and screenshot evidence. Role 1 confirms exact packages/versions and owns shared configuration; Roles 4/5 do not independently modify the lockfile.
+Role 1 maintains one compatible component-interaction test path plus one real-browser screenshot/end-to-end path under UI-X05. The preferred minimal direction is a DOM-capable React testing setup for fast component behaviour and Playwright for browser, responsive, accessibility, and screenshot evidence. Any contributor may change packages or shared configuration after checking active work; Role 1 assists with lockfile and configuration deconfliction before merge.
 
 Every captured artifact is entered in a Role 1-owned evidence manifest with surface, viewport/device, session/cycle revision where relevant, capture date, and one of: real Twitch/OBS/cloud, memory-backed integration, fixture-only, or unverified. A file or screenshot without that label is not judged evidence.
 

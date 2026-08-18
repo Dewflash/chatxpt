@@ -4,11 +4,13 @@
 
 Read the root `AGENTS.md` before this guide. The root guide is authoritative if anything conflicts. Detailed Streamer Studio scope will be refined by the owner without weakening the baseline below.
 
+Role 4 is the streamer-UX and design-system responsibility lead, not an exclusive file owner. Under D-071, any contributor may implement across role directories while preserving accepted UX decisions and public seams.
+
 For the current MVP planning pass, Role 2 decides Role 4's build plan under D-016. Role 4 reviews it for feasibility and then owns detailed visual, interaction, accessibility, component, and code decisions that fit the plan.
 
-Before implementation, read the Role 2-authored Role 4 execution plan, provide one consolidated feasibility review, and then follow its accepted phases and acceptance evidence.
+Before a first planned pass, read the Role 2-maintained Role 4 execution plan and its feasibility record, then follow the accepted phases and evidence. This preparation is not a cross-role edit-permission gate.
 
-Role 4 may begin a session with only `I am Role 4. What do I need to do?`. Codex must follow the guided execution mode in `AGENTS.md`, choose the current ready pass, and ask only the current phase's owner decisions with recommendations. Role 4 does not need to identify technical tasks or Git steps. Settled Role 4 choices and pass evidence are recorded in `docs/roles/ROLE-4-EXECUTION.md`; Role 2 retains ownership of edits to the baseline plan.
+Role 4 may begin a session with only `I am Role 4. What do I need to do?`. Codex must follow the guided execution mode in `AGENTS.md`, choose the current ready pass, and ask only the current phase's owner decisions with recommendations. Role 4 does not need to identify technical tasks or Git steps. Settled Role 4 choices and pass evidence are recorded in `docs/roles/ROLE-4-EXECUTION.md`; Role 2 maintains the baseline plan, which any contributor may edit with coordination.
 
 Also follow `docs/build-plans/INTEGRATION-CONTRACT.md`: export a public UI module, consume Role 1 view models, emit commands, and keep AI/engine/persistence/permission/timer authority outside the UI.
 
@@ -31,7 +33,7 @@ Deliver a working, persistent, self-service streamer experience that makes ChatX
 
 ## Required handoff
 
-Consume Role 1 contracts and Role 3 state. Propose missing settings or commands to the owning role rather than implementing engine or integration logic inside UI code.
+Consume Role 1 contracts and Role 3 state. Keep engine or integration authority outside UI code; any contributor may implement missing settings or commands in their proper module and notify the relevant leads.
 
 ## Verification
 

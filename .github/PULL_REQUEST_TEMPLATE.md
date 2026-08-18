@@ -2,7 +2,7 @@
 
 Describe the user-visible or integration outcome in plain language.
 
-## Ownership
+## Responsibility and coordination
 
 - Role: <!-- Role 1 / 2 / 3 / 4 / 5 -->
 - Owner: <!-- GitHub username -->
@@ -12,8 +12,8 @@ Describe the user-visible or integration outcome in plain language.
 
 ## Scope
 
-- Owned directories changed:
-- Other-role directories changed: <!-- Must be none unless Role 1 override or target-owner approval is recorded. -->
+- Primary responsibility directories changed:
+- Cross-role/shared directories changed: <!-- Allowed; explain overlap checks, notifications, and deconfliction. -->
 - Shared contracts changed:
 - Public entry point/seam exercised:
 - Producer and consumer affected:
@@ -59,14 +59,15 @@ npm run ...
 - [ ] Settled decision-gate answers and completed-pass evidence are recorded in my execution plan.
 - [ ] Public seams use canonical examples and do not import another role's private modules.
 - [ ] Both producer and consumer contract tests pass when a cross-role seam changed.
-- [ ] Cross-role proposals were recorded before implementation.
+- [ ] Relevant responsibility leads and Role 1 were notified of substantial cross-role work; any unresolved decision has a coordination issue.
 - [ ] No secrets, `.env.local`, real viewer data, or unrelated files are included.
 - [ ] `git diff --check` passes.
 - [ ] Relevant tests pass.
 - [ ] `npm run check` passes, or the exact blocker is documented above.
 
-## Review requirements
+## Review requests and integration
 
-- [ ] Assigned role owner reviewed role-specific files.
+- [ ] Relevant responsibility leads were requested for role-specific context; their response is advisory, not an edit/push permission gate.
 - [ ] Role 1 reviewed integration impact.
 - [ ] Two reviewers were requested for shared contracts, authentication, safety, or demo-critical integration.
+- [ ] Current `main` and overlapping branches/PRs were checked; textual and semantic conflicts were deconflicted before merge.

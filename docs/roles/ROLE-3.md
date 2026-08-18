@@ -4,6 +4,8 @@
 
 Read the root `AGENTS.md` before this guide. The root guide is authoritative if anything conflicts.
 
+The `Owns` and `Does not own` labels below describe module responsibility and decision context, not contributor edit permissions. Under D-071, any contributor may work across these areas while preserving the integration contract.
+
 Execute work through `docs/build-plans/ROLE-3-BUILD-PLAN.md`. Role 1 defines required phases, deadlines, outcomes, and integration acceptance; L0pch decides the named Role 3 component choices at each decision gate.
 
 Implement the pure engine seam in `docs/build-plans/INTEGRATION-CONTRACT.md`; Role 3 returns decisions/state/events/allowed actions while Role 1 owns authentication, persistence, realtime, and platform execution.
@@ -30,7 +32,7 @@ Convert Role 2's intelligence and candidate quests into safe, feasible, varied, 
 
 ## Required handoff
 
-Consume Role 2 outputs through agreed contracts and emit validated quest state through Role 1 contracts. Send streamer-control requirements to Role 4 and viewer/reward requirements to Role 5 as cross-role proposals.
+Consume Role 2 outputs through agreed contracts and emit validated quest state through Role 1 contracts. Notify Role 4 of streamer-control requirements and Role 5 of viewer/reward requirements; any contributor may implement the coherent cross-role slice, with an issue only when durable coordination is useful.
 
 ## Verification
 

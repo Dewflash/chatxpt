@@ -38,7 +38,7 @@ Run this loop throughout every phase:
 1. Pull and inspect current `main`, open PRs, TODOs, and the coordination board.
 2. Test the newest integrated golden path before starting new integration work.
 3. Triage failures into the correct role instead of silently absorbing all fixes.
-4. Accept or reject shared-contract proposals quickly so Roles 2-5 remain unblocked.
+4. Review and deconflict shared-contract changes quickly; contributors may implement and push them without waiting for role permission.
 5. Assign newly discovered work with an owner, acceptance signal, priority, and deadline.
 6. Integrate the smallest current vertical slice on `main`; do not wait for every role to finish.
 7. Review cross-role changes, enforce real/mock disclosure, and merge safe work.
@@ -53,7 +53,7 @@ Run this loop throughout every phase:
 | D1-01 | Final legacy-file mapping into the five owned source directories | Open | — |
 | D1-02 | Minimum fields and versioning strategy for contract version one | Resolved by D-031/D-035 | Version `1.0.0`; required canonical envelope/revision/provenance/error fields from the integration contract; producer and consumer tests accompany changes. |
 | D1-03 | Which existing prototype behaviours must remain temporarily reachable during migration | Open | — |
-| D1-03A | Public entry points, shared-file ownership, and dependency-request procedure | Resolved by D-032 | Role 1 owns collision-prone composition files; Roles 2-5 export public entries and request shared dependencies through Role 1 unless granted a scoped edit. |
+| D1-03A | Public entry points, shared-file responsibility, and dependency-deconfliction procedure | Resolved by D-032 and superseding D-071 | Role 1 maintains collision-prone composition files; any contributor may edit them after checking overlap and must coordinate deconfliction before merge. Responsibility-specific modules export public entries. |
 
 ### R1-P01 — Publish authoritative plans
 
@@ -67,7 +67,7 @@ Run this loop throughout every phase:
 - Wire them into onboarding, CODEOWNERS, role guides, TODOs, and team context.
 - Preserve all decisions from the owner grill.
 
-**Acceptance:** Plans are linked from repository authority; affected owners are required reviewers; checks pass.
+**Acceptance:** Plans are linked from repository authority; affected responsibility leads are requested for context; Role 1 can complete integration review without waiting indefinitely; checks pass.
 
 ### R1-P02 — Thin contracts and application-orchestrator skeleton
 
@@ -121,12 +121,12 @@ Run this loop throughout every phase:
 - Create each role directory and documented public entry point.
 - Keep `src/app/` routes/layout/providers thin and Role 1-owned; they mount Role 4/5 public modules.
 - Move or wrap code into `src/core/`, `src/integrations/`, `src/realtime/`, `src/ai/`, `src/extraction/`, `src/quest-engine/`, `src/streamer/`, `src/design-system/`, and `src/viewer/`.
-- Record Role 1 ownership of dependency/lock/config/env/route/migration files and the scoped dependency-request process.
+- Record Role 1 maintenance/deconfliction responsibility for dependency/lock/config/env/route/migration files and the open-contribution overlap procedure.
 - Preserve the existing prototype until equivalent role-owned paths compile.
 
-**Must not:** Redesign Role 2 algorithms, Role 3 mechanics, or Role 4/5 UX.
+**Scope note:** This migration pass preserves existing Role 2 algorithms, Role 3 mechanics, and Role 4/5 UX. A contributor may redesign those areas only in a separately scoped and documented pass.
 
-**Acceptance:** Existing routes build; imports resolve; CODEOWNERS matches actual paths; public entry points exist; no role must edit another role's source or a collision-prone shared file to start.
+**Acceptance:** Existing routes build; imports resolve; CODEOWNERS matches responsibility paths; public entry points exist; no contributor must wait for another role before starting a coherent slice.
 
 ### R1-P03A — Day-one external and capture feasibility spikes
 
@@ -151,8 +151,8 @@ Run this loop throughout every phase:
 
 - Define the Role 4/5 guided execution mode, explained phase design gates, and role-owned execution records.
 - Keep technical/Git choices with Codex and component visual decisions with the role owner.
-- Convert every missing cross-role UI requirement into a persistent issue with an owner and required-by phase.
-- Ensure a blocked UI uses an accepted fixture/disabled path and never implements another role's backend.
+- Give every missing cross-role UI requirement a responsibility area and required-by phase; create a persistent issue when unresolved coordination benefits from one.
+- Ensure a UI missing upstream behaviour either uses an accepted fixture/disabled path or implements the smallest coherent cross-role backend slice with the relevant public contracts and tests.
 
 **Acceptance:** A zero-context Role 4 or Role 5 prompt deterministically selects the first ready task, asks one explained decision batch, records answers, and names the exact escalation path without source-boundary drift.
 
@@ -388,6 +388,6 @@ Run this loop throughout every phase:
 
 **Acceptance:** Clean-clone verification passes; deployed links work; deck/video meet limits; repository access and submission package are confirmed.
 
-## Escalation and reassignment
+## Cross-role contribution and integration
 
-Role 1 may create or redirect work whenever integration/testing reveals a gap. Every assignment must name the owning role, reason, priority, acceptance signal, deadline, and affected contract. Role 1 uses the recorded override for urgent fixes but returns component decisions to the owner afterward.
+Role 1 may create, redirect, or directly assist work whenever integration/testing reveals a gap. Every assignment names the responsibility area, reason, priority, acceptance signal, deadline, and affected contract. Any contributor may implement the gap. Role 1 notifies affected leads, deconflicts overlapping branches before merge, preserves accepted component decisions unless a recorded decision replaces them, and ensures a missing owner response never stalls otherwise safe work.

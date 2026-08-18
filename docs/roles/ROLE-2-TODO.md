@@ -2,7 +2,7 @@
 
 **Owner:** `joelyrk`
 
-Update only this role's statuses and evidence. Raise shared-contract needs through a `cross-role` GitHub Issue before implementation.
+Keep this role's statuses and evidence current. Any contributor may update affected rows. Shared-contract work may be implemented immediately with Role 1 notification, producer/consumer tests, and pre-merge deconfliction; use a `cross-role` issue only for durable unresolved coordination.
 
 Execute these outcomes through `docs/build-plans/ROLE-2-BUILD-PLAN.md`; its decision gates belong to Joelyrk unless explicitly marked joint or escalated.
 
@@ -15,8 +15,8 @@ Execute these outcomes through `docs/build-plans/ROLE-2-BUILD-PLAN.md`; its deci
 | R2-002 | P0 | IN PROGRESS | Implement tiered real-frame extraction from Role 1's OBS Virtual Camera interface. | Shared extraction contract and real frame source | Universal activity signals work across multiple owned action-game examples; calibrated adapters emit specific HUD facts only when supported; confidence/capabilities/unknown and resource measurements are evidenced. |
 | R2-003 | P0 | IN PROGRESS | Implement audience/gameplay snapshot and behavioural intelligence. | R2-002; audience contract | Timestamped/confidence-scored output for energy, sentiment, intent, humour, risk, boredom, hype, and repeated requests. |
 | R2-004 | P0 | IN PROGRESS | Define provider evaluation criteria with Role 3. | Accepted D-014 | Joint comparison covers OpenRouter and alternatives, latency, cost, privacy, reliability, structured output, quest quality, and fallback. |
-| R2-005 | P0 | BLOCKED | Implement chosen provider adapter and model-ready context. | Joint recommendation accepted by Role 1 | Server-only provider path returns validated structured output; no vendor payload leaks into core. |
-| R2-006 | P0 | BLOCKED | Produce exactly three candidate quests plus metadata for Role 3. | R2-003 and R2-005 | Candidate output conforms to contract and includes confidence, reason, provider/fallback, and traceable inputs. |
+| R2-005 | P1 | READY | Evaluate or refine the disabled provider adapter and model-ready context only if a future controlled trial is explicitly enabled. | D-055 no-provider MVP; future team-owned credential | Server-only provider path returns validated structured output; no vendor payload leaks into core. This is not an MVP or cross-role blocker. |
+| R2-006 | P0 | IN PROGRESS | Produce exactly three candidate quests plus metadata for Role 3 through the credential-free algorithmic path. | R2-003; D-055 | Candidate output conforms to contract and includes confidence, reason, algorithmic/fallback status, and traceable inputs. Provider work is not a prerequisite. |
 | R2-007 | P0 | IN PROGRESS | Build credential-free and malformed/provider-failure behaviour. | Current mock engine | Tests demonstrate deterministic fallback and clear provider status. |
 | R2-008 | P1 | IN PROGRESS | Create representative AI/extraction evaluation cases and evidence. | Ongoing | Multiple game genres, audience moods, unsafe/noisy cases, latency results, and documented limitations. |
 

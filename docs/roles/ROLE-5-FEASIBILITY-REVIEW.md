@@ -8,7 +8,7 @@
 
 **Plan reviewed:** `docs/build-plans/ROLE-5-BUILD-PLAN.md` and `docs/build-plans/ROLE-4-5-DELIVERY-MATRIX.md`; reconciled with merged PR #27 and PR #29 on 3 August 2026
 
-**Review status:** Submitted to Role 2 and Role 1 in [issue #16, comment 5163871816](https://github.com/Dewflash/chatxpt/issues/16#issuecomment-5163871816). Role 2 must record the accepted baseline or one revision before Role 5 starts source implementation.
+**Review status:** Accepted and reconciled through issue #16. D-071 now supersedes the role-based source-implementation gate from this historical review.
 
 **Coordination issue:** [#16 Role 5 feasibility review and plan acceptance](https://github.com/Dewflash/chatxpt/issues/16)
 
@@ -31,7 +31,7 @@ Role 1 preserved the technically valid recommendations below under distinct feas
 
 ### Feasible as currently phased
 
-Conditionally yes. PR #27 corrected the plan structure and tracks every known upstream seam, but implementation exits still depend on the accepted clarifications and handoffs below. Role 5 may begin only after Role 2 records its accept/revise response and the current Role 5 UX batch is recorded; it must not invent missing vote, lifecycle, access, identity, fallback, timer, reward, or persistence authority.
+Conditionally yes. PR #27 corrected the plan structure and tracks every known upstream seam. UI exits still depend on the required capabilities, but source work does not wait on another role: any contributor may implement missing vote, lifecycle, access, identity, fallback, timer, reward, or persistence behaviour in its proper module. UI code must not invent that authority.
 
 ### Conflicts or missing requirements
 
@@ -149,7 +149,7 @@ Role 5 proposes these public render modules from `@/viewer`:
 
 Detailed prop names remain a Role 5 implementation decision, but the boundary will accept validated Role 1 view/access/transport state and typed dispatch callbacks. The overlay will expose no command callback. Role 5 will preserve server authority, retain the latest safe shared revision while reconnecting, recover private viewer state only through Role 1's accepted receipt path, reject older snapshots for presentation, avoid optimistic tallies, and derive only display time, labels, layout, focus, and local expanded/collapsed state.
 
-No source implementation begins until Role 2 records the response or revision and Role 1 is notified. After that gate, Role 5 begins R5-P02 inside `src/viewer/` and consumes Role 4 only through `@/design-system`.
+The former Role 2 response gate is satisfied and, under D-071, is not a future permission gate. Viewer code stays inside `src/viewer/` and consumes shared visuals through `@/design-system`; any contributor may implement either module while preserving its public seam.
 
 ## Evidence classification
 

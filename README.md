@@ -176,7 +176,7 @@ ChatXPT does not host livestream video. Twitch remains the video and channel sur
 | Route composition | Next.js pages and API endpoints that mount role-owned modules | `src/app/` |
 | Persistence target | Supabase schema, row-level security, realtime policy, migrations, and local CLI workflow | `supabase/` |
 
-Role 1 owns shared contracts and orchestration. Role 2 analyses inputs and generates candidates. Role 3 remains the deterministic authority over quest validity and lifecycle. Roles 4 and 5 render streamer and viewer experiences. Public ports prevent one role from importing another role's private implementation.
+Role 1 maintains shared contracts and orchestration. Role 2 is responsible for input analysis and candidate generation. Role 3 remains the deterministic runtime authority over quest validity and lifecycle. Roles 4 and 5 lead the streamer and viewer experiences. These labels define module responsibility, not edit permission: under D-071 any contributor may implement across roles, while public ports still prevent one module from importing another module's private implementation.
 
 ### Current runnable path versus production-shaped path
 
@@ -237,7 +237,7 @@ The core runtime policy is:
 
 | File | Purpose |
 | --- | --- |
-| `AGENTS.md` | Root authority for product scope, golden workflow, five-role ownership, safety, evidence, collaboration, and delivery rules followed by contributors and coding agents. |
+| `AGENTS.md` | Root authority for product scope, golden workflow, five-role responsibility, open cross-role contribution, safety, evidence, collaboration, and delivery rules followed by contributors and coding agents. |
 | `.codex/skills/chatxpt-prototype/SKILL.md` | Project-specific Codex workflow for implementing and validating ChatXPT changes. |
 | `.codex/skills/chatxpt-prototype/agents/openai.yaml` | Codex skill metadata and default invocation prompt: `Use $chatxpt-prototype to implement the next demo-ready ChatXPT feature.` |
 | `.codex/skills/chatxpt-prototype/references/quest-policy.md` | Shared sidequest policy loaded by the ChatXPT skill for generation-related work. |
@@ -343,7 +343,7 @@ The current prototype truth table is [docs/submission/END_TO_END_PROTOTYPE_CHECK
 
 ## Contributor Workflow
 
-Every contributor and coding agent must read [AGENTS.md](AGENTS.md), [docs/TEAM_PLAYBOOK.md](docs/TEAM_PLAYBOOK.md), the assigned role guide/TODO, [docs/build-plans/INTEGRATION-CONTRACT.md](docs/build-plans/INTEGRATION-CONTRACT.md), the assigned build plan, and [docs/DECISIONS.md](docs/DECISIONS.md). Changes remain within role ownership, integrate through public ports, include focused tests, and add a role-owned fragment under `changes/`.
+Every contributor and coding agent must read [AGENTS.md](AGENTS.md), [docs/TEAM_PLAYBOOK.md](docs/TEAM_PLAYBOOK.md), the assigned role guide/TODO, [docs/build-plans/INTEGRATION-CONTRACT.md](docs/build-plans/INTEGRATION-CONTRACT.md), the assigned build plan, and [docs/DECISIONS.md](docs/DECISIONS.md). Any contributor may change any role directory. Changes stay within the destination module's responsibility, integrate through public ports, disclose and deconflict cross-role overlap with Role 1, include focused tests, and add a change fragment under `changes/`.
 
 ## Submission Packet
 

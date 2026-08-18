@@ -54,13 +54,13 @@ The dependency rule is deliberately one-way:
 
 - The core defines neutral contracts and application ports.
 - Twitch, OBS, Supabase, AI, extraction, quest logic, and UI implement or consume those ports.
-- Role-owned modules communicate through their public `index.ts` entrypoints rather than importing another role's private files.
+- Responsibility-specific modules communicate through their public `index.ts` entrypoints rather than importing another module's private files.
 - Thin files under `src/app/` are the composition layer. They may mount role-owned modules, authenticate requests, and connect public ports.
 - The orchestrator is the sole authority for canonical command ordering, idempotency, state revision, persistence, and publication.
 
-## 3. Ownership and responsibility
+## 3. Module and contributor responsibility
 
-| Role | Responsibility | Owned source |
+| Role | Responsibility | Primary source |
 | --- | --- | --- |
 | Role 1 — integration | Shared contracts, orchestration, Twitch/OBS adapters, persistence, realtime, routes, and cross-role tests | `src/core/`, `src/integrations/`, `src/realtime/`, thin `src/app/`, `tests/integration/`, `supabase/` |
 | Role 2 — intelligence | Frame and audience analysis, observation fusion, model/provider boundaries, and candidate generation | `src/extraction/`, `src/ai/` |
@@ -68,7 +68,7 @@ The dependency rule is deliberately one-way:
 | Role 4 — streamer UI | Studio, Live Config experience, setup/status presentation, and the shared visual system | `src/streamer/`, `src/design-system/` |
 | Role 5 — viewer UI | Twitch viewer, hosted viewer, chat instructions, active-quest/result presentation, and overlay visuals | `src/viewer/` |
 
-`AGENTS.md`, `.github/CODEOWNERS`, and `scripts/check-role-boundaries.mjs` enforce this model. The retained `src/lib/` and `src/components/` trees are explicitly treated as legacy until the open migration decisions are settled.
+`AGENTS.md` defines the model, `.github/CODEOWNERS` routes review context, and `scripts/check-role-boundaries.mjs` enforces dependency direction. Under D-071, any contributor may edit any area without prior role approval; the mapped responsibility, public entrypoints, and import boundaries still determine where code belongs. The retained `src/lib/` and `src/components/` trees are explicitly treated as legacy until the open migration decisions are settled.
 
 ## 4. The canonical end-to-end flow
 
@@ -186,7 +186,7 @@ The following tables cover files that define architecture, runtime behaviour, co
 
 | File | What it does |
 | --- | --- |
-| `AGENTS.md` | Binding product direction, five-role ownership model, Twitch-only MVP scope, golden workflow, evidence rules, and collaboration constraints. |
+| `AGENTS.md` | Binding product direction, five-role responsibility model, open cross-role contribution, Twitch-only MVP scope, golden workflow, evidence rules, and collaboration constraints. |
 | `README.md` | Main setup, surface, architecture, prompt/agent, dependency, API, and repository disclosure for contributors and submission reviewers. |
 | `docs/ARCHITECTURE.md` | High-level accepted target architecture, dependency direction, contracts, realtime boundary, security rules, and migration status. |
 | `docs/build-plans/INTEGRATION-CONTRACT.md` | Binding producer/consumer contract: orchestrator order, view ownership, revisions, persistence-before-broadcast, fixture rules, and cross-role acceptance ladder. |
@@ -199,7 +199,7 @@ The following tables cover files that define architecture, runtime behaviour, co
 | `tsconfig.json` | Enables strict TypeScript settings and the `@/* -> src/*` import alias. |
 | `vitest.config.mts` | Configures the test environment, aliases, and test discovery. |
 | `vercel.json` | Defines the Vercel install and build commands. It does not prove a deployment exists. |
-| `.github/CODEOWNERS` | Assigns the default integration owner and role-specific reviewers to protected repository areas. |
+| `.github/CODEOWNERS` | Routes the default Role 1 integration review and role-specific context. It is not a contributor edit-permission map under D-071. |
 
 ### 7.2 Next.js composition and compatibility files
 
@@ -440,12 +440,12 @@ The production deployment target is Vercel plus Supabase. The repository contain
 ## 11. How to make a safe change
 
 1. Read `AGENTS.md`, the relevant role guide/TODO/build plan, and the integration contract.
-2. Identify the owning directory and use the role's public entrypoint for cross-role dependencies.
+2. Identify the responsible module and use its public entrypoint for cross-module dependencies; any contributor may edit it.
 3. Treat `src/core/contracts/` changes as coordinated, potentially breaking changes.
 4. Preserve evidence class, timestamps, confidence, unknown handling, and the credential-free fallback.
 5. Keep authentication, authoritative state, timers, tallies, and secrets out of UI components.
 6. Add the smallest producer and consumer tests that prove the public seam.
 7. Run the focused tests while editing, then `git diff --check` and `npm run check` before handoff.
-8. Update the owning role TODO, add exactly one `changes/role-<n>/` fragment, and state what was actually verified.
+8. Update every affected role TODO, add exactly one fragment under the primary responsibility in `changes/role-<n>/`, and state what was actually verified.
 
 For a concise target-architecture view, continue with [`ARCHITECTURE.md`](ARCHITECTURE.md). For exact cross-role acceptance rules, read [`build-plans/INTEGRATION-CONTRACT.md`](build-plans/INTEGRATION-CONTRACT.md).

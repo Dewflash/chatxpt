@@ -1,3 +1,4 @@
+# CODEOWNERS routes responsibility context and Role 1 integration review. Under D-071 it does not grant edit permission or a role-based veto; @Dewflash can complete integration review when another lead is unavailable.
 # Role 1 is the default integration owner.
 * @Dewflash
 

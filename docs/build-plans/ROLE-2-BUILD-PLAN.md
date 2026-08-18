@@ -24,16 +24,16 @@ Role 2 is complete when:
 - Role 3 can validate or replace candidates without importing Role 2 internals.
 - Evaluation evidence covers multiple action-game HUDs, audience states, provider failure, malformed output, latency, and known limitations.
 
-## Non-negotiable boundaries
+## Architecture and evidence boundaries
 
-- Do not edit canonical types in `src/core/`; propose changes to Role 1.
-- Do not implement Twitch/OBS integration, quest lifecycle, deterministic safety enforcement, voting, rewards, or UI code.
+- Canonical types remain in `src/core/`. Any contributor may edit them; notify Role 1, add affected producer/consumer tests, and deconflict the change before merge.
+- Twitch/OBS integration, quest lifecycle, deterministic safety enforcement, voting, rewards, and UI code remain outside `src/ai/` and `src/extraction/`. A Role 2 contributor may implement them in their corresponding modules under the repository-wide open-contribution rule.
 - Do not fabricate live health, kills, combat, phase, or other gameplay state.
 - Raw frames are ephemeral. Raw Twitch chat may be retained for at most 24 hours under D-024.
 - AI must be free for the MVP; no paid provider usage is authorised.
 - Test fixtures may be simulated or annotated, but only real-frame/real-chat runs count as live evidence.
 - Expose Role 2 through documented public ports from `src/extraction/` and `src/ai/`; do not import another role's internals.
-- Request shared dependencies through Role 1 so multiple roles do not conflict in `package.json` or the lockfile.
+- Record shared-dependency purpose/version/runtime risk/fallback and coordinate the package/lockfile edit with Role 1 so concurrent changes are deconflicted before merge.
 - Support universal broad visual signals for action games and calibrated HUD facts only for explicitly configured adapters; unsupported facts remain `unknown`.
 
 ## Phase 1: Unblock Roles 4 and 5
@@ -340,11 +340,11 @@ Raw chat is processed in memory by default. If Joelyrk's D2-15 choice requires t
 
 **Acceptance:** Role 2 producer tests and Role 3 consumer tests pass against the same canonical examples; Role 3 integration tests consume Role 2 outputs only through public ports; Role 4/5 plans reflect actual states; Role 1 receives contract proposals, evaluation evidence, performance limits, and open risks.
 
-## Escalate to Role 1 when
+## Coordinate with Role 1 when
 
-- A canonical contract must change.
+- A canonical contract changes; implementation may proceed with affected producer/consumer tests, but Role 1 deconflicts it before merge.
 - A paid service or new external account is proposed.
 - Retention/privacy exceeds accepted limits.
 - Role 4/5 feasibility feedback changes product scope.
-- Role 2 needs another role's source edited.
+- Overlapping branches create a semantic conflict; Role 1 assists and settles integration order when needed.
 - Live extraction cannot meet the golden workflow or feature-freeze deadline.

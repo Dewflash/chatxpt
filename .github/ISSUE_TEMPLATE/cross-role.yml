@@ -1,5 +1,5 @@
 name: Cross-role proposal
-description: Request another role to compare and decide a feature, contract, or dependency before implementation.
+description: Coordinate a substantial cross-role feature, contract, overlap, or unresolved decision without blocking implementation.
 title: "[Cross-role] "
 labels:
   - cross-role
@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Do not implement the cross-role portion before the target owner compares it and `@Dewflash` is notified.
+        This issue is a coordination record, not a permission gate. Implementation may proceed after overlap is checked and the relevant leads plus `@Dewflash` are notified. Role 1 helps deconflict before merge.
   - type: dropdown
     id: originating_role
     attributes:
@@ -43,7 +43,7 @@ body:
     id: proposal
     attributes:
       label: Proposal from the originating role
-      description: Explain the desired outcome, relevant evidence, and why it crosses ownership.
+      description: Explain the desired outcome, relevant evidence, why it crosses responsibilities, and any implementation already in progress.
     validations:
       required: true
   - type: textarea
@@ -80,5 +80,5 @@ body:
       options:
         - label: I have mentioned the target owner and `@Dewflash` in the issue text or comments.
           required: true
-        - label: I have not implemented the cross-role portion.
+        - label: I checked for overlapping branches or pull requests and recorded any known deconfliction need.
           required: true

@@ -1,8 +1,8 @@
 # Role 5 Build Plan: Viewer Participation and OBS Quest Visuals
 
-**Implementation owner:** Role 5 (`drdexe`)
+**Implementation responsibility lead:** Role 5 (`drdexe`)
 
-**Plan owner:** Role 2 (`joelyrk`) under D-016
+**Plan responsibility lead:** Role 2 (`joelyrk`) under D-016 and D-071
 
 **Status:** Accepted by Role 2 after Role 5's consolidated feasibility review in [issue #16](https://github.com/Dewflash/chatxpt/issues/16#issuecomment-5189664413); no scope revision was required
 
@@ -20,10 +20,10 @@ Role 5 implements one phase at a time.
 
 1. Complete every P0 deliverable and exit check in the current phase.
 2. Record the commands, fixtures, screenshots, and limitations actually verified.
-3. Resolve or formally defer every blocking contract gap with its owner.
+3. Record every contract gap, notify the relevant leads, and either implement the cross-role slice, use a labelled fixture, or defer it for a stated technical reason.
 4. Begin the next phase only after the current phase exit is reviewable.
 
-Role 5 may split a phase into small pull requests, but may not start later fallbacks or visual polish to bypass an incomplete primary-flow exit. Role 5 starts Phase 1 after Role 4 publishes the minimum `@/design-system` handoff; it does not wait for the complete Studio.
+Role 5 may split a phase into small pull requests, but may not use later polish to conceal an incomplete primary-flow exit. If the minimum `@/design-system` handoff is missing, any contributor may implement it in `src/design-system/`; Role 5 never waits for the complete Studio.
 
 ### How Codex coaches a novice owner through design decisions
 
@@ -31,7 +31,7 @@ The decision tables below are starter prompts and minimum areas to consider, not
 
 Codex explains the visible result and trade-off first, recommends a default, and then selects the appropriate implementation technique. It must never ask a jargon-only question such as `Flexbox or Grid?`: Role 5 decides how the viewer experience should behave and feel; Codex decides whether Grid, Flexbox, or another implementation produces that result. Role 5 may reply `Approve all recommendations`.
 
-Role 2 owns this baseline plan. Role 5's settled answers are recorded in `docs/roles/ROLE-5-EXECUTION.md`, so Role 5 does not edit another owner's plan. Codex checks that record to avoid repeating settled choices, then asks only the relevant unresolved choices for the current pass.
+Role 2 maintains this baseline plan. Role 5's settled answers are recorded in `docs/roles/ROLE-5-EXECUTION.md`. Any contributor may edit either record, while coordinating plan-level changes with Role 2 and preserving the execution record as the source of settled UX choices. Codex checks that record to avoid repeating settled choices, then asks only the relevant unresolved choices for the current pass.
 
 ## Definition of done
 
@@ -144,16 +144,16 @@ Codex first prepares the technical feasibility review itself, then uses these as
 - Return one consolidated response covering conflicts, missing requirements, route/harness needs, Extension/mobile/CSP constraints, OBS risks, dependency requests, and the smallest viable recovery for each issue.
 - Compare UI-X05 through UI-X08 and UI-X10 with current Role 1/3 work.
 - Confirm that Role 4's minimum design-system handoff is sufficient to start Phase 1.
-- Identify any package request with purpose, version, client/server impact, bundle/runtime risk, and no-package fallback; Role 1 owns installation.
+- Identify any package change with purpose, version, client/server impact, bundle/runtime risk, and no-package fallback; any contributor may implement it and Role 1 deconflicts shared files.
 
 ### Exit evidence
 
 - One written feasibility review is posted to [issue #16](https://github.com/Dewflash/chatxpt/issues/16), where Role 2 and Role 1 can compare it.
 - Role 2 records one revision or explicitly records that no revision was needed.
-- Every blocker has an owner and required-by phase.
-- No source implementation starts before this exit.
+- Every gap has a responsibility area, available contributor, and required-by phase.
+- The feasibility record may be completed alongside source work; it is not an edit or push permission gate under D-071.
 
-**Acceptance record (5 August 2026):** Role 2 [accepted Role 5's review](https://github.com/Dewflash/chatxpt/issues/16#issuecomment-5189664413) without changing phase, priority, ownership, or scope. F5-01 through F5-04 remain implementing-owner recommendations, while UI-X05 through UI-X08 and UI-X10 retain authority for the missing harness, lifecycle examples, fallbacks, and private viewer recovery. Role 5 may begin its Phase 1 prop and fixture work, but design-system consumption still waits for Role 4's minimum public handoff.
+**Acceptance record (5 August 2026):** Role 2 [accepted Role 5's review](https://github.com/Dewflash/chatxpt/issues/16#issuecomment-5189664413) without changing phase, priority, responsibility, or scope. F5-01 through F5-04 remain viewer-experience recommendations, while UI-X05 through UI-X08 and UI-X10 identify the missing harness, lifecycle examples, fallbacks, and private viewer recovery. Under D-071, any contributor may implement those slices or the minimum design-system handoff without waiting for another role.
 
 ## Phase 1 / R5-P02: Public viewer boundary, design-system consumption, and harness
 
@@ -177,7 +177,7 @@ Codex first prepares the technical feasibility review itself, then uses these as
 
 - Define render-only module props around accepted view models, typed command dispatch, room/access result, transport health, loading state, and Twitch context supplied by Role 1.
 - Export Twitch viewer, hosted board, chat instruction, and read-only overlay module entry points through `src/viewer/index.ts` using names selected by Role 5 and documented for Role 1.
-- Consume tokens/base components only from `@/design-system`; do not copy or edit Role 4 files.
+- Consume tokens/base components through `@/design-system`; any contributor may edit design-system source, but viewer product code must not copy or privately import its internals.
 - Add Role 5-owned consumer tests using accepted Core fixtures and render wrappers; request shared test dependencies through Role 1.
 - Provide a fixture gallery/development harness module that is unmistakably fixture-only and mounted only by Role 1's local harness.
 - Establish performance budgets compatible with the current 1MB mobile initial-load policy and a three-second constrained-network target; record actual built asset evidence once Role 1 packaging exists.
@@ -329,7 +329,7 @@ All `r5.mode.*`, `r5.board.room-error-set.v1`, `r5.chat.acknowledgement-set.v1`,
 
 **Cutoff:** 7 August 2026, 18:00 SGT
 
-This phase starts only if Phase 4 has passed and Role 1 agrees the work cannot destabilise the golden workflow or violate Extension performance limits.
+This phase starts after Phase 4 stability and Extension-performance evidence pass. No role-owner approval gate applies; the contributor must preserve the golden workflow and deconflict shared changes with Role 1.
 
 ### Owner design gate
 
@@ -370,10 +370,10 @@ Requested plan revision (one consolidated list):
 
 Role 2 compares the response with this plan, records one revision, and notifies Role 1. Detailed visual, interaction, accessibility, component, and code choices then remain with Role 5 as long as they preserve the accepted plan.
 
-## Escalate to Role 1 when
+## Coordinate with Role 1 when
 
-- A canonical viewer/overlay view, command, room/access, chat acknowledgement, health, identity, reward, or error contract must change.
-- Twitch Extension route/asset/CSP/auth/hosting or OBS secure-read behaviour requires Role 1 implementation.
-- A package, lockfile, app route, environment value, or integration test must change.
-- A decision changes scope, safety, privacy, cost, ownership, or the golden workflow.
+- A canonical viewer/overlay view, command, room/access, chat acknowledgement, health, identity, reward, or error contract changes; any contributor may implement it with affected tests and Role 1 deconfliction.
+- Twitch Extension route/asset/CSP/auth/hosting or OBS secure-read behaviour changes; any contributor may implement the proper integration module while Role 1 coordinates safety and overlap.
+- A package, lockfile, app route, environment value, or integration test changes; any contributor may edit it after checking overlap and coordinating before merge.
+- A decision changes scope, safety, privacy, cost, responsibility, or the golden workflow; the project owner settles that durable decision before merge.
 - P0 cannot meet the shared schedule, performance constraints, or real-evidence requirement.

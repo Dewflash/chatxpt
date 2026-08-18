@@ -6,7 +6,7 @@ This is the required operating procedure for all five contributors and their Cha
 
 1. Never work directly on `main`.
 2. Never pull, switch branches, merge, or rebase while uncommitted work exists.
-3. Never edit another role's files without the cross-role process or Role 1 integration override.
+3. Anyone may edit any role's files, but must preserve module boundaries, disclose cross-role scope, and deconflict overlapping work with Role 1.
 4. Never push secrets, `.env.local`, real viewer data, or credentials.
 
 If a command reports a conflict or something unexpected, stop. Do not force-push, reset, delete files, or guess. Ask your role's Codex to explain the exact state and notify Role 1 if shared work is affected.
@@ -137,13 +137,13 @@ Before editing:
 1. Read the root AGENTS.md, TEAM_PLAYBOOK.md, INTEGRATION-CONTRACT.md, my role guide and TODO, my execution plan, PROJECT_TODO.md, and DECISIONS.md.
 2. Inspect git status and incoming main changes without discarding anything.
 3. Summarise relevant changes since my branch diverged.
-4. Confirm the files my role owns and flag anything outside them.
+4. Confirm the module responsibilities involved and flag cross-role or shared-file overlap.
 5. Identify the matching plan phase/pass and turn this objective into one reviewable pass with acceptance evidence.
 6. List every open decision in that phase's decision gate in one batch. Separate component decisions I own from cross-role or project-owner decisions.
-7. Identify dependencies and blockers before implementation.
-8. Name the public entry point and producer/consumer contract test for this pass. Do not import another role's private files.
+7. Identify dependencies, likely overlaps, and external blockers before implementation.
+8. Name the public entry point and producer/consumer contract test for this pass. Contributors may edit across roles; product modules still do not import another module's private files.
 
-Do not edit another role's files. Update me briefly while working. At the end, verify, update my TODO and change fragment, review the diff, and tell me when it is ready to push and open a PR.
+Cross role boundaries whenever the coherent implementation requires it. Notify the relevant leads and Role 1, but do not wait for role-based permission. Update me briefly while working. At the end, verify, update affected records and the change fragment, review the diff, and tell me when it is ready to push and open a PR.
 ```
 
 ### Simpler start for Roles 4 and 5
@@ -165,11 +165,11 @@ Codex then follows the guided execution mode in `AGENTS.md`: it finds the first 
 ## During a work pass
 
 - Work on one issue or clearly bounded outcome.
-- Keep changes inside your owned directories.
-- Let your role owner decide component details; do not escalate every small choice to Role 1.
-- Create a `cross-role` GitHub Issue before work that requires another role.
-- If a shared contract is missing, use mocks that satisfy the last accepted contract and request the change from Role 1.
-- Do not edit `src/app/`, dependency/lock/config/env files, or Supabase migrations unless you are Role 1 or have a recorded scoped grant. Request dependencies from Role 1 with purpose, version, runtime/bundle risk, and fallback.
+- Put code in the directory matching its runtime responsibility, regardless of which contributor implements it.
+- Use the responsibility lead as an adviser for component details; do not escalate every small choice to Role 1 or wait for role-based permission.
+- Notify affected leads and Role 1 when work crosses roles. Create a `cross-role` GitHub Issue only when a durable comparison or unresolved decision needs tracking.
+- If a shared contract is missing, either use a labelled fixture against the last accepted contract or implement the canonical change with producer/consumer tests and Role 1 deconfliction.
+- Anyone may edit `src/app/`, dependency/lock/config/env files, or Supabase migrations. Because these are collision-prone, sync first, document dependency purpose/version/runtime risk/fallback, and coordinate overlapping edits with Role 1 before merge.
 - Merge and exercise the smallest cross-role vertical slice after each wave; do not postpone integration until every component is complete.
 - Keep mock, simulated, and live behaviour visibly distinguishable.
 - Run the smallest relevant checks while working.
@@ -182,9 +182,9 @@ Codex should inspect the current plan phase first, then present all open decisio
 - The current recorded rule or gap
 - The practical options
 - Its recommendation and consequence
-- Whether the role owner can decide it or a cross-role/project decision is required
+- Whether the responsibility lead should advise or the project owner must settle a product, architecture, safety, or cost decision
 
-The role owner answers once. For Roles 1-3, Codex records settled component decisions directly in the plan's decision table. For Roles 4/5, Role 2 retains the baseline-plan files, so Codex records the UI owner's answers in `ROLE-4-EXECUTION.md` or `ROLE-5-EXECUTION.md` and sends plan-level revisions through the feasibility issue. Every role reflects work status in its TODO. Durable product, architecture, provider, cost, safety, or ownership changes go through Role 1 and `docs/DECISIONS.md`.
+The responsibility lead answers once when available. For Roles 1-3, Codex records settled component decisions directly in the plan's decision table. For Roles 4/5, normal UX answers go in `ROLE-4-EXECUTION.md` or `ROLE-5-EXECUTION.md`, while baseline-plan revisions may be made by any contributor and are coordinated with Role 2. Every affected role reflects work status in its TODO. Durable product, architecture, provider, cost, safety, or responsibility changes go through Role 1 and `docs/DECISIONS.md`. Waiting for a role response does not block source work or a branch push unless the unresolved choice would create a safety, security, cost, or destructive-action risk.
 
 ## End of every work pass
 
@@ -202,12 +202,12 @@ UI roles also provide screenshots or a short recording. AI/engine roles provide 
 
 ### 2. Update team records
 
-- Update only your role's `ROLE-<n>-TODO.md`.
-- Update settled decision answers and completed-pass evidence in your execution plan; Roles 4/5 use their role-owned `ROLE-<n>-EXECUTION.md` records rather than editing Role 2's baseline plan.
+- Update the TODOs for every role whose tracked task changed; do not rewrite unrelated statuses.
+- Update settled decision answers and completed-pass evidence in the relevant execution plan or execution record. Any contributor may make the edit and should notify the responsibility lead.
 - Add one change fragment under `changes/role-<n>/` using `changes/README.md`.
 - Update relevant technical documentation.
 - Link any cross-role issue or accepted decision.
-- Do not edit `CHANGELOG.md`; Role 1 compiles it.
+- Any contributor may compile `CHANGELOG.md`; check for overlap and coordinate that collision-prone edit with Role 1 before merge.
 
 ### 3. Review before committing
 
@@ -225,7 +225,7 @@ Read the diff. Do not approve a commit you do not understand.
 
 ### 4. Commit and push
 
-After the role owner approves the reviewed diff:
+After the contributor and Codex review the diff, request the relevant responsibility leads' review and then commit and push. Their response is useful but is not required to publish the branch:
 
 ```bash
 git add <reviewed-files>
@@ -237,9 +237,9 @@ Use `fix`, `docs`, `test`, or `chore` instead of `feat` when appropriate. Never 
 
 ### 5. Open the pull request
 
-Fill every section of `.github/PULL_REQUEST_TEMPLATE.md`. Link the issue, request the required owner, and notify Role 1. Do not merge your own pull request.
+Fill every section of `.github/PULL_REQUEST_TEMPLATE.md`. Link any relevant issue, request the responsibility leads, and notify Role 1. Do not merge your own pull request.
 
-Role 1 checks integration, required reviews, automated checks, changelog fragment, evidence, and effect on the golden Twitch flow before merging.
+Role 1 checks integration, requested review input, automated checks, changelog fragment, evidence, and effect on the golden Twitch flow before merging. If a responsibility lead is unavailable, Role 1 performs or arranges the evidence-backed review so integration does not stall.
 
 ## Resolving conflicts safely
 
@@ -247,11 +247,11 @@ If `git merge origin/main` or another command reports conflicts:
 
 1. Stop and keep the terminal output.
 2. Run `git status`.
-3. Ask Codex to explain each conflicted file and its owner.
-4. Notify the affected owner and Role 1.
-5. Resolve only your owned files. The other owner resolves or approves their files.
-6. Run the full checks again.
-7. Never solve a conflict by deleting the other person's work, force-pushing, or resetting shared history.
+3. Ask Codex to explain each conflicted file, its responsibility, and the intent on both branches.
+4. Notify the affected contributors and Role 1.
+5. Resolve any conflicted file needed for the coherent change. Preserve both valid intentions; Role 1 helps settle semantic conflicts and integration order.
+6. Run the affected producer/consumer checks and the full checks again.
+7. Never solve a conflict by silently deleting the other person's work, force-pushing, or resetting shared history.
 
 ## If you are unsure
 

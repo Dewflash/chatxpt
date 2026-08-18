@@ -1,8 +1,8 @@
 # Five-Person Workflow
 
-Work within five strict areas of ownership while integrating through recorded shared contracts.
+Work through five clear areas of responsibility while allowing contributors to help anywhere and integrating through recorded shared contracts.
 
-## Authoritative ownership
+## Authoritative responsibilities
 
 The canonical role definitions and project context are in `AGENTS.md`:
 
@@ -12,15 +12,15 @@ The canonical role definitions and project context are in `AGENTS.md`:
 4. **Streamer Studio UI/UX and customisation** — `JYL1m`
 5. **Viewer Quest Board UI/UX** — `drdexe`
 
-Each contributor works only inside their assigned role. The project owner is the primary authority for direction, priorities, role assignments, and cross-role decisions. The other four role owners may independently develop ideas for their own components.
+Each contributor has an assigned coordination home, but may inspect, edit, test, or implement in any role directory without prior permission. The project owner is the primary authority for direction, priorities, architecture, safety, cost, and final integration order. Responsibility leads remain advisers and normal reviewers for their components, not edit gatekeepers.
 
-Role 1 may inspect, redirect, assist, and modify another role for integration, safety, deadline recovery, or an owner-requested fix. Notify the affected owner and request review whenever practical; urgent demo fixes must be minimal, immediately disclosed, and recorded.
+Role 1 may inspect, redirect, assist, and modify any role as ordinary integration work. Notify affected contributors and request the responsibility lead's review whenever practical, but do not wait for role-based permission to implement, push, or open a pull request.
 
-If an idea or feature crosses a role boundary, the originating contributor must not implement it. Send it to the owning role for comparison against that role's approach and notify the project owner before it is adopted. Shared types and API contracts remain owned by Role 1 and require affected-owner review.
+If an idea or feature crosses a role boundary, notify the relevant lead and Role 1, inspect active work for overlap, and implement it in the directory matching its runtime responsibility. Shared types and API contracts remain maintained by Role 1, but any contributor may edit them with producer/consumer tests, migration notes, and deconfliction before merge.
 
-Cross-role proposals use GitHub Issues as the persistent record because contributors work from separate computers and repository clones. Mention the target owner and `@Dewflash`; the target owner adds its comparison and recommendation before implementation. The project owner may resolve issues from the primary Codex task, but Role 1 must copy the settled outcome back into the issue or decision log.
+Substantial or unresolved cross-role proposals use GitHub Issues as a persistent coordination record because contributors work from separate computers and repository clones. Mention the relevant leads and `@Dewflash`; their comparison may happen alongside implementation. The issue is not a permission gate. The project owner may resolve issues from the primary Codex task, and Role 1 copies the settled outcome back into the issue or decision log.
 
-Before broad migration, Role 1 publishes the provisional public contracts/orchestrator ports and maps legacy ownership. Role 1 then performs the mechanical migration behind those seams. The migration must preserve behaviour and cannot redesign another role's component.
+Before broad migration, Role 1 publishes the provisional public contracts/orchestrator ports and maps legacy responsibilities. Any contributor may perform the mechanical migration behind those seams, while Role 1 deconflicts the branches. Migration preserves behaviour unless a separate redesign pass is explicitly scoped.
 
 ## Daily rhythm
 
@@ -37,8 +37,9 @@ Before broad migration, Role 1 publishes the provisional public contracts/orches
 - Keep branches under one day when possible.
 - Sync current `main` before requesting review.
 - Submit every change through a pull request; Role 1 controls final integration and merge.
-- Require the affected role owner when a pull request touches another role's files.
-- Require one reviewer; use two for domain contracts or demo-critical changes, and require automated checks.
+- Request the affected responsibility leads when a pull request touches their modules; a missing response does not block branch work or pushing.
+- Request one reviewer and two for domain contracts or demo-critical changes. If they are unavailable, Role 1 performs or arranges the evidence-backed integration review; automated checks remain required.
+- Before integration, fetch current `main`, identify overlapping branches/pull requests, and deconflict both textual and semantic changes. Role 1 actively assists and decides the safest landing order.
 - Do not force-push a branch another teammate is using without agreement.
 
 ## ChatGPT Pro collaboration

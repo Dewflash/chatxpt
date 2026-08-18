@@ -2,9 +2,9 @@
 
 **Owner:** `drdexe`
 
-**Baseline-plan owner:** Role 2 (`joelyrk`) under D-016
+**Baseline-plan responsibility lead:** Role 2 (`joelyrk`) under D-016 and D-071
 
-This is the Role 5-owned working record. Codex updates it after the owner answers a decision batch and after every completed pass. Role 5 does not edit Role 2's baseline plan; requested plan corrections go through the feasibility-review issue.
+This is the Role 5 responsibility record. Any contributor may update it after a settled decision or completed pass. Role 2 maintains the baseline plan, which any contributor may edit with coordination; the feasibility issue is optional for unresolved durable choices.
 
 ## Current position
 
@@ -13,7 +13,7 @@ This is the Role 5-owned working record. Codex updates it after the owner answer
 | Plan | `docs/build-plans/ROLE-5-BUILD-PLAN.md` plus the shared delivery matrix |
 | Current phase | R5-P04 hosted fallback, chat fallback, and overlay integration |
 | Current TODO | R5-004 through R5-006 integration; R5-008 real evidence |
-| Source editing allowed now | Role 5 retains presentation ownership; Role 1 mounted the Twitch viewer and EBS under D-063 and owns the remaining fallback/overlay authority |
+| Source editing allowed now | Yes across all role directories under D-071; keep viewer presentation and backend authority in their proper modules and deconflict with Role 1 before merge |
 | Persistent handoff | [GitHub issue #16](https://github.com/Dewflash/chatxpt/issues/16) |
 | Current implementation branch | Integrated by Role 1 on `role-1/finals-isolated-passes` |
 

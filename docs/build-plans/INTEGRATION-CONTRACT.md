@@ -83,9 +83,9 @@ correlationId
 - Broadcaster/moderator commands, viewer commands, system analysis, and read-only overlay access use separate permission classes.
 - Raw frames are not persisted. Raw chat is preferably processed in memory; if retained for debugging, Role 1 implements automated deletion within the accepted 24-hour maximum.
 
-## Shared files and dependency ownership
+## Shared files and dependency coordination
 
-Role 1 owns shared composition and collision-prone files:
+Role 1 maintains and deconflicts shared composition and collision-prone files; any contributor may edit them:
 
 - `src/app/` route/layout/provider entry points and the single app-level global-style import.
 - `package.json`, `package-lock.json`, TypeScript/Next/Vitest/ESLint configuration, and shared path aliases.
@@ -93,9 +93,9 @@ Role 1 owns shared composition and collision-prone files:
 - Supabase schema/migrations, RLS policies, seeds, and deployment instructions.
 - `tests/integration/` and canonical contract examples/tests under `src/core/`.
 
-Roles 2-5 expose documented public entry points from their owned directories. Route files stay thin and mount those modules. A role that needs a dependency proposes the package, version, purpose, client/server impact, size/runtime risk, and fallback to Role 1. Role 1 installs it or grants one explicitly scoped package-file edit; multiple roles do not independently rewrite the lockfile.
+Responsibility-specific modules expose documented public entry points from their mapped directories. Route files stay thin and mount those modules. A contributor that needs a dependency records the package, version, purpose, client/server impact, size/runtime risk, and fallback, then checks active branches and coordinates the shared package/lockfile edit with Role 1. Prior permission is not required; deconfliction before merge is.
 
-Role 4 owns tokens/components/styles under `src/design-system/`. Role 1 only mounts the app-level import. Role 5 consumes the public design-system entry point and does not copy or edit Role 4 internals.
+Design-system code stays under `src/design-system/`, and Role 4 is its responsibility lead. Any contributor may edit it. Role 1 only mounts the app-level import, and viewer product code consumes the public design-system entry point rather than copying or privately importing its internals.
 
 ## Contract fixtures and test ladder
 
@@ -143,7 +143,7 @@ Role 2 keeps game/HUD calibration inside extraction adapters and publishes capab
 The two UI plans are separate deliverables but one synchronised system. Both must include:
 
 - The exact plan phase/pass, P0/P1/excluded scope, date, and integration-wave exit.
-- Required Role 1 route/embedding mount request; Role 4/5 do not directly take ownership of `src/app/`.
+- Required route/embedding mount outcome and Role 1 deconfliction contact; any contributor may edit `src/app/`, while role-specific logic remains outside the thin route shell.
 - Input view models, emitted commands, typed errors, capabilities, and public entry point.
 - A complete state/fixture catalogue: loading, empty, ready, unknown, permission denied, disconnected, stale, provider unavailable, fallback, reconnecting, and terminal states relevant to that surface.
 - Which data is authoritative, derived for presentation, fixture-only, or not implemented.
@@ -158,7 +158,7 @@ The plans must also contain one shared dependency table:
 - Role 3 publishes allowed-action and lifecycle examples early.
 - Role 2 publishes intelligence/provider/unknown status examples early.
 
-Role 4/5 feasibility reviews must flag any missing view model, command, fixture, route mount, or upstream deadline before implementation begins.
+Role 4/5 feasibility reviews flag missing view models, commands, fixtures, route mounts, or upstream deadlines as early as practical. Contributors may implement the missing cross-role slice in parallel; the review is not an edit gate.
 
 ## Integration completion rule
 

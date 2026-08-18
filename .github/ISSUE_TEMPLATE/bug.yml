@@ -6,7 +6,7 @@ body:
   - type: dropdown
     id: role
     attributes:
-      label: Owning role
+      label: Primary responsibility
       options:
         - Role 1 - Integrations and shared platform
         - Role 2 - AI intelligence and data extraction

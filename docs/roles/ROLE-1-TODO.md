@@ -6,21 +6,21 @@ Update this file at the start and end of each Role 1 pass. Do not mark `DONE` wi
 
 Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan defines phase order, owner decisions, deadlines, and pass-level evidence.
 
-**Next:** finish R1-015 (browser-safe UI gateway/harness) and keep activating the team-owned Supabase Free preview. Continue coordinating open feasibility handoffs and keep ambiguous legacy moves deferred; AI/extraction, quest mechanics, and detailed UI implementation remain with their owners.
+**Next:** finish R1-015 (browser-safe UI gateway/harness) and keep activating the team-owned Supabase Free preview. Continue coordinating open feasibility handoffs and keep ambiguous legacy moves deferred. AI/extraction, quest mechanics, and detailed UI remain assigned responsibility areas, but any contributor may implement across them under D-071.
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
 | R1-001 | P0 | DONE | Merge the beginner-safe team foundation. | None | Root/role guides, playbook, GitHub templates, CODEOWNERS, TODOs, changelog workflow, checks, and pushed PR. |
-| R1-012 | P0 | DONE | Publish and operationalise the concurrent Role 1-3 build plans. | R1-001; D-017 through D-029 | Three plans define phases, decision gates, deadlines, real-data rules, acceptance evidence, ownership, onboarding links, and required reviews; `npm run check` and `git diff --check` pass. |
-| R1-013 | P0 | DONE | Publish the binding cross-role integration contract and close plan-level integration gaps. | R1-012; D-030 through D-036 | Orchestrator/seams, shared-file ownership, realtime semantics, contract ladder, risk spikes, tiered game support, and synchronised Role 4/5 plan requirements are authoritative; `npm run check` and `git diff --check` pass. |
-| R1-002 | P0 | IN PROGRESS | Perform the one-time public-entry ownership migration. | R1-003 skeleton; open legacy mapping decisions | Public paths, compatibility tests, dependency enforcement, and a factual legacy inventory exist; ambiguous moves remain deferred until D1-01/D1-03 are settled. |
+| R1-012 | P0 | DONE | Publish and operationalise the concurrent Role 1-3 build plans. | R1-001; D-017 through D-029 | Three plans define phases, decision gates, deadlines, real-data rules, acceptance evidence, responsibility, onboarding links, and review requests; `npm run check` and `git diff --check` pass. |
+| R1-013 | P0 | DONE | Publish the binding cross-role integration contract and close plan-level integration gaps. | R1-012; D-030 through D-036 | Orchestrator/seams, shared-file responsibility, realtime semantics, contract ladder, risk spikes, tiered game support, and synchronised Role 4/5 plan requirements are authoritative; `npm run check` and `git diff --check` pass. |
+| R1-002 | P0 | IN PROGRESS | Perform the one-time public-entry responsibility migration. | R1-003 skeleton; open legacy mapping decisions | Public paths, compatibility tests, dependency enforcement, and a factual legacy inventory exist; ambiguous moves remain deferred until D1-01/D1-03 are settled. Any contributor may perform the accepted moves. |
 | R1-003 | P0 | DONE | Freeze version 1 contracts, public ports, orchestrator skeleton, and capability model. | R1-001; input from Roles 2-5 | Versioned schemas/ports, non-live fixtures, all-role consumer tests, and the candidate -> engine -> atomic commit -> validated view/broadcast fixture cycle pass, including duplicate, stale, concurrent, denial, and recovery cases. |
 | R1-004 | P0 | IN PROGRESS | Create Supabase Free project and minimal revisioned schema/realtime channels. | R1-003; D-037 through D-041 | Committed migrations/RLS/env validation; profiles, sessions, quests, accepted participation, events/results, and sanitised snapshots use atomic revisions, reconnect recovery, server-only writes, and an in-memory fallback. Cloud/two-browser evidence is recorded separately from local execution. |
 | R1-005 | P0 | IN PROGRESS | Connect Vercel deployment and safe environment variables. | R1-004 | Server-only deployment health route and local client-bundle secret scan are implemented; outstanding evidence still requires real Vercel preview deployment and configured environment values. |
 | R1-006 | P0 | BLOCKED | Register Twitch app and Extension test version. | R1-011 | The viewer EBS verifies Twitch JWTs and the signed EventSub webhook counts pseudonymous exact `1`/`2`/`3` chat votes through the shared ledger. Remaining external work: developer-console registration, EventSub subscription creation, test channel/allowlist, Local or Hosted Test runtime evidence, later self-service OAuth automation, and recorded live proof. |
 | R1-007 | P0 | IN PROGRESS | Run the early OBS capture spike, then define/test capture and Browser Source integration. | R1-003 provisional port | Studio now opens session-bound Gameplay Capture and generates a secure read-only `/obs-overlay` descriptor. Virtual Camera snapshots cross the authenticated ingress with current authority; overlay tokens stay in the URL fragment and project canonical read-only state. Focused source tests pass. Outstanding evidence still requires macOS permission, real frame sampling, and a recorded OBS Browser Source run. |
 | R1-008 | P0 | BLOCKED | Integrate Roles 2-5 after every wave and complete the golden workflow. | R1-003 through R1-007; role deliverables | Same authoritative revision reaches Studio, two viewers, persistence, and OBS; contract ladder plus failure/fallback runs pass. |
-| R1-009 | P1 | READY | Maintain GitHub issues, decisions, changelog compilation, and integration notes. | Ongoing | Every merged PR has owner review, fragment, verification, and recorded cross-role outcomes. |
+| R1-009 | P1 | READY | Maintain GitHub issues, decisions, changelog compilation, and integration notes. | Ongoing | Every merged PR has requested responsibility-lead context where useful, Role 1 integration review, overlap/deconfliction evidence, fragment, verification, and recorded cross-role outcomes. |
 | R1-010 | P1 | BLOCKED | Assemble submission artifacts and invite Garena collaborator. | R1-008 and explicit project-owner product-readiness declaration | Required README/disclosures, deck, video, private repo access, and final checklist. Evidence collection may continue, but final narrative/deck/video assembly does not begin before that declaration. |
 | R1-011 | P0 | READY | Create the Role 1-controlled Twitch account and enable 2FA for developer application and Extension registration. | None | Role 1 can access the Twitch developer console and begin app/Extension setup without committing credentials. |
 | R1-014 | P0 | DONE | Make Role 4/5 planning beginner-safe and convert every missing UI dependency into persistent work. | PR #14; D-042/D-043 | PR #27 merged guided mode, adaptive design coaching, role-owned execution records, corrected P0/P1 tasks, feasibility issues #15/#16, UI-X issues #17-#26, owner notification, and green repository checks. Role 1 explicitly waived the pending reviewer requests before merge. |
@@ -48,11 +48,11 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 - Memory and Supabase readers return only the requesting viewer's accepted candidate/source/time plus `sessionPoints: 0` until the reward read model is persisted.
 - Hosted-board discovery (UI-X08) and Twitch-chat delivery/acknowledgement (UI-X07) remain open under R1-016 after this pass.
 
-## Finals Twitch viewer owner override (14 August 2026)
+## Historical finals Twitch viewer override (14 August 2026; superseded by D-071)
 
 - The project owner explicitly authorised Role 1 to apply the D-015 integration override for the demo-critical viewer failure, mount the existing Role 5 public surface, make minimum Role 5-adjacent integration fixes, and proceed without Role 5 review for this pass.
 - This pass keeps visual/interaction decisions inside the existing `@/viewer` module. Role 1 changes the thin app mount, Twitch JWT/EBS boundary, channel/session directory, canonical command composition, local diagnostic staging, upload client, tests, and setup documentation.
-- The review waiver is limited to this urgent finals pass; it does not transfer ongoing Role 5 component authority or permit unrelated viewer redesign.
+- This was the rule at the time. D-071 now allows cross-role contribution without an override while retaining Role 5 as the viewer-experience responsibility lead.
 
 ## Current R1-016 hosted-board access pass
 
@@ -105,11 +105,11 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 - The guide records only source-inspection evidence. It does not upgrade fixture tests, static SQL, or local compatibility paths into real Twitch, OBS, Supabase Cloud, or Vercel runtime claims.
 - `README.md` and `docs/ARCHITECTURE.md` link to the implementation guide so contributors can move from the product overview to the detailed code map.
 
-## Decisions Role 1 still owns
+## Decisions Role 1 still settles or maintains
 
 - Shared contract acceptance and breaking changes
 - Supabase schema/realtime boundaries and Vercel deployment
 - Twitch/OBS integration scope
 - UI client/harness/test-stack choices, per-viewer recovery, hosted discovery, and chat delivery policy
-- Integration overrides and cross-role disputes
+- Cross-role deconfliction, semantic disputes, and integration order
 - Submission operations and any later changes to the accepted participation-rate KPI, owner-called freeze authority, or deferred demo-narrative scope

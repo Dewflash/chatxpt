@@ -6,7 +6,7 @@ body:
   - type: dropdown
     id: role
     attributes:
-      label: Owning role
+      label: Primary responsibility
       options:
         - Role 1 - Integrations and shared platform
         - Role 2 - AI intelligence and data extraction
@@ -48,5 +48,5 @@ body:
           required: true
         - label: No credentials or personal viewer data are introduced
           required: true
-        - label: Cross-role work has a linked `cross-role` issue
+        - label: Cross-role work links a coordination issue when an unresolved durable decision needs one
           required: false

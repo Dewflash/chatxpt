@@ -61,42 +61,41 @@ Run the smallest relevant test while working and `npm run check` before merge ha
 
 `npm run check` also runs `npm run check:boundaries`. A role-owned module may import canonical Core and its allowed public dependencies, but may not import another role's private files. Tests may consume the explicit `@/core/testing` fixture entrypoint; product code may not.
 
-## Five-role ownership model
+## Five-role responsibility model
 
-Each of the five contributors is assigned exactly one role. Role ownership is exclusive for normal work: the owner drives that area's ideation, design, implementation, tests, documentation, and component-level decisions. Contributors must not implement or direct work inside another role unless the project owner explicitly reassigns or approves it.
+Each contributor has one coordination home and each role has a responsibility lead. These labels assign accountability, subject-matter context, TODO/evidence maintenance, and normal review routing; they are not file-edit permissions. Any contributor may inspect, edit, test, document, or implement work in any role directory without prior approval, reassignment, a cross-role issue, or a target-owner comparison.
 
-The project owner is the primary authority for overall product direction, priorities, role assignments, and cross-role decisions. The four other role owners have independent ideation authority inside their assigned components, subject to the recorded product direction and non-negotiable rules in this file.
+Open contribution does not erase the product architecture. Code still belongs in the directory that represents its runtime responsibility, modules still integrate through public seams, and product code still may not import another module's private files. A contributor working across roles must understand the relevant role guide and plan, disclose every cross-role file changed, run the affected producer/consumer tests, and preserve rather than overwrite concurrent work.
 
-Within those boundaries, each role owner decides their component's detailed behaviour, implementation, algorithms, UX flows, evaluation approach, and trade-offs without asking the project owner to design the component for them. Escalate only when a decision changes accepted product direction, crosses ownership, changes a shared contract, creates material safety/privacy/security risk, introduces an external service or recurring cost, or threatens the golden Twitch workflow.
+The project owner remains the primary authority for overall product direction, priorities, accepted architecture, safety, external cost, and final integration order. Responsibility leads remain the first reviewers and advisers for their areas, but they cannot block implementation, pushing a branch, or opening a pull request merely because another role made the change.
 
-When a contributor identifies an idea, feature, or change outside their role:
+When work crosses role responsibilities:
 
-1. Do not implement it in the originating role.
-2. Send it to the owning role as a clearly labelled cross-role proposal.
-3. The owning role compares it with its own approach and reports the recommendation and trade-offs.
-4. Notify the project owner of the proposal and comparison before any cross-role decision is adopted.
+1. Inspect current `main`, open branches/pull requests, and `docs/TEAM_CONTEXT.md` for overlap.
+2. Notify the relevant responsibility lead and Role 1 promptly; use a `cross-role` issue when a durable coordination record is useful, not as a permission gate.
+3. Implement the change in the directory that owns that runtime responsibility and keep public contracts explicit.
+4. List the cross-role files, intent, tests, and unresolved semantic choices in the pull request.
+5. Sync and deconflict before integration. Role 1 actively helps reconcile overlapping branches and decides integration order when needed.
 
-Shared contracts are coordinated through Role 1. A role owner may reject an inbound proposal that does not fit their component, but the project owner retains the final decision on scope or ownership disputes.
+### Role 1 integration and deconfliction duty
 
-### Role 1 integration override
+Role 1 may inspect, redirect, assist, and modify any role as part of ordinary integration work. Role 1 also owns active merge support: identify overlapping branches, explain conflicting intent, preserve both contributors' valid work, coordinate the resolution, rerun affected checks, and land the smallest coherent sequence.
 
-Role 1 may inspect, redirect, assist, and modify any role when required for integration, safety, deadline recovery, or an owner-requested fix. This is an integration override, not silent replacement of the component owner.
-
-- Inform the affected owner before changing their files whenever practical.
-- Use a pull request and request that owner's review before merge.
-- If an urgent demo failure makes prior review impossible, Role 1 may apply the minimum safe fix, immediately notify the owner, and record what changed and why.
-- After the urgent condition ends, component-level decisions return to the assigned owner.
+- Notify affected contributors promptly; notification is coordination, not permission.
+- Request the responsibility lead's review when practical, but do not leave another contributor idle while waiting.
+- Never resolve a conflict by discarding another branch's work without explaining the decision and recording the surviving behaviour.
+- A failing check, unresolved semantic conflict, safety/privacy/security issue, or broken golden workflow may delay integration. Role ownership alone may not.
 
 ### Scoped Role 2 planning grant
 
-For the current MVP planning pass, the project owner grants Role 2 authority to decide the build plans for Roles 4 and 5. This is a deliberate exception to normal component planning ownership and is limited to the plans themselves.
+For the current MVP planning pass, Role 2 is responsible for maintaining the build plans for Roles 4 and 5. This is a planning responsibility, not an edit-permission grant.
 
 - Role 2 decides MVP outcomes, surface and flow coverage, feature priority, required product states, AI/data requirements, mock/live boundaries, milestones, acceptance criteria, exclusions, and handoff order for both UI roles.
 - Role 2 produces separate but synchronised implementation-ready plans for Roles 4 and 5, includes the shared dependency/fixture/contract matrix required by D-034, and sends each plan to its implementing owner and Role 1.
 - Roles 4 and 5 review their plan for feasibility, identify conflicts or missing requirements in one response, and then implement it. They retain detailed visual, interaction, accessibility, component, and code decisions that do not contradict the approved plan.
-- Role 2 may revise the plans after comparison, but may not edit Role 4 or Role 5 source files or implement their UI work under this grant.
-- Any disagreement that changes scope, ownership, shared contracts, safety, cost, or the golden workflow goes to Role 1, who remains final authority.
-- This grant does not give Role 2 authority over Role 3's quest-engine plan or Role 1's integration plan.
+- Role 2 may revise the plans after comparison and may contribute to Role 4 or Role 5 source under the open-contribution rules above.
+- Any disagreement that changes scope, shared contracts, safety, cost, or the golden workflow goes to Role 1, who remains final authority.
+- Role 3 remains responsible for the quest-engine plan and Role 1 remains responsible for the integration plan; contributors may still help implement them.
 
 ### Mandatory role guides
 
@@ -124,27 +123,27 @@ The agent must instead:
 
 1. Read the mandatory files and the role-owned execution record under `docs/roles/ROLE-<n>-EXECUTION.md`.
 2. Inspect Git state without discarding work. Pull `main` only when the tree is clean, then explain relevant incoming changes in plain language.
-3. Select the first `READY` item in the role TODO and map it to the current plan phase. If the plan is still awaiting feasibility acceptance, perform the feasibility review before editing source.
-4. State one bounded pass as `We will ...`; name its user-visible outcome, owned files, dependencies, and acceptance evidence.
+3. Select the first `READY` item in the role TODO and map it to the current plan phase. If the plan still needs feasibility review, perform it promptly; this does not prohibit parallel source work under D-071.
+4. State one bounded pass as `We will ...`; name its user-visible outcome, affected responsibility areas/files, dependencies, and acceptance evidence.
 5. For every user-visible pass, run a short design-coaching gate. Use the plan's questions as starter examples, then inspect the actual surface and generate the most relevant questions about user goal, organisation and hierarchy, layout and responsiveness, interaction feedback, error/recovery UX, visual tone, motion, accessibility, and trust. Ask only choices that materially affect this pass, explain them without jargon, give a recommendation and consequence, and accept `Approve all recommendations` as a complete response. The plan tables are neither an exhaustive questionnaire nor fixed wording.
 6. Make routine technical choices independently from repository evidence. Do not ask the owner to choose file structure, branch names, test tools, command syntax, contract ownership, or other normal implementation details.
 7. After the owner answers, record the decisions in the role execution record and continue through the current bounded pass without asking for repeated permission for ordinary in-scope edits and tests. Never cross into the next phase before the current exit is accepted.
-8. Stop and escalate only for a shared-contract or ownership change, material product scope, safety/privacy/security, external cost/service choice, destructive action, missing credentials, or a genuine blocker that cannot be handled through the accepted fixture boundary.
-9. If another role is required, draft or update the `cross-role` GitHub Issue, name the target owner and required-by phase, notify Role 1, and keep the UI on the accepted fixture/disabled path. Do not ask the novice owner to design the other role's solution.
+8. Stop and escalate only for a material product-scope change, safety/privacy/security, external cost/service choice, destructive action, missing credentials, or a genuine blocker that cannot be handled safely. A shared-contract edit is allowed, but it must be coordinated, tested on both sides, and deconflicted with Role 1.
+9. If another role's module is required, notify its responsibility lead and Role 1, then either implement the smallest coherent cross-role slice or keep the UI on the accepted fixture/disabled path. Use a `cross-role` issue when it improves coordination; do not make the novice owner design another module's solution.
 10. At the end, run the required checks, capture UI evidence, update the role TODO/execution record/change fragment, review the diff in plain language, and ask one final question: whether to commit, push, and open the pull request. Never merge the role owner's own pull request.
 
 The agent should minimise questions, not owner authority or design thinking. Role 4 still decides its visual and streamer interaction choices; Role 5 still decides its viewer and overlay interaction choices. Codex actively helps the owner consider relevant alternatives instead of merely reading a preset list. When a non-visual pass genuinely creates no owner decision, the agent explains the UX implications it checked and proceeds.
 
-### Cross-role handoff authority
+### Cross-role coordination records
 
 The five contributors work from separate computers and repository clones. GitHub is the persistent coordination system; personal ChatGPT/Codex conversations are not shared team memory.
 
-- Create one GitHub Issue per cross-role proposal and label it `cross-role` plus the originating and target roles.
-- The originating role records the problem, proposal, reason it crosses the boundary, relevant evidence, affected contracts, and requested decision. It must not implement the proposal.
+- Create a GitHub Issue for a substantial cross-role proposal when the team needs a durable comparison or unresolved decision; label it `cross-role` plus the originating and target roles.
+- The contributor records the problem, proposal, relevant evidence, affected contracts, implementation status, and requested input. Implementation may proceed in parallel when it preserves accepted architecture and safety.
 - Assign or mention the target owner and mention `@Dewflash` in the issue.
 - The target owner records comparison with their current approach, trade-offs, recommendation, and affected contracts.
 - The project owner may discuss or resolve an issue through the primary Codex task. Role 1 must copy the settled outcome back into the GitHub Issue or `docs/DECISIONS.md` so every computer receives it.
-- Record the outcome as `accepted`, `rejected`, or `deferred`. Implementation remains blocked until the target owner has compared it and the project owner has been notified.
+- Record the outcome as `accepted`, `rejected`, or `deferred`. A missing target-owner response is not an implementation or push blocker; Role 1 resolves any remaining semantic conflict before merge.
 - If an accepted proposal changes product direction, architecture, provider choice, ownership, or another durable rule, also record it in `docs/DECISIONS.md`.
 
 ### Role 1: Integrations and shared platform
@@ -215,7 +214,7 @@ Primary work:
 - Define how streamer vetoes, vote results, quest outcomes, and recent history influence the next quest cycle.
 - Expose a pure public engine port returning state/events/allowed actions; Role 1 owns authentication, persistence, realtime, and platform execution.
 
-Role 3 owns these mechanics; their exact timings and defaults are not project-owner decisions unless they cross a non-negotiable or another role boundary.
+Role 3 leads these mechanics; their exact timings and defaults are not project-owner decisions unless they cross a non-negotiable or accepted module/product boundary.
 
 Does not own extraction implementation, provider-adapter code, audience-analysis prompts, or UI decisions. Role 3 consumes analysed inputs and candidate quests from Role 2 and emits validated quest state through Role 1's contracts.
 
@@ -266,11 +265,11 @@ Primary work:
 
 Coordinates vote and quest contracts with Role 1 and reward/progress rules with Role 3.
 
-## Directory ownership map
+## Directory responsibility map
 
-Role ownership is enforced through repository directories:
+Directories describe the responsibility of the code they contain, not who has permission to edit them:
 
-| Role | Exclusive source directories |
+| Role | Primary source directories |
 | --- | --- |
 | Role 1: Integrations and shared platform | `src/core/`, `src/integrations/`, `src/realtime/` |
 | Role 2: AI intelligence and data extraction | `src/ai/`, `src/extraction/` |
@@ -280,22 +279,22 @@ Role ownership is enforced through repository directories:
 
 Role 5 owns viewer-facing OBS overlay visuals inside `src/viewer/`; Role 1 owns the OBS integration and data contract inside `src/integrations/`.
 
-- Create new role-specific source inside the owning role's directory.
-- Do not edit, move, rename, or delete files in another role's directory except through the recorded Role 1 integration override.
-- Role 1 exclusively owns shared domain contracts in `src/core/`.
-- Role 1 exclusively owns thin `src/app/` route/layout/provider files, shared dependency/lock/config/env files, Supabase migrations/RLS, and `tests/integration/`. Role-specific UI and logic stay behind public entry points in the owning directories.
-- A role that needs a dependency proposes it to Role 1 with purpose, version, runtime/bundle risk, and fallback. Role 1 applies the shared-file edit or grants one explicitly scoped exception.
+- Create new responsibility-specific source inside the corresponding directory, regardless of which contributor implements it.
+- Any contributor may edit, move, rename, or delete files in another role's directory within an agreed task. Review concurrent work first and disclose the scope in the pull request.
+- Role 1 maintains shared domain contracts in `src/core/`; any contributor may change them with affected producer/consumer tests and prompt Role 1 notification.
+- Role 1 maintains thin `src/app/` route/layout/provider files, shared dependency/lock/config/env files, Supabase migrations/RLS, and `tests/integration/`. Any contributor may edit them, but must sync first and involve Role 1 in deconflicting collision-prone changes before merge. Role-specific UI and logic still stay behind public entry points.
+- A contributor adding a dependency records its purpose, version, runtime/bundle risk, and fallback, then coordinates the shared-file edit with Role 1 so concurrent lockfile changes are reconciled.
 - Role 4 owns design-system implementation/styles under `src/design-system/`; Role 1 owns only the app-level import/wiring and Role 5 consumes the public design-system entry point.
-- If another role needs a directory or contract change, submit a cross-role proposal to the owner and notify the project owner before adoption.
-- Files outside the mapped directories are not automatically shared. Their ownership must be recorded before role-specific work changes them.
+- Cross-role directory or contract changes may proceed after checking for overlap and notifying the relevant leads; an issue is optional unless a durable unresolved decision needs tracking.
+- Files outside the map are treated as shared/collision-prone. Contributors may change them, but must identify responsibility and coordinate overlaps before merge.
 
 ### One-time ownership migration
 
-Role 1 is authorised to perform the initial mechanical migration from the legacy shared `src/lib/`, `src/components/`, and `src/app/` layout behind the five role boundaries. `src/app/` remains thin and Role 1-owned while it mounts the role-owned modules. This exception is limited to moving files, reconnecting imports/routes, and preserving existing behaviour. Role 1 must not redesign another role's algorithms, AI behaviour, or UX during the migration. Once a file enters its mapped role directory, exclusive ownership transfers immediately to that role.
+Role 1 coordinates the initial mechanical migration from the legacy shared `src/lib/`, `src/components/`, and `src/app/` layout behind the five module boundaries. Other contributors may help. `src/app/` remains thin while it mounts the responsibility-specific modules. Migration work is limited to moving files, reconnecting imports/routes, and preserving existing behaviour unless the pull request explicitly scopes a redesign. Once a file enters its mapped role directory, that directory's public-seam and architecture rules apply.
 
 ## Shared contracts
 
-Role 1 owns the canonical definitions; affected role owners must review breaking changes.
+Role 1 maintains the canonical definitions. Any contributor may implement a contract change; breaking changes require prompt affected-role notification, producer and consumer tests, migration notes, and Role 1 deconfliction before merge.
 
 ```text
 PlatformEvent
@@ -328,14 +327,14 @@ Keep provider payloads, Twitch payloads, component-local UI state, and persisten
 - Start each task from current `main` and use `role-<n>/<short-summary>` branches.
 - Never push directly to `main`; use a pull request for every change.
 - Keep branches short-lived, sync current `main` before review, and integrate the smallest vertical slice after every wave and at least daily.
-- Role 1 controls final integration and merging. A pull request that touches another role's files requires that role owner's review.
+- Role 1 controls final integration and merging. Cross-role pull requests request the relevant responsibility leads, but their response is advisory and not a permission gate.
 - Maintain `CODEOWNERS` for role directories and require automated checks before merge.
-- Do not edit another role's implementation or make decisions for that role, except through the recorded Role 1 integration override or the scoped D-016 Role 2 planning grant.
-- Route cross-role proposals to the owning role for comparison and notify the project owner before adoption.
+- Contributors may edit any role's implementation. Preserve the destination module's accepted responsibilities, document significant judgement, and invite its lead to review.
+- Notify relevant leads and Role 1 of substantial cross-role work; use issues for durable coordination, not permission.
 - Use GitHub Issues as the persistent cross-role handoff record. If the owner resolves something through Codex, Role 1 records the result back in the repository or issue.
-- Do not change another role's public contract without that owner's review and the project owner's awareness.
+- Public-contract changes require affected producer/consumer tests and project-owner awareness before merge; no responsibility lead has a role-based veto over implementation or push.
 - Keep pull requests small and include screenshots or recordings for UI changes.
-- Require one reviewer; require two reviewers for shared contracts, safety logic, authentication, or demo-critical integration.
+- Request one reviewer and request two for shared contracts, safety logic, authentication, or demo-critical integration. If reviewers are unavailable, Role 1 may complete the evidence-backed integration review so the team does not stall.
 - State what was actually verified; never upgrade source inspection into runtime proof.
 - Record every runtime run, screenshot, recording, evaluation, or inspection used as project evidence in `docs/evidence/manifest.json`; the evidence class, actual input, immutable source revision, command/interaction, artifact reference, reviewer, and limitations must pass `npm run check:evidence`.
 - Update `docs/DECISIONS.md` when the team settles Twitch scope, Supabase, AI provider/routing, gameplay extraction, identity, or rewards.

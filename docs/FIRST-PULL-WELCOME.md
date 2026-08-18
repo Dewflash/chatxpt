@@ -40,11 +40,11 @@ Keep the displayed welcome readable:
 | Role 4 | `JYL1m` | Streamer UI/UX and shared visual system: Studio, setup, profiles, customisation, readiness, streamer controls, Twitch Config/Live Config, and shared design components. |
 | Role 5 | `drdexe` | Viewer UI/UX and broadcast presentation: Twitch voting, hosted board, chat instructions, reactions, hype/points presentation, quest results, reconnect UX, and OBS overlay. |
 
-Stay inside the assigned role. If another role is needed, Codex creates or updates a cross-role issue, identifies the target owner, notifies Role 1, and preserves an accepted fixture/disabled boundary. The originating role does not implement the other role's work.
+Treat the assigned role as a coordination home, not a file boundary. Anyone may contribute to another role's module. When work crosses roles, Codex checks for overlapping branches, notifies the relevant responsibility leads and Role 1, preserves public seams, and either implements the coherent cross-role slice or uses an accepted fixture/disabled boundary. Cross-role issues are coordination records, not permission gates.
 
 ## Role 1 welcome and decision map
 
-You lead integration and may use the recorded integration override when necessary, while informing and requesting review from affected owners.
+You lead integration and deconfliction across every role. Inform affected contributors, request responsibility-lead review when practical, and keep work moving while reviews are pending.
 
 Across your passes, Codex will help you decide:
 
@@ -59,7 +59,7 @@ Across your passes, Codex will help you decide:
 - Cross-role integration order, contract tests, failure recovery, and feature freeze.
 - Real-versus-fixture evidence, KPIs, demo narrative, and submission readiness.
 
-You do not need to pre-decide Role 2 algorithms, Role 3 mechanics, or Role 4/5 detailed UX. Those owners bring recommendations through the accepted boundaries.
+Role 2, Role 3, and Roles 4/5 remain the normal advisers for their algorithms, mechanics, and detailed UX. You or another contributor may still implement across those modules while preserving accepted decisions and recording substantial judgement.
 
 ## Role 2 welcome and decision map
 
@@ -222,4 +222,4 @@ Current ready task
 -> commit, push, and pull request
 ```
 
-One pass produces one reviewable outcome. Codex does not spread a pass across unrelated screens or cross into another role.
+One pass produces one reviewable outcome. Codex does not spread a pass across unrelated screens; it may cross module responsibilities when that is required for the coherent outcome under D-071.

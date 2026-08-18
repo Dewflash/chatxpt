@@ -2,7 +2,7 @@
 
 **Owner:** `drdexe`
 
-Detailed product work begins from Role 2's scoped D-016 build plan. Role 5 supplies one feasibility review and does not implement speculative surfaces outside the accepted plan.
+Detailed product work follows the Role 2-maintained build plan. Role 5 remains the viewer/overlay UX responsibility lead, while any contributor may implement accepted work across roles under D-071.
 
 If the owner asks only `What do I need to do?`, Codex selects the first `READY` task and follows `ROLE-5-EXECUTION.md`. The owner answers only the current phase's explained design questions; Codex handles routine technical and Git decisions.
 
@@ -19,7 +19,7 @@ The feasibility review must also check `docs/build-plans/INTEGRATION-CONTRACT.md
 | R5-005 | P0 | DONE | Build `1`/`2`/`3` Twitch-chat fallback presentation. | UI-X07 | The canonical chat presentation and overlay expose exactly three numbered choices; Role 1 verifies signed EventSub delivery, pseudonymizes viewers, silently counts one first vote, and avoids per-vote spam. Real Twitch delivery remains R5-008. |
 | R5-006 | P0 | DONE | Build the read-only viewer-facing OBS overlay module. | Role 1 secure OBS mount/OverlayViewModel; Role 3 state examples | `/obs-overlay` renders the reviewed inactive/voting/active/progress/result/reconnect states from a session-scoped read grant and emits no commands. Real OBS evidence remains R5-008. |
 | R5-007A | P0 | DONE | Build basic reactions, community hype, private session points, and reconnect presentation. | Participation/reward contracts; Role 1 personalised-viewer seam | The canonical and packaged Twitch viewers dispatch authorised `hype` reactions, render authoritative community hype, keep session points private through the viewer-recovery identity, and retain safe reconnect state. |
-| R5-007B | P1 | BLOCKED | Refine reaction, hype, result, and reward celebrations only after P0 passes. | R5-007A; Role 1 approval after P0 | Optional polish respects reduced motion and Extension performance without becoming a P0 dependency. |
+| R5-007B | P1 | READY | Refine reaction, hype, result, and reward celebrations after protecting P0. | R5-007A; P0 stability evidence | Optional polish respects reduced motion and Extension performance without becoming a P0 dependency. No role-owner approval gate applies. |
 | R5-008 | P0 | IN PROGRESS | Produce contract, multi-device, responsive, accessibility, and failure evidence. | R5-003 through R5-007A | Fixture viewport evidence and integrated signed-token tests pass; real Twitch Local/Hosted Test, two-device Supabase voting/recovery, and OBS Browser Source evidence remain. |
 
 ## Decisions Role 5 may make without Role 1 within the accepted build plan

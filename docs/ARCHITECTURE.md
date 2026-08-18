@@ -54,13 +54,15 @@ Extension JWT + signed EventSub chat   ephemeral raw-game frames
     streamer UI      viewer surfaces      OBS overlay
 ```
 
-## Ownership and boundaries
+## Responsibilities and module boundaries
 
 - `src/core/`, `src/integrations/`, and `src/realtime/`: Role 1 contracts, platform adapters, session lifecycle, participation, persistence, and integration.
 - `src/extraction/` and `src/ai/`: Role 2 real-frame/chat intelligence, context, provider adapters, and candidate output.
 - `src/quest-engine/`: Role 3 deterministic intervention, validation, fallback, lifecycle, voting resolution, progress, results, and rewards.
 - `src/streamer/` and `src/design-system/`: Role 4 streamer surfaces and shared visual system.
 - `src/viewer/`: Role 5 viewer, fallback, and overlay experiences.
+
+These are code-responsibility boundaries, not contributor permissions. Under D-071, any contributor may implement in any directory; the resulting code still belongs in the appropriate module and integrates through its public seam.
 
 Twitch, OBS, provider, Supabase, and UI payloads terminate at their adapters. Canonical contracts contain platform-neutral facts plus source, method, timestamp, confidence, freshness, and `unknown` provenance.
 

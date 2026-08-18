@@ -10,6 +10,8 @@
 
 **Review status:** Accepted. The review was submitted in [issue #15, comment 5164904061](https://github.com/Dewflash/chatxpt/issues/15#issuecomment-5164904061); Role 1 acknowledged the handoff; and Role 1 plus Role 2's plan owner approved [PR #30](https://github.com/Dewflash/chatxpt/pull/30) on 4 August 2026 with no scope revision.
 
+**Current authority:** D-071 supersedes role-based implementation gates in this historical review. Any contributor may implement missing upstream work in its proper module; UI modules still must not invent backend authority.
+
 ## Owner decisions
 
 | ID | Approved decision |
@@ -25,7 +27,7 @@
 
 Conditionally yes. StreamerViewModel, strict schemas, typed errors, evidence classes, revisions, quest commands, signal provenance, and the public @/streamer boundary are a sound render-only foundation. @/design-system is intentionally empty and ready for Role 4 ownership.
 
-Full P0 exits remain conditional on the assigned upstream seams. Role 4 must not invent setup, persistence, authentication, actor permissions, quest mechanics, timers, AI status, or route authority.
+Full P0 UI exits still require the relevant seams. Missing setup, persistence, authentication, actor permissions, quest mechanics, timers, AI status, or route authority stays outside UI modules, but any contributor may implement those capabilities in their corresponding modules without waiting for the responsibility lead.
 
 ### Conflicts and missing requirements
 
@@ -58,7 +60,7 @@ Role 4 proposes StreamerStudio, StreamerTestLab, TwitchConfigPanel, and TwitchLi
 
 The Phase 1 handoff is feasible with React/CSS. It will publish semantic colour, type, spacing, radius, elevation, focus, and motion tokens plus accessible button, icon-button, field/label, card/panel, status badge, progress, notice, and visually-hidden primitives.
 
-It will support light/dark/Twitch contexts, non-colour cues, visible focus, at least 44-pixel targets, localisation, zoom, narrow containers, reduced motion, and additive changes. P0 uses system/local fonts unless Role 1 approves CSP-safe font loading.
+It will support light/dark/Twitch contexts, non-colour cues, visible focus, at least 44-pixel targets, localisation, zoom, narrow containers, reduced motion, and additive changes. P0 uses system/local fonts unless a contributor implements and verifies CSP-safe font loading, coordinating shared configuration with Role 1.
 
 ### Dependencies
 
