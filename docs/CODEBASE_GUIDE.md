@@ -2,7 +2,7 @@
 
 This guide explains how ChatXPT is structured, how data moves through the system, and what the major files do. It is an implementation companion to [`ARCHITECTURE.md`](ARCHITECTURE.md), which defines the higher-level target architecture, and [`build-plans/INTEGRATION-CONTRACT.md`](build-plans/INTEGRATION-CONTRACT.md), which defines the binding role-to-role seams.
 
-**Evidence basis:** source inspection of the finals integration branch through `ad82747` on 17 August 2026. Runtime and external-service proof remain separately tracked in `docs/evidence/manifest.json`.
+**Evidence basis:** source inspection of the finals integration branch through `38dca70` on 18 August 2026. Runtime and external-service proof remain separately tracked in `docs/evidence/manifest.json`.
 
 ## 1. Read this first: implementation status
 

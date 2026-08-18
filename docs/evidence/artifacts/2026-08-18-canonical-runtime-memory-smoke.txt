@@ -1,0 +1,28 @@
+ChatXPT canonical production-runtime smoke
+Captured: 2026-08-18T15:01:11+08:00
+Source: 38dca700a97499f0e8388e77c5654f7a910e1e70
+Branch: role-1/finals-isolated-passes
+Evidence class: memory-backed
+Result: passed
+
+Verified boundaries:
+- Deployment health reported explicit memory persistence and configured Gameplay Capture.
+- Twitch readiness returned the expected callback and Extension paths with no missing test configuration.
+- Studio created and recovered one signed, channel-bound live session.
+- The OBS setup grant kept its read-only token in the URL fragment and returned canonical overlay state.
+- Gameplay Capture used a distinct authenticated, session-bound grant.
+- The hosted Quest Board exchanged the session room code for private shared-ledger access.
+- EventSub accepted an exact raw-body HMAC callback challenge.
+- Studio, Config, Live Config, Twitch viewer, hosted board, OBS overlay, and Gameplay Capture pages rendered from the production build.
+
+Repository verification completed before the runtime smoke:
+- ESLint passed.
+- TypeScript passed.
+- Role-boundary, evidence-manifest, demo-runbook, and client-secret checks passed.
+- 557 Vitest tests across 79 files passed.
+- Next.js 16.2.12 production build passed.
+- Built-client secret scan passed.
+
+Limitations:
+- The server used process-memory persistence and local test-only credentials.
+- This is not evidence of Twitch-issued JWTs, real EventSub delivery, Twitch Local/Hosted Test, Supabase Cloud, OBS Browser Source, camera permission, Vercel, or a public deployment.

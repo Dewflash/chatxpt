@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-08-14",
+  "updatedAt": "2026-08-18",
   "resources": [
     {
       "id": "twitch-broadcaster",
@@ -477,6 +477,57 @@
         "This is unreviewed canonical-fixture browser evidence, not real Twitch Extension identity, JWT delivery, authorised vote dispatch, hosted access, Twitch chat delivery, Supabase recovery, or OBS Browser Source proof.",
         "Tie and zero-vote resolution remain neutral because the current ViewerViewModel has no authoritative resolution field; no result was calculated in Role 5.",
         "The temporary capture test and CDP script are removed after generation; committed component tests retain the state coverage."
+      ]
+    },
+    {
+      "id": "E-20260818-R1-001",
+      "capturedAt": "2026-08-18T15:01:11+08:00",
+      "owner": { "role": "role-1", "github": "Dewflash" },
+      "reviewer": { "role": "role-1", "github": "Dewflash" },
+      "evidenceClass": "memory-backed",
+      "result": "passed",
+      "claim": "The immutable production build mounts and authenticates the canonical Studio, Twitch readiness, hosted board, EventSub challenge, Gameplay Capture, and OBS overlay boundaries in memory mode.",
+      "resourceIds": [],
+      "surfaces": [
+        {
+          "name": "canonical production server boundaries",
+          "deviceClass": "server",
+          "viewport": null
+        }
+      ],
+      "source": {
+        "gitCommit": "38dca700a97499f0e8388e77c5654f7a910e1e70",
+        "branch": "role-1/finals-isolated-passes",
+        "prNumber": null
+      },
+      "authoritativeState": {
+        "sessionRef": "canonical-runtime-smoke-session",
+        "questCycleRef": null,
+        "revision": 1
+      },
+      "inputs": [
+        {
+          "kind": "memory",
+          "description": "A local production server with process-memory persistence, non-production setup values, signed local grants, and a local EventSub callback challenge."
+        }
+      ],
+      "commands": [
+        "Run the Next.js production server on local port 3210 with non-production configuration",
+        "Run scripts/smoke-canonical-runtime.mjs against the local production server",
+        "Run lint, typecheck, policy checks, 557 Vitest tests, production build, and built-client secret scan"
+      ],
+      "artifacts": [
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-18-canonical-runtime-memory-smoke.txt",
+          "mediaType": "text/plain",
+          "privacyReviewed": true,
+          "sha256": null
+        }
+      ],
+      "limitations": [
+        "This run did not use Twitch-issued identity, real EventSub delivery, Twitch Local or Hosted Test, Supabase Cloud, OBS Browser Source, camera permission, Vercel, or a public origin.",
+        "Memory mode proves one-process composition only; external multi-client durability and realtime behaviour remain unverified."
       ]
     }
   ]
