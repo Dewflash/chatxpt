@@ -325,7 +325,7 @@ Run this loop throughout every phase:
 | --- | --- | --- | --- |
 | D1-11 | Contract-change cutoff before feature freeze | Resolved by D-051 | No automatic cutoff or freeze date; only the project owner may explicitly call the freeze. Dated milestones remain delivery targets. |
 | D1-12 | Minimum acceptable real extraction, quest, and participation evidence | Open | — |
-| D1-13 | Final golden real-gameplay scenario and demo narrative | Deferred by D-048/D-053 | Brawl Stars is the intended scenario subject to real capture proof, but Role 1 does not assemble or optimise the final narrative until the project owner declares the product ready. |
+| D1-13 | Final golden real-gameplay scenario and demo narrative | Partly resolved by D-072; narrative deferred by D-053 | Vanilla Minecraft is the calibrated demonstration target. Modded/hidden/unrecognised HUDs fall back to universal signals and `unknown`; contracts remain game-neutral. Role 1 still does not assemble the final narrative until the project owner declares the product ready. |
 
 ### R1-P11 — Role 2 to Role 3 integration
 
@@ -360,8 +360,8 @@ Run this loop throughout every phase:
 
 **Required runs:**
 
-- Real gameplay + real Twitch chat + free AI available.
-- Real gameplay + free AI unavailable + algorithmic intelligence + deterministic quest fallback.
+- Real vanilla Minecraft gameplay + real Twitch chat + the approved OpenAI path available through an eligible team-owned credited key.
+- Real gameplay + missing credential/credit/provider availability + algorithmic intelligence + deterministic quest fallback.
 - OCR/vision cannot identify a requested value and reports `unknown`.
 - Viewer reconnect and duplicate vote.
 - Simultaneous/stale streamer commands, out-of-order realtime delivery, clock skew, and duplicate command IDs.

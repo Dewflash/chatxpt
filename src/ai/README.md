@@ -12,6 +12,6 @@ Role 2 owns implementations behind the provider ports exported by `index.ts`. Co
 
 [`PROVIDER_EVALUATION.md`](./PROVIDER_EVALUATION.md) defines the Role 2 operational half of the joint Role 2/3 trial matrix and records the fixture/live evidence boundary.
 
-No model, provider, prompt, or quest-quality rule is selected here. Provider adoption remains a joint Role 2/Role 3 recommendation. Every provider or algorithmic result still goes to Role 3 for deterministic safety, evidence, feasibility, diversity, history, and fallback handling.
+D-072 selects the server-side OpenAI Responses API with exact model `gpt-5.6-terra`, an 8-second timeout, existing team credit only, bounded normalised context, and mandatory algorithmic fallback. Prompt/context refinement and quest-quality evidence remain Role 2/3 work, but adoption is not an implementation gate. Every provider or algorithmic result still goes to Role 3 for deterministic safety, evidence, feasibility, diversity, history, and fallback handling.
 
 Fixture-only UI-X09 proposal payloads live under `tests/`. They cover the required confidence, unknown, stale, capture-denied, provider, algorithmic, and fallback presentation shapes, but are not exported to product consumers and are not live evidence. Role 1 must review and promote any accepted canonical examples into `@/core/testing`.

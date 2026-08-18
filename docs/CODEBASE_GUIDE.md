@@ -84,7 +84,7 @@ The dependency rule is deliberately one-way:
 
 `InterventionCoordinator` asks Role 3's intervention policy whether the current session, quest state, cooldown, intelligence confidence, and streamer profile permit a new quest. If the answer is no, generation does not run.
 
-When generation is allowed, Role 2's provider boundary produces exactly three `QuestCandidate` records. The accepted no-credential implementation is algorithmic. Any future external provider must use the same validated boundary and fall back safely on timeout, malformed output, cancellation, or provider failure.
+When generation is allowed, Role 2's provider boundary produces exactly three `QuestCandidate` records. D-072 permits the server-side OpenAI `gpt-5.6-terra` path, while the permanent no-credential implementation remains algorithmic. The provider uses the same validated boundary and falls back safely on timeout, malformed output, missing credential/credit, or provider failure; caller cancellation propagates without producing candidates.
 
 ### 4.3 Validate and run the quest lifecycle
 
@@ -313,7 +313,7 @@ The following tables cover files that define architecture, runtime behaviour, co
 | `src/ai/algorithmic-candidates.ts` | Accepted credential-free generator. Uses only fresh supported signals, avoids recent titles, records provenance, and always returns exactly three game-neutral candidates. |
 | `src/ai/providers.ts` | Wraps intelligence and candidate providers with canonical input/output validation. |
 | `src/ai/provider-fallback.ts` | Adds bounded timeouts, cancellation, error classification, output validation, latency observations, and safe algorithmic fallback around an optional provider. |
-| `src/ai/PROVIDER_EVALUATION.md` | Compares provider integration properties without adopting a provider or proving one is live. |
+| `src/ai/PROVIDER_EVALUATION.md` | Defines evidence and reliability checks for the D-072-approved provider without pretending that source configuration proves a live call. |
 | `src/extraction/ports.ts` | Defines replaceable frame-measurement, classification, OCR, observation, and snapshot pipeline ports. |
 | `src/extraction/visual-measurements.ts` | Downsamples frames and derives luminance/frame-difference measurements with bounded pixel work and ephemeral-frame cleanup. |
 | `src/extraction/visual-classification.ts` | Derives thresholds from annotated samples and classifies broad quiet/action/transition/unknown activity plus whether an OCR burst is justified. |

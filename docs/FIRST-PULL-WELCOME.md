@@ -77,11 +77,11 @@ Across your passes, Codex will help you decide:
 - Audience taxonomy, aggregation windows, spam, sarcasm, humour, repeated requests, and low-volume chat.
 - Rule-based versus model-assisted analysis and raw-chat privacy/retention.
 - Model-ready context, signal priority, recent history, and streamer restrictions.
-- OpenRouter/alternative evaluation for free use, structured output, latency, reliability, and privacy.
+- D-072-approved OpenAI `gpt-5.6-terra` evaluation for structured output, credited availability, latency, reliability, privacy/retention, and fallback.
 - Retry, malformed/refusal/outage behaviour and the credential-free algorithmic path.
 - Candidate metadata, evaluation thresholds, limitations, and demo-readiness evidence.
 
-You answer only the current phase's small decision batch. Provider adoption is a joint Role 2/3 recommendation brought to Role 1.
+You answer only the current phase's small decision batch. D-072 settles provider adoption; current work gathers real execution and quality evidence without reopening it.
 
 ## Role 3 welcome and decision map
 

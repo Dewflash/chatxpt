@@ -44,9 +44,9 @@ ChatXPT is not merely a poll or a generic chatbot. It closes the loop between wh
 - Real gameplay captured through OBS Virtual Camera and real Twitch activity drive candidate generation; missing observations are honestly `unknown`.
 - Exactly three validated, capability-aware game-neutral options reach one streamer and two viewer clients with the same authoritative session/cycle revision.
 - Voting, activation, OBS display, progress, terminal result, session points, and hype complete end to end.
-- A free AI contribution is evidenced when available; provider failure continues through algorithms on real inputs and deterministic quest fallback.
+- The approved server-side AI contribution is evidenced when an eligible team-owned credited key is available; missing credit/credential or provider failure continues through algorithms on real inputs and deterministic quest fallback.
 - Twitch Extension, hosted Viewer Quest Board, and Twitch-chat voting capabilities/fallbacks are represented honestly.
-- No secret, paid model dependency, fabricated live signal, or persistent monetary economy is required.
+- No secret or paid-model availability is required for the workflow; no fabricated live signal or persistent monetary economy is allowed.
 
 ## Current Twitch proof
 

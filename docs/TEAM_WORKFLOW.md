@@ -51,13 +51,13 @@ Before broad migration, Role 1 publishes the provisional public contracts/orches
 - Ask it to inspect current files before editing; agents do not share live context or uncommitted work across five machines.
 - Distill useful conclusions from private chats into `TEAM_CONTEXT.md` or `DECISIONS.md`; do not commit raw private chat exports.
 - Review every diff and never paste API keys, private viewer data, or competition credentials into chats.
-- ChatGPT Pro and application API usage are separate. No paid model usage is authorised; use clearly labelled fixtures for component tests and real OBS/Twitch inputs for every live or judged claim.
+- ChatGPT Pro and application API usage are separate. D-072 permits the approved API model only with a server-side team key and existing prepaid/promotional credit; no contributor must buy quota. Use clearly labelled fixtures for component tests and real OBS/Twitch inputs for every live or judged claim.
 
 ## AI decision boundary
 
 - Role 2 owns provider adapters, model-ready context, signal-analysis AI, and reliability evaluation.
 - Role 3 owns quest-domain AI objectives, generation instructions, quality criteria, and use inside the deterministic engine.
-- Roles 2 and 3 submit one joint provider/model recommendation to Role 1 before adopting OpenRouter or another provider.
+- D-072 settles OpenAI `gpt-5.6-terra` adoption. Roles 2 and 3 still evaluate reliability and quest quality for Role 1; a different provider/model or new spend requires a new owner decision.
 
 ## Change and submission records
 

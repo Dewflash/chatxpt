@@ -217,9 +217,9 @@ Role 1 owns vote authentication, acceptance, storage, and deduplication. Role 3 
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D23-01 | Free provider/model comparison and final recommendation to Role 1 | Open | — |
+| D23-01 | Provider/model selection and evaluation baseline | Resolved by D-072 | OpenAI Responses API with exact model `gpt-5.6-terra` is approved. Role 3 evaluates quest quality and engine fit without treating that evaluation as an adoption gate. |
 | D23-02 | Structured candidate schema details and quest-quality rubric | Open | — |
-| D23-03 | Provider timeout/malformed response threshold before algorithmic fallback | Open | — |
+| D23-03 | Provider timeout/malformed response threshold before algorithmic fallback | Resolved by D-072 | One attempt and an 8-second timeout. Refusal, malformed/non-exactly-three output, invalid citations, rate limiting, outage, missing credential/credit, or timeout uses the algorithmic path; caller cancellation propagates without candidates or fallback. All surviving candidates still pass Role 3 validation/replacement. |
 
 ### L0pch-only decision gate
 
@@ -232,7 +232,7 @@ Role 1 owns vote authentication, acceptance, storage, and deduplication. Role 3 
 
 **Outcome:** Role 2 generation targets criteria that Role 3 can validate consistently.
 
-**Acceptance:** Quality rubric covers feasibility, clarity, novelty, moment fit, streamer fit, audience fit, duration, difficulty, and safety; joint provider recommendation reaches Role 1.
+**Acceptance:** Quality rubric covers feasibility, clarity, novelty, moment fit, streamer fit, audience fit, duration, difficulty, and safety; real evidence for the D-072-approved provider reaches Role 1 without weakening deterministic authority.
 
 ### R3-P13 — End-to-end engine evaluation
 

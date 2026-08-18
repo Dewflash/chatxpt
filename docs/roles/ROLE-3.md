@@ -18,7 +18,7 @@ Convert Role 2's intelligence and candidate quests into safe, feasible, varied, 
 
 - Intervention, proposal, approval, veto, automatic/manual activation, interruption, and emergency-control mechanics.
 - Quest-domain AI decisions: quest objectives, generation instructions, quality criteria, and how model output is used inside the deterministic engine.
-- Joint provider/model evaluation with Role 2; submit one recommendation to Role 1 before integration.
+- Evaluate the D-072-approved OpenAI `gpt-5.6-terra` path with Role 2; adoption is settled, but Role 3's quest-quality rubric and deterministic validation/replacement authority remain mandatory.
 - Quest validation, feasibility, difficulty, diversity, repetition, cooldown, and streamer-boundary rules.
 - Quest lifecycle, progress, completion, scoring, rewards, results, and recent-history effects.
 - Deterministic safety enforcement and a curated fallback quest library.

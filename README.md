@@ -244,13 +244,13 @@ The core runtime policy is:
 | `docs/TEAM_PLAYBOOK.md` | Human/agent setup, Git, task selection, verification, handoff, and pull-request procedure. |
 | `docs/roles/ROLE-*.md` | Role-specific authority, design and implementation responsibilities, and escalation boundaries. |
 | `docs/build-plans/*.md` | Phase gates, contracts, acceptance evidence, and implementation plans. |
-| `docs/DECISIONS.md` | Durable decisions, including the judged-MVP no-external-provider decision. |
+| `docs/DECISIONS.md` | Durable decisions, including the approved server-side model, fallback, privacy, and Minecraft demo boundary. |
 
 These agent files guide repository work; they are not hidden runtime prompts sent to viewers or Twitch. Provider credentials, raw model names, and prompt editing are also not exposed as normal streamer controls.
 
 ### Model/provider status
 
-No external model provider is required for the judged MVP under decision D-055. The submitted flow uses credential-free algorithmic candidate generation plus deterministic Role 3 validation/replacement. An owner-authorised controlled provider implementation now exists, but it remains disabled without `CHATXPT_LLM_ENABLED=true` and a server-side API key; its presence is not proof that a provider call occurred. No key was present and no paid request was sent during this pass.
+D-072 permits the judged MVP to use the OpenAI Responses API with exact model `gpt-5.6-terra`. It remains an opt-in server path requiring `CHATXPT_LLM_ENABLED=true`, a server-only team-owned key, and existing prepaid or promotional credit. OpenAI documents no API free tier for this model, so missing credential/credit/quota/provider availability immediately preserves the credential-free algorithmic route; Role 3 still validates or replaces every candidate deterministically. The adapter sends only bounded normalised context, sets `store: false`, retains no prompt/output/vendor payload in ChatXPT, and never sends raw frames, raw chat, viewer identity, Twitch IDs, usernames, or secrets. OpenAI documents that API data is not used for training by default unless the account opts in, but default abuse-monitoring logs may retain customer content for up to 30 days unless the API project is approved for Zero Data Retention. Source presence is not runtime evidence, and no provider call is claimed without a manifest entry. See the official [GPT-5.6 Terra model page](https://developers.openai.com/api/docs/models/gpt-5.6-terra) and [OpenAI API data controls](https://developers.openai.com/api/docs/guides/your-data#default-usage-policies-by-endpoint).
 
 ## 4. Third-Party Libraries, Models, Datasets, and APIs
 
@@ -265,7 +265,7 @@ Exact versions are pinned in [package.json](package.json) and `package-lock.json
 | Zod | 4.4.3 | Runtime validation for domain contracts, requests, commands, view models, and structured provider output. |
 | Supabase JS | 2.111.0 | Persistence and realtime adapter for the accepted production target. Local memory remains available. |
 | `server-only` | 0.0.1 | Build-time protection for server-only integration modules and secrets. |
-| OpenAI SDK | 7.3.0 | Explicitly enabled server-side structured-output adapter with credential-free fallback. Not required by the judged path. |
+| OpenAI SDK | 7.3.0 | D-072-approved server-side structured-output adapter with mandatory credential-free fallback. |
 | Tesseract.js | 7.0.0 | Optional bounded OCR adapter for named gameplay-frame crops. Installation alone is not live OCR evidence. |
 
 Development and test tooling includes TypeScript 5.9.3, ESLint 9.39.2, Vitest 4.1.10, the Supabase CLI 2.111.0, and the corresponding Node/React type packages.
@@ -274,9 +274,9 @@ Development and test tooling includes TypeScript 5.9.3, ESLint 9.39.2, Vitest 4.
 
 | Model/provider | Submitted status | Data and credential boundary |
 | --- | --- | --- |
-| Credential-free algorithmic generation | Active judged-MVP path | Runs without an external model or provider credential. |
-| OpenAI model via `OPENAI_MODEL` | Controlled opt-in evaluation path | Key remains server-side; explicit enablement, timeout, strict validation, and algorithmic fallback are mandatory. No call is claimed without recorded execution. |
-| Groq `openai/gpt-oss-20b` | Future evaluation candidate only | Not adopted, configured, or required for the submitted path. |
+| Credential-free algorithmic generation | Permanent judged-MVP fallback | Runs on the same real inputs without an external model, credential, or quota. |
+| OpenAI `gpt-5.6-terra` | Approved opt-in judged-MVP path | Team-owned key remains server-side; existing credit, explicit enablement, 8-second timeout, strict exactly-three validation, and algorithmic fallback are mandatory. No call is claimed without recorded execution. |
+| Groq `openai/gpt-oss-20b` | Superseded evaluation candidate | Not adopted or configured after D-072. |
 
 ### External services and APIs
 
@@ -286,7 +286,7 @@ Development and test tooling includes TypeScript 5.9.3, ESLint 9.39.2, Vitest 4.
 | OBS Studio | Real gameplay/screen input and Browser Source broadcast output | The overlay URL is implemented. Real OBS/Virtual Camera extraction is claimed only when visibly recorded and entered in the evidence manifest. |
 | Supabase Free | Accepted persistence and realtime target | Memory fallback and adapters/schema exist. Real cloud operation is not claimed without a recorded cloud run. |
 | Vercel | Planned preview/production host | No deployment claim is made until a deployment artifact is recorded. |
-| OpenAI API | Legacy optional candidate-generation API | Not the accepted judged-MVP dependency. |
+| OpenAI API | Approved optional candidate-generation API | Requires a private team-owned credited key; no client secret, provider dependency, or runtime claim is implied without recorded evidence. |
 
 YouTube, Discord, TikTok, Kick, and other streaming platforms are not implemented in the Twitch MVP. They may appear only as future or `Coming Soon` integrations.
 

@@ -17,8 +17,8 @@
 
 ## AI, algorithms, and fallback
 
-- [ ] Roles 2/3 record their joint free provider/model recommendation and evidence.
-- [ ] A real-input run shows the free AI contribution and structured-output validation when available.
+- [x] The project owner records the provider/model decision: D-072 approves server-side OpenAI `gpt-5.6-terra` with permanent credential-free fallback.
+- [ ] A privacy-reviewed real-input run shows the approved AI contribution and structured-output validation when an eligible team-owned credited key is available.
 - [ ] Provider unavailable/slow/malformed behavior visibly continues through credential-free algorithms and deterministic quest fallback.
 - [ ] OCR/vision uncertainty produces `unknown` rather than a fabricated gameplay fact.
 - [ ] At least two team-owned action-game HUD/pacing styles and varied audience states are evaluated.

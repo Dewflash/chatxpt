@@ -55,7 +55,7 @@ Local demo routes:
 4. Confirm the **Stream automation settings** are set to **Auto generate** and **Auto overlay**, or switch to **Manual review** / **Streamer approves** if the recording should show manual control.
 5. Connect Twitch chat to the broadcaster channel, for example `dewflash`, if a test stream is available.
 6. Wait for auto-generation or click **Generate sidequests** if the recording needs to move faster. If clicked manually, label that as prototype/demo control.
-7. Confirm exactly three Brawl Stars-safe quest cards appear. With no `OPENAI_API_KEY`, this uses the credential-free algorithmic/demo engine. If `OPENAI_API_KEY` is configured, the legacy API tries the optional OpenAI adapter and falls back to the algorithmic engine on failure. The accepted judged MVP path remains the credential-free algorithmic route recorded in D-055.
+7. Confirm exactly three vanilla-Minecraft-appropriate quest cards appear. With no eligible `OPENAI_API_KEY`/credit, this uses the credential-free algorithmic/demo engine. When the D-072 server configuration is enabled, the OpenAI `gpt-5.6-terra` adapter gets one bounded 8-second attempt and falls back algorithmically on any failure; every candidate still goes through Role 3 validation.
 8. Run `npm run dev:twitch`, install the Local Test version using `https://localhost:3000/`, and ask Joel or another allowlisted viewer to open the installed panel. Select one of the three quests and submit the vote. Confirm private acknowledgement and the Studio tally. Use Twitch chat `1`/`2`/`3` only as the fallback/comment-ingestion proof; if Twitch is unavailable, click `+ vote` and label it as simulated diagnostic voting.
 9. In Studio, generate the session-scoped **OBS Browser Source** URL, add the complete `/obs-overlay` URL to OBS, and show the authoritative vote, active sidequest, timer, progress, result, and reconnect states. Do not expose its fragment token in the recording. The old `/overlay` route is legacy diagnostic output and is not canonical proof.
 10. Return to the control room and click **Complete**, **Fail**, or **Clear** to demonstrate terminal overlay updates.
@@ -66,8 +66,8 @@ Local demo routes:
 Current runnable UI path:
 
 - `/api/sidequests` validates the legacy `GenerationRequest`.
-- The judged MVP does not adopt an external provider. D-055 records the accepted provider decision: use credential-free algorithmic candidates plus Role 3 deterministic validation/replacement for the MVP.
-- The legacy `/api/sidequests` path still contains an optional server-side OpenAI adapter if `OPENAI_API_KEY` is configured; this is not the accepted judged-provider path and should not be presented as MVP provider evidence.
+- D-072 approves the server-side OpenAI `gpt-5.6-terra` path under its credential, existing-credit, privacy, timeout, and validation constraints while preserving credential-free algorithmic candidates plus Role 3 deterministic validation/replacement.
+- The legacy `/api/sidequests` path still contains an optional OpenAI adapter, but source presence or a configured key is not provider evidence; only a recorded run of the canonical approved boundary may support that claim.
 - If the key is absent or the legacy provider call fails, it returns exactly three credential-free algorithmic/demo quests and, on provider failure, a warning.
 
 Accepted MVP path present as component code/tests:
@@ -123,6 +123,6 @@ The newer Role 5 fixture evidence also shows Twitch, hosted-board, and OBS overl
 - Real hosted-board two-client voting against an authoritative session is not evidenced.
 - Real Supabase cloud realtime/persistence and Vercel deployment evidence are still outstanding.
 - Role 2 real-frame extraction/OCR and real gameplay asset evaluation are still blocked or incomplete until the owner records a real OBS/gameplay run.
-- External model-provider adoption is closed for the judged MVP by D-055: no provider is adopted or configured. Future Groq trial evidence remains optional/future, not a blocker for the credential-free MVP route.
+- External model-provider adoption is closed by D-072: OpenAI `gpt-5.6-terra` is approved, and missing credentials, existing credit, quota, or availability cannot block the credential-free MVP route.
 - The accepted Role 2 algorithmic/provider path and Role 3 deterministic engine are component-tested but not fully wired into the visible end-to-end UI route.
 - The integration completion rule is not met until the same authoritative session and quest-cycle revision is observable across orchestrator, Studio, two viewers, persistence, and OBS overlay.

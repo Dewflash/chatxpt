@@ -28,7 +28,7 @@ Extension JWT + signed EventSub chat   ephemeral raw-game frames
                            |
                            v
           Role 2 extraction + audience intelligence
-      visual algorithms + selective OCR + optional free AI
+    visual algorithms + selective OCR + optional server AI
                            |
         real observations + confidence + provenance + unknown
                            |
@@ -94,7 +94,7 @@ A developer Test Lab may analyse team-owned or explicitly authorised gameplay, i
 
 ## AI and deterministic fallback
 
-The judged MVP does not adopt an external provider. Role 2 owns provider transport, signal context, reliability, and candidate generation, but the submitted build uses the credential-free algorithmic candidate route unless a later accepted decision adds a provider. Role 3 owns quest objectives, quality, deterministic validation, replacement, and lifecycle use.
+D-072 permits an opt-in server-side OpenAI Responses path using exact model `gpt-5.6-terra`, a team-owned key, and existing prepaid or promotional credit. Role 2 owns provider transport, bounded normalised context, reliability, and candidate generation. Role 3 owns quest objectives, quality, deterministic validation, replacement, and lifecycle use. Missing credential/credit/quota or any provider failure retains the credential-free algorithmic route.
 
 Provider failure must not stop the workflow:
 
@@ -102,7 +102,7 @@ Provider failure must not stop the workflow:
 2. Role 3 rejects unsafe, impossible, repetitive, or unsupported candidates and replaces them from its deterministic, unknown-safe fallback library.
 3. Surfaces show provider/algorithmic/fallback state without claiming unavailable facts.
 
-No paid model usage is authorised for the MVP.
+No contributor is required to buy quota. The approved model has no API free tier, so it may use existing team credit only; adding a payment method or new spend requires another owner decision. The server sends no raw frames, raw chat, viewer identity, Twitch IDs, usernames, or secrets, sets `store: false`, and retains no prompt/output/vendor payload. OpenAI's documented default abuse-monitoring retention still applies unless the team API project has Zero Data Retention.
 
 ## Safety, privacy, and evidence
 

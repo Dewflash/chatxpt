@@ -129,15 +129,15 @@ Research links live viewing with presence, connection, longer continued watching
 
 **Repo lens:** `src/extraction/` | `src/ai/` | `src/integrations/obs/` | `docs/DECISIONS.md`
 
-## Slide 12 - The candidate layer is AI-ready and credential-free today
+## Slide 12 - Server AI when available, credential-free intelligence always
 
 **Context assembly:** `GameplaySnapshot + AudienceSignal + StreamerProfile + recent quests + restrictions` becomes one model-ready, game-capability-aware context.
 
-**Current judged path:** a credential-free algorithmic generator uses that real context to produce exactly three distinct candidates. Genre-aware templates cover racing, strategy, platformer, tactical, MOBA, battle royale, arena, and unknown categories.
+**Permanent path:** a credential-free algorithmic generator uses real context to produce exactly three distinct candidates. Genre-aware templates cover racing, strategy, platformer, tactical, MOBA, battle royale, arena, and unknown categories.
 
-**AI implementation boundary:** any future model adapter stays server-side, returns structured candidates, observes latency and privacy limits, and falls back cleanly on timeout, refusal, malformed output, or outage.
+**AI implementation boundary:** D-072 permits server-side OpenAI `gpt-5.6-terra`; it returns strict structured candidates, observes credit, latency, privacy/retention, and source-freshness limits, and falls back cleanly on missing credentials/credit, timeout, refusal, malformed output, or outage.
 
-**Technical decision:** no external model provider is configured for the judged MVP. A future provider trial must first clear a recorded quality, latency, privacy, cost, and reliability rubric.
+**Technical decision:** the provider is optional, never authoritative, and never required for the workflow. Every output still passes Role 3 validation and must be backed by recorded real execution before the pitch calls it live.
 
 **Repo lens:** `src/ai/` | `src/lib/mock-engine.ts` | `src/app/api/sidequests/route.ts` | `docs/DECISIONS.md`
 

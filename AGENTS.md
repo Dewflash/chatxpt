@@ -183,7 +183,7 @@ Primary work:
 - Provide Role 3 with behavioural signals and confidence needed to adapt intervention and streamer-control behaviour.
 - Convert gameplay snapshots, audience signals, streamer profiles, recent quests, and restrictions into model-ready context.
 - Own model-provider adapters, model-ready context, signal-analysis prompts, structured transport, and provider reliability evaluation.
-- Jointly evaluate provider/model selection with Role 3: Role 2 assesses integration, latency, privacy, cost, structured output, and reliability; Role 3 assesses quest quality and engine fit.
+- Evaluate the approved OpenAI `gpt-5.6-terra` path with Role 3: Role 2 assesses integration, latency, privacy, cost, structured output, and reliability; Role 3 assesses quest quality and engine fit. D-072 settles adoption, but runtime evidence remains required.
 - Produce exactly three distinct candidate quests for Role 3 to validate and orchestrate.
 - Expose public Role 2 ports and producer contract tests; do not persist session/lifecycle/UI state or import another role's private implementation.
 - Decide and deliver the current MVP build plans for Roles 4 and 5 under the scoped planning grant above.
@@ -191,7 +191,7 @@ Primary work:
 
 Does not own quest lifecycle, deterministic quest rules, Role 4/5 source implementation, or their detailed execution decisions after the build plans are accepted. Role 2 supplies analysed signals and AI-generated candidates to Role 3.
 
-**Open decision:** OpenRouter is the current leading candidate, not yet selected. Roles 2 and 3 compare it with alternatives and send one joint recommendation to Role 1 before integration or model-picker work.
+**Accepted provider boundary:** D-072 permits server-side OpenAI `gpt-5.6-terra` for the judged MVP under its credential, credit, privacy, timeout, validation, and fallback limits. Provider availability is not required for the golden workflow, and provider/model pickers remain out of scope.
 
 ### Role 3: Quest engine
 
@@ -205,7 +205,7 @@ Primary work:
 - Decide the detailed proposal, approval, veto, automatic/manual activation, interruption, and emergency-control behaviour using Role 2's behavioural intelligence and the streamer's saved preferences.
 - Convert analysed signals from Role 2 into deterministic quest-engine inputs.
 - Own quest-domain AI decisions: quest objectives, generation instructions, quality criteria, and how model output is used within the deterministic engine.
-- Jointly evaluate provider/model selection with Role 2 and send one recommendation to Role 1.
+- Evaluate the approved OpenAI `gpt-5.6-terra` output with Role 2 against the provider-quality rubric; Role 3's deterministic validator and replacement library remain authoritative regardless of provider status.
 - Enforce feasibility, duplication, timing, difficulty, diversity, cooldown, streamer-boundary, and safety rules.
 - Own quest states: proposed, voting, active, succeeded, failed, cancelled, skipped, and expired.
 - Define scoring, reward, progress, automatic completion, and manual completion rules.
@@ -353,5 +353,4 @@ Keep provider payloads, Twitch payloads, component-local UI state, and persisten
 
 ## Current open decisions
 
-- Which genuinely free provider/model, if any, Roles 2 and 3 jointly recommend behind the mandatory no-credential path.
-- Component-level decision gates marked `Open` in the Role 1-3 build plans and the forthcoming Role 4/5 plans.
+- Component-level decision gates marked `Open` in the Role 1-3 build plans and the Role 4/5 plans. D-072 closes provider/model adoption; credential/credit availability and real provider evidence remain execution dependencies, not product-decision gates.

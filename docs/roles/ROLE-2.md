@@ -20,7 +20,7 @@ Turn gameplay and audience activity into reliable, model-ready intelligence and 
 - Chat, sentiment, intent, energy, humour, risk, boredom, hype, and behavioural analysis.
 - Signal aggregation, timestamps, confidence, and model-ready context.
 - AI provider adapters, model-ready context, signal-analysis prompts, structured transport, runtime validation, and provider reliability evaluation.
-- Joint provider/model evaluation with Role 3; submit one recommendation to Role 1 before integration.
+- Evaluate the D-072-approved OpenAI `gpt-5.6-terra` path with Role 3; adoption is settled, while real latency, privacy, reliability, structured-output, cost/credit, and quest-quality evidence remains required.
 - AI-specific privacy, latency, cost, reliability, moderation, and observability evidence.
 - The current MVP build plans for Roles 4 and 5 under D-016, including outcomes, surface/flow coverage, priorities, required states, AI/data requirements, mock/live boundaries, milestones, acceptance criteria, exclusions, and handoff order.
 
@@ -32,7 +32,7 @@ Turn gameplay and audience activity into reliable, model-ready intelligence and 
 
 ## Required handoff
 
-Provide Role 3 with normalised behavioural signals, capability tier, confidence, traceable context, three candidate quests, validation metadata, and provider/fallback status through canonical ports. Compare provider candidates with Role 3, covering integration, latency, privacy, cost, structured output, reliability, quest quality, and engine fit. Give Roles 4 and 5 separate but synchronised implementation-ready MVP plans plus their shared dependency/fixture/contract matrix, collect feasibility context from each lead, revise as needed, and notify Role 1. Any contributor may implement contract changes immediately with Role 1 notification, affected producer/consumer tests, and pre-merge deconfliction.
+Provide Role 3 with normalised behavioural signals, capability tier, confidence, traceable context, three candidate quests, validation metadata, and provider/fallback status through canonical ports. Evaluate the approved provider path with Role 3 for integration, latency, privacy, cost/credit, structured output, reliability, quest quality, and engine fit without treating that evaluation as an implementation gate. Give Roles 4 and 5 separate but synchronised implementation-ready MVP plans plus their shared dependency/fixture/contract matrix, collect feasibility context from each lead, revise as needed, and notify Role 1. Any contributor may implement contract changes immediately with Role 1 notification, affected producer/consumer tests, and pre-merge deconfliction.
 
 ## Verification
 

@@ -38,7 +38,7 @@ The app is now moving toward Broadcast control room:
 - The four large recording controls are labelled as the Action cockpit.
 - Studio separates Current read, Streamer preference, Engine stack, and Automation.
 - Game support is shown through a streamer-selected game category plus a current game field.
-- The engine story is visible: no external provider for judged MVP, algorithmic candidates, deterministic validation/replacement, safe library fallback.
+- The engine story is visible: approved server AI when available, algorithmic candidates when unavailable, deterministic validation/replacement, and safe library fallback.
 
 ## Final CSS pass checklist
 

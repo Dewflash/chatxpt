@@ -23,8 +23,10 @@ describe("third-party disclosures", () => {
       "OBS",
       "Supabase Free",
       "Vercel",
-      "No provider is selected",
-      "credential-free algorithmic generation",
+      "`gpt-5.6-terra`",
+      "existing prepaid/promotional credit",
+      "falls back algorithmically",
+      "Zero Data Retention",
       "No third-party datasets are bundled",
       "A passing fixture test is not live Twitch, OBS, cloud, or provider evidence",
     ]) {
