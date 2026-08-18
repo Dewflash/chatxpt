@@ -77,6 +77,16 @@ export type {
   VisualActivityClassification,
   VisualActivityPolicy,
 } from "./visual-classification";
+export { createMultiGameVisionEvidencePolicy } from "./vision-evidence-policy";
+export type { MultiGameVisionEvidencePolicy } from "./vision-evidence-policy";
+export { createBrowserTesseractOcr } from "./tesseract-ocr";
+export type {
+  BrowserTesseractOcrHandle,
+  BrowserTesseractOcrOptions,
+  TesseractWorkerPort,
+} from "./tesseract-ocr";
+export { createMultiGameGameplayExtractionPipeline } from "./multi-game-pipeline";
+export type { MultiGameGameplayPipelineOptions } from "./multi-game-pipeline";
 export {
   audienceEventSchema,
   audienceSnapshotSchema,
