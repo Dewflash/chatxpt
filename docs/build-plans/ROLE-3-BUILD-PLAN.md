@@ -217,9 +217,11 @@ Role 1 owns vote authentication, acceptance, storage, and deduplication. Role 3 
 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
-| D23-01 | Free provider/model comparison and final recommendation to Role 1 | Open | — |
-| D23-02 | Structured candidate schema details and quest-quality rubric | Open | — |
-| D23-03 | Provider timeout/malformed response threshold before algorithmic fallback | Open | — |
+| D23-01 | Free provider/model comparison and final recommendation to Role 1 | Accepted for MVP | Per D-055 and closed issue #46, adopt no external provider for the judged MVP. Role 2 supplies the credential-free algorithmic candidate route and Role 3 remains the deterministic validation/replacement authority. Groq `openai/gpt-oss-20b` is only a future controlled-trial candidate and is not configured, called, or presented as evidenced. |
+| D23-02 | Structured candidate schema details and quest-quality rubric | Accepted | Use the canonical exactly-three candidate schema plus Role 3's deterministic hard gates, weighted quality rubric, and D3-20/D3-21 objectives. Provider, algorithmic, and deterministic-fallback provenance never changes validation order or authority. |
+| D23-03 | Provider timeout/malformed response threshold before algorithmic fallback | Deferred beyond MVP | The judged MVP makes no provider attempt, so it enters the credential-free algorithmic route immediately and has no provider timeout threshold. Any future controlled provider trial must return to this joint gate with real latency/reliability evidence; timeout, refusal, rate limit, outage, malformed, missing, or rejected output must continue to use separately validated fallback without semantic repair. |
+
+**MVP provider record (2026-08-18):** Issue #46 is closed after D-055 settled the no-provider judged path. Role 3's rubric and fallback tests remain useful evaluation assets, but they are fixture/component evidence and do not prove a real provider call, provider latency, availability, quota, or model quality.
 
 ### L0pch-only decision gate
 
