@@ -2,7 +2,7 @@
 
 **Owner:** Role 1 (`Dewflash`)
 
-**Date:** 18 August 2026; evidence hierarchy corrected 19 August 2026
+**Date:** 18 August 2026; evidence hierarchy and direct streamer pain map expanded 19 August 2026
 
 **Method:** Secondary research only
 
@@ -12,7 +12,7 @@
 
 ChatXPT should not be positioned as a generic cure for low streamer engagement. Engagement and channel growth are multi-causal, Twitch already supplies chat, polls, rewards, events, and broad analytics, and current third-party tools already market AI cohosts, chat summaries, gameplay-reactive overlays, direct game effects, and automated production.
 
-The evidence supports a narrower problem:
+The direct streamer evidence supports a narrower problem:
 
 > During live gameplay, a solo or lightly supported creator must trade attention between playing and audience management. Existing tools expose feeds and controls, but the creator still has to notice a useful audience signal, decide whether the current game moment can tolerate an interruption, turn the signal into a safe interaction, operate that interaction, and carry its result back into the broadcast.
 
@@ -28,7 +28,7 @@ This is an experience-level differentiation, not a durable technical moat. A com
 
 The reviewed research establishes different things at different strengths:
 
-1. **Pain evidence:** divided attention, audience-management work, nonlinear chat overload, and some late-join context difficulty are documented.
+1. **Pain evidence:** sparse-audience interaction, divided attention, audience-management work, lost qualitative feedback, limited analytics actionability, nonlinear chat overload, and some late-join context difficulty are documented. Only some studies provide prevalence denominators, and none provides prevalence for ChatXPT's exact Twitch game-streamer target.
 2. **Adjacent intervention evidence:** CatchLive changed behavioural participation proxies in a small comparison, and large observational deployments show that viewers can use optional Extension content. These systems are not ChatXPT.
 3. **Feasibility and category evidence:** gameplay signals can support bounded phase inference, and social participation matters to some viewers. This does not prove product value.
 4. **Direct ChatXPT solution evidence:** none yet. No reviewed source evaluates ChatXPT's exact private-cue -> safe exactly-three sidequest -> Twitch vote -> OBS payoff loop.
@@ -72,11 +72,21 @@ Current first-party documentation is authoritative for present product capabilit
 
 ### Problem that the evidence supports
 
+The small-streamer cold start is directly documented outside Twitch. Im and colleagues analysed one week of AfreecaTV activity covering 33,453 streamers: the top 100 streamers (0.3%) received 50% of viewers, and only 11.5% of channels had more than 10 viewers. In follow-up interviews, six streamers averaging 10 or fewer viewers identified the lack of live viewer interaction as their main problem; high labour and repeated financial/mental investment without sufficient reward contributed to lower motivation and sustainability concerns. This is strong evidence of audience concentration and direct qualitative evidence of the resulting pain in that six-person sample. It is not a Twitch prevalence estimate and does not show that ChatXPT can attract viewers. [Im et al., 2020](https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci?sereArticleSearchBean.artiId=ART002635923)
+
 Streamers perform gameplay and audience-facing production simultaneously. Wohn and Freeman's 25-interview study describes audience management as cognitively and temporally costly. Participants discussed difficulty scanning chat during focused work, pausing gameplay to catch up, relying on moderators to flag missed messages, and sometimes preferring post-stream statistics to distracting live counts. The authors explicitly describe a trade-off between content and interaction. The sample ranged from 119 to 187,664 followers and is not representative of all creators, but the attention mechanism is directly relevant. [Wohn and Freeman, 2020](https://guof.people.clemson.edu/papers/imx20.pdf)
+
+Mok and colleagues observed the cold-start performance problem in five novice streamers playing *Slay the Spire* with and without a simulated audience. Four of five spent more time silent in the audience-bot condition, even though non-game remarks increased from 18 to 72 across participants and four said they liked having the bot. The authors observed participants suspending play to read and respond. This small lab study shows the core tension clearly: audience material can help conversation while simultaneously adding reading and response load. It does not justify simulating viewers; ChatXPT must use real audience activity or explicit streamer intent. [Mok et al., 2020](https://colinauyeung.github.io/pub/audiencebot.pdf)
 
 Flores-Saviaga and colleagues analysed 226,658 Twitch streams and 12.15 million chat messages collected in 2017, together with 45 hours of video. They observed different audience-management patterns by channel scale, reliance on bots and moderators, simple chat-based numbered choices, and a phase distinction: slower or reflective game moments are better suited to audience interaction, while tense moments demand gameplay attention. Their scale labels are too old and broad to reuse as modern market segments, but the behavioural distinction is useful. [Flores-Saviaga et al., 2019](https://arxiv.org/pdf/2012.00215)
 
 Hamilton and colleagues' long-running ethnography similarly found that streamers split focus between play and viewers, that regulars and moderators help manage this work, and that meaningful participation is a strong property of smaller communities. The study predates current Twitch tooling, so it supports the social pattern rather than a present capability gap. [Hamilton et al., 2014](https://ecologylab.net/research/publications/streamingOnTwitch.pdf)
+
+The problem continues after the live moment. Mallari and colleagues interviewed 18 game streamers—13 on Twitch and five on Mixer; six were in the 0-1,000 follower band and most streamed part-time. All 18 ran Discord servers as auxiliary community spaces, and the researchers analysed about 8,000 streamer-authored Discord messages. The study found that valuable qualitative feedback could be lost during a broadcast and that native performance metrics described views, followers, and revenue without providing enough actionable explanation. These findings support an intervention-specific record, not a generic analytics or growth suite. The themes were not prevalence-coded or separated for the six smallest channels. [Mallari et al., 2021](https://prosocialcomputing.com/assets/pdf/publications/mallari-chi2021-streamers.pdf)
+
+Broader workload evidence reinforces the need for restraint rather than a broader product promise. A survey of 343 full-time Chinese live streamers found 30.6% met the study's burnout definition, 67.8% reported high job stress, 59.5% cyberbullying, and 42.0% slow follower growth. Interviews with 39 partnered Twitch streamers likewise documented strenuous schedules and career precarity. These populations do not match ChatXPT's target closely enough to claim that ChatXPT treats burnout or career insecurity. They support low-distraction controls, emergency pause, privacy, safety, and an explicit refusal to become an always-on growth coach. [Chen et al., 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11108200/) [Johnson and Woodcock, 2019](https://oro.open.ac.uk/68719/3/68719.pdf)
+
+The full direct-pain map, denominator discipline, and `quantitative result -> supported claim -> limitation -> ChatXPT response` ledger are in [`LIVE-DIRECTOR-EVIDENCE-MATRIX.md`](./LIVE-DIRECTOR-EVIDENCE-MATRIX.md).
 
 ### Problem that the evidence does not support
 
@@ -92,7 +102,7 @@ For very small chats, personally reading and responding to individual viewers ca
 
 ### Why the proposed solution fits the narrower problem
 
-The solution fit is not “more engagement features.” It is the reduction of a specific coordination sequence:
+The solution fit is not “more engagement features.” ChatXPT cannot solve audience discovery or manufacture interaction. Its addressable wedge begins when at least one real audience signal or explicit streamer goal can support a legitimate participation moment. It then tests the reduction of a specific coordination sequence:
 
 ```text
 notice audience signal
@@ -108,7 +118,7 @@ ChatXPT can compress that sequence only if it remains source-labelled, streamer-
 
 ## 3. Target segment: operating reality, not follower count
 
-No reviewed source provides a stable, universal 2026 definition of a small or medium Twitch streamer. Followers also do not describe live workload: two channels with the same follower count can have very different chat velocity, moderation, game intensity, and production support.
+No reviewed source provides a stable, universal 2026 definition of a small or medium Twitch streamer. The AfreecaTV study shows severe audience concentration in one platform and week, but it cannot supply a Twitch segment definition. Followers also do not describe live workload: two channels with the same follower count can have very different chat velocity, moderation, game intensity, and production support.
 
 ChatXPT should segment sessions by operating mode:
 
@@ -279,7 +289,7 @@ Secondary research can justify what to test, but it cannot establish that the pr
 
 ### Recommended problem statement
 
-Solo and lightly supported game streamers must decide when and how to turn live audience activity into meaningful participation while their attention is already committed to gameplay. Existing tools show chat and offer polls, rewards, analytics, and reactive effects, but leave the creator to connect the current game moment, audience intent, safety boundaries, interaction setup, and broadcast follow-through.
+Small and under-resourced livestream creators face an engagement problem at both ends: many receive too little interaction to sustain the social experience they want, while those receiving bursts of activity must interpret and operationalise it while also playing and performing. ChatXPT cannot create viewers. Its addressable problem is that existing chat, polls, rewards, analytics, and reactive effects still leave the creator to connect a real audience signal, the current game moment, safety boundaries, interaction setup, and broadcast follow-through.
 
 ### Recommended solution statement
 
@@ -301,6 +311,10 @@ ChatXPT turns a suitable gameplay moment and privacy-safe audience signal into o
 ## 13. Limitations and unresolved proof
 
 - The strongest audience-management studies are qualitative or use older Twitch data. Platform norms and tools have changed.
+- The strongest direct small-streamer prevalence result is from one week on AfreecaTV, not Twitch; its six follow-up interviews do not establish a universal response to low viewership.
+- The novice multitasking study involved five people, a simulated audience, and a slow turn-based game.
+- The 18-streamer analytics study includes five Mixer creators and does not report theme prevalence by channel size.
+- The 343-streamer burnout survey concerns full-time company-employed Chinese creators across content types and cannot be generalised to small Twitch game streamers or ChatXPT impact.
 - The reviewed samples do not isolate the exact solo, bursty/rising segment proposed here.
 - Vendor engagement statistics do not disclose enough method to become ChatXPT performance targets.
 - CatchLive is a small deployment and found mixed results for game-stream understanding.
@@ -317,7 +331,12 @@ The expanded quantitative ledger, including adjacent-treatment, Extension, audie
 
 | Source | Method/capability | Supports | Does not support | Evidence grade |
 | --- | --- | --- | --- | --- |
+| [Im et al., Broadcasting to a Few People, 2020](https://www.kci.go.kr/kciportal/ci/sereArticleSearch/ciSereArtiView.kci?sereArticleSearchBean.artiId=ART002635923) | One-week AfreecaTV crawl of 33,453 streamers plus six interviews with creators averaging 10 or fewer viewers | Severe audience concentration; direct low-interaction, labour, motivation, and sustainability pain in the six-person sample | Twitch prevalence, product demand, or an engagement-growth effect | Strong for sampled platform concentration; moderate for transferable pain |
 | [Wohn & Freeman, Audience Management Practices, 2020](https://guof.people.clemson.edu/papers/imx20.pdf) | 25 semi-structured streamer interviews over four months | Attention trade-offs, missed chat, moderator assistance, audience-management cost | Prevalence across all streamers or 2026 tool fit | Strong for mechanism; moderate for market prevalence |
+| [Mok et al., Talk Like Somebody is Watching, 2020](https://colinauyeung.github.io/pub/audiencebot.pdf) | Five-novice observational lab study with no-bot and simulated-audience conditions | Cold-start performance expectation and added play/read/respond load | Real-audience behaviour, population prevalence, retention, or a case for fake viewers | Moderate for mechanism; weak for market prevalence |
+| [Mallari et al., Analytics Needs of Video Game Streamers, 2021](https://prosocialcomputing.com/assets/pdf/publications/mallari-chi2021-streamers.pdf) | 18 game-streamer interviews, all 18 Discord communities, and about 8,000 streamer messages | Fragmented tool ecology, lost qualitative feedback, and limited actionable analytics | Per-theme prevalence, causal analytics value, or generic growth coaching | Strong for direct need discovery; moderate for generalisation |
+| [Chen et al., Burnout among Chinese Live Streamers, 2024](https://pmc.ncbi.nlm.nih.gov/articles/PMC11108200/) | Cross-sectional survey of 343 full-time company-employed live streamers | Sampled prevalence of burnout, stress, cyberbullying, and slow follower growth | Small Twitch game-streamer prevalence or ChatXPT impact | Strong for its population; weak for ChatXPT target fit |
+| [Johnson & Woodcock, It's Like the Gold Rush, 2019](https://oro.open.ac.uk/68719/3/68719.pdf) | 39 partnered professional/aspiring-professional Twitch interviews | Strenuous self-taught labour, uncertain success, and career precarity | Small-streamer prevalence or a universal growth playbook | Moderate contextual evidence |
 | [Flores-Saviaga et al., Participation at Scale, 2019](https://arxiv.org/pdf/2012.00215) | 2017 dataset of 226,658 streams, 12.15M messages, 651,664 chatters, plus 45 hours of video | Different operating modes, bots/moderators, numbered choices, game-phase interaction timing | Modern size taxonomy or causality | Moderate |
 | [Hamilton et al., Streaming on Twitch, 2014](https://ecologylab.net/research/publications/streamingOnTwitch.pdf) | Multi-year ethnography plus 11 streamer and four viewer interviews | Split attention, community participation, moderator role | Current platform capability | Moderate |
 | [CatchLive, CHI 2022](https://catchlive.kixlab.org/) | Real-time summarisation deployment across three streams and 67 viewers | Testable late-join/context need and distraction risk | Proven game understanding or ChatXPT feature fit | Moderate |
