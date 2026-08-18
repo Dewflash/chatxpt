@@ -2,7 +2,7 @@
 
 **Owner:** `joelyrk`
 
-Keep this role's statuses and evidence current. Any contributor may update affected rows. Shared-contract work may be implemented immediately with Role 1 notification, producer/consumer tests, and pre-merge deconfliction; use a `cross-role` issue only for durable unresolved coordination.
+Keep this role's statuses and evidence current. Any contributor may update affected rows. Shared-contract work may be implemented immediately with Role 1 notification, producer/consumer tests, and author/reviewer pre-merge deconfliction; Role 1 assists but is not an approval gate. Use a `cross-role` issue only for durable unresolved coordination.
 
 Execute these outcomes through `docs/build-plans/ROLE-2-BUILD-PLAN.md`; its decision gates belong to Joelyrk unless explicitly marked joint or escalated.
 

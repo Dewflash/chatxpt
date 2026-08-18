@@ -199,7 +199,7 @@ The following tables cover files that define architecture, runtime behaviour, co
 | `tsconfig.json` | Enables strict TypeScript settings and the `@/* -> src/*` import alias. |
 | `vitest.config.mts` | Configures the test environment, aliases, and test discovery. |
 | `vercel.json` | Defines the Vercel install and build commands. It does not prove a deployment exists. |
-| `.github/CODEOWNERS` | Routes the default Role 1 integration review and role-specific context. It is not a contributor edit-permission map under D-071. |
+| `.github/CODEOWNERS` | Routes default responsibility and integration-review context. It is not an edit or merge-permission map under D-071/D-073. |
 
 ### 7.2 Next.js composition and compatibility files
 

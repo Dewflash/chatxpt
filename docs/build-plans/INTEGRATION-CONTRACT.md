@@ -93,7 +93,7 @@ Role 1 maintains and deconflicts shared composition and collision-prone files; a
 - Supabase schema/migrations, RLS policies, seeds, and deployment instructions.
 - `tests/integration/` and canonical contract examples/tests under `src/core/`.
 
-Responsibility-specific modules expose documented public entry points from their mapped directories. Route files stay thin and mount those modules. A contributor that needs a dependency records the package, version, purpose, client/server impact, size/runtime risk, and fallback, then checks active branches and coordinates the shared package/lockfile edit with Role 1. Prior permission is not required; deconfliction before merge is.
+Responsibility-specific modules expose documented public entry points from their mapped directories. Route files stay thin and mount those modules. A contributor that needs a dependency records the package, version, purpose, client/server impact, size/runtime risk, and fallback, then checks active branches, deconflicts the shared package/lockfile edit with affected contributors, and notifies Role 1. Prior permission or Role 1 approval is not required; documented deconfliction before merge is.
 
 Design-system code stays under `src/design-system/`, and Role 4 is its responsibility lead. Any contributor may edit it. Role 1 only mounts the app-level import, and viewer product code consumes the public design-system entry point rather than copying or privately importing its internals.
 

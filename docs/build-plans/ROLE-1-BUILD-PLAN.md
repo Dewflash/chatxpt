@@ -2,7 +2,7 @@
 
 **Owner:** `Dewflash`
 
-**Authority:** Project owner and final integration authority
+**Authority:** Project owner and default integration/deconfliction coordinator; merge authority is shared under D-073
 
 **Primary directories:** `src/core/`, `src/integrations/`, `src/realtime/`
 
@@ -41,7 +41,7 @@ Run this loop throughout every phase:
 4. Review and deconflict shared-contract changes quickly; contributors may implement and push them without waiting for role permission.
 5. Assign newly discovered work with an owner, acceptance signal, priority, and deadline.
 6. Integrate the smallest current vertical slice on `main`; do not wait for every role to finish.
-7. Review cross-role changes, enforce real/mock disclosure, and merge safe work.
+7. Review cross-role changes, enforce real/mock disclosure, and help any qualified contributor land safe work; Role 1 is not the exclusive merger.
 8. Record durable decisions and update project status.
 
 ## Phase 1: Establish parallel-safe foundations

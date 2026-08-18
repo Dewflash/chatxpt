@@ -2,7 +2,7 @@
 
 **Owner:** `L0pch`
 
-Keep this role's statuses and evidence current. Any contributor may update affected rows. Shared-contract or UI work may be implemented immediately in the appropriate module with Role 1 notification, affected tests, and pre-merge deconfliction; use a `cross-role` issue only for durable unresolved coordination.
+Keep this role's statuses and evidence current. Any contributor may update affected rows. Shared-contract or UI work may be implemented immediately in the appropriate module with Role 1 notification, affected tests, and author/reviewer pre-merge deconfliction; Role 1 assists but is not an approval gate. Use a `cross-role` issue only for durable unresolved coordination.
 
 Execute these outcomes through `docs/build-plans/ROLE-3-BUILD-PLAN.md`; its decision gates belong to L0pch unless explicitly marked joint or escalated.
 

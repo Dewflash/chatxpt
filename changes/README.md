@@ -27,4 +27,4 @@ Rules:
 - Describe the outcome, not every file touched.
 - Never include secrets or personal viewer data.
 - Link a cross-role issue when one exists; creating one is optional unless an unresolved durable decision needs tracking.
-- Any contributor may compile `CHANGELOG.md`; check for overlap and coordinate the collision-prone edit with Role 1 before merge.
+- Any contributor may compile `CHANGELOG.md`; check for overlap, deconflict with affected contributors, and notify Role 1 before merge.

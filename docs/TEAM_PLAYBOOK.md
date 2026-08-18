@@ -6,8 +6,9 @@ This is the required operating procedure for all five contributors and their Cha
 
 1. Never work directly on `main`.
 2. Never pull, switch branches, merge, or rebase while uncommitted work exists.
-3. Anyone may edit any role's files, but must preserve module boundaries, disclose cross-role scope, and deconflict overlapping work with Role 1.
+3. Anyone may edit any role's files, but must preserve module boundaries, disclose cross-role scope, deconflict overlapping work with affected contributors, and notify Role 1 for integration visibility.
 4. Never push secrets, `.env.local`, real viewer data, or credentials.
+5. Any contributor with repository merge permission may merge an independently reviewed pull request; Role 1 is not the exclusive merger.
 
 If a command reports a conflict or something unexpected, stop. Do not force-push, reset, delete files, or guess. Ask your role's Codex to explain the exact state and notify Role 1 if shared work is affected.
 
@@ -169,7 +170,7 @@ Codex then follows the guided execution mode in `AGENTS.md`: it finds the first 
 - Use the responsibility lead as an adviser for component details; do not escalate every small choice to Role 1 or wait for role-based permission.
 - Notify affected leads and Role 1 when work crosses roles. Create a `cross-role` GitHub Issue only when a durable comparison or unresolved decision needs tracking.
 - If a shared contract is missing, either use a labelled fixture against the last accepted contract or implement the canonical change with producer/consumer tests and Role 1 deconfliction.
-- Anyone may edit `src/app/`, dependency/lock/config/env files, or Supabase migrations. Because these are collision-prone, sync first, document dependency purpose/version/runtime risk/fallback, and coordinate overlapping edits with Role 1 before merge.
+- Anyone may edit `src/app/`, dependency/lock/config/env files, or Supabase migrations. Because these are collision-prone, sync first, document dependency purpose/version/runtime risk/fallback, deconflict with affected contributors, and notify Role 1. Role 1 approval is not required to merge.
 - Merge and exercise the smallest cross-role vertical slice after each wave; do not postpone integration until every component is complete.
 - Keep mock, simulated, and live behaviour visibly distinguishable.
 - Run the smallest relevant checks while working.
@@ -207,7 +208,7 @@ UI roles also provide screenshots or a short recording. AI/engine roles provide 
 - Add one change fragment under `changes/role-<n>/` using `changes/README.md`.
 - Update relevant technical documentation.
 - Link any cross-role issue or accepted decision.
-- Any contributor may compile `CHANGELOG.md`; check for overlap and coordinate that collision-prone edit with Role 1 before merge.
+- Any contributor may compile `CHANGELOG.md`; check for overlap, deconflict with affected contributors, and notify Role 1 before merge.
 
 ### 3. Review before committing
 
@@ -237,9 +238,9 @@ Use `fix`, `docs`, `test`, or `chore` instead of `feat` when appropriate. Never 
 
 ### 5. Open the pull request
 
-Fill every section of `.github/PULL_REQUEST_TEMPLATE.md`. Link any relevant issue, request the responsibility leads, and notify Role 1. Do not merge your own pull request.
+Fill every section of `.github/PULL_REQUEST_TEMPLATE.md`. Link any relevant issue, request the responsibility leads, and notify Role 1. The author does not self-approve; review may come from any qualified contributor rather than a specific role owner.
 
-Role 1 checks integration, requested review input, automated checks, changelog fragment, evidence, and effect on the golden Twitch flow before merging. If a responsibility lead is unavailable, Role 1 performs or arranges the evidence-backed review so integration does not stall.
+After the required independent review, any contributor with repository merge permission may merge. Confirm automated checks and branch protection, current/deconflicted `main`, the change fragment/evidence, and no unresolved material safety, security, privacy, data-loss, external-cost, or golden-workflow issue. Role 1 is the default integration helper, not a required approver. If a requested responsibility lead is unavailable, use another qualified reviewer so integration does not stall.
 
 ## Resolving conflicts safely
 

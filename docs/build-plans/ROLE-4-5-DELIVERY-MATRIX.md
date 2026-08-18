@@ -87,7 +87,7 @@ Exact Extension view types and asset paths remain Role 1 decision D1-08. OBS cap
 
 ## Required upstream seam requests
 
-These are contract requirements discovered during planning, not accepted schema changes. The responsibility lead contributes comparison context, but implementation may proceed in parallel. Before merge, Role 1 reconciles the outcome with accepted architecture and affected producer/consumer tests.
+These are contract requirements discovered during planning, not accepted schema changes. The responsibility lead contributes comparison context, but implementation may proceed in parallel. Before merge, the author and independent reviewer reconcile the outcome with accepted architecture and affected producer/consumer tests; Role 1 is available for deconfliction but is not an approval gate.
 
 | Request ID | Owner | Required capability | Why existing contract is insufficient | Required by |
 | --- | --- | --- | --- | --- |

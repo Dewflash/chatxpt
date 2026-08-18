@@ -25,13 +25,13 @@ ChatXPT is a Top 10 finalist. `docs/submission/FINALS-2026.md` records the non-s
 
 | Role | Owner | Authority |
 | --- | --- | --- |
-| Role 1 | `Dewflash` | Project owner; integrations, shared contracts, infrastructure, final integration, direction, and role arbitration |
+| Role 1 | `Dewflash` | Project owner; integrations, shared contracts, infrastructure, integration/deconfliction coordination, direction, and role arbitration |
 | Role 2 | `joelyrk` | AI intelligence, gameplay/chat extraction, provider adapters, and model-ready context |
 | Role 3 | `L0pch` | Quest engine, quest-domain AI, lifecycle, safety, scoring, and activation behaviour |
 | Role 4 | `JYL1m` | Streamer Studio, Twitch Live Config, shared visual system, and streamer UX |
 | Role 5 | `drdexe` | Twitch viewer Extension, hosted viewer fallback, viewer overlay visuals, and viewer UX |
 
-Role 1 is the final authority and actively deconflicts, redirects, or assists work under `AGENTS.md`. Under D-071, every contributor may implement in any role area; the table names responsibility leads and review context, not file permissions or push gates.
+Role 1 is the final product-direction authority and actively deconflicts, redirects, or assists work under `AGENTS.md`. Under D-071 and D-073, every contributor may implement in any role area, and any contributor with repository permission may merge independently reviewed work. The table names responsibility leads and review context, not file, push, approval, or merge gates.
 
 ## Immediate coordinated assignment
 

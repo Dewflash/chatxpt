@@ -28,7 +28,7 @@ Role 3 is complete when:
 ## Architecture and evidence boundaries
 
 - Extraction, audience analysis, provider-adapter code, Twitch/OBS integration, persistence, and UI code remain outside `src/quest-engine/`. A Role 3 contributor may implement them in their corresponding modules under the repository-wide open-contribution rule.
-- Canonical contracts remain in `src/core/`. Any contributor may edit them; notify Role 1, add affected producer/consumer tests, and deconflict the change before merge.
+- Canonical contracts remain in `src/core/`. Any contributor may edit them; notify Role 1, add affected producer/consumer tests, and deconflict the change with the author/reviewer before merge. Role 1 approval is not a gate.
 - Do not trust AI output without deterministic validation.
 - Do not infer missing real gameplay facts. Consume Role 2 confidence/unknown values and degrade safely.
 - Return deterministic state/events/allowed actions through the public `QuestEngine` port; do not persist, broadcast, authenticate, or call integration services.
@@ -264,7 +264,7 @@ Role 1 owns vote authentication, acceptance, storage, and deduplication. Role 3 
 
 ## Coordinate with Role 1 when
 
-- A canonical contract changes; implementation may proceed with affected producer/consumer tests, but Role 1 deconflicts it before merge.
+- A canonical contract changes; implementation may proceed with affected producer/consumer tests, and the author plus independent reviewer deconflict it before merge with Role 1 available to assist.
 - A mechanic changes accepted product scope or another module's runtime responsibility; Role 1 settles the durable decision before merge.
 - Safety, privacy, monetary, or wagering risk appears.
 - The provider recommendation introduces cost or a new external service.

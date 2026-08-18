@@ -13,7 +13,7 @@ This is the Role 5 responsibility record. Any contributor may update it after a 
 | Plan | `docs/build-plans/ROLE-5-BUILD-PLAN.md` plus the shared delivery matrix |
 | Current phase | R5-P04 hosted fallback, chat fallback, and overlay integration |
 | Current TODO | R5-004 through R5-006 integration; R5-008 real evidence |
-| Source editing allowed now | Yes across all role directories under D-071; keep viewer presentation and backend authority in their proper modules and deconflict with Role 1 before merge |
+| Source editing allowed now | Yes across all role directories under D-071; keep viewer presentation and backend authority in their proper modules, deconflict affected branches, and notify Role 1 without making it an approval gate |
 | Persistent handoff | [GitHub issue #16](https://github.com/Dewflash/chatxpt/issues/16) |
 | Current implementation branch | Integrated by Role 1 on `role-1/finals-isolated-passes` |
 

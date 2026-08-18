@@ -67,7 +67,9 @@ Each contributor has one coordination home and each role has a responsibility le
 
 Open contribution does not erase the product architecture. Code still belongs in the directory that represents its runtime responsibility, modules still integrate through public seams, and product code still may not import another module's private files. A contributor working across roles must understand the relevant role guide and plan, disclose every cross-role file changed, run the affected producer/consumer tests, and preserve rather than overwrite concurrent work.
 
-The project owner remains the primary authority for overall product direction, priorities, accepted architecture, safety, external cost, and final integration order. Responsibility leads remain the first reviewers and advisers for their areas, but they cannot block implementation, pushing a branch, or opening a pull request merely because another role made the change.
+The project owner remains the primary authority for overall product direction, priorities, accepted architecture, safety, and external cost. Role 1 coordinates integration order when branches overlap, but does not hold an exclusive merge gate. Responsibility leads remain the first reviewers and advisers for their areas, but they cannot block implementation, pushing a branch, opening a pull request, or an independently reviewed merge merely because another role made the change.
+
+Under D-073, any contributor with repository merge permission may merge a pull request after its author obtains the required independent review and the objective merge gates pass. Those gates are required automated checks and branch protection, branch synchronisation/deconfliction, and resolution of material safety, security, privacy, data-loss, external-cost, or golden-workflow risk. Role identity, a missing responsibility-lead response, or Role 1 availability is not a merge blocker.
 
 When work crosses role responsibilities:
 
@@ -83,6 +85,7 @@ Role 1 may inspect, redirect, assist, and modify any role as part of ordinary in
 
 - Notify affected contributors promptly; notification is coordination, not permission.
 - Request the responsibility lead's review when practical, but do not leave another contributor idle while waiting.
+- Provide integration and conflict-resolution help without becoming the mandatory approver or exclusive merger.
 - Never resolve a conflict by discarding another branch's work without explaining the decision and recording the surviving behaviour.
 - A failing check, unresolved semantic conflict, safety/privacy/security issue, or broken golden workflow may delay integration. Role ownership alone may not.
 
@@ -130,7 +133,7 @@ The agent must instead:
 7. After the owner answers, record the decisions in the role execution record and continue through the current bounded pass without asking for repeated permission for ordinary in-scope edits and tests. Never cross into the next phase before the current exit is accepted.
 8. Stop and escalate only for a material product-scope change, safety/privacy/security, external cost/service choice, destructive action, missing credentials, or a genuine blocker that cannot be handled safely. A shared-contract edit is allowed, but it must be coordinated, tested on both sides, and deconflicted with Role 1.
 9. If another role's module is required, notify its responsibility lead and Role 1, then either implement the smallest coherent cross-role slice or keep the UI on the accepted fixture/disabled path. Use a `cross-role` issue when it improves coordination; do not make the novice owner design another module's solution.
-10. At the end, run the required checks, capture UI evidence, update the role TODO/execution record/change fragment, review the diff in plain language, and ask one final question: whether to commit, push, and open the pull request. Never merge the role owner's own pull request.
+10. At the end, run the required checks, capture UI evidence, update the role TODO/execution record/change fragment, review the diff in plain language, and ask one final question: whether to commit, push, and open the pull request. The author does not self-approve; after independent review, any other contributor with merge permission may merge under D-073.
 
 The agent should minimise questions, not owner authority or design thinking. Role 4 still decides its visual and streamer interaction choices; Role 5 still decides its viewer and overlay interaction choices. Codex actively helps the owner consider relevant alternatives instead of merely reading a preset list. When a non-visual pass genuinely creates no owner decision, the agent explains the UX implications it checked and proceeds.
 
@@ -143,7 +146,7 @@ The five contributors work from separate computers and repository clones. GitHub
 - Assign or mention the target owner and mention `@Dewflash` in the issue.
 - The target owner records comparison with their current approach, trade-offs, recommendation, and affected contracts.
 - The project owner may discuss or resolve an issue through the primary Codex task. Role 1 must copy the settled outcome back into the GitHub Issue or `docs/DECISIONS.md` so every computer receives it.
-- Record the outcome as `accepted`, `rejected`, or `deferred`. A missing target-owner response is not an implementation or push blocker; Role 1 resolves any remaining semantic conflict before merge.
+- Record the outcome as `accepted`, `rejected`, or `deferred`. A missing target-owner or Role 1 response is not an implementation, push, or merge blocker. The author and independent reviewer resolve documented overlap and escalate only a material product/safety conflict that cannot be settled from repository authority.
 - If an accepted proposal changes product direction, architecture, provider choice, ownership, or another durable rule, also record it in `docs/DECISIONS.md`.
 
 ### Role 1: Integrations and shared platform
@@ -282,7 +285,7 @@ Role 5 owns viewer-facing OBS overlay visuals inside `src/viewer/`; Role 1 owns 
 - Create new responsibility-specific source inside the corresponding directory, regardless of which contributor implements it.
 - Any contributor may edit, move, rename, or delete files in another role's directory within an agreed task. Review concurrent work first and disclose the scope in the pull request.
 - Role 1 maintains shared domain contracts in `src/core/`; any contributor may change them with affected producer/consumer tests and prompt Role 1 notification.
-- Role 1 maintains thin `src/app/` route/layout/provider files, shared dependency/lock/config/env files, Supabase migrations/RLS, and `tests/integration/`. Any contributor may edit them, but must sync first and involve Role 1 in deconflicting collision-prone changes before merge. Role-specific UI and logic still stay behind public entry points.
+- Role 1 maintains thin `src/app/` route/layout/provider files, shared dependency/lock/config/env files, Supabase migrations/RLS, and `tests/integration/`. Any contributor may edit them, but must sync and deconflict collision-prone changes before merge. Notify Role 1 and use its integration help when overlap exists; Role 1 approval is not a gate. Role-specific UI and logic still stay behind public entry points.
 - A contributor adding a dependency records its purpose, version, runtime/bundle risk, and fallback, then coordinates the shared-file edit with Role 1 so concurrent lockfile changes are reconciled.
 - Role 4 owns design-system implementation/styles under `src/design-system/`; Role 1 owns only the app-level import/wiring and Role 5 consumes the public design-system entry point.
 - Cross-role directory or contract changes may proceed after checking for overlap and notifying the relevant leads; an issue is optional unless a durable unresolved decision needs tracking.
@@ -294,7 +297,7 @@ Role 1 coordinates the initial mechanical migration from the legacy shared `src/
 
 ## Shared contracts
 
-Role 1 maintains the canonical definitions. Any contributor may implement a contract change; breaking changes require prompt affected-role notification, producer and consumer tests, migration notes, and Role 1 deconfliction before merge.
+Role 1 maintains the canonical definitions. Any contributor may implement a contract change; breaking changes require prompt affected-role notification, producer and consumer tests, migration notes, and documented deconfliction before merge. Role 1 assists but is not the required approver.
 
 ```text
 PlatformEvent
@@ -327,14 +330,14 @@ Keep provider payloads, Twitch payloads, component-local UI state, and persisten
 - Start each task from current `main` and use `role-<n>/<short-summary>` branches.
 - Never push directly to `main`; use a pull request for every change.
 - Keep branches short-lived, sync current `main` before review, and integrate the smallest vertical slice after every wave and at least daily.
-- Role 1 controls final integration and merging. Cross-role pull requests request the relevant responsibility leads, but their response is advisory and not a permission gate.
+- Any contributor with repository merge permission may merge an independently reviewed pull request. Role 1 coordinates integration and overlapping landing order by default but is not the mandatory approver or exclusive merger.
 - Maintain `CODEOWNERS` for role directories and require automated checks before merge.
 - Contributors may edit any role's implementation. Preserve the destination module's accepted responsibilities, document significant judgement, and invite its lead to review.
 - Notify relevant leads and Role 1 of substantial cross-role work; use issues for durable coordination, not permission.
 - Use GitHub Issues as the persistent cross-role handoff record. If the owner resolves something through Codex, Role 1 records the result back in the repository or issue.
 - Public-contract changes require affected producer/consumer tests and project-owner awareness before merge; no responsibility lead has a role-based veto over implementation or push.
 - Keep pull requests small and include screenshots or recordings for UI changes.
-- Request one reviewer and request two for shared contracts, safety logic, authentication, or demo-critical integration. If reviewers are unavailable, Role 1 may complete the evidence-backed integration review so the team does not stall.
+- Obtain one independent reviewer and two for shared contracts, safety logic, authentication, or demo-critical integration. The reviewers may be any qualified contributors; responsibility-lead or Role 1 silence is not a personal veto. Actual branch-protection requirements, automated checks, deconfliction, and material-risk gates remain mandatory.
 - State what was actually verified; never upgrade source inspection into runtime proof.
 - Record every runtime run, screenshot, recording, evaluation, or inspection used as project evidence in `docs/evidence/manifest.json`; the evidence class, actual input, immutable source revision, command/interaction, artifact reference, reviewer, and limitations must pass `npm run check:evidence`.
 - Update `docs/DECISIONS.md` when the team settles Twitch scope, Supabase, AI provider/routing, gameplay extraction, identity, or rewards.

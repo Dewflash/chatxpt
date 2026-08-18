@@ -26,14 +26,14 @@ Role 2 is complete when:
 
 ## Architecture and evidence boundaries
 
-- Canonical types remain in `src/core/`. Any contributor may edit them; notify Role 1, add affected producer/consumer tests, and deconflict the change before merge.
+- Canonical types remain in `src/core/`. Any contributor may edit them; notify Role 1, add affected producer/consumer tests, and deconflict the change with the author/reviewer before merge. Role 1 approval is not a gate.
 - Twitch/OBS integration, quest lifecycle, deterministic safety enforcement, voting, rewards, and UI code remain outside `src/ai/` and `src/extraction/`. A Role 2 contributor may implement them in their corresponding modules under the repository-wide open-contribution rule.
 - Do not fabricate live health, kills, combat, phase, or other gameplay state.
 - Raw frames are ephemeral. Raw Twitch chat may be retained for at most 24 hours under D-024.
 - A credential-free algorithmic path remains mandatory. The approved provider may use existing team-owned prepaid or promotional credit only; no contributor must buy quota, and new spend requires a separate owner decision.
 - Test fixtures may be simulated or annotated, but only real-frame/real-chat runs count as live evidence.
 - Expose Role 2 through documented public ports from `src/extraction/` and `src/ai/`; do not import another role's internals.
-- Record shared-dependency purpose/version/runtime risk/fallback and coordinate the package/lockfile edit with Role 1 so concurrent changes are deconflicted before merge.
+- Record shared-dependency purpose/version/runtime risk/fallback, deconflict concurrent package/lockfile edits with affected contributors, and notify Role 1 for integration visibility.
 - Support universal broad visual signals for action games and calibrated HUD facts only for explicitly configured adapters; unsupported facts remain `unknown`.
 
 ## Phase 1: Unblock Roles 4 and 5
@@ -344,7 +344,7 @@ Raw chat is processed in memory by default. If Joelyrk's D2-15 choice requires t
 
 ## Coordinate with Role 1 when
 
-- A canonical contract changes; implementation may proceed with affected producer/consumer tests, but Role 1 deconflicts it before merge.
+- A canonical contract changes; implementation may proceed with affected producer/consumer tests, and the author plus independent reviewer deconflict it before merge with Role 1 available to assist.
 - A paid service or new external account is proposed.
 - Retention/privacy exceeds accepted limits.
 - Role 4/5 feasibility feedback changes product scope.

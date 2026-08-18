@@ -19,7 +19,7 @@ Before starting a pass, read in this order:
 - Role 1 defines required phases, order, outcomes, deadlines, acceptance criteria, and integration boundaries for Roles 1-3.
 - Joelyrk decides the Role 2 component choices named at each Role 2 decision gate.
 - L0pch decides the Role 3 component choices named at each Role 3 decision gate.
-- Any contributor may propose or implement a better sequence or scope, but must record departures from the accepted plan. Role 1 resolves remaining product or integration conflicts before merge.
+- Any contributor may propose or implement a better sequence or scope, but must record departures from the accepted plan. The author and independent reviewer resolve overlap with Role 1 available for integration help; only a material unresolved product or safety decision requires project-owner settlement before merge.
 - Role 2 separately authors the Role 4 and Role 5 plans under D-016. Those plans must use the same phase/pass/decision/evidence structure.
 
 ## Concurrent execution model

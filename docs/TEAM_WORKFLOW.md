@@ -12,7 +12,7 @@ The canonical role definitions and project context are in `AGENTS.md`:
 4. **Streamer Studio UI/UX and customisation** — `JYL1m`
 5. **Viewer Quest Board UI/UX** — `drdexe`
 
-Each contributor has an assigned coordination home, but may inspect, edit, test, or implement in any role directory without prior permission. The project owner is the primary authority for direction, priorities, architecture, safety, cost, and final integration order. Responsibility leads remain advisers and normal reviewers for their components, not edit gatekeepers.
+Each contributor has an assigned coordination home, but may inspect, edit, test, implement, review, or merge across any role directory without prior role permission. The project owner is the primary authority for direction, priorities, architecture, safety, and cost. Role 1 coordinates overlapping integration order by default but is not an exclusive merge gate. Responsibility leads remain advisers and normal reviewers for their components, not edit or merge gatekeepers.
 
 Role 1 may inspect, redirect, assist, and modify any role as ordinary integration work. Notify affected contributors and request the responsibility lead's review whenever practical, but do not wait for role-based permission to implement, push, or open a pull request.
 
@@ -36,9 +36,9 @@ Before broad migration, Role 1 publishes the provisional public contracts/orches
 - Use `role-<n>/<short-summary>` branches and never push directly to `main`.
 - Keep branches under one day when possible.
 - Sync current `main` before requesting review.
-- Submit every change through a pull request; Role 1 controls final integration and merge.
+- Submit every change through a pull request; after independent review, any contributor with repository merge permission may merge it.
 - Request the affected responsibility leads when a pull request touches their modules; a missing response does not block branch work or pushing.
-- Request one reviewer and two for domain contracts or demo-critical changes. If they are unavailable, Role 1 performs or arranges the evidence-backed integration review; automated checks remain required.
+- Obtain one independent reviewer and two for domain contracts or demo-critical changes. Reviewers may be any qualified contributors; unavailable responsibility leads or Role 1 do not create a personal veto. Automated checks and actual branch-protection rules remain required.
 - Before integration, fetch current `main`, identify overlapping branches/pull requests, and deconflict both textual and semantic changes. Role 1 actively assists and decides the safest landing order.
 - Do not force-push a branch another teammate is using without agreement.
 

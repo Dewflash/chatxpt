@@ -21,14 +21,14 @@ Before planning or editing, read:
 1. Confirm `git status --short` is clean. If it is not, protect the current work before pulling or switching.
 2. Fetch and ask Codex to summarise relevant incoming changes.
 3. Update local `main` with `git pull --ff-only`.
-4. Claim or create one issue with a clear acceptance signal.
+4. Claim or update an issue with a clear acceptance signal when durable coordination is useful; an issue is not a permission gate.
 5. Create `role-<n>/<short-summary>` from current `main`.
 6. Match the task to one execution-plan pass and ask Codex for every open decision in that phase in one batch.
-7. Keep implementation inside the assigned role's owned directories.
+7. Put implementation in the directory matching its runtime responsibility; any contributor may work across role directories.
 
 ## Pull requests
 
-- Never push directly to `main` and never merge your own pull request.
+- Never push directly to `main`. After independent review, any contributor with repository merge permission may merge the pull request; Role 1 is not the exclusive merger.
 - Explain the user-visible outcome and risk.
 - Include screenshots or a short capture for UI changes.
 - Include evaluation/test evidence for AI or quest-engine changes.
@@ -36,8 +36,8 @@ Before planning or editing, read:
 - State what is real, mocked, simulated, fallback, or not implemented.
 - Update your role TODO and add a fragment under `changes/role-<n>/`.
 - Keep secrets and real viewer data out of code, fixtures, screenshots, and logs.
-- Require the affected owner for cross-role files and Role 1 for integration.
-- Use two reviewers for shared types, authentication, safety, or demo-critical behaviour.
+- Request affected responsibility-lead context for cross-role files and notify Role 1 for integration support; neither is a personal approval gate.
+- Obtain two independent reviewers for shared types, authentication, safety, or demo-critical behaviour.
 
 ## Definition of done
 
