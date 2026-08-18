@@ -4,7 +4,7 @@
 
 **Responsibility leads:** Role 2 for intelligence, Role 3 for intervention and quest mechanics, Role 4 for streamer UX, and Role 5 for viewer/overlay UX
 
-**Status:** Drafted at the project owner's request; evidence-gated and not yet active implementation authority
+**Status:** Secondary research complete; project-owner keep/defer/reject decision pending; not active implementation authority
 
 **Authority:** D-007, D-008, D-012, D-024, D-030, D-041, D-052, D-067, D-068, D-071, D-073, and D-074
 
@@ -12,9 +12,11 @@
 
 This plan records how the proposed Live Director expansion would be implemented if its value survives the secondary-research gate. It does not by itself authorise source implementation.
 
+`docs/research/LIVE-DIRECTOR-SECONDARY-RESEARCH.md` completes `LD-V01` through `LD-V06` and `LD-V08`, and supplies owner-ready recommendations for `LD-V07` and `LD-V09`. The evidence supports a narrow audience-to-sidequest orchestration wedge rather than a generic AI stream director. Project-owner acceptance and the resulting scope rewrite remain outstanding.
+
 Before `LD-P01` begins:
 
-1. `LD-V01` through `LD-V09` in `docs/research/PRODUCT-VALIDATION.md` must produce the problem, capability, playbook, source-truth, and feature-value evidence.
+1. `LD-V01` through `LD-V09` in `docs/research/PRODUCT-VALIDATION.md` must produce the problem, capability, playbook, source-truth, and feature-value evidence. **Research complete; LD-V07/LD-V09 recommendations await acceptance.**
 2. Every proposed addition must receive a project-owner `keep`, `defer`, or `reject` decision.
 3. The retained scope, value claims, privacy boundary, and evaluation measures must be copied into this plan.
 4. The affected role queues and coordination board must be updated against current `main`.
@@ -238,7 +240,7 @@ Each activated pass uses a short-lived branch and one reviewable pull request wh
 
 ## Value and evaluation matrix
 
-Targets remain `TBD` until `LD-P00`; the plan records what must be measurable, not invented success numbers.
+The research report proposes explicit initial falsification gates. They remain proposed until `LD-P00` copies the project-owner-accepted numbers and scope into this plan; the table below records the dimensions that must remain measurable.
 
 | Value claim | Quantifiable measure | Qualitative evidence | Baseline/comparison | Guardrail or rejection signal |
 | --- | --- | --- | --- | --- |
@@ -273,4 +275,4 @@ Narrow or reject the expansion if any of the following remains true after `LD-P0
 
 ## Current reality
 
-This document is planning evidence only. No Live Director contract, Chat Pointer, Catch-up Card, Director Cue, Session Brief expansion, or private cue channel is claimed implemented by this plan. The current product retains its existing exactly-three quest, viewer participation, and OBS quest-state surfaces while the research gate remains open.
+This document is planning evidence only. No Live Director contract, Chat Pointer, Catch-up Card, Director Cue, Session Brief expansion, or private cue channel is claimed implemented by this plan. The secondary-research pass is complete, but the owner acceptance gate remains open. The current product retains its existing exactly-three quest, viewer participation, and OBS quest-state surfaces until retained scope is accepted and copied into `LD-P00`.

@@ -4,7 +4,7 @@
 
 This file records evidence for problem-solution fit, originality, expected impact, and trade-offs. It must distinguish observations from team hypotheses and must not contain unnecessary personal information.
 
-**Current discovery status:** D-074 settles the three-surface responsibility rule, and `docs/build-plans/LIVE-DIRECTOR-IMPLEMENTATION-PLAN.md` records the requested isolated-pass implementation sequence. The proposed feature scope and value claims remain evidence-gated: the plan is not active implementation authority or proof that the named pain points are prevalent. Role implementation queues must not treat the additions as committed scope until the secondary-research gate and project-owner keep/defer/reject review are complete.
+**Current discovery status:** D-074 settles the three-surface responsibility rule, and `docs/build-plans/LIVE-DIRECTOR-IMPLEMENTATION-PLAN.md` records the requested isolated-pass implementation sequence. `docs/research/LIVE-DIRECTOR-SECONDARY-RESEARCH.md` now completes the secondary-research pain, playbook, current-tool, source-truth, differentiation, evaluation, and feature-scope pass. Its keep/defer/reject package is a recommendation awaiting project-owner acceptance, so the implementation plan remains inactive and role queues must not treat the additions as committed scope.
 
 ## Current validation method
 
@@ -90,15 +90,15 @@ The current discovery recommendation is to validate Live Config/OBS Dock plus an
 
 | ID | Status | To-do | Completion evidence |
 | --- | --- | --- | --- |
-| LD-V01 | READY | Validate the divided-attention and engagement-production problem for under-resourced small/medium Twitch game streamers using secondary research. | Multiple credible sources, segment definitions, limitations, counterevidence, and an evidence-strength assessment. |
-| LD-V02 | READY | Validate whether newcomers and viewers of low-narration streams experience a meaningful game-state/context gap. | Research-backed viewer problem statement; distinguish game comprehension, stream goal, recent event, and active interaction needs. |
-| LD-V03 | READY | Validate whether repeated chat suggestions, missed requests, and deciding what to acknowledge are sufficiently common and costly to justify the Director Cue. | Evidence for prevalence and workflow cost; current Twitch/mod/bot workarounds and remaining gap. |
-| LD-V04 | READY | Audit current Twitch and third-party capabilities for catch-up context, chat summarisation, streamer-private cues, interventions, and annotated post-stream analytics. | Truthful capability/differentiation matrix with current sources and no unsupported competitor claims. |
-| LD-V05 | READY | Test the product thesis against sparse-chat, rising-community, and busy-small-team operating modes plus different gameplay-attention patterns. | Playbook matrix states when ChatXPT should explain, cue, wait, or offer a sidequest and when it should remain silent. |
-| LD-V06 | READY | Determine what game/context facts the current game-neutral and calibrated extraction tiers can support without fabricating intent. | Required facts mapped to declared, observed, derived, unavailable, and future-only sources. |
-| LD-V07 | READY | Decide the private streamer cue channel after comparing second-screen Live Config, OBS Dock, private audio/hotkeys, and an always-on-top companion. | Project-owner go/no-go with platform, accessibility, capture-recursion, anti-cheat, and implementation-risk notes. |
-| LD-V08 | READY | Define the minimum intervention-specific Session Brief and the exact moments it appears. | Post-stream and next-stream information hierarchy that does not duplicate Twitch Analytics or overstate causality. |
-| LD-V09 | READY | Produce a keep/defer/reject scope recommendation for every proposed streamer and viewer addition. | Evidence-to-feature traceability and an explicit judgement of whether the expansion remains one coherent Live Director product. |
+| LD-V01 | DONE | Validate the divided-attention and engagement-production problem for under-resourced small/medium Twitch game streamers using secondary research. | `LIVE-DIRECTOR-SECONDARY-RESEARCH.md` narrows the evidenced problem to live attention and interaction-orchestration cost, defines operating modes instead of unsupported follower bands, and records counterevidence. |
+| LD-V02 | DONE | Validate whether newcomers and viewers of low-narration streams experience a meaningful game-state/context gap. | The CatchLive and viewer-motivation evidence supports only a bounded Catch-up experiment; mixed game-understanding results prevent a P0 or retention claim. |
+| LD-V03 | DONE | Validate whether repeated chat suggestions, missed requests, and deciding what to acknowledge are sufficiently common and costly to justify the Director Cue. | Audience-management studies document missed chat, interruption, and moderator workarounds; Twitch's existing chat surface limits Chat Pointer to expiring cue evidence rather than a chat product. |
+| LD-V04 | DONE | Audit current Twitch and third-party capabilities for catch-up context, chat summarisation, streamer-private cues, interventions, and annotated post-stream analytics. | The report audits current Twitch, Streamlabs, StreamElements, Crowd Control, Tangia, and OBS capabilities and rejects broad occupied categories. |
+| LD-V05 | DONE | Test the product thesis against sparse-chat, rising-community, and busy-small-team operating modes plus different gameplay-attention patterns. | The report's operating-mode and live-phase playbook states when ChatXPT stays silent, waits, cues, opens a sidequest, or closes the loop. |
+| LD-V06 | DONE | Determine what game/context facts the current game-neutral and calibrated extraction tiers can support without fabricating intent. | The source-truth matrix separates declared, observed, derived, authoritative, unavailable, and future-only facts with explicit `unknown` handling. |
+| LD-V07 | OWNER DECISION READY | Decide the private streamer cue channel after comparing second-screen Live Config, OBS Dock, private audio/hotkeys, and an always-on-top companion. | The report recommends Live Config pop-out/OBS Dock for P0, defers audio/hotkeys, and rejects a native always-on-top companion from the MVP; owner acceptance is pending. |
+| LD-V08 | DONE | Define the minimum intervention-specific Session Brief and the exact moments it appears. | The report limits the brief to a P1 experiment covering one authoritative intervention, source class, action, participation, outcome, reliability, and limitations without generic metrics or causality. |
+| LD-V09 | OWNER DECISION READY | Produce a keep/defer/reject scope recommendation for every proposed streamer and viewer addition. | The report traces every proposed and adjacent feature to evidence, competitor overlap, a scope recommendation, and a kill condition; owner acceptance is pending. |
 | LD-V10 | DONE | Record the requested evidence-gated isolated cross-role implementation plan without activating source work. | `docs/build-plans/LIVE-DIRECTOR-IMPLEMENTATION-PLAN.md` records the surface boundary, candidate contract spine, pass order, dependencies, evaluation matrix, and kill criteria. |
 | LD-V11 | WAITING | Activate only the retained implementation passes after LD-V01 through LD-V09 and project-owner scope acceptance. | Accepted keep/defer/reject scope is copied into the plan, affected role queues and coordination rows are updated, and rejected features are removed before source work begins. |
 
@@ -121,11 +121,11 @@ Use a working flow or concise concept explanation. Do not lead the participant t
 
 | Evidence ID | Date | Participant class | Observed problem/workaround | Reaction to workflow | Concern/trade-off | Product implication | Observation or hypothesis |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| — | — | — | No participant evidence recorded yet. | — | — | — | Unverified hypothesis only. |
+| LD-SR-001 | 2026-08-18 | Secondary research; no primary participant | Divided attention and audience-management cost are documented, but generic low engagement and retention lift are not. Twitch and third-party products already cover most broad feature categories. | Not applicable; no primary reaction collected. | Research is old or bounded in places; vendor metrics are not independent; willingness to install and sustained use remain unknown. | Target the bursty/rising operating mode and the closed-loop sidequest orchestration wedge; make Catch-up and Session Brief P1 experiments; reject broad AI-cohost, coaching, chat, analytics, and native-HUD scope. | Evidence synthesis and bounded team recommendation; see `LIVE-DIRECTOR-SECONDARY-RESEARCH.md`. |
 
 ## Alternatives and differentiation
 
-This is a claim framework, not a completed market study. Verify concrete competitor capabilities before naming a product in the deck.
+The completed current capability audit and its source limitations are in `docs/research/LIVE-DIRECTOR-SECONDARY-RESEARCH.md`. The table below remains the durable comparison framework; deck claims must use the audited wording and dates rather than broad category claims.
 
 | Existing approach | Useful today | Typical gap ChatXPT tests | Evidence required |
 | --- | --- | --- | --- |
