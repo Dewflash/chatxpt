@@ -37,6 +37,17 @@ export class CanonicalViewProjector implements ViewModelProjector {
       connected &&
       input.capabilities.reactions &&
       input.participationMode !== "unavailable";
+    const streamerLiveDirector =
+      input.liveDirector === undefined ? {} : { liveDirector: input.liveDirector };
+    const viewerLiveDirector =
+      input.liveDirector === undefined
+        ? {}
+        : {
+            liveDirector:
+              input.liveDirector === null
+                ? null
+                : { publicContext: input.liveDirector.publicContext },
+          };
 
     return {
       streamer: streamerViewModelSchema.parse({
@@ -48,6 +59,7 @@ export class CanonicalViewProjector implements ViewModelProjector {
         audience: input.audience,
         questCycle: input.questCycle,
         emergencyPaused: input.emergencyPaused,
+        ...streamerLiveDirector,
       }),
       viewer: viewerViewModelSchema.parse({
         envelope: input.envelope,
@@ -62,6 +74,7 @@ export class CanonicalViewProjector implements ViewModelProjector {
         acceptedCandidateId: input.acceptedCandidateId,
         questCycle: input.questCycle,
         connection: input.connection,
+        ...viewerLiveDirector,
       }),
       overlay: overlayViewModelSchema.parse({
         envelope: input.envelope,

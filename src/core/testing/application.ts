@@ -247,6 +247,7 @@ export class CanonicalFixtureViewProjector implements ViewModelProjector {
         audience: input.audience,
         questCycle: input.questCycle,
         emergencyPaused: input.emergencyPaused,
+        ...(input.liveDirector === undefined ? {} : { liveDirector: input.liveDirector }),
       }),
       viewer: viewerViewModelSchema.parse({
         envelope: input.envelope,
@@ -261,6 +262,14 @@ export class CanonicalFixtureViewProjector implements ViewModelProjector {
         acceptedCandidateId: input.acceptedCandidateId,
         questCycle: input.questCycle,
         connection: input.connection,
+        ...(input.liveDirector === undefined
+          ? {}
+          : {
+              liveDirector:
+                input.liveDirector === null
+                  ? null
+                  : { publicContext: input.liveDirector.publicContext },
+            }),
       }),
       overlay: overlayViewModelSchema.parse({
         envelope: input.envelope,

@@ -6,9 +6,12 @@ import {
   candidateBatchSchema,
   commandEnvelopeSchema,
   contractEnvelopeSchema,
+  directorCueSchema,
   gameplayCapabilitiesSchema,
   gameplaySnapshotSchema,
   intelligenceSnapshotSchema,
+  liveDirectorInterventionRecordSchema,
+  liveDirectorStateSchema,
   overlayViewModelSchema,
   questCycleStateSchema,
   sessionHistorySnapshotSchema,
@@ -18,6 +21,8 @@ import {
   streamerServiceCommandSchema,
   streamerSetupServiceSchema,
   streamerProfileSettingsCommandSchema,
+  streamerLiveDirectorCueCommandSchema,
+  streamerLiveDirectorIntentCommandSchema,
   streamerProfileSchema,
   streamerViewModelSchema,
   viewerViewModelSchema,
@@ -27,6 +32,9 @@ import {
   contractFixtureCandidateBatch,
   contractFixtureEnvelope,
   contractFixtureGameplaySnapshot,
+  contractFixtureLiveDirectorIntervention,
+  contractFixtureLiveDirectorState,
+  contractFixtureLiveDirectorStateCatalog,
   contractFixtureAudienceSnapshot,
   contractFixtureOverlayView,
   contractFixtureProfile,
@@ -128,6 +136,71 @@ describe("signal and capability truthfulness", () => {
     expect(
       gameplayCapabilitiesSchema.safeParse(invalidCalibratedCapabilitiesWithoutAdapter).success,
     ).toBe(false);
+  });
+});
+
+describe("Live Director contract and privacy spine", () => {
+  it("publishes known, unknown, stale, conflicting, and privacy-denied fixtures", () => {
+    expect(Object.keys(contractFixtureLiveDirectorStateCatalog)).toEqual([
+      "live-director.known.v1",
+      "live-director.unknown.v1",
+      "live-director.stale.v1",
+      "live-director.conflicting.v1",
+      "live-director.privacy-denied.v1",
+    ]);
+    for (const state of Object.values(contractFixtureLiveDirectorStateCatalog)) {
+      expect(liveDirectorStateSchema.safeParse(state).success).toBe(true);
+      expect(state.privacy).toEqual({
+        rawChatRetained: false,
+        usernamesIncluded: false,
+        viewerIdentifiersIncluded: false,
+        providerPayloadIncluded: false,
+      });
+    }
+  });
+
+  it("keeps source classes separate and rejects mismatched cue/context authority", () => {
+    expect(contractFixtureLiveDirectorState.liveContext?.facts.map((fact) => fact.sourceClass)).toEqual(
+      expect.arrayContaining(["streamer-declared", "gameplay-observed", "audience-derived"]),
+    );
+    expect(
+      liveDirectorStateSchema.safeParse({
+        ...structuredClone(contractFixtureLiveDirectorState),
+        cue: {
+          ...structuredClone(contractFixtureLiveDirectorState.cue!),
+          contextId: "different-context",
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      liveDirectorStateSchema.safeParse({
+        ...structuredClone(contractFixtureLiveDirectorState),
+        rawChat: ["private fixture text"],
+      }).success,
+    ).toBe(false);
+    expect(
+      directorCueSchema.safeParse({
+        ...structuredClone(contractFixtureLiveDirectorState.cue!),
+        state: "expired",
+        availableActions: [],
+        updatedAt: contractFixtureLiveDirectorState.cue!.expiresAt - 1,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("represents a privacy-safe, explicitly non-causal intervention record", () => {
+    expect(
+      liveDirectorInterventionRecordSchema.safeParse(contractFixtureLiveDirectorIntervention).success,
+    ).toBe(true);
+    expect(contractFixtureLiveDirectorIntervention.privacy).toEqual({
+      rawChatIncluded: false,
+      usernamesIncluded: false,
+      viewerIdentifiersIncluded: false,
+      privateVoteReceiptsIncluded: false,
+      providerPayloadIncluded: false,
+    });
+    expect(contractFixtureLiveDirectorIntervention).not.toHaveProperty("viewerId");
+    expect(contractFixtureLiveDirectorIntervention).not.toHaveProperty("rawChat");
   });
 });
 
@@ -374,6 +447,89 @@ describe("identity and command permissions", () => {
     ).toBe(false);
   });
 
+  it("authorises Live Director intent and cue command classes without client lifecycle authority", () => {
+    const base = {
+      contractVersion: CONTRACT_VERSION,
+      sessionId: "fixture-session",
+      questCycleId: "fixture-cycle",
+      commandId: "fixture-live-director-command",
+      correlationId: "fixture-live-director-correlation",
+      expectedRevision: 4,
+      issuedAt: 10,
+    };
+    const intent = {
+      ...base,
+      questCycleId: null,
+      type: "streamer.live-director-intent",
+      action: "set",
+      intent: {
+        goal: "Reach the next shelter",
+        objective: "Explore carefully while chat chooses the route.",
+        desiredAudienceInvolvement: "Vote on the route.",
+        requestedExpiresAt: 1_000,
+      },
+    };
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...intent,
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+      }).success,
+    ).toBe(true);
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...intent,
+        actor: { kind: "moderator", actorId: "fixture-moderator" },
+      }).success,
+    ).toBe(false);
+    expect(
+      streamerLiveDirectorIntentCommandSchema.safeParse({
+        ...intent,
+        action: "clear",
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+      }).success,
+    ).toBe(false);
+
+    const cueAction = {
+      ...base,
+      type: "streamer.live-director-cue",
+      actor: { kind: "moderator", actorId: "fixture-moderator" },
+      cueId: "fixture-director-cue",
+      action: "later",
+    };
+    expect(commandEnvelopeSchema.safeParse(cueAction).success).toBe(true);
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...cueAction,
+        actor: { kind: "viewer", actorId: "fixture-viewer" },
+      }).success,
+    ).toBe(false);
+    expect(
+      streamerLiveDirectorCueCommandSchema.safeParse({
+        ...cueAction,
+        outcome: "voting",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...base,
+        type: "system.live-director-context-ready",
+        actor: { kind: "system", actorId: "fixture-orchestrator" },
+        liveContextId: "fixture-live-context",
+        audiencePointerId: "fixture-pointer",
+      }).success,
+    ).toBe(true);
+    expect(
+      commandEnvelopeSchema.safeParse({
+        ...base,
+        type: "system.live-director-cue-ready",
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+        cueId: "fixture-director-cue",
+        liveContextId: "fixture-live-context",
+      }).success,
+    ).toBe(false);
+  });
+
   it("accepts broadcaster-only setup/session commands and rejects invalid service action pairs", () => {
     const base = {
       contractVersion: CONTRACT_VERSION,
@@ -589,6 +745,32 @@ describe("role view-model boundaries", () => {
           ...contractFixtureViewerView.capabilities,
           twitchExtension: true,
         },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("structurally excludes private Live Director state from viewer and OBS projections", () => {
+    expect(contractFixtureStreamerView.liveDirector?.cue?.reason).toContain("Chat is asking");
+    expect(contractFixtureViewerView.liveDirector).toEqual({
+      publicContext: contractFixtureLiveDirectorState.publicContext,
+    });
+    expect(contractFixtureViewerView.liveDirector).not.toHaveProperty("cue");
+    expect(contractFixtureViewerView.liveDirector).not.toHaveProperty("audiencePointer");
+    expect(contractFixtureOverlayView).not.toHaveProperty("liveDirector");
+
+    expect(
+      viewerViewModelSchema.safeParse({
+        ...structuredClone(contractFixtureViewerView),
+        liveDirector: {
+          publicContext: contractFixtureLiveDirectorState.publicContext,
+          cue: contractFixtureLiveDirectorState.cue,
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      overlayViewModelSchema.safeParse({
+        ...structuredClone(contractFixtureOverlayView),
+        liveDirector: contractFixtureLiveDirectorState,
       }).success,
     ).toBe(false);
   });

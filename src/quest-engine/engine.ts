@@ -770,6 +770,18 @@ export class DefaultQuestEngine implements QuestEngine {
         return error("unavailable-capability", "Emergency clear is handled by the Role 1 latch");
       case "streamer.profile-settings":
         return error("unavailable-capability", "Profile settings are handled by the Role 1 state seam");
+      case "streamer.live-director-intent":
+      case "system.live-director-context-ready":
+      case "system.live-director-cue-ready":
+        return error(
+          "unavailable-capability",
+          "Live Director authority is handled by the Role 1 state seam",
+        );
+      case "streamer.live-director-cue":
+        return error(
+          "unavailable-capability",
+          "Director Cue actions require the Role 3 cue lifecycle",
+        );
     }
   }
 }
