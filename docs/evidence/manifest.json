@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-08-18",
+  "updatedAt": "2026-08-19",
   "resources": [
     {
       "id": "twitch-broadcaster",
@@ -528,6 +528,58 @@
       "limitations": [
         "This run did not use Twitch-issued identity, real EventSub delivery, Twitch Local or Hosted Test, Supabase Cloud, OBS Browser Source, camera permission, Vercel, or a public origin.",
         "Memory mode proves one-process composition only; external multi-client durability and realtime behaviour remain unverified."
+      ]
+    },
+    {
+      "id": "E-20260819-R1-001",
+      "capturedAt": "2026-08-19T13:34:15+08:00",
+      "owner": { "role": "role-1", "github": "Dewflash" },
+      "reviewer": { "role": "role-1", "github": "Dewflash" },
+      "evidenceClass": "fixture-only",
+      "result": "passed",
+      "claim": "Canonical fixture tests prove one revision across Live Director role projections, private cue isolation, approved public viewer context, no OBS private state, and fail-closed duplicate/stale cue commands.",
+      "resourceIds": [],
+      "surfaces": [
+        {
+          "name": "Core Live Director projection boundary",
+          "deviceClass": "server",
+          "viewport": null
+        }
+      ],
+      "source": {
+        "gitCommit": "49383cc",
+        "branch": "role-1/live-director-01-contracts",
+        "prNumber": null
+      },
+      "authoritativeState": {
+        "sessionRef": "fixture-session",
+        "questCycleRef": "fixture-cycle",
+        "revision": 1
+      },
+      "inputs": [
+        {
+          "kind": "fixture",
+          "description": "Canonical known, unknown, stale, conflicting, and privacy-denied Live Director fixtures plus fixture broadcaster, moderator, system, viewer, session, and quest-cycle identities."
+        }
+      ],
+      "commands": [
+        "npm.cmd run test:contracts",
+        "npm.cmd run test:orchestrator",
+        "npm.cmd run test:integration -- --run tests/integration/role-entrypoints.test.ts tests/integration/orchestrator.test.ts",
+        "npm.cmd run check"
+      ],
+      "artifacts": [
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-19-live-director-contract-fixture-only.txt",
+          "mediaType": "text/plain",
+          "privacyReviewed": true,
+          "sha256": "f36dea115165ac1d0344b5ec3685a5564afd7f87b7ce29fdc830394e170e2f4e"
+        }
+      ],
+      "limitations": [
+        "This is deterministic fixture evidence only; it does not prove real Twitch, OBS, Supabase Cloud, Vercel, provider, or multi-device execution.",
+        "Cue suitability and lifecycle mechanics remain Role 3 follow-up, and no direct solution-fit or engagement effect is claimed."
       ]
     }
   ]
