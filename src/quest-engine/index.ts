@@ -5,6 +5,19 @@ export {
   DefaultQuestEngine,
 } from "./engine";
 export {
+  DefaultDirectorCueLifecycle,
+  DIRECTOR_CUE_POSTPONE_MILLISECONDS,
+} from "./director-cue";
+export type {
+  ApplyDirectorCueActionInput,
+  DirectorCueAuthority,
+  DirectorCueDecision,
+  DirectorCueResult,
+  OfferDirectorCueInput,
+  ReconcileDirectorCueInput,
+  ResurfaceDirectorCueInput,
+} from "./director-cue";
+export {
   checkRecentQuestRepetition,
   decideActiveQuestInterruption,
   defaultCooldownEndsAt,
