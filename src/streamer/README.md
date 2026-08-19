@@ -33,3 +33,9 @@ The modules emit only canonical commands created by the exported Role 4 command 
 All health and generation labels are provider-neutral. No API key, raw model/provider selector, viewer-personality profile, or viewer account requirement is exposed.
 
 Owner decision D-061 permits future automatic learning only for soft streamer preferences, with visible learned provenance, explanation, and reset. The current public view/command contracts do not expose that provenance or reset authority, so these modules do not infer or store learned values. Identity, selected game, safety, accessibility, and forbidden quest types remain explicit streamer-owned settings.
+
+## Session history and post-stream summary
+
+`StudioManagementSurface` optionally accepts the canonical `SessionHistorySnapshot` from UI-X04. Studio presents aggregate terminal-sidequest totals first, then recent outcomes as responsive cards with outcome, evidence class, timing, accepted votes, and non-monetary rewards. Empty, unavailable, diagnostic, and fixture states remain explicit. The UI does not derive authoritative history from the current view and never receives raw chat, viewer identifiers, or private vote receipts.
+
+The authenticated Studio server reads up to 25 entries through the configured Role 1 `SessionHistoryReader`. A history-read failure degrades only this optional P1 section; saved defaults and live controls continue using the current authoritative session.

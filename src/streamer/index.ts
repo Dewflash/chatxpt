@@ -7,11 +7,13 @@ export type {
   StudioSetupStep,
 } from "./studio-setup-shell";
 export {
+  sessionHistorySnapshotSchema,
   streamerQuestCommandSchema,
   streamerProfileSchema,
   streamerViewModelSchema,
 } from "../core";
 export type {
+  SessionHistorySnapshot,
   StreamerProfile,
   StreamerQuestCommand,
   StreamerViewModel,
