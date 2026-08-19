@@ -274,6 +274,8 @@ D-075 activates the research-bounded Live Director scope and assigns Role 3 five
 | `LD-R3-04` / R3-012 | Context invalidation, emergency, cooldown, reconnect, and history rules remain deterministic | No scheduler, persistence, UI authority, or automatic-completion expansion |
 | `LD-R3-05` / R3-013 | Failure-oriented evaluation, fixtures, public seam examples, and limitations reach Role 1 | Role 1 separately proves real Twitch/OBS/provider/runtime behaviour |
 
+**LD-R3-03 implementation record (2026-08-19):** `DefaultDirectorCueConverter` accepts only the current canonical `converted` cue, treats absent provider/algorithmic candidates as untrusted empty input, and reuses `DefaultCandidateAssembler` plus `DefaultQuestEngine` without relaxing validation or creating another lifecycle. The only successful output is a private canonical `proposed` cycle with exactly three options and streamer approve/reject actions; invalid cue/context, fallback exhaustion, and proposal rejection return typed `no-publication`. The coordinator emits cue/context-linked audit metadata but does not generate candidates, publish to viewers, start voting, persist, authenticate, schedule, or broadcast.
+
 ### Phase 7 acceptance
 
 - Hard lifecycle, emergency, safety, support, freshness, confidence, and `unknown` gates remain stronger than cue-scoring or profile intensity.

@@ -17,6 +17,12 @@ export type {
   ReconcileDirectorCueInput,
   ResurfaceDirectorCueInput,
 } from "./director-cue";
+export { DefaultDirectorCueConverter } from "./director-cue-conversion";
+export type {
+  DirectorCueConversionFailureCode,
+  DirectorCueConversionInput,
+  DirectorCueConversionResult,
+} from "./director-cue-conversion";
 export {
   checkRecentQuestRepetition,
   decideActiveQuestInterruption,
