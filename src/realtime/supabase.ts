@@ -61,6 +61,7 @@ import {
 } from "./types";
 import { sanitizeRoleViewsForBroadcast } from "./sanitization";
 import { buildSessionHistoryFromReceipts } from "./session-history";
+import { EphemeralAudiencePointerAggregateRepository } from "./live-director-context";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -934,6 +935,7 @@ export function createSupabasePersistenceRuntime(
     hostedBoardSessions,
     twitchChannelSessions,
     candidates: new SupabaseCandidateBatchRepository(api),
+    audiencePointers: new EphemeralAudiencePointerAggregateRepository(),
     acceptedVotes,
     gameplaySnapshots,
     snapshots,

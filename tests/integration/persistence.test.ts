@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   ChatXptOrchestrator,
+  audiencePointerAggregateSchema,
   commandFingerprint,
+  streamerLiveDirectorIntentCommandSchema,
   streamerQuestCommandSchema,
+  systemLiveDirectorContextCommandSchema,
   viewerVoteCommandSchema,
   type AcceptedCommandReceipt,
   type AuthoritativeSessionState,
@@ -18,6 +21,7 @@ import {
   ScriptedFixtureQuestEngine,
   SequenceFixtureMessageIds,
   contractFixtureCandidateBatch,
+  contractFixtureAudiencePointerAggregate,
   contractFixtureGameplaySnapshot,
   contractFixtureQuestCycle,
   contractFixtureSession,
@@ -69,7 +73,12 @@ function voteCommand(
 
 function logicDependencies(): Omit<
   OrchestratorDependencies,
-  "repository" | "candidateBatches" | "acceptedVotes" | "gameplaySnapshots" | "publisher"
+  | "repository"
+  | "candidateBatches"
+  | "audiencePointers"
+  | "acceptedVotes"
+  | "gameplaySnapshots"
+  | "publisher"
 > {
   return {
     authorizer: new FixtureOnlyAllowAuthorizer(),
@@ -308,6 +317,96 @@ describe("production-shaped memory persistence integration", () => {
       ),
     };
     await expect(runtime.candidates.store(reused)).rejects.toThrow("Candidate batch ID was reused");
+  });
+
+  it("stages audience pointer deduplication inputs outside authoritative product history", async () => {
+    const runtime = await preparedRuntime();
+    await runtime.audiencePointers.store(contractFixtureAudiencePointerAggregate);
+    await runtime.audiencePointers.store(structuredClone(contractFixtureAudiencePointerAggregate));
+
+    await expect(
+      runtime.audiencePointers.read(
+        contractFixtureAudiencePointerAggregate.pointerId,
+        contractFixtureSession.sessionId,
+      ),
+    ).resolves.toEqual(contractFixtureAudiencePointerAggregate);
+    await expect(
+      runtime.audiencePointers.read(
+        contractFixtureAudiencePointerAggregate.pointerId,
+        "different-session",
+      ),
+    ).resolves.toBeNull();
+    expect(JSON.stringify(await runtime.sessions.load(contractFixtureSession.sessionId))).not.toContain(
+      "participantKey",
+    );
+
+    const reused = {
+      ...structuredClone(contractFixtureAudiencePointerAggregate),
+      topic: "Different aggregate with a reused ID",
+    };
+    await expect(runtime.audiencePointers.store(reused)).rejects.toThrow(
+      "Audience pointer aggregate ID was reused",
+    );
+  });
+
+  it("persists only the composed Live Director aggregate across reconnect", async () => {
+    const runtime = await preparedRuntime();
+    const aggregate = audiencePointerAggregateSchema.parse({
+      ...structuredClone(contractFixtureAudiencePointerAggregate),
+      envelope: {
+        ...structuredClone(contractFixtureAudiencePointerAggregate.envelope),
+        revision: 1,
+      },
+    });
+    await runtime.audiencePointers.store(aggregate);
+    const orchestrator = new ChatXptOrchestrator(
+      bindPersistenceRuntime(logicDependencies(), runtime),
+    );
+    const intent = streamerLiveDirectorIntentCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: null,
+      commandId: "memory-live-director-intent",
+      correlationId: "memory-live-director-intent-correlation",
+      expectedRevision: 0,
+      issuedAt: FIXTURE_NOW,
+      actor: { kind: "broadcaster", actorId: contractFixtureSession.broadcasterId },
+      type: "streamer.live-director-intent",
+      action: "set",
+      intent: {
+        goal: "Reach shelter safely",
+        objective: "Invite chat to choose the next safe route.",
+        desiredAudienceInvolvement: "Vote on the route.",
+        requestedExpiresAt: FIXTURE_NOW + 60_000,
+      },
+    });
+    const context = systemLiveDirectorContextCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: contractFixtureQuestCycle.envelope.questCycleId,
+      commandId: "memory-live-director-context",
+      correlationId: "memory-live-director-context-correlation",
+      expectedRevision: 1,
+      issuedAt: FIXTURE_NOW,
+      actor: { kind: "system", actorId: "fixture-orchestrator" },
+      type: "system.live-director-context-ready",
+      liveContextId: "memory-live-context",
+      audiencePointerId: aggregate.pointerId,
+    });
+
+    expect((await orchestrator.execute(intent)).ok).toBe(true);
+    expect((await orchestrator.execute(context)).ok).toBe(true);
+    const recovered = await runtime.sessions.load(contractFixtureSession.sessionId);
+    expect(recovered?.liveDirector?.audiencePointer).toMatchObject({
+      status: "known",
+      uniqueParticipants: 3,
+      qualifyingMessages: 5,
+    });
+    expect(recovered?.liveDirector?.liveContext?.contextId).toBe("memory-live-context");
+    const persisted = JSON.stringify(recovered);
+    expect(persisted).not.toContain("participantKey");
+    expect(persisted).not.toContain("messageFingerprint");
+    expect(persisted).not.toContain("ephemeral-participant");
   });
 
   it("derives privacy-safe session history from terminal authoritative receipts", async () => {

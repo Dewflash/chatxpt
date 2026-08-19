@@ -1,5 +1,6 @@
 import type {
   AcceptedVoteTallySnapshot,
+  AudiencePointerAggregate,
   CandidateBatch,
   CommandEnvelope,
   DomainError,
@@ -26,6 +27,11 @@ export interface CommandAuthorizer {
 export interface CandidateBatchReader {
   /** candidateBatchId is the canonical candidate-batch envelope messageId. */
   read(candidateBatchId: string, sessionId: string): Promise<CandidateBatch | null>;
+}
+
+export interface AudiencePointerAggregateReader {
+  /** pointerId is the ephemeral aggregate identifier, never a retained viewer identity. */
+  read(pointerId: string, sessionId: string): Promise<AudiencePointerAggregate | null>;
 }
 
 export interface CurrentGameplaySnapshotReadInput {
@@ -118,6 +124,7 @@ export interface MessageIdFactory {
 export interface OrchestratorDependencies {
   readonly authorizer: CommandAuthorizer;
   readonly candidateBatches: CandidateBatchReader;
+  readonly audiencePointers: AudiencePointerAggregateReader;
   readonly acceptedVotes: AcceptedVoteTallyReader;
   readonly gameplaySnapshots: CurrentGameplaySnapshotRepository;
   readonly repository: SessionStateRepository;

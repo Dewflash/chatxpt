@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   CONTRACT_VERSION,
   acceptedVoteTallySnapshotSchema,
+  audiencePointerAggregateSchema,
   candidateBatchSchema,
   commandEnvelopeSchema,
   contractEnvelopeSchema,
@@ -30,6 +31,7 @@ import {
 } from "./contracts";
 import {
   contractFixtureCandidateBatch,
+  contractFixtureAudiencePointerAggregate,
   contractFixtureEnvelope,
   contractFixtureGameplaySnapshot,
   contractFixtureLiveDirectorIntervention,
@@ -140,6 +142,27 @@ describe("signal and capability truthfulness", () => {
 });
 
 describe("Live Director contract and privacy spine", () => {
+  it("accepts only privacy-safe ephemeral audience-pointer aggregate inputs", () => {
+    expect(
+      audiencePointerAggregateSchema.safeParse(contractFixtureAudiencePointerAggregate).success,
+    ).toBe(true);
+    expect(
+      audiencePointerAggregateSchema.safeParse({
+        ...structuredClone(contractFixtureAudiencePointerAggregate),
+        rawChat: ["private chat must never enter this seam"],
+      }).success,
+    ).toBe(false);
+    expect(
+      audiencePointerAggregateSchema.safeParse({
+        ...structuredClone(contractFixtureAudiencePointerAggregate),
+        envelope: {
+          ...structuredClone(contractFixtureAudiencePointerAggregate.envelope),
+          source: "twitch",
+        },
+      }).success,
+    ).toBe(false);
+  });
+
   it("publishes known, unknown, stale, conflicting, and privacy-denied fixtures", () => {
     expect(Object.keys(contractFixtureLiveDirectorStateCatalog)).toEqual([
       "live-director.known.v1",

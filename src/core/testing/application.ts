@@ -1,5 +1,6 @@
 import {
   acceptedVoteTallySnapshotSchema,
+  audiencePointerAggregateSchema,
   domainErrorSchema,
   gameplaySnapshotSchema,
   overlayViewModelSchema,
@@ -7,6 +8,7 @@ import {
   viewerViewModelSchema,
   type CandidateBatch,
   type AcceptedVoteTallySnapshot,
+  type AudiencePointerAggregate,
   type CommandEnvelope,
   type GameplaySnapshot,
   type QuestEngine,
@@ -19,6 +21,7 @@ import {
 import type {
   AcceptedVoteTallyReadInput,
   AcceptedVoteTallyReader,
+  AudiencePointerAggregateReader,
   CandidateBatchReader,
   CommandAuthorizer,
   CommitAuthoritativeStateInput,
@@ -132,6 +135,27 @@ export class StaticFixtureCandidateBatchReader implements CandidateBatchReader {
         candidate.envelope.messageId === candidateBatchId && candidate.envelope.sessionId === sessionId,
     );
     return batch === undefined ? null : clone(batch);
+  }
+}
+
+export class StaticFixtureAudiencePointerAggregateReader
+  implements AudiencePointerAggregateReader
+{
+  constructor(private readonly aggregates: readonly AudiencePointerAggregate[] = []) {
+    for (const aggregate of aggregates) {
+      const parsed = audiencePointerAggregateSchema.parse(aggregate);
+      if (parsed.envelope.evidenceClass !== "fixture") {
+        throw new Error("Fixture audience pointer reader accepts only fixture-labelled aggregates");
+      }
+    }
+  }
+
+  async read(pointerId: string, sessionId: string): Promise<AudiencePointerAggregate | null> {
+    const aggregate = this.aggregates.find(
+      (candidate) =>
+        candidate.pointerId === pointerId && candidate.envelope.sessionId === sessionId,
+    );
+    return aggregate === undefined ? null : clone(aggregate);
   }
 }
 

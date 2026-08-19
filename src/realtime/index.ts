@@ -13,6 +13,7 @@ export {
   MemoryChatXptPersistence,
   createMemoryPersistenceRuntime,
 } from "./memory";
+export { EphemeralAudiencePointerAggregateRepository } from "./live-director-context";
 export {
   ServerCommandAuthorizer,
   StaticVerifiedActorResolver,
@@ -48,6 +49,7 @@ export {
   SESSION_RECONNECT_GRACE_MS,
   PersistenceConflictError,
   type BootstrapSessionInput,
+  type AudiencePointerAggregateRepository,
   type CandidateBatchRepository,
   type ChatXptPersistenceRuntime,
   type CommitSessionLifecycleInput,
