@@ -19,6 +19,7 @@ import {
   FixtureOnlyAllowAuthorizer,
   FixtureProjectionContextResolver,
   ScriptedFixtureQuestEngine,
+  ScriptedFixtureDirectorCueLifecycle,
   SequenceFixtureMessageIds,
   contractFixtureCandidateBatch,
   contractFixtureAudiencePointerAggregate,
@@ -92,6 +93,14 @@ function logicDependencies(): Omit<
             attributes: { commandType: input.command.type },
           },
         ],
+      },
+    })),
+    directorCues: new ScriptedFixtureDirectorCueLifecycle(() => ({
+      ok: false,
+      error: {
+        code: "forbidden",
+        message: "Fixture persistence test did not script a Director Cue transition",
+        retryable: false,
       },
     })),
     projectionContext: new FixtureProjectionContextResolver({

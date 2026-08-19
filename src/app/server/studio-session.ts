@@ -542,6 +542,7 @@ export class StudioSessionApplication {
       audience: state.audience,
       questCycle: state.questCycle,
       emergencyPaused: state.emergencyPaused,
+      ...(state.liveDirector === undefined ? {} : { liveDirector: state.liveDirector }),
     });
     return {
       view,

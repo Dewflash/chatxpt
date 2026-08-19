@@ -2,7 +2,11 @@ import { createHmac } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { CONTRACT_VERSION, streamerProfileSettingsCommandSchema } from "@/core";
+import {
+  CONTRACT_VERSION,
+  streamerLiveDirectorIntentCommandSchema,
+  streamerProfileSettingsCommandSchema,
+} from "@/core";
 import { createMemoryPersistenceRuntime } from "@/realtime";
 
 import { ChatXptServerRuntime } from "./runtime";
@@ -101,6 +105,44 @@ describe("StudioSessionApplication", () => {
     const result = await context.application.execute(started.grant, null, command);
     expect(result.outcome).toBe("committed");
     expect(result.view.profile.experience.intensity).toBe(0.7);
+    expect(result.view.session.revision).toBe(started.view.session.revision + 1);
+  });
+
+  it("persists private declared intent through the same broadcaster-authorised command path", async () => {
+    const context = application();
+    const started = await context.application.start(SETUP_KEY, {
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    });
+    const command = streamerLiveDirectorIntentCommandSchema.parse({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: started.view.session.sessionId,
+      questCycleId: null,
+      commandId: "live-intent-command-1",
+      correlationId: "live-intent-command-1",
+      expectedRevision: started.view.session.revision,
+      issuedAt: NOW,
+      actor: { kind: "broadcaster", actorId: "channel-1" },
+      type: "streamer.live-director-intent",
+      action: "set",
+      intent: {
+        goal: "Reach the next shelter",
+        objective: "Explore carefully while chat helps choose the route.",
+        desiredAudienceInvolvement: "Suggest the next safe route.",
+        requestedExpiresAt: NOW + 60 * 60 * 1_000,
+      },
+    });
+
+    const result = await context.application.execute(started.grant, null, command);
+
+    expect(result.outcome).toBe("committed");
+    expect(result.view.liveDirector?.declaredIntent).toMatchObject({
+      status: "known",
+      goal: "Reach the next shelter",
+      objective: "Explore carefully while chat helps choose the route.",
+    });
     expect(result.view.session.revision).toBe(started.view.session.revision + 1);
   });
 

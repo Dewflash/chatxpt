@@ -27,6 +27,9 @@ import type {
   CommitAuthoritativeStateInput,
   CurrentGameplaySnapshotReadInput,
   CurrentGameplaySnapshotRepository,
+  DirectorCueLifecycle,
+  DirectorCueLifecycleActionInput,
+  DirectorCueLifecycleResult,
   IngestGameplaySnapshotResult,
   MessageIdFactory,
   ProjectionContextResolver,
@@ -313,6 +316,21 @@ export class ScriptedFixtureQuestEngine implements QuestEngine {
   constructor(private readonly script: (input: QuestEngineInput) => QuestEngineResult) {}
 
   decide(input: QuestEngineInput): QuestEngineResult {
+    this.calls += 1;
+    return this.script(input);
+  }
+}
+
+export class ScriptedFixtureDirectorCueLifecycle implements DirectorCueLifecycle {
+  calls = 0;
+
+  constructor(
+    private readonly script: (
+      input: DirectorCueLifecycleActionInput,
+    ) => DirectorCueLifecycleResult,
+  ) {}
+
+  applyAction(input: DirectorCueLifecycleActionInput): DirectorCueLifecycleResult {
     this.calls += 1;
     return this.script(input);
   }

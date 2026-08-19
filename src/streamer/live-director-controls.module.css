@@ -1,0 +1,137 @@
+.workspace {
+  display: grid;
+  gap: var(--cx-space-lg);
+}
+
+.workspace h3,
+.workspace p {
+  margin: 0;
+}
+
+.intentCard,
+.cueCard,
+.sourceCard {
+  display: grid;
+  gap: var(--cx-space-md);
+}
+
+.intentCard > p,
+.intentCard > small,
+.cueCard > p,
+.cueCard > small,
+.sourceCard p,
+.fact > small,
+.pointerMeta,
+.privacyNote {
+  color: var(--cx-color-text-muted);
+}
+
+.intentForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cx-space-md);
+  padding-top: var(--cx-space-md);
+  border-top: 1px solid var(--cx-color-border);
+}
+
+.intentForm label {
+  min-width: 0;
+  display: grid;
+  gap: var(--cx-space-xs);
+  font-weight: var(--cx-font-weight-medium);
+}
+
+.intentForm label:nth-child(2),
+.intentForm > small {
+  grid-column: 1 / -1;
+}
+
+.intentForm input,
+.intentForm textarea {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--cx-color-border);
+  border-radius: var(--cx-radius-md);
+  color: var(--cx-color-text);
+  background: var(--cx-color-surface-raised);
+  font: inherit;
+  resize: vertical;
+}
+
+.intentForm input:focus-visible,
+.intentForm textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--cx-focus-ring);
+}
+
+.intentActions,
+.cueActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cx-space-sm);
+}
+
+.sourceGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: var(--cx-space-md);
+}
+
+.sourceCard > div:first-child {
+  display: grid;
+  gap: var(--cx-space-xs);
+}
+
+.sourceCard p,
+.fact > small,
+.pointerMeta,
+.privacyNote {
+  margin: 0;
+  font-size: var(--cx-font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.fact {
+  display: grid;
+  gap: var(--cx-space-xs);
+  padding-top: var(--cx-space-md);
+  border-top: 1px solid var(--cx-color-border);
+}
+
+.fact strong,
+.intentCard p,
+.cueCard p {
+  overflow-wrap: anywhere;
+}
+
+.workspace[data-compact="true"] .sourceGrid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.workspace[data-compact="true"] .sourceCard {
+  gap: var(--cx-space-sm);
+}
+
+@media (max-width: 72rem) {
+  .sourceGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 34rem) {
+  .intentForm {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .intentForm label:nth-child(2),
+  .intentForm > small {
+    grid-column: auto;
+  }
+
+  .intentActions,
+  .intentActions > button,
+  .cueActions,
+  .cueActions > button {
+    width: 100%;
+  }
+}

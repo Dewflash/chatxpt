@@ -32,7 +32,7 @@ import {
   verifyTwitchExtensionJwt,
   type TwitchExtensionAuthorization,
 } from "@/integrations";
-import { createDefaultQuestEngine } from "@/quest-engine";
+import { createDefaultQuestEngine, DefaultDirectorCueLifecycle } from "@/quest-engine";
 import {
   ServerCommandAuthorizer,
   SessionLifecycleService,
@@ -406,6 +406,7 @@ export class TwitchExtensionViewerApplication {
               this.now,
             ),
             engine: createDefaultQuestEngine(),
+            directorCues: new DefaultDirectorCueLifecycle(),
             projectionContext,
             projector: new CanonicalViewProjector(),
             clock: { now: this.now },
@@ -845,6 +846,7 @@ export class TwitchExtensionViewerApplication {
             this.now,
           ),
           engine: createDefaultQuestEngine(),
+          directorCues: new DefaultDirectorCueLifecycle(),
           projectionContext: new TwitchViewerProjectionContext(
             this.persistence,
             actor,

@@ -228,6 +228,20 @@
   gap: var(--cx-space-sm);
 }
 
+.dockSetup {
+  display: grid;
+  gap: var(--cx-space-sm);
+  padding: var(--cx-space-lg);
+  border: 1px solid var(--cx-color-border);
+  border-radius: var(--cx-radius-md);
+  background: var(--cx-color-surface);
+}
+
+.dockSetup p {
+  margin: 0;
+  color: var(--cx-color-text-muted);
+}
+
 .actionGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

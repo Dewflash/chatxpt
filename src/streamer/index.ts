@@ -21,22 +21,28 @@ export type { StudioStatusSurfaceProps } from "./studio-status";
 export { StudioManagementSurface } from "./studio-management";
 export type { StudioManagementSurfaceProps } from "./studio-management";
 export { TwitchConfigSurface, TwitchLiveConfigSurface } from "./twitch-config";
+export { LiveDirectorControls } from "./live-director-controls";
+export type { LiveDirectorControlsProps } from "./live-director-controls";
 export type {
   TwitchConfigSurfaceProps,
   TwitchLiveConfigSurfaceProps,
 } from "./twitch-config";
 export {
   buildEmergencyClearCommand,
+  buildLiveDirectorCueCommand,
+  buildLiveDirectorIntentCommand,
   buildProfileSettingsCommand,
   buildQuestCommand,
   buildQuestProgressCommand,
   buildSetupCommand,
   defaultStreamerCommandFactory,
+  DEFAULT_LIVE_DIRECTOR_INTENT_LIFETIME_MILLISECONDS,
   editableDefaultsFromView,
   profileDefaultsChanged,
 } from "./streamer-commands";
 export type {
   EditableProfileDefaults,
+  LiveDirectorIntentDraft,
   StreamerCommandFactory,
   StreamerUiCommand,
 } from "./streamer-commands";

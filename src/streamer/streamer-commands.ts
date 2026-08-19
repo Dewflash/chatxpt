@@ -1,11 +1,16 @@
 import {
   CONTRACT_VERSION,
   streamerEmergencyClearCommandSchema,
+  streamerLiveDirectorCueCommandSchema,
+  streamerLiveDirectorIntentCommandSchema,
   streamerProfileSettingsCommandSchema,
   streamerQuestCommandSchema,
   streamerQuestProgressCommandSchema,
   streamerServiceCommandSchema,
   type StreamerEmergencyClearCommand,
+  type DirectorCueAction,
+  type StreamerLiveDirectorCueCommand,
+  type StreamerLiveDirectorIntentCommand,
   type StreamerProfileSettingsCommand,
   type StreamerQuestAction,
   type StreamerQuestCommand,
@@ -20,6 +25,8 @@ import {
 
 export type StreamerUiCommand =
   | StreamerProfileSettingsCommand
+  | StreamerLiveDirectorIntentCommand
+  | StreamerLiveDirectorCueCommand
   | StreamerQuestCommand
   | StreamerQuestProgressCommand
   | StreamerEmergencyClearCommand
@@ -35,6 +42,14 @@ export interface EditableProfileDefaults {
   readonly voting: StreamerVotingPreferences;
   readonly rewards: StreamerRewardPreferences;
 }
+
+export interface LiveDirectorIntentDraft {
+  readonly goal: string;
+  readonly objective: string;
+  readonly desiredAudienceInvolvement: string | null;
+}
+
+export const DEFAULT_LIVE_DIRECTOR_INTENT_LIFETIME_MILLISECONDS = 2 * 60 * 60 * 1_000;
 
 function fallbackId(prefix: string): string {
   const random = Math.random().toString(36).slice(2, 10);
@@ -136,6 +151,42 @@ export function buildEmergencyClearCommand(
     ...metadata(view, factory, "emergency-clear"),
     questCycleId: view.questCycle.envelope.questCycleId,
     type: "streamer.emergency-clear",
+  });
+}
+
+export function buildLiveDirectorIntentCommand(
+  view: StreamerViewModel,
+  intent: LiveDirectorIntentDraft | null,
+  factory: StreamerCommandFactory = defaultStreamerCommandFactory,
+): StreamerLiveDirectorIntentCommand {
+  const commandMetadata = metadata(view, factory, "live-director-intent");
+  return streamerLiveDirectorIntentCommandSchema.parse({
+    ...commandMetadata,
+    questCycleId: null,
+    type: "streamer.live-director-intent",
+    action: intent === null ? "clear" : "set",
+    intent: intent === null
+      ? null
+      : {
+          ...intent,
+          requestedExpiresAt:
+            commandMetadata.issuedAt + DEFAULT_LIVE_DIRECTOR_INTENT_LIFETIME_MILLISECONDS,
+        },
+  });
+}
+
+export function buildLiveDirectorCueCommand(
+  view: StreamerViewModel,
+  cueId: string,
+  action: DirectorCueAction,
+  factory: StreamerCommandFactory = defaultStreamerCommandFactory,
+): StreamerLiveDirectorCueCommand {
+  return streamerLiveDirectorCueCommandSchema.parse({
+    ...metadata(view, factory, `live-director-cue-${action}`),
+    questCycleId: view.questCycle.envelope.questCycleId,
+    type: "streamer.live-director-cue",
+    cueId,
+    action,
   });
 }
 

@@ -3,7 +3,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { createFixtureUiGatewaySnapshot, streamerViewModelSchema } from "../core";
-import { contractFixtureUiX01ReadinessCatalog } from "../core/testing";
+import {
+  contractFixtureLiveDirectorStateCatalog,
+  contractFixtureUiX01ReadinessCatalog,
+} from "../core/testing";
 import { StudioManagementSurface } from "./studio-management";
 
 function mixedGenerationView() {
@@ -32,7 +35,11 @@ describe("StudioManagementSurface", () => {
   });
 
   it("renders the complete Studio hierarchy with saved provenance and an honest session boundary", () => {
-    const view = createFixtureUiGatewaySnapshot().views.streamer;
+    const base = createFixtureUiGatewaySnapshot().views.streamer;
+    const view = streamerViewModelSchema.parse({
+      ...base,
+      liveDirector: contractFixtureLiveDirectorStateCatalog["live-director.known.v1"],
+    });
     const readiness = contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"];
     const html = renderToStaticMarkup(h(StudioManagementSurface, { view, readiness }));
 
@@ -134,5 +141,49 @@ describe("StudioManagementSurface", () => {
     expect(html).toContain("their update command is not public yet");
     expect(html).toContain("Studio will not imitate persistence in browser storage");
     expect(html).toContain("Profile actions are not mounted");
+  });
+
+  it("renders private source-separated Live Context and every available Director Cue action", () => {
+    const base = createFixtureUiGatewaySnapshot().views.streamer;
+    const view = streamerViewModelSchema.parse({
+      ...base,
+      liveDirector: contractFixtureLiveDirectorStateCatalog["live-director.known.v1"],
+    });
+    const html = renderToStaticMarkup(h(StudioManagementSurface, {
+      view,
+      onCommand: () => undefined,
+    }));
+
+    expect(html).toContain("Session Goal");
+    expect(html).toContain("Current Objective");
+    expect(html).toContain("Streamer says");
+    expect(html).toContain("ChatXPT detects");
+    expect(html).toContain("Chat suggests");
+    expect(html).toContain("3 unique participants");
+    expect(html).toContain(">Acknowledge<");
+    expect(html).toContain("Turn into vote");
+    expect(html).toContain(">Later<");
+    expect(html).toContain(">Dismiss<");
+    expect(html).toContain("does not publish candidates by itself");
+  });
+
+  it("keeps stale and permission-denied context honest and removes stale cue actions", () => {
+    const base = createFixtureUiGatewaySnapshot().views.streamer;
+    const stale = streamerViewModelSchema.parse({
+      ...base,
+      liveDirector: contractFixtureLiveDirectorStateCatalog["live-director.stale.v1"],
+    });
+    const denied = streamerViewModelSchema.parse({
+      ...base,
+      liveDirector: contractFixtureLiveDirectorStateCatalog["live-director.privacy-denied.v1"],
+    });
+    const staleHtml = renderToStaticMarkup(h(StudioManagementSurface, { view: stale }));
+    const deniedHtml = renderToStaticMarkup(h(StudioManagementSurface, { view: denied }));
+
+    expect(staleHtml).toContain("This cue has no available action");
+    expect(staleHtml).not.toContain(">Later<");
+    expect(deniedHtml).toContain("Permission Denied");
+    expect(deniedHtml).toContain("Audience aggregate access is not authorised");
+    expect(deniedHtml).toContain("Permission is not available");
   });
 });

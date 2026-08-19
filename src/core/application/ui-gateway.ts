@@ -6,6 +6,7 @@ import {
   commandEnvelopeSchema,
   contractEnvelopeSchema,
   gameplaySnapshotSchema,
+  liveDirectorStateSchema,
   overlayViewModelSchema,
   streamerProfileSchema,
   streamerServiceCommandSchema,
@@ -14,6 +15,7 @@ import {
   type CommandEnvelope,
   type ContractEnvelope,
   type GameplaySnapshot,
+  type LiveDirectorState,
   type AudienceSnapshot,
   type OverlayViewModel,
   type QuestCandidate,
@@ -330,6 +332,111 @@ function gatewaySession(): StreamSession {
   };
 }
 
+function gatewayLiveDirector(): LiveDirectorState {
+  return liveDirectorStateSchema.parse({
+    declaredIntent: {
+      status: "known",
+      intentId: "gateway-live-intent",
+      goal: "Reach the next safe shelter",
+      objective: "Explore carefully while involving chat in the route choice.",
+      desiredAudienceInvolvement: "Suggest and vote on the next safe route.",
+      authorId: "fixture-broadcaster",
+      updatedAt: GATEWAY_TIME - 20_000,
+      expiresAt: GATEWAY_TIME + 600_000,
+    },
+    audiencePointer: {
+      status: "known",
+      pointerId: "gateway-audience-pointer",
+      topic: "Try the quieter route",
+      observedAt: GATEWAY_TIME - 5_000,
+      windowStartedAt: GATEWAY_TIME - 30_000,
+      windowEndedAt: GATEWAY_TIME - 5_000,
+      createdAt: GATEWAY_TIME,
+      expiresAt: GATEWAY_TIME + 30_000,
+      confidence: 0.82,
+      relevance: 0.88,
+      intentAlignment: 0.9,
+      uniqueParticipants: 3,
+      qualifyingMessages: 5,
+      sarcasmRisk: false,
+      evidenceSignalIds: ["gateway-audience-energy"],
+    },
+    liveContext: {
+      contextId: "gateway-live-context",
+      declaredIntentId: "gateway-live-intent",
+      audiencePointerId: "gateway-audience-pointer",
+      compiledAt: GATEWAY_TIME,
+      expiresAt: GATEWAY_TIME + 30_000,
+      facts: [
+        {
+          factId: "gateway-context-streamer",
+          sourceClass: "streamer-declared",
+          kind: "current-objective",
+          status: "known",
+          value: "Explore carefully while involving chat in the route choice.",
+          method: "declared-intent",
+          confidence: 1,
+          observedAt: GATEWAY_TIME - 20_000,
+          expiresAt: GATEWAY_TIME + 600_000,
+          evidenceClass: "fixture",
+          evidenceSignalIds: ["gateway-live-intent"],
+        },
+        {
+          factId: "gateway-context-gameplay",
+          sourceClass: "gameplay-observed",
+          kind: "activity-intensity",
+          status: "unknown",
+          value: null,
+          method: "fixture-normalizer",
+          confidence: 0,
+          observedAt: GATEWAY_TIME,
+          expiresAt: GATEWAY_TIME + 15_000,
+          evidenceClass: "fixture",
+          evidenceSignalIds: ["gateway-activity"],
+        },
+        {
+          factId: "gateway-context-audience",
+          sourceClass: "audience-derived",
+          kind: "route-request",
+          status: "known",
+          value: "Try the quieter route",
+          method: "fixture-aggregate",
+          confidence: 0.82,
+          observedAt: GATEWAY_TIME - 5_000,
+          expiresAt: GATEWAY_TIME + 30_000,
+          evidenceClass: "fixture",
+          evidenceSignalIds: ["gateway-audience-energy"],
+        },
+      ],
+    },
+    cue: {
+      cueId: "gateway-director-cue",
+      contextId: "gateway-live-context",
+      intentId: "gateway-live-intent",
+      audiencePointerId: "gateway-audience-pointer",
+      state: "proposed",
+      reason: "Chat is asking for a route choice during a low-pressure moment.",
+      evidenceReferences: [
+        "gateway-live-intent",
+        "gateway-activity",
+        "gateway-audience-pointer",
+      ],
+      createdAt: GATEWAY_TIME,
+      updatedAt: GATEWAY_TIME,
+      expiresAt: GATEWAY_TIME + 30_000,
+      availableActions: ["acknowledge", "turn-into-vote", "later", "dismiss"],
+    },
+    publicContext: null,
+    privacy: {
+      rawChatRetained: false,
+      usernamesIncluded: false,
+      viewerIdentifiersIncluded: false,
+      providerPayloadIncluded: false,
+    },
+    updatedAt: GATEWAY_TIME,
+  });
+}
+
 function gatewayViews(): RoleViewModels {
   const session = gatewaySession();
   const questCycle = gatewayQuestCycle();
@@ -342,6 +449,7 @@ function gatewayViews(): RoleViewModels {
   const profile = gatewayProfile();
   const gameplay = gatewayGameplay();
   const audience = gatewayAudience();
+  const liveDirector = gatewayLiveDirector();
 
   const streamer: StreamerViewModel = streamerViewModelSchema.parse({
     envelope: envelope("ui-gateway-streamer-view", "orchestrator"),
@@ -352,6 +460,7 @@ function gatewayViews(): RoleViewModels {
     audience,
     questCycle,
     emergencyPaused: false,
+    liveDirector,
   });
   const viewer: ViewerViewModel = viewerViewModelSchema.parse({
     envelope: envelope("ui-gateway-viewer-view", "orchestrator"),
@@ -366,6 +475,7 @@ function gatewayViews(): RoleViewModels {
     acceptedCandidateId: null,
     questCycle,
     connection: serviceHealth("viewer-realtime", "ready", "Fixture viewer can fetch the latest snapshot."),
+    liveDirector: { publicContext: liveDirector.publicContext },
   });
   const overlay: OverlayViewModel = overlayViewModelSchema.parse({
     envelope: envelope("ui-gateway-overlay-view", "orchestrator"),
@@ -404,6 +514,21 @@ function gatewayCommands(views: RoleViewModels): UiGatewaySnapshot["commands"] {
         ),
         allowed: true,
         boundary: "Emergency pause latches inside Role 1 authoritative state; UI only emits the command.",
+      },
+      {
+        method: "POST",
+        href: "/api/ui-gateway/commands",
+        command: command(
+          "ui-gateway-live-director-cue",
+          { kind: "broadcaster", actorId: "fixture-broadcaster" },
+          {
+            type: "streamer.live-director-cue",
+            cueId: "gateway-director-cue",
+            action: "later",
+          },
+        ),
+        allowed: true,
+        boundary: "Director Cue actions are authenticated by Role 1 and transitioned by Role 3 before one authoritative commit.",
       },
       {
         method: "POST",

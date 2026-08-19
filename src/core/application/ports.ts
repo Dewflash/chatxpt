@@ -3,10 +3,14 @@ import type {
   AudiencePointerAggregate,
   CandidateBatch,
   CommandEnvelope,
+  DirectorCue,
   DomainError,
   GameplaySnapshot,
+  LiveDirectorState,
   QuestEngine,
+  QuestEngineEventDraft,
   RoleViewModels,
+  StreamerLiveDirectorCueCommand,
   ViewModelProjector,
 } from "../contracts";
 import type {
@@ -121,6 +125,35 @@ export interface MessageIdFactory {
   nextId(kind: "quest-state" | "quest-event" | "view-model"): string;
 }
 
+export interface DirectorCueLifecycleActionInput {
+  readonly authority: {
+    readonly sessionId: string;
+    readonly questCycleId: string;
+    readonly revision: number;
+  };
+  readonly current: LiveDirectorState;
+  readonly command: StreamerLiveDirectorCueCommand;
+  readonly emergencyPaused: boolean;
+  readonly now: number;
+}
+
+export type DirectorCueLifecycleResult =
+  | {
+      readonly ok: true;
+      readonly decision: {
+        readonly nextCue: DirectorCue;
+        readonly events: readonly QuestEngineEventDraft[];
+      };
+    }
+  | { readonly ok: false; readonly error: DomainError };
+
+/** Role 3 decides pure cue transitions; Role 1 authenticates and commits them. */
+export interface DirectorCueLifecycle {
+  applyAction(
+    input: DirectorCueLifecycleActionInput,
+  ): Promise<DirectorCueLifecycleResult> | DirectorCueLifecycleResult;
+}
+
 export interface OrchestratorDependencies {
   readonly authorizer: CommandAuthorizer;
   readonly candidateBatches: CandidateBatchReader;
@@ -129,6 +162,7 @@ export interface OrchestratorDependencies {
   readonly gameplaySnapshots: CurrentGameplaySnapshotRepository;
   readonly repository: SessionStateRepository;
   readonly engine: QuestEngine;
+  readonly directorCues: DirectorCueLifecycle;
   readonly projectionContext: ProjectionContextResolver;
   readonly projector: ViewModelProjector;
   readonly publisher: StatePublisher;

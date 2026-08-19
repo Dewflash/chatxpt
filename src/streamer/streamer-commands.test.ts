@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   streamerProfileSettingsCommandSchema,
+  streamerLiveDirectorCueCommandSchema,
+  streamerLiveDirectorIntentCommandSchema,
   streamerQuestCommandSchema,
   streamerQuestProgressCommandSchema,
   streamerServiceCommandSchema,
@@ -9,6 +11,8 @@ import {
 import { contractFixtureStreamerView } from "../core/testing";
 import {
   buildEmergencyClearCommand,
+  buildLiveDirectorCueCommand,
+  buildLiveDirectorIntentCommand,
   buildProfileSettingsCommand,
   buildQuestCommand,
   buildQuestProgressCommand,
@@ -83,5 +87,37 @@ describe("Role 4 streamer command builders", () => {
     expect(retry).toMatchObject({ type: "streamer.setup", service: "realtime", action: "retry-service" });
     expect(streamerServiceCommandSchema.safeParse(start).success).toBe(true);
     expect(start).toMatchObject({ type: "streamer.session", action: "start" });
+  });
+
+  it("builds private declared-intent and Director Cue commands through canonical seams", () => {
+    const intent = buildLiveDirectorIntentCommand(
+      contractFixtureStreamerView,
+      {
+        goal: "Reach the next safe shelter",
+        objective: "Explore carefully while involving chat in the route choice.",
+        desiredAudienceInvolvement: "Vote on the next safe route.",
+      },
+      factory,
+    );
+    const cue = buildLiveDirectorCueCommand(
+      contractFixtureStreamerView,
+      "fixture-director-cue",
+      "later",
+      factory,
+    );
+
+    expect(streamerLiveDirectorIntentCommandSchema.safeParse(intent).success).toBe(true);
+    expect(intent).toMatchObject({
+      commandId: "test-live-director-intent",
+      questCycleId: null,
+      action: "set",
+      intent: { requestedExpiresAt: 1_786_027_200_000 },
+    });
+    expect(streamerLiveDirectorCueCommandSchema.safeParse(cue).success).toBe(true);
+    expect(cue).toMatchObject({
+      commandId: "test-live-director-cue-later",
+      cueId: "fixture-director-cue",
+      action: "later",
+    });
   });
 });
