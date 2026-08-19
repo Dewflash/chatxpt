@@ -218,7 +218,7 @@ Role 1 owns vote authentication, acceptance, storage, and deduplication. Role 3 
 | ID | Owner decision | Status | Recorded answer |
 | --- | --- | --- | --- |
 | D23-01 | Provider/model selection and evaluation baseline | Resolved by D-072 | OpenAI Responses API with exact model `gpt-5.6-terra` is approved. Role 3 evaluates quest quality and engine fit without treating that evaluation as an adoption gate. |
-| D23-02 | Structured candidate schema details and quest-quality rubric | Open | — |
+| D23-02 | Structured candidate schema details and quest-quality rubric | Accepted | Use the canonical exactly-three candidate schema, D3-20/D3-21 objectives, and Role 3's deterministic hard gates, weighted quality threshold, and replacement authority. D-072 adds source freshness/confidence validation without granting provider output a trust exception. |
 | D23-03 | Provider timeout/malformed response threshold before algorithmic fallback | Resolved by D-072 | One attempt and an 8-second timeout. Refusal, malformed/non-exactly-three output, invalid citations, rate limiting, outage, missing credential/credit, or timeout uses the algorithmic path; caller cancellation propagates without candidates or fallback. All surviving candidates still pass Role 3 validation/replacement. |
 
 ### L0pch-only decision gate
