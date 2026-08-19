@@ -39,6 +39,8 @@ These resource IDs must match the evidence manifest.
 
 Use this when real Twitch, OBS, Supabase, Vercel, or provider access is not ready. It proves production-shaped local behaviour only.
 
+The repeatable Role 5 server-boundary rehearsal is `npm run smoke:role-5-memory` against a local production server. Supply only disposable test values for the named setup/Extension/EventSub environment variables in the process that starts the server and runner; never write those values to an artifact. The command exercises locally signed viewer identities, hosted anonymous grants, signed chat delivery, and overlay state, but its output remains `memory-backed` rather than real Twitch/OBS/cloud evidence.
+
 1. Start the local app with the documented command for the current branch.
 2. Open Studio or diagnostic harness in the streamer desktop browser.
 3. Open two viewer clients, preferably one desktop/narrow and one separate profile.
@@ -102,4 +104,3 @@ Stop the rehearsal and record the blocker instead of continuing if:
 - The same authoritative revision cannot be matched across the required surfaces.
 - A command mutates local UI state before Role 1 authority accepts it.
 - Any unsafe, impossible, humiliating, wagering, illegal, or offline physical quest reaches viewers.
-

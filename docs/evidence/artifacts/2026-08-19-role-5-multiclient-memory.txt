@@ -1,0 +1,49 @@
+R5-008 / R5-P05 — Role 5 multi-client memory rehearsal
+
+Source commit: 79192dc
+Branch: role-5/real-evidence-run
+Evidence class: memory-backed
+Captured: 2026-08-19T19:55:18+08:00
+
+Immutable production-build run
+
+- npm.cmd run build: passed from source commit 79192dc.
+- npm.cmd run smoke:role-5-memory: passed against the local production server on port 3210.
+- Focused Role 5 viewer/Twitch/hosted/chat/OBS suite: 6 files / 47 tests passed.
+- npm.cmd run check: lint, typecheck, boundary/evidence/runbook/secret checks, 80 files / 583 Vitest tests, production build, and built-client secret scan passed.
+- Script lint, syntax, package JSON parsing, and git diff checks passed.
+
+Authoritative primary cycle
+
+- Session: local-twitch-session-00370cb1-b3dd-4b17-a9ab-3008c7ca3d95
+- Quest cycle: local-twitch-cycle-26768355-48e1-4a85-8900-0b9d1c14f832
+- Voting revision: 6
+- Active revision: 7
+- Progress revision: 8
+- Terminal revision: 9
+- Winner: primary-candidate-two
+- Terminal status: succeeded
+
+Verified interactions
+
+- Two isolated locally signed viewer contexts, one authenticated and one anonymous, opened the same three-option voting revision.
+- Both viewers voted for the same candidate through the authorised Twitch Extension command endpoint.
+- Private accepted-vote acknowledgement recovered after token refresh; the anonymous viewer remained identity-safe.
+- Repeating the same vote and reaction command IDs returned idempotent duplicate outcomes without double application.
+- Community hype and the two-vote tally reached the read-only overlay projection at the same revision.
+- Authoritative vote close activated the same winner for both viewers and the overlay.
+- Manual progress at 0.5 and the succeeded result reached both viewers and the overlay at one revision per transition.
+- Two hosted-board clients received distinct anonymous HttpOnly grants, reconnected with retained authority, and received a safe typed response for an invalid room code.
+- Signed local EventSub notifications counted exact 1/2/3 chat votes through the shared first-vote-final ledger; a second choice from the same chatter and ordinary chat did not add votes.
+
+Privacy review
+
+- No JWT, setup key, EventSub secret, hosted-board token, cookie, room code, Twitch ID, raw chat export, or personal viewer identifier is present in this artifact.
+- Session and cycle references are disposable local diagnostic identifiers.
+
+Limitations
+
+- Viewer JWTs were locally signed, candidates were synthetic diagnostics, secrets were test-only, and persistence was process memory.
+- This is not Twitch-issued identity, Twitch Local/Hosted Test, real EventSub delivery, Supabase Cloud, OBS Browser Source, or deployed-origin evidence.
+- Hosted fallback recovery used a separate live memory session, not the primary voting cycle.
+- The run does not prove a non-zero persisted session-points award.

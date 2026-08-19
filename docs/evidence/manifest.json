@@ -634,6 +634,69 @@
         "This is deterministic fixture evidence with a memory repository; it does not prove real Twitch chat, the Role 2 real producer, Supabase Cloud, Vercel, OBS, or multi-device realtime.",
         "Role 3 cue suitability/lifecycle and exactly-three conversion remain separate passes, and no direct engagement, causal, or product-value effect is claimed."
       ]
+    },
+    {
+      "id": "E-20260819-R5-001",
+      "capturedAt": "2026-08-19T19:58:32+08:00",
+      "owner": { "role": "role-5", "github": "drdexe" },
+      "reviewer": { "role": "role-5", "github": "drdexe" },
+      "evidenceClass": "memory-backed",
+      "result": "passed",
+      "claim": "A local production server kept two isolated signed viewers and a read-only overlay on one authoritative vote, winner, progress, and terminal revision sequence, then passed private reconnect plus hosted-board and signed-chat fallback checks.",
+      "resourceIds": [],
+      "surfaces": [
+        {
+          "name": "Two isolated Twitch Extension API viewers",
+          "deviceClass": "multi-client",
+          "viewport": null
+        },
+        {
+          "name": "Read-only OBS overlay state API",
+          "deviceClass": "obs",
+          "viewport": "1280x720 descriptor"
+        },
+        {
+          "name": "Hosted-board and signed-chat fallback APIs",
+          "deviceClass": "server",
+          "viewport": null
+        }
+      ],
+      "source": {
+        "gitCommit": "79192dc",
+        "branch": "role-5/real-evidence-run",
+        "prNumber": null
+      },
+      "authoritativeState": {
+        "sessionRef": "local-twitch-session-00370cb1-b3dd-4b17-a9ab-3008c7ca3d95",
+        "questCycleRef": "local-twitch-cycle-26768355-48e1-4a85-8900-0b9d1c14f832",
+        "revision": 9
+      },
+      "inputs": [
+        {
+          "kind": "memory",
+          "description": "Local production server, process-memory persistence, synthetic three-candidate cycles, locally signed diagnostic JWT/EventSub messages, disposable test secrets, and isolated viewer/hosted credentials."
+        }
+      ],
+      "commands": [
+        "npm.cmd run build",
+        "Start the local production server on port 3210 with disposable test-only Extension, EventSub, Studio, hosted-board, and overlay values",
+        "npm.cmd run smoke:role-5-memory",
+        "npm.cmd test -- src/viewer/presentation.test.ts src/viewer/surfaces.test.ts tests/integration/twitch-extension-viewer.test.ts src/app/server/hosted-board.test.ts src/app/server/twitch-chat.test.ts src/app/server/obs-overlay.test.ts",
+        "npm.cmd run check"
+      ],
+      "artifacts": [
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-19-role-5-multiclient-memory.txt",
+          "mediaType": "text/plain",
+          "privacyReviewed": true,
+          "sha256": "c27e56ed046a53b269b1042148ea7bf9d870b0e1a4977d2f053078674c5c243b"
+        }
+      ],
+      "limitations": [
+        "This uses locally signed diagnostic identity/activity, synthetic candidates, test-only secrets, process memory, and HTTP/API interaction; it is not real Twitch, Supabase Cloud, physical-device, or OBS Browser Source evidence.",
+        "Hosted recovery ran on a separate live memory session from the primary vote cycle, and no non-zero persisted session-points award is claimed."
+      ]
     }
   ]
 }

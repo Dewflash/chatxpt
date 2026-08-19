@@ -8,7 +8,7 @@ If the owner asks only `What do I need to do?`, Codex selects the first `READY` 
 
 The feasibility review must also check `docs/build-plans/INTEGRATION-CONTRACT.md`: public entries, viewer/overlay view models, commands/errors/fixtures, Role 1 route/Extension/OBS mounts, upstream deadlines, and Role 4's early token handoff.
 
-**Current pass:** Role 1 completed the source integration passes under D-063. The Twitch Extension, hosted Quest Board, exact `1`/`2`/`3` EventSub chat fallback, and read-only OBS overlay now converge on one authoritative session and private participation ledger. Tie/zero resolution detail and real Twitch/cloud/OBS evidence remain follow-up evidence work.
+**Current pass:** `role-5/real-evidence-run` adds a repeatable production-server rehearsal for the Twitch Extension, hosted Quest Board, exact `1`/`2`/`3` EventSub chat fallback, and read-only OBS overlay. Memory-backed evidence now proves two isolated viewer contexts, authoritative winner/progress/result parity, private reconnect, and fallback behavior. Real Twitch Local/Hosted Test, Supabase Cloud, and OBS Browser Source evidence remain the R5-008 exit.
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
@@ -20,7 +20,7 @@ The feasibility review must also check `docs/build-plans/INTEGRATION-CONTRACT.md
 | R5-006 | P0 | DONE | Build the read-only viewer-facing OBS overlay module. | Role 1 secure OBS mount/OverlayViewModel; Role 3 state examples | `/obs-overlay` renders the reviewed inactive/voting/active/progress/result/reconnect states from a session-scoped read grant and emits no commands. Real OBS evidence remains R5-008. |
 | R5-007A | P0 | DONE | Build basic reactions, community hype, private session points, and reconnect presentation. | Participation/reward contracts; Role 1 personalised-viewer seam | The canonical and packaged Twitch viewers dispatch authorised `hype` reactions, render authoritative community hype, keep session points private through the viewer-recovery identity, and retain safe reconnect state. |
 | R5-007B | P1 | READY | Refine reaction, hype, result, and reward celebrations after protecting P0. | R5-007A; P0 stability evidence | Optional polish respects reduced motion and Extension performance without becoming a P0 dependency. No role-owner approval gate applies. |
-| R5-008 | P0 | IN PROGRESS | Produce contract, multi-device, responsive, accessibility, and failure evidence. | R5-003 through R5-007A | Fixture viewport evidence and integrated signed-token tests pass; real Twitch Local/Hosted Test, two-device Supabase voting/recovery, and OBS Browser Source evidence remain. |
+| R5-008 | P0 | IN PROGRESS | Produce contract, multi-device, responsive, accessibility, and failure evidence. | R5-003 through R5-007A | Commit `79192dc` and `E-20260819-R5-001` add a production-server memory rehearsal covering two isolated signed viewers, duplicate/idempotent commands, authoritative winner/progress/result parity, private reconnect, hosted anonymous recovery, and signed EventSub chat fallback. Real Twitch Local/Hosted Test, two-device Supabase voting/recovery, actual mouse/touch/keyboard interaction, and OBS Browser Source evidence remain. |
 
 ## Decisions Role 5 may make without Role 1 within the accepted build plan
 
