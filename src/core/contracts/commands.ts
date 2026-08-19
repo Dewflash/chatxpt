@@ -9,6 +9,7 @@ import {
 } from "./common";
 import { streamerQuestActionSchema } from "./quests";
 import { participationSourceModeSchema } from "./participation";
+import { directorCueActionSchema } from "./signals";
 
 const commandEnvelopeFields = {
   contractVersion: contractVersionSchema,
@@ -148,6 +149,73 @@ export const streamerProfileSettingsCommandSchema = z
     }
   });
 
+const declaredStreamIntentRequestSchema = z
+  .object({
+    goal: z.string().trim().min(3).max(120),
+    objective: z.string().trim().min(3).max(240),
+    desiredAudienceInvolvement: z.string().trim().min(1).max(160).nullable(),
+    requestedExpiresAt: timestampSchema,
+  })
+  .strict();
+
+export const streamerLiveDirectorIntentCommandSchema = z
+  .object({
+    ...commandEnvelopeFields,
+    type: z.literal("streamer.live-director-intent"),
+    action: z.enum(["set", "clear"]),
+    intent: declaredStreamIntentRequestSchema.nullable(),
+  })
+  .strict()
+  .superRefine((command, context) => {
+    if ((command.action === "set") !== (command.intent !== null)) {
+      context.addIssue({
+        code: "custom",
+        message: "Set intent commands require intent data; clear commands cannot carry it",
+        path: ["intent"],
+      });
+    }
+    if (
+      command.action === "set" &&
+      command.intent !== null &&
+      command.intent.requestedExpiresAt <= command.issuedAt
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Requested intent expiry must follow command issue time",
+        path: ["intent", "requestedExpiresAt"],
+      });
+    }
+  });
+
+export const systemLiveDirectorContextCommandSchema = z
+  .object({
+    ...commandEnvelopeFields,
+    type: z.literal("system.live-director-context-ready"),
+    liveContextId: identifierSchema,
+    audiencePointerId: identifierSchema.nullable(),
+  })
+  .strict();
+
+export const systemLiveDirectorCueCommandSchema = z
+  .object({
+    ...commandEnvelopeFields,
+    questCycleId: identifierSchema,
+    type: z.literal("system.live-director-cue-ready"),
+    cueId: identifierSchema,
+    liveContextId: identifierSchema,
+  })
+  .strict();
+
+export const streamerLiveDirectorCueCommandSchema = z
+  .object({
+    ...commandEnvelopeFields,
+    questCycleId: identifierSchema,
+    type: z.literal("streamer.live-director-cue"),
+    cueId: identifierSchema,
+    action: directorCueActionSchema,
+  })
+  .strict();
+
 export const commandEnvelopeSchema = z
   .discriminatedUnion("type", [
     streamerQuestCommandSchema,
@@ -160,6 +228,10 @@ export const commandEnvelopeSchema = z
     systemQuestProgressCommandSchema,
     streamerEmergencyClearCommandSchema,
     streamerProfileSettingsCommandSchema,
+    streamerLiveDirectorIntentCommandSchema,
+    systemLiveDirectorContextCommandSchema,
+    systemLiveDirectorCueCommandSchema,
+    streamerLiveDirectorCueCommandSchema,
   ])
   .superRefine((command, context) => {
     const allowedActorKinds: Record<typeof command.type, Array<typeof command.actor.kind>> = {
@@ -173,6 +245,10 @@ export const commandEnvelopeSchema = z
       "system.quest-progress": ["system"],
       "streamer.emergency-clear": ["broadcaster", "moderator"],
       "streamer.profile-settings": ["broadcaster"],
+      "streamer.live-director-intent": ["broadcaster"],
+      "system.live-director-context-ready": ["system"],
+      "system.live-director-cue-ready": ["system"],
+      "streamer.live-director-cue": ["broadcaster", "moderator"],
     };
 
     if (!allowedActorKinds[command.type].includes(command.actor.kind)) {
@@ -194,3 +270,13 @@ export type StreamerQuestProgressCommand = z.infer<typeof streamerQuestProgressC
 export type SystemQuestProgressCommand = z.infer<typeof systemQuestProgressCommandSchema>;
 export type StreamerEmergencyClearCommand = z.infer<typeof streamerEmergencyClearCommandSchema>;
 export type StreamerProfileSettingsCommand = z.infer<typeof streamerProfileSettingsCommandSchema>;
+export type StreamerLiveDirectorIntentCommand = z.infer<
+  typeof streamerLiveDirectorIntentCommandSchema
+>;
+export type SystemLiveDirectorContextCommand = z.infer<
+  typeof systemLiveDirectorContextCommandSchema
+>;
+export type SystemLiveDirectorCueCommand = z.infer<typeof systemLiveDirectorCueCommandSchema>;
+export type StreamerLiveDirectorCueCommand = z.infer<
+  typeof streamerLiveDirectorCueCommandSchema
+>;

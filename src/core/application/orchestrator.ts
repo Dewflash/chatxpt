@@ -14,6 +14,7 @@ import {
   streamerViewModelSchema,
   audienceSnapshotSchema,
   gameplaySnapshotSchema,
+  liveDirectorStateSchema,
   timestampSchema,
   viewerViewModelSchema,
   type CommandEnvelope,
@@ -71,6 +72,9 @@ function stateInvariantError(state: AuthoritativeSessionState): DomainError | nu
     !questCycleStateSchema.safeParse(state.questCycle).success ||
     (state.gameplay !== null && !gameplaySnapshotSchema.safeParse(state.gameplay).success) ||
     (state.audience !== null && !audienceSnapshotSchema.safeParse(state.audience).success) ||
+    (state.liveDirector !== undefined &&
+      state.liveDirector !== null &&
+      !liveDirectorStateSchema.safeParse(state.liveDirector).success) ||
     state.services.some((service) => !serviceHealthSchema.safeParse(service).success) ||
     typeof state.emergencyPaused !== "boolean" ||
     !Number.isSafeInteger(state.communityHype) ||
@@ -307,6 +311,7 @@ function projectionInput(
     communityHype: state.communityHype,
     acceptedCandidateId: context.acceptedCandidateId,
     connection: context.connection,
+    liveDirector: state.liveDirector,
   };
 }
 

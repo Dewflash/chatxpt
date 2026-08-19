@@ -5,6 +5,7 @@ import {
   commandEnvelopeSchema,
   gameplaySnapshotSchema,
   identifierSchema,
+  liveDirectorStateSchema,
   questCycleStateSchema,
   questEngineEventSchema,
   serviceHealthSchema,
@@ -32,6 +33,7 @@ export const authoritativeSessionStateSchema = z
     emergencyPaused: z.boolean(),
     communityHype: z.number().int().nonnegative(),
     recentQuests: z.array(recentQuestSummarySchema).max(20).optional(),
+    liveDirector: liveDirectorStateSchema.nullable().optional(),
   })
   .strict()
   .superRefine((state, context) => {

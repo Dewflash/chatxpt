@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ChatXptOrchestrator,
   streamerEmergencyClearCommandSchema,
+  streamerLiveDirectorCueCommandSchema,
   streamerProfileSettingsCommandSchema,
   streamerQuestCommandSchema,
   streamerQuestProgressCommandSchema,
@@ -34,6 +35,7 @@ import {
   contractFixtureAudienceSnapshot,
   contractFixtureCandidateBatch,
   contractFixtureGameplaySnapshot,
+  contractFixtureLiveDirectorState,
   contractFixtureProfile,
   contractFixtureQuestCycle,
   contractFixtureSession,
@@ -89,6 +91,25 @@ function reactionCommand(commandId = "fixture-viewer-reaction", expectedRevision
     actor: { kind: "anonymous", actorId: null },
     type: "viewer.react",
     reaction: "hype",
+  });
+}
+
+function liveDirectorCueCommand(
+  commandId = "fixture-live-director-cue-command",
+  expectedRevision = 0,
+) {
+  return streamerLiveDirectorCueCommandSchema.parse({
+    contractVersion: "1.0.0",
+    sessionId: contractFixtureSession.sessionId,
+    questCycleId: contractFixtureQuestCycle.envelope.questCycleId,
+    commandId,
+    correlationId: `correlation-${commandId}`,
+    expectedRevision,
+    issuedAt: ACCEPTED_AT,
+    actor: { kind: "moderator", actorId: "fixture-moderator" },
+    type: "streamer.live-director-cue",
+    cueId: contractFixtureLiveDirectorState.cue?.cueId,
+    action: "later",
   });
 }
 
@@ -618,6 +639,43 @@ describe("Role 1 application orchestrator", () => {
     expect(duplicate.outcome).toBe("duplicate");
     expect(duplicate.delivery).toBe("not-republished");
     expect(duplicate.receipt.state.session.revision).toBe(1);
+    expect(engine.calls).toBe(1);
+    expect(publisher.published).toHaveLength(1);
+  });
+
+  it("keeps Live Director projections revision-consistent and fails duplicate/stale cue commands closed", async () => {
+    const state = { ...initialState(), liveDirector: structuredClone(contractFixtureLiveDirectorState) };
+    const repository = new FixtureSessionStateRepository([state]);
+    const publisher = new RecordingFixturePublisher();
+    const engine = successfulEngine();
+    const orchestrator = new ChatXptOrchestrator(dependencies(repository, publisher, engine));
+    const input = liveDirectorCueCommand();
+
+    const first = await orchestrator.execute(input);
+    const duplicate = await orchestrator.execute(input);
+    const stale = await orchestrator.execute(liveDirectorCueCommand("fixture-stale-live-director", 0));
+
+    expect(first.ok).toBe(true);
+    if (!first.ok || first.views === null) return;
+    expect(first.views.streamer.liveDirector?.cue?.reason).toContain("Chat is asking");
+    expect(first.views.viewer.liveDirector).toEqual({
+      publicContext: contractFixtureLiveDirectorState.publicContext,
+    });
+    expect(first.views.viewer.liveDirector).not.toHaveProperty("cue");
+    expect(first.views.overlay).not.toHaveProperty("liveDirector");
+    expect(
+      [first.views.streamer, first.views.viewer, first.views.overlay].map(
+        (view) => view.envelope.revision,
+      ),
+    ).toEqual([1, 1, 1]);
+
+    expect(duplicate.ok).toBe(true);
+    if (!duplicate.ok) return;
+    expect(duplicate.outcome).toBe("duplicate");
+    expect(duplicate.delivery).toBe("not-republished");
+    expect(stale.ok).toBe(false);
+    if (stale.ok) return;
+    expect(stale.error.code).toBe("stale-revision");
     expect(engine.calls).toBe(1);
     expect(publisher.published).toHaveLength(1);
   });

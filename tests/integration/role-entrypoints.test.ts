@@ -44,12 +44,16 @@ describe("role-owned public entrypoints", () => {
 
   it("lets Role 4 consume the canonical streamer view", () => {
     expect(streamerViewModelSchema.safeParse(contractFixtureStreamerView).success).toBe(true);
+    expect(contractFixtureStreamerView.liveDirector?.cue?.state).toBe("proposed");
     expect(typeof streamerQuestCommandSchema.safeParse).toBe("function");
   });
 
   it("lets Role 5 consume the canonical viewer and overlay views", () => {
     expect(viewerSurfaceSchema.safeParse(contractFixtureViewerView).success).toBe(true);
     expect(viewerOverlaySchema.safeParse(contractFixtureOverlayView).success).toBe(true);
+    expect(contractFixtureViewerView.liveDirector).toHaveProperty("publicContext");
+    expect(contractFixtureViewerView.liveDirector).not.toHaveProperty("cue");
+    expect(contractFixtureOverlayView).not.toHaveProperty("liveDirector");
     expect(typeof viewerVoteCommandSchema.safeParse).toBe("function");
     expect(typeof viewerReactionCommandSchema.safeParse).toBe("function");
   });

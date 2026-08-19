@@ -10,6 +10,73 @@ import {
   timestampSchema,
 } from "./common";
 import { voteTallySchema } from "./quests";
+import { directorCueActionSchema } from "./signals";
+
+export const liveDirectorInterventionActionSchema = z.union([
+  directorCueActionSchema,
+  z.enum(["expired", "stale", "cancelled"]),
+]);
+
+export const liveDirectorInterventionOutcomeSchema = z.enum([
+  "no-publication",
+  "voting",
+  "active",
+  "succeeded",
+  "failed",
+  "cancelled",
+  "skipped",
+  "expired",
+]);
+
+export const liveDirectorInterventionRecordSchema = z
+  .object({
+    interventionId: identifierSchema,
+    sessionId: identifierSchema,
+    cueId: identifierSchema,
+    sourceContextId: identifierSchema,
+    questCycleId: identifierSchema.nullable(),
+    cueShownAt: timestampSchema,
+    action: liveDirectorInterventionActionSchema,
+    actionAt: timestampSchema,
+    acceptedVoteCount: z.number().int().nonnegative(),
+    reactionCount: z.number().int().nonnegative(),
+    outcome: liveDirectorInterventionOutcomeSchema,
+    evidenceClass: evidenceClassSchema,
+    limitations: z.array(z.string().trim().min(1).max(240)).max(8),
+    privacy: z
+      .object({
+        rawChatIncluded: z.literal(false),
+        usernamesIncluded: z.literal(false),
+        viewerIdentifiersIncluded: z.literal(false),
+        privateVoteReceiptsIncluded: z.literal(false),
+        providerPayloadIncluded: z.literal(false),
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((record, context) => {
+    if (record.actionAt < record.cueShownAt) {
+      context.addIssue({
+        code: "custom",
+        message: "Intervention action cannot predate the cue",
+        path: ["actionAt"],
+      });
+    }
+    if (record.action === "turn-into-vote" && record.questCycleId === null) {
+      context.addIssue({
+        code: "custom",
+        message: "Vote conversion interventions require a quest-cycle reference",
+        path: ["questCycleId"],
+      });
+    }
+    if (record.action !== "turn-into-vote" && record.outcome !== "no-publication") {
+      context.addIssue({
+        code: "custom",
+        message: "Non-conversion interventions cannot claim a quest outcome",
+        path: ["outcome"],
+      });
+    }
+  });
 
 export const sessionHistoryOutcomeSchema = z.enum([
   "succeeded",
@@ -165,3 +232,12 @@ export type SessionHistoryEntry = z.infer<typeof sessionHistoryEntrySchema>;
 export type SessionHistorySummary = z.infer<typeof sessionHistorySummarySchema>;
 export type SessionHistoryPrivacy = z.infer<typeof sessionHistoryPrivacySchema>;
 export type SessionHistorySnapshot = z.infer<typeof sessionHistorySnapshotSchema>;
+export type LiveDirectorInterventionAction = z.infer<
+  typeof liveDirectorInterventionActionSchema
+>;
+export type LiveDirectorInterventionOutcome = z.infer<
+  typeof liveDirectorInterventionOutcomeSchema
+>;
+export type LiveDirectorInterventionRecord = z.infer<
+  typeof liveDirectorInterventionRecordSchema
+>;

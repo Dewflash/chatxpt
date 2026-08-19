@@ -6,7 +6,7 @@ Update this file at the start and end of each Role 1 pass. Do not mark `DONE` wi
 
 Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan defines phase order, owner decisions, deadlines, and pass-level evidence.
 
-**Next:** begin R1-023 (`LD-R1-01`) on a fresh branch from current `main`, while Role 3 begins R3-009 (`LD-R3-01`) against the proposed canonical fixtures. Keep R1-015 and the team-owned Supabase preview moving where they do not overlap. Deconflict each Live Director wave before merge; role labels remain responsibility context, not permission gates.
+**Next:** begin R1-024 (`LD-R1-02`) from the landed R1-023 contract spine and deconflict its context input with Role 3's R3-009 suitability seam. Keep R1-015 and the team-owned Supabase preview moving where they do not overlap. Deconflict each Live Director wave before merge; role labels remain responsibility context, not permission gates.
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
@@ -32,7 +32,7 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 | R1-020 | P0 | DONE | Implement accepted quest runtime seams for #36, #37, #38, recovered #48 scheduler, and #50 progress commands. | D-044 through D-047; accepted #50 command decision | Canonical tick/progress/emergency-clear commands, durable emergency latch, intervention-before-generation coordinator, vote-close scheduler, memory/Supabase due-cycle readers, migration, focused tests, and `npm run check` pass. |
 | R1-021 | P0 | IN PROGRESS | Mount authenticated normalised gameplay snapshots into the shared server runtime without per-frame revision churn. | R1-003/R1-004/R1-007; Role 2 extraction public output | A server-only setup key issues short-lived session grants; memory/Supabase keep one monotonic snapshot per active session; ingestion rejects stale or cross-session/cycle/revision/evidence input; the capture UI submits only normalized facts and refreshes authority; and the sole orchestrator hydrates matching gameplay with explicit Capture Health. Focused checks pass on the finals integration branch. Full repository checks and real browser/OBS evidence remain before handoff. |
 | R1-022 | P0 | DONE | Validate and scope the proposed Live Director expansion, then activate only the retained passes in its implementation plan. | P-015; D-074; research report and evidence matrix | D-075 accepts the narrow P0 loop, two bounded P1 experiments, explicit deferrals/rejections, and the five-pass Role 1 / five-pass Role 3 split. The active plan, queues, Role 3 brief, project queue, and coordination record preserve the unproven-solution-fit boundary. |
-| R1-023 | P0 | READY | `LD-R1-01`: define the canonical Live Director authority, privacy, command, expiry, and three-projection spine. | R1-003; D-075; current contracts | Versioned contracts/fixtures and producer/consumer tests prove one revision, server-authorised actions, stale/duplicate failure, and structural absence of private cue/pointer/personal/provider data from viewer and OBS projections. |
+| R1-023 | P0 | DONE | `LD-R1-01`: define the canonical Live Director authority, privacy, command, expiry, and three-projection spine. | R1-003; D-075; current contracts | Commit `49383cc` publishes versioned contracts plus known/unknown/stale/conflicting/privacy-denied fixtures; Core/role-consumer/orchestrator tests prove one revision, permission classes, cue expiry, duplicate/stale failure, approved viewer context, and structural absence of private cue/pointer/provider/personal state from viewer and OBS projections. Evidence: `E-20260819-R1-001`. |
 | R1-024 | P0 | READY | `LD-R1-02`: compose declared intent, privacy-safe Chat Pointer aggregates, and source-separated private Live Context. | R1-023; Role 3 R3-009 input shape | Known/unknown/stale/conflict/sparse/single-viewer/spam/deleted-chat/reconnect/permission tests pass; only approved aggregates persist and no audience or streamer intent is fabricated. |
 | R1-025 | P0 | READY | `LD-R1-03`: deliver Session Goal, Live Context, cue actions, existing recommended quests, and private pop-out/OBS Dock through Studio/Live Config. | R1-023/R1-024; Role 3 R3-010 actions | Accessible compact/private UI covers stale, permission, health, loading, offline, and reconnect states; it remains distinct from the public OBS Browser Source and adds no native/audio/gameplay-coach scope. |
 | R1-026 | P0 | READY | `LD-R1-04`: preserve Extension Vote/Active/Result and compressed OBS payoff, with minimal Catch-up isolated as a P1 experiment. | R1-023; Role 3 lifecycle/conversion passes | Personal receipt/recovery stays private, hosted/chat fallbacks remain, OBS leaks no private fields, and responsive/accessibility/reconnect/terminal fixtures pass without client-owned lifecycle authority. |
@@ -42,6 +42,13 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 
 - `codex/role-1-demo-runbook` adds `docs/evidence/GOLDEN_REHEARSAL_RUNBOOK.md`, a privacy-safe rehearsal path for memory-backed and real Twitch/OBS runs.
 - `npm run check:demo-runbook` verifies the runbook keeps the required evidence resources, phases, fixture-vs-live warning, unknown-handling rule, authoritative revision gate, and secret/link guardrails.
+
+## Current R1-023 Live Director authority evidence
+
+- `49383cc` adds the additive canonical intent, pointer, source-separated Live Context, cue, public-context, intervention-record, command, and projection schemas without changing the `1.0.0` compatibility boundary for existing clients.
+- Fixture producer/consumer and orchestrator tests cover known, unknown, stale, conflicting, privacy-denied, permission, expiry, duplicate, stale-revision, and three-projection privacy cases.
+- Viewer output contains only the approved public-context object; OBS retains only its existing public quest projection and rejects any Live Director field. The default quest engine rejects the new commands until Role 3's cue lifecycle lands.
+- Evidence entry `E-20260819-R1-001` is fixture-only. Real Twitch, OBS, Supabase Cloud, provider, and solution-fit evidence remains unproven.
 
 ## Current R1-010/R1-018 disclosure evidence
 
