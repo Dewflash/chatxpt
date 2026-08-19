@@ -84,6 +84,9 @@ function input(
     now: ROLE_3_FIXTURE_TIME + 1_000,
     seed: "role-3-cue-conversion-seed",
     command: role3IntelligenceCommand(),
+    emergencyPaused: false,
+    sessionEnded: false,
+    questImpossible: false,
     ...overrides,
   };
 }
@@ -130,6 +133,32 @@ describe("DefaultDirectorCueConverter", () => {
     if (!result.ok) return;
     expect(result.batch.candidates).toHaveLength(3);
     expect(result.decision.nextState.options).toEqual(result.batch.candidates);
+  });
+
+  it.each([
+    ["emergency pause", { emergencyPaused: true }],
+    ["session end", { sessionEnded: true }],
+    ["impossible opportunity", { questImpossible: true }],
+  ])("publishes nothing after %s", (_name, authorityPatch) => {
+    expect(new DefaultDirectorCueConverter().convert(input(authorityPatch))).toMatchObject({
+      ok: false,
+      disposition: "no-publication",
+      code: "invalid-context",
+    });
+  });
+
+  it("publishes nothing when audience support expires before conversion", () => {
+    expect(
+      new DefaultDirectorCueConverter().convert(
+        input({ now: convertedLiveDirector.audiencePointer!.status === "known"
+          ? convertedLiveDirector.audiencePointer!.expiresAt
+          : ROLE_3_FIXTURE_TIME + 1_000 }),
+      ),
+    ).toMatchObject({
+      ok: false,
+      disposition: "no-publication",
+      code: "cue-not-converted",
+    });
   });
 
   it.each([0, 1, 2, 3])(

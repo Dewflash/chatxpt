@@ -14,14 +14,18 @@ import {
 } from "../core";
 import {
   checkRecentQuestRepetition,
+  createDirectorCueHistorySummary,
   decideActiveQuestInterruption,
   defaultCooldownEndsAt,
   DefaultDirectorCueSuitabilityPolicy,
   DefaultInterventionPolicy,
   DIRECTOR_CUE_ATTENTION_WINDOW_MILLISECONDS,
   DIRECTOR_CUE_COOLDOWN_MILLISECONDS,
+  mergeDirectorCueHistory,
   type DirectorCueSuitabilityInput,
+  type RecentDirectorCueSummary,
 } from ".";
+import { contractFixtureLiveDirectorState } from "../core/testing";
 import {
   ROLE_3_FIXTURE_TIME,
   role3FixtureIdleState,
@@ -202,6 +206,21 @@ function directorInput(
     audiencePointer: directorAudience(),
     recentCues: [],
     now: ROLE_3_FIXTURE_TIME,
+    ...patch,
+  };
+}
+
+function recentCue(
+  cueId: string,
+  patch: Partial<RecentDirectorCueSummary> = {},
+): RecentDirectorCueSummary {
+  return {
+    cueId,
+    intentId: `intent-${cueId}`,
+    topic: `Topic ${cueId}`,
+    offeredAt: ROLE_3_FIXTURE_TIME - 180_000,
+    resolvedAt: ROLE_3_FIXTURE_TIME - 180_000,
+    disposition: "dismissed",
     ...patch,
   };
 }
@@ -617,20 +636,25 @@ describe("DefaultDirectorCueSuitabilityPolicy", () => {
     {
       name: "cooldown",
       recentCues: [
-        {
+        recentCue("cooldown", {
           intentId: "other-intent",
           topic: "A different topic",
           offeredAt: ROLE_3_FIXTURE_TIME - DIRECTOR_CUE_COOLDOWN_MILLISECONDS + 1,
-        },
+          resolvedAt: ROLE_3_FIXTURE_TIME - DIRECTOR_CUE_COOLDOWN_MILLISECONDS + 1,
+        }),
       ],
       reason: "cue-cooldown",
     },
     {
       name: "attention budget",
-      recentCues: [1, 2, 3].map((index) => ({
+      recentCues: [1, 2, 3].map((index) => recentCue(`attention-${index}`, {
         intentId: `intent-${index}`,
         topic: `Distinct topic ${index}`,
         offeredAt:
+          ROLE_3_FIXTURE_TIME -
+          DIRECTOR_CUE_COOLDOWN_MILLISECONDS -
+          index * 1_000,
+        resolvedAt:
           ROLE_3_FIXTURE_TIME -
           DIRECTOR_CUE_COOLDOWN_MILLISECONDS -
           index * 1_000,
@@ -640,11 +664,12 @@ describe("DefaultDirectorCueSuitabilityPolicy", () => {
     {
       name: "repeated topic",
       recentCues: [
-        {
+        recentCue("repeated", {
           intentId: fixtureDirectorIntent.intentId,
           topic: "Choose next safe build",
           offeredAt: ROLE_3_FIXTURE_TIME - DIRECTOR_CUE_ATTENTION_WINDOW_MILLISECONDS - 1,
-        },
+          resolvedAt: ROLE_3_FIXTURE_TIME - DIRECTOR_CUE_ATTENTION_WINDOW_MILLISECONDS - 1,
+        }),
       ],
       reason: "repeated-cue",
     },
@@ -683,6 +708,53 @@ describe("DefaultDirectorCueSuitabilityPolicy", () => {
       intelligence([knownSignal("activity", "activity-intensity", 0.25)]),
     );
     expect(policy.decide(input)).toEqual(policy.decide(input));
+  });
+
+  it("starts post-dismissal cooldown at resolution and deduplicates reconnect replay", () => {
+    const cue = {
+      ...contractFixtureLiveDirectorState.cue!,
+      state: "dismissed" as const,
+      reason: "Streamer dismissed the cue",
+      createdAt: ROLE_3_FIXTURE_TIME - 2_000,
+      updatedAt: ROLE_3_FIXTURE_TIME - 1_000,
+      availableActions: [],
+    };
+    const summary = createDirectorCueHistorySummary({
+      cue,
+      topic: contractFixtureLiveDirectorState.audiencePointer!.status === "known"
+        ? contractFixtureLiveDirectorState.audiencePointer!.topic
+        : "",
+    });
+    expect(summary).toMatchObject({
+      cueId: cue.cueId,
+      disposition: "dismissed",
+      resolvedAt: ROLE_3_FIXTURE_TIME - 1_000,
+    });
+    if (summary === null) throw new Error("Expected a resolved cue history summary");
+    const once = mergeDirectorCueHistory([], summary, ROLE_3_FIXTURE_TIME);
+    expect(mergeDirectorCueHistory(once ?? [], summary, ROLE_3_FIXTURE_TIME)).toEqual(once);
+    expect(
+      mergeDirectorCueHistory(
+        once ?? [],
+        { ...summary, disposition: "converted" },
+        ROLE_3_FIXTURE_TIME,
+      ),
+    ).toBeNull();
+
+    const snapshot = intelligence([knownSignal("activity", "activity-intensity", 0.1)]);
+    expect(policy.decide(directorInput(snapshot, { recentCues: once ?? [] }))).toMatchObject({
+      disposition: "stay-silent",
+      reasons: ["cue-cooldown"],
+    });
+  });
+
+  it("does not fabricate history for a cue that is still active", () => {
+    expect(
+      createDirectorCueHistorySummary({
+        cue: contractFixtureLiveDirectorState.cue!,
+        topic: "Choose the next safe build",
+      }),
+    ).toBeNull();
   });
 });
 

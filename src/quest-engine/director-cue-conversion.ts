@@ -26,6 +26,9 @@ export interface DirectorCueConversionInput
   /** `null` represents provider/algorithmic unavailability; deterministic fallback still runs. */
   readonly candidates: readonly unknown[] | null;
   readonly command: IntelligenceReadyCommand;
+  readonly emergencyPaused: boolean;
+  readonly sessionEnded: boolean;
+  readonly questImpossible: boolean;
 }
 
 export type DirectorCueConversionFailureCode =
@@ -68,17 +71,20 @@ function noPublication(
   };
 }
 
-function cueMatchesCurrentContext(state: LiveDirectorState): boolean {
+function cueMatchesCurrentContext(state: LiveDirectorState, now: number): boolean {
   const cue = state.cue;
   if (cue === null || cue.state !== "converted") return false;
   if (state.liveContext?.contextId !== cue.contextId) return false;
+  if (state.liveContext.expiresAt <= now || cue.expiresAt <= now) return false;
   if (state.declaredIntent.status !== "known" || state.declaredIntent.intentId !== cue.intentId) {
     return false;
   }
+  if (state.declaredIntent.expiresAt <= now) return false;
   if (cue.audiencePointerId === null) return true;
   return (
     state.audiencePointer?.status === "known" &&
-    state.audiencePointer.pointerId === cue.audiencePointerId
+    state.audiencePointer.pointerId === cue.audiencePointerId &&
+    state.audiencePointer.expiresAt > now
   );
 }
 
@@ -102,11 +108,24 @@ export class DefaultDirectorCueConverter {
       !command.success ||
       command.data.type !== "system.intelligence-ready" ||
       !Number.isSafeInteger(input.now) ||
-      input.now < 0
+      input.now < 0 ||
+      typeof input.emergencyPaused !== "boolean" ||
+      typeof input.sessionEnded !== "boolean" ||
+      typeof input.questImpossible !== "boolean"
     ) {
       return noPublication("invalid-context", "Director Cue conversion input is invalid.");
     }
-    if (!cueMatchesCurrentContext(liveDirector.data)) {
+    if (input.emergencyPaused || input.sessionEnded || input.questImpossible) {
+      return noPublication(
+        "invalid-context",
+        input.emergencyPaused
+          ? "Emergency pause prevents Director Cue conversion."
+          : input.sessionEnded
+            ? "An ended session cannot convert a Director Cue."
+            : "An impossible opportunity cannot convert a Director Cue.",
+      );
+    }
+    if (!cueMatchesCurrentContext(liveDirector.data, input.now)) {
       return noPublication(
         "cue-not-converted",
         "Only the current canonical converted Director Cue may request candidates.",
