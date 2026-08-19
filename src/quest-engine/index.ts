@@ -21,8 +21,6 @@ export {
 export type {
   ActiveQuestInterruptionDecision,
   ActiveQuestInterruptionInput,
-  DirectorCueAudienceContext,
-  DirectorCueIntent,
   DirectorCueSuitability,
   DirectorCueSuitabilityDecision,
   DirectorCueSuitabilityInput,

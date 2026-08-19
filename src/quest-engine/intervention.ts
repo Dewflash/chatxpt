@@ -1,7 +1,11 @@
 import {
+  audiencePointerSchema,
+  declaredStreamIntentSchema,
   intelligenceSnapshotSchema,
   questCycleStateSchema,
   streamerProfileSchema,
+  type AudiencePointer,
+  type DeclaredStreamIntent,
   type IntelligenceSnapshot,
   type NamedSignal,
   type QuestCycleState,
@@ -61,43 +65,19 @@ export type DirectorCueSuitabilityReason =
   | "transition"
   | "unsafe-moment"
   | "missing-audience-context"
+  | "permission-denied-audience-context"
   | "sparse-audience"
   | "conflicting-audience"
   | "ambiguous-audience"
   | "sarcasm-risk"
   | "stale-audience-context"
   | "low-confidence-audience-context"
+  | "stale-declared-intent"
+  | "permission-denied-declared-intent"
   | "cue-cooldown"
   | "attention-budget-exhausted"
   | "repeated-cue"
   | "below-cue-threshold";
-
-export type DirectorCueIntent =
-  | {
-      readonly status: "known";
-      readonly intentId: string;
-      readonly objective: string;
-      readonly updatedAt: number;
-    }
-  | { readonly status: "unknown" };
-
-export type DirectorCueAudienceContext =
-  | {
-      readonly status: "known";
-      readonly pointerId: string;
-      readonly topic: string;
-      readonly observedAt: number;
-      readonly confidence: number;
-      readonly relevance: number;
-      readonly intentAlignment: number;
-      readonly uniqueParticipants: number;
-      readonly qualifyingMessages: number;
-      readonly sarcasmRisk: boolean;
-      readonly evidenceSignalIds: readonly string[];
-    }
-  | { readonly status: "unknown"; readonly evidenceSignalIds: readonly string[] }
-  | { readonly status: "conflicting"; readonly evidenceSignalIds: readonly string[] }
-  | { readonly status: "ambiguous"; readonly evidenceSignalIds: readonly string[] };
 
 export interface RecentDirectorCueSummary {
   readonly intentId: string;
@@ -110,8 +90,8 @@ export interface DirectorCueSuitabilityInput {
   readonly intelligence: IntelligenceSnapshot;
   readonly profile: StreamerProfile;
   readonly emergencyPaused: boolean;
-  readonly declaredIntent: DirectorCueIntent;
-  readonly audienceContext: DirectorCueAudienceContext;
+  readonly declaredIntent: DeclaredStreamIntent;
+  readonly audiencePointer: AudiencePointer;
   readonly recentCues: readonly RecentDirectorCueSummary[];
   readonly now: number;
 }
@@ -258,51 +238,6 @@ function directorCueThresholds(profile: StreamerProfile) {
   };
 }
 
-function validDirectorCueIntent(
-  intent: DirectorCueIntent,
-  now: number,
-): intent is Extract<DirectorCueIntent, { readonly status: "known" }> {
-  return (
-    intent.status === "known" &&
-    intent.intentId.trim().length > 0 &&
-    intent.intentId.length <= 120 &&
-    intent.objective.trim().length > 0 &&
-    intent.objective.length <= 240 &&
-    Number.isSafeInteger(intent.updatedAt) &&
-    intent.updatedAt >= 0 &&
-    intent.updatedAt <= now
-  );
-}
-
-function validAudienceContext(
-  context: Extract<DirectorCueAudienceContext, { readonly status: "known" }>,
-): boolean {
-  return (
-    context.pointerId.trim().length > 0 &&
-    context.pointerId.length <= 120 &&
-    context.topic.trim().length > 0 &&
-    context.topic.length <= 240 &&
-    Number.isSafeInteger(context.observedAt) &&
-    context.observedAt >= 0 &&
-    Number.isFinite(context.confidence) &&
-    context.confidence >= 0 &&
-    context.confidence <= 1 &&
-    Number.isFinite(context.relevance) &&
-    context.relevance >= 0 &&
-    context.relevance <= 1 &&
-    Number.isFinite(context.intentAlignment) &&
-    context.intentAlignment >= 0 &&
-    context.intentAlignment <= 1 &&
-    Number.isSafeInteger(context.uniqueParticipants) &&
-    context.uniqueParticipants >= 0 &&
-    Number.isSafeInteger(context.qualifyingMessages) &&
-    context.qualifyingMessages >= 0 &&
-    context.evidenceSignalIds.every(
-      (signalId) => signalId.trim().length > 0 && signalId.length <= 120,
-    )
-  );
-}
-
 function recentCueHistoryIsValid(
   recentCues: readonly RecentDirectorCueSummary[],
   now: number,
@@ -322,20 +257,22 @@ function recentCueHistoryIsValid(
 /**
  * Pure Role 3 policy for the private Live Director cue opportunity.
  *
- * `declaredIntent` and `audienceContext` are a temporary Role 3 adapter for the
- * proposed LD-R1-01 fixture. The policy will consume the canonical Core seam
- * once Role 1 publishes it; no persistence, projection, or UI authority lives
- * here.
+ * The policy consumes Role 1's canonical declared-intent and retained audience
+ * pointer contracts. No persistence, projection, or UI authority lives here.
  */
 export class DefaultDirectorCueSuitabilityPolicy {
   decide(input: DirectorCueSuitabilityInput): DirectorCueSuitabilityDecision {
     const state = questCycleStateSchema.safeParse(input.currentState);
     const intelligence = intelligenceSnapshotSchema.safeParse(input.intelligence);
     const profile = streamerProfileSchema.safeParse(input.profile);
+    const intent = declaredStreamIntentSchema.safeParse(input.declaredIntent);
+    const pointer = audiencePointerSchema.safeParse(input.audiencePointer);
     if (
       !state.success ||
       !intelligence.success ||
       !profile.success ||
+      !intent.success ||
+      !pointer.success ||
       !Number.isSafeInteger(input.now) ||
       input.now < 0 ||
       !recentCueHistoryIsValid(input.recentCues, input.now)
@@ -361,11 +298,19 @@ export class DefaultDirectorCueSuitabilityPolicy {
     if (unsafeMoment(intelligence.data, input.now)) {
       return cueDecision("stay-silent", "unsafe-moment");
     }
-    const declaredIntent = input.declaredIntent;
+    const declaredIntent = intent.data;
     if (declaredIntent.status === "unknown") {
-      return cueDecision("stay-silent", "missing-declared-intent");
+      return cueDecision(
+        "stay-silent",
+        declaredIntent.reason === "permission-denied"
+          ? "permission-denied-declared-intent"
+          : "missing-declared-intent",
+      );
     }
-    if (!validDirectorCueIntent(declaredIntent, input.now)) {
+    if (declaredIntent.status === "stale" || declaredIntent.expiresAt <= input.now) {
+      return cueDecision("stay-silent", "stale-declared-intent");
+    }
+    if (declaredIntent.updatedAt > input.now) {
       return cueDecision("stay-silent", "invalid-context");
     }
 
@@ -398,9 +343,17 @@ export class DefaultDirectorCueSuitabilityPolicy {
       return cueDecision("wait", "active-gameplay", 0, [activity.signalId]);
     }
 
-    const audience = input.audienceContext;
+    const audience = pointer.data;
     if (audience.status === "unknown") {
       return cueDecision("wait", "missing-audience-context", 0, [activity.signalId]);
+    }
+    if (audience.status === "permission-denied") {
+      return cueDecision(
+        "wait",
+        "permission-denied-audience-context",
+        0,
+        [activity.signalId, ...audience.evidenceSignalIds],
+      );
     }
     if (audience.status === "conflicting") {
       return cueDecision("wait", "conflicting-audience", 0, [activity.signalId, ...audience.evidenceSignalIds]);
@@ -408,8 +361,14 @@ export class DefaultDirectorCueSuitabilityPolicy {
     if (audience.status === "ambiguous") {
       return cueDecision("wait", "ambiguous-audience", 0, [activity.signalId, ...audience.evidenceSignalIds]);
     }
-    if (!validAudienceContext(audience)) {
+    if (audience.status === "stale") {
+      return cueDecision("wait", "stale-audience-context", 0, [activity.signalId, ...audience.evidenceSignalIds]);
+    }
+    if (audience.status !== "known") {
       return cueDecision("stay-silent", "invalid-context");
+    }
+    if (audience.expiresAt <= input.now) {
+      return cueDecision("wait", "stale-audience-context", 0, [activity.signalId, ...audience.evidenceSignalIds]);
     }
     const audienceAge = input.now - audience.observedAt;
     if (audienceAge < 0) {

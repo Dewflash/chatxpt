@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import {
   CONTRACT_VERSION,
+  audiencePointerSchema,
+  declaredStreamIntentSchema,
   intelligenceSnapshotSchema,
   questCycleStateSchema,
   streamerProfileSchema,
   type IntelligenceSnapshot,
   type NamedSignal,
+  type AudiencePointer,
+  type DeclaredStreamIntent,
 } from "../core";
 import {
   checkRecentQuestRepetition,
@@ -16,7 +20,6 @@ import {
   DefaultInterventionPolicy,
   DIRECTOR_CUE_ATTENTION_WINDOW_MILLISECONDS,
   DIRECTOR_CUE_COOLDOWN_MILLISECONDS,
-  type DirectorCueAudienceContext,
   type DirectorCueSuitabilityInput,
 } from ".";
 import {
@@ -148,21 +151,29 @@ function restampIntelligence(
   });
 }
 
-const fixtureDirectorIntent = {
-  status: "known" as const,
+const fixtureDirectorIntent: Extract<DeclaredStreamIntent, { readonly status: "known" }> = {
+  status: "known",
   intentId: "intent-build-safely",
+  goal: "Build safely",
   objective: "Build safely while keeping chat involved",
+  desiredAudienceInvolvement: "Choose the next safe build",
+  authorId: "role-3-streamer",
   updatedAt: ROLE_3_FIXTURE_TIME - 60_000,
+  expiresAt: ROLE_3_FIXTURE_TIME + 60_000,
 };
 
 function directorAudience(
-  patch: Partial<Extract<DirectorCueAudienceContext, { readonly status: "known" }>> = {},
-): Extract<DirectorCueAudienceContext, { readonly status: "known" }> {
-  return {
+  patch: Partial<Extract<AudiencePointer, { readonly status: "known" }>> = {},
+): Extract<AudiencePointer, { readonly status: "known" }> {
+  const pointer = audiencePointerSchema.parse({
     status: "known",
     pointerId: "pointer-build-choice",
     topic: "Choose the next safe build",
+    windowStartedAt: ROLE_3_FIXTURE_TIME - 10_000,
+    windowEndedAt: ROLE_3_FIXTURE_TIME - 1_000,
     observedAt: ROLE_3_FIXTURE_TIME - 1_000,
+    createdAt: ROLE_3_FIXTURE_TIME - 1_000,
+    expiresAt: ROLE_3_FIXTURE_TIME + 29_000,
     confidence: 0.9,
     relevance: 0.8,
     intentAlignment: 0.8,
@@ -171,7 +182,11 @@ function directorAudience(
     sarcasmRisk: false,
     evidenceSignalIds: ["audience-build-choice"],
     ...patch,
-  };
+  });
+  if (pointer.status !== "known") {
+    throw new Error("Director Cue fixture must remain a known audience pointer");
+  }
+  return pointer;
 }
 
 function directorInput(
@@ -184,7 +199,7 @@ function directorInput(
     profile: fixtureProfile,
     emergencyPaused: false,
     declaredIntent: fixtureDirectorIntent,
-    audienceContext: directorAudience(),
+    audiencePointer: directorAudience(),
     recentCues: [],
     now: ROLE_3_FIXTURE_TIME,
     ...patch,
@@ -383,7 +398,11 @@ describe("DefaultDirectorCueSuitabilityPolicy", () => {
         directorInput(unsafe, {
           currentState: proposedState,
           emergencyPaused: true,
-          declaredIntent: { status: "unknown" },
+          declaredIntent: {
+            status: "unknown",
+            reason: "not-set",
+            observedAt: ROLE_3_FIXTURE_TIME,
+          },
         }),
       ),
     ).toMatchObject({ disposition: "stay-silent", reasons: ["cycle-unavailable"] });
@@ -391,7 +410,11 @@ describe("DefaultDirectorCueSuitabilityPolicy", () => {
       policy.decide(
         directorInput(unsafe, {
           emergencyPaused: true,
-          declaredIntent: { status: "unknown" },
+          declaredIntent: {
+            status: "unknown",
+            reason: "not-set",
+            observedAt: ROLE_3_FIXTURE_TIME,
+          },
         }),
       ),
     ).toMatchObject({ disposition: "stay-silent", reasons: ["emergency-paused"] });
@@ -463,44 +486,82 @@ describe("DefaultDirectorCueSuitabilityPolicy", () => {
   it.each([
     {
       name: "unknown audience context",
-      audienceContext: { status: "unknown", evidenceSignalIds: [] } as const,
+      audiencePointer: audiencePointerSchema.parse({
+        status: "unknown",
+        reason: "not-enough-evidence",
+        observedAt: ROLE_3_FIXTURE_TIME,
+        evidenceSignalIds: [],
+      }),
       reason: "missing-audience-context",
     },
     {
       name: "conflicting chat",
-      audienceContext: { status: "conflicting", evidenceSignalIds: ["chat-conflict"] } as const,
+      audiencePointer: audiencePointerSchema.parse({
+        status: "conflicting",
+        reason: "competing-topics",
+        observedAt: ROLE_3_FIXTURE_TIME,
+        evidenceSignalIds: ["chat-conflict"],
+      }),
       reason: "conflicting-audience",
     },
     {
       name: "ambiguous chat",
-      audienceContext: { status: "ambiguous", evidenceSignalIds: ["chat-ambiguous"] } as const,
+      audiencePointer: audiencePointerSchema.parse({
+        status: "ambiguous",
+        reason: "sarcasm-or-humour",
+        observedAt: ROLE_3_FIXTURE_TIME,
+        evidenceSignalIds: ["chat-ambiguous"],
+      }),
       reason: "ambiguous-audience",
     },
     {
+      name: "permission-denied chat",
+      audiencePointer: audiencePointerSchema.parse({
+        status: "permission-denied",
+        reason: "audience-analysis-disabled",
+        observedAt: ROLE_3_FIXTURE_TIME,
+        evidenceSignalIds: [],
+      }),
+      reason: "permission-denied-audience-context",
+    },
+    {
       name: "sparse chat",
-      audienceContext: directorAudience({ uniqueParticipants: 1, qualifyingMessages: 1 }),
+      audiencePointer: directorAudience({ uniqueParticipants: 1, qualifyingMessages: 1 }),
       reason: "sparse-audience",
     },
     {
       name: "sarcastic chat",
-      audienceContext: directorAudience({ sarcasmRisk: true }),
+      audiencePointer: directorAudience({ sarcasmRisk: true }),
       reason: "sarcasm-risk",
     },
     {
       name: "stale audience context",
-      audienceContext: directorAudience({
+      audiencePointer: directorAudience({
+        windowStartedAt: ROLE_3_FIXTURE_TIME - 40_000,
+        windowEndedAt: ROLE_3_FIXTURE_TIME - 31_000,
         observedAt: ROLE_3_FIXTURE_TIME - 30_001,
+        createdAt: ROLE_3_FIXTURE_TIME - 30_001,
+      }),
+      reason: "stale-audience-context",
+    },
+    {
+      name: "canonical stale audience pointer",
+      audiencePointer: audiencePointerSchema.parse({
+        ...directorAudience(),
+        status: "stale",
+        expiresAt: ROLE_3_FIXTURE_TIME - 1,
+        staleAt: ROLE_3_FIXTURE_TIME,
       }),
       reason: "stale-audience-context",
     },
     {
       name: "weak audience context",
-      audienceContext: directorAudience({ confidence: 0.64 }),
+      audiencePointer: directorAudience({ confidence: 0.64 }),
       reason: "low-confidence-audience-context",
     },
-  ])("does not fabricate suitability from $name", ({ audienceContext, reason }) => {
+  ])("does not fabricate suitability from $name", ({ audiencePointer, reason }) => {
     const snapshot = intelligence([knownSignal("activity", "activity-intensity", 0.1)]);
-    expect(policy.decide(directorInput(snapshot, { audienceContext }))).toMatchObject({
+    expect(policy.decide(directorInput(snapshot, { audiencePointer }))).toMatchObject({
       disposition: "wait",
       reasons: [reason],
     });
@@ -509,10 +570,46 @@ describe("DefaultDirectorCueSuitabilityPolicy", () => {
   it("stays silent without a streamer-declared objective", () => {
     const snapshot = intelligence([knownSignal("activity", "activity-intensity", 0.1)]);
     expect(
-      policy.decide(directorInput(snapshot, { declaredIntent: { status: "unknown" } })),
+      policy.decide(
+        directorInput(snapshot, {
+          declaredIntent: declaredStreamIntentSchema.parse({
+            status: "unknown",
+            reason: "not-set",
+            observedAt: ROLE_3_FIXTURE_TIME,
+          }),
+        }),
+      ),
     ).toMatchObject({
       disposition: "stay-silent",
       reasons: ["missing-declared-intent"],
+    });
+  });
+
+  it.each([
+    {
+      name: "stale",
+      declaredIntent: declaredStreamIntentSchema.parse({
+        ...fixtureDirectorIntent,
+        status: "stale",
+        expiresAt: ROLE_3_FIXTURE_TIME - 1,
+        staleAt: ROLE_3_FIXTURE_TIME,
+      }),
+      reason: "stale-declared-intent",
+    },
+    {
+      name: "permission denied",
+      declaredIntent: declaredStreamIntentSchema.parse({
+        status: "unknown",
+        reason: "permission-denied",
+        observedAt: ROLE_3_FIXTURE_TIME,
+      }),
+      reason: "permission-denied-declared-intent",
+    },
+  ])("fails closed when declared intent is $name", ({ declaredIntent, reason }) => {
+    const snapshot = intelligence([knownSignal("activity", "activity-intensity", 0.1)]);
+    expect(policy.decide(directorInput(snapshot, { declaredIntent }))).toMatchObject({
+      disposition: "stay-silent",
+      reasons: [reason],
     });
   });
 
