@@ -392,6 +392,109 @@ export const audiencePointerSchema = z
     }
   });
 
+/**
+ * Ephemeral Role 2 -> Role 1 input used to build a retained Chat Pointer.
+ * The opaque participant keys and message fingerprints exist only so Role 1
+ * can remove duplicate deliveries/repeated spam and count distinct people.
+ * They are deliberately absent from AudiencePointer and authoritative state.
+ */
+export const audiencePointerAggregateEvidenceSchema = z
+  .object({
+    evidenceSignalId: identifierSchema,
+    participantKey: identifierSchema,
+    messageFingerprint: identifierSchema,
+    observedAt: timestampSchema,
+    deleted: z.boolean(),
+  })
+  .strict();
+
+const audiencePointerAggregateEnvelopeFields = {
+  envelope: contractEnvelopeSchema,
+  pointerId: identifierSchema,
+  observedAt: timestampSchema,
+};
+
+export const audiencePointerAggregateSchema = z
+  .discriminatedUnion("status", [
+    z
+      .object({
+        ...audiencePointerAggregateEnvelopeFields,
+        status: z.literal("known"),
+        topic: z.string().trim().min(1).max(240),
+        windowStartedAt: timestampSchema,
+        windowEndedAt: timestampSchema,
+        createdAt: timestampSchema,
+        expiresAt: timestampSchema,
+        confidence: confidenceSchema,
+        relevance: confidenceSchema,
+        intentAlignment: confidenceSchema,
+        sarcasmRisk: z.boolean(),
+        evidence: z.array(audiencePointerAggregateEvidenceSchema).min(1).max(128),
+      })
+      .strict(),
+    z
+      .object({
+        ...audiencePointerAggregateEnvelopeFields,
+        status: z.enum(["unknown", "conflicting", "ambiguous", "permission-denied"]),
+        reason: z.string().trim().min(1).max(160),
+        evidenceSignalIds: z.array(identifierSchema).max(32),
+      })
+      .strict(),
+  ])
+  .superRefine((aggregate, context) => {
+    if (
+      aggregate.envelope.source !== "algorithm" &&
+      aggregate.envelope.source !== "test-fixture"
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Audience pointer aggregates must come from an algorithm or test fixture",
+        path: ["envelope", "source"],
+      });
+    }
+    if (aggregate.observedAt !== aggregate.envelope.occurredAt) {
+      context.addIssue({
+        code: "custom",
+        message: "Audience pointer observation time must match its envelope",
+        path: ["observedAt"],
+      });
+    }
+    if (aggregate.status !== "known") {
+      if (new Set(aggregate.evidenceSignalIds).size !== aggregate.evidenceSignalIds.length) {
+        context.addIssue({
+          code: "custom",
+          message: "Audience pointer aggregate evidence references must be distinct",
+          path: ["evidenceSignalIds"],
+        });
+      }
+      return;
+    }
+    if (
+      aggregate.windowEndedAt < aggregate.windowStartedAt ||
+      aggregate.observedAt < aggregate.windowEndedAt ||
+      aggregate.createdAt < aggregate.observedAt ||
+      aggregate.expiresAt <= aggregate.createdAt
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Audience pointer aggregate timestamps must be monotonic and expire after creation",
+        path: ["expiresAt"],
+      });
+    }
+    for (const [index, evidence] of aggregate.evidence.entries()) {
+      if (
+        evidence.observedAt < aggregate.windowStartedAt ||
+        evidence.observedAt > aggregate.windowEndedAt
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: "Audience pointer evidence must fall inside its aggregate window",
+          path: ["evidence", index, "observedAt"],
+        });
+      }
+    }
+  });
+
 export const liveContextSnapshotSchema = z
   .object({
     contextId: identifierSchema,
@@ -684,6 +787,10 @@ export type LiveContextFactStatus = z.infer<typeof liveContextFactStatusSchema>;
 export type LiveContextFact = z.infer<typeof liveContextFactSchema>;
 export type DeclaredStreamIntent = z.infer<typeof declaredStreamIntentSchema>;
 export type AudiencePointer = z.infer<typeof audiencePointerSchema>;
+export type AudiencePointerAggregateEvidence = z.infer<
+  typeof audiencePointerAggregateEvidenceSchema
+>;
+export type AudiencePointerAggregate = z.infer<typeof audiencePointerAggregateSchema>;
 export type LiveContextSnapshot = z.infer<typeof liveContextSnapshotSchema>;
 export type DirectorCueAction = z.infer<typeof directorCueActionSchema>;
 export type DirectorCueState = z.infer<typeof directorCueStateSchema>;

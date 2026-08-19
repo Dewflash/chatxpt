@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import {
   ChatXptOrchestrator,
+  audiencePointerAggregateSchema,
   streamerEmergencyClearCommandSchema,
+  streamerLiveDirectorIntentCommandSchema,
   streamerLiveDirectorCueCommandSchema,
   streamerProfileSettingsCommandSchema,
   streamerQuestCommandSchema,
   streamerQuestProgressCommandSchema,
   systemIntelligenceCommandSchema,
+  systemLiveDirectorContextCommandSchema,
   systemQuestProgressCommandSchema,
   systemVoteCloseCommandSchema,
   viewerReactionCommandSchema,
@@ -32,6 +35,8 @@ import {
   ScriptedFixtureQuestEngine,
   SequenceFixtureMessageIds,
   StaticFixtureCandidateBatchReader,
+  StaticFixtureAudiencePointerAggregateReader,
+  contractFixtureAudiencePointerAggregate,
   contractFixtureAudienceSnapshot,
   contractFixtureCandidateBatch,
   contractFixtureGameplaySnapshot,
@@ -113,6 +118,50 @@ function liveDirectorCueCommand(
   });
 }
 
+function liveDirectorIntentCommand(
+  commandId = "fixture-live-director-intent-command",
+  expectedRevision = 0,
+) {
+  return streamerLiveDirectorIntentCommandSchema.parse({
+    contractVersion: "1.0.0",
+    sessionId: contractFixtureSession.sessionId,
+    questCycleId: null,
+    commandId,
+    correlationId: `correlation-${commandId}`,
+    expectedRevision,
+    issuedAt: ACCEPTED_AT - 1,
+    actor: { kind: "broadcaster", actorId: contractFixtureSession.broadcasterId },
+    type: "streamer.live-director-intent",
+    action: "set",
+    intent: {
+      goal: "Reach the next safe shelter",
+      objective: "Explore carefully while involving chat in the route choice.",
+      desiredAudienceInvolvement: "Vote on the next safe route.",
+      requestedExpiresAt: ACCEPTED_AT + 600_000,
+    },
+  });
+}
+
+function liveDirectorContextCommand(
+  commandId = "fixture-live-director-context-command",
+  expectedRevision = 1,
+  audiencePointerId: string | null = "fixture-pointer",
+) {
+  return systemLiveDirectorContextCommandSchema.parse({
+    contractVersion: "1.0.0",
+    sessionId: contractFixtureSession.sessionId,
+    questCycleId: contractFixtureQuestCycle.envelope.questCycleId,
+    commandId,
+    correlationId: `correlation-${commandId}`,
+    expectedRevision,
+    issuedAt: ACCEPTED_AT,
+    actor: { kind: "system", actorId: "fixture-orchestrator" },
+    type: "system.live-director-context-ready",
+    liveContextId: `context-${commandId}`,
+    audiencePointerId,
+  });
+}
+
 function successfulEngine() {
   return new ScriptedFixtureQuestEngine((input) => ({
     ok: true,
@@ -138,6 +187,9 @@ function dependencies(
   return {
     authorizer,
     candidateBatches: new StaticFixtureCandidateBatchReader(),
+    audiencePointers: new StaticFixtureAudiencePointerAggregateReader([
+      contractFixtureAudiencePointerAggregate,
+    ]),
     acceptedVotes,
     gameplaySnapshots: new FixtureCurrentGameplaySnapshotRepository(),
     repository,
@@ -678,6 +730,141 @@ describe("Role 1 application orchestrator", () => {
     expect(stale.error.code).toBe("stale-revision");
     expect(engine.calls).toBe(1);
     expect(publisher.published).toHaveLength(1);
+  });
+
+  it("commits declared intent and composed private context without invoking the quest engine", async () => {
+    const repository = new FixtureSessionStateRepository([initialState()]);
+    const publisher = new RecordingFixturePublisher();
+    const engine = successfulEngine();
+    const aggregate = audiencePointerAggregateSchema.parse({
+      ...structuredClone(contractFixtureAudiencePointerAggregate),
+      envelope: {
+        ...structuredClone(contractFixtureAudiencePointerAggregate.envelope),
+        revision: 1,
+      },
+    });
+    const orchestrator = new ChatXptOrchestrator({
+      ...dependencies(repository, publisher, engine),
+      audiencePointers: new StaticFixtureAudiencePointerAggregateReader([aggregate]),
+    });
+
+    const intent = await orchestrator.execute(liveDirectorIntentCommand());
+    const staleIntent = await orchestrator.execute(
+      liveDirectorIntentCommand("older-live-director-intent", 0),
+    );
+    const context = await orchestrator.execute(liveDirectorContextCommand());
+
+    expect(intent.ok).toBe(true);
+    expect(staleIntent.ok).toBe(false);
+    if (!staleIntent.ok) expect(staleIntent.error.code).toBe("stale-revision");
+    expect(context.ok).toBe(true);
+    if (!context.ok || context.views === null) return;
+    expect(context.receipt.state.session.revision).toBe(2);
+    expect(context.receipt.state.liveDirector?.declaredIntent).toMatchObject({
+      status: "known",
+      intentId: "fixture-live-director-intent-command",
+    });
+    expect(context.receipt.state.liveDirector?.audiencePointer).toMatchObject({
+      status: "known",
+      uniqueParticipants: 3,
+      qualifyingMessages: 5,
+    });
+    expect(
+      context.receipt.state.liveDirector?.liveContext?.facts.map((fact) => fact.sourceClass),
+    ).toEqual(expect.arrayContaining(["streamer-declared", "gameplay-observed", "audience-derived"]));
+    expect(context.receipt.events).toHaveLength(1);
+    expect(context.receipt.events[0].event).toEqual({
+      eventType: "live-director.context-composed",
+      attributes: {
+        contextId: "context-fixture-live-director-context-command",
+        audiencePointerStatus: "known",
+        uniqueParticipants: 3,
+        qualifyingMessages: 5,
+        rawChatRetained: false,
+      },
+    });
+    expect(context.views.streamer.liveDirector?.liveContext).not.toBeNull();
+    expect(context.views.viewer.liveDirector).toEqual({ publicContext: null });
+    expect(context.views.overlay).not.toHaveProperty("liveDirector");
+    expect(engine.calls).toBe(0);
+    expect(publisher.published).toHaveLength(2);
+
+    const persisted = JSON.stringify(context.receipt.state);
+    expect(persisted).not.toContain("participantKey");
+    expect(persisted).not.toContain("messageFingerprint");
+    expect(persisted).not.toContain("ephemeral-participant");
+  });
+
+  it("recovers composed context from authoritative state and fails duplicate/stale updates closed", async () => {
+    const repository = new FixtureSessionStateRepository([initialState()]);
+    const aggregate = audiencePointerAggregateSchema.parse({
+      ...structuredClone(contractFixtureAudiencePointerAggregate),
+      envelope: {
+        ...structuredClone(contractFixtureAudiencePointerAggregate.envelope),
+        revision: 1,
+      },
+    });
+    const reader = new StaticFixtureAudiencePointerAggregateReader([aggregate]);
+    const firstPublisher = new RecordingFixturePublisher();
+    const firstOrchestrator = new ChatXptOrchestrator({
+      ...dependencies(repository, firstPublisher),
+      audiencePointers: reader,
+    });
+    await firstOrchestrator.execute(liveDirectorIntentCommand());
+    const contextCommand = liveDirectorContextCommand();
+    const first = await firstOrchestrator.execute(contextCommand);
+    const duplicate = await firstOrchestrator.execute(contextCommand);
+    const stale = await firstOrchestrator.execute(
+      liveDirectorContextCommand("stale-context-command", 1),
+    );
+
+    expect(first.ok).toBe(true);
+    expect(duplicate.ok).toBe(true);
+    if (duplicate.ok) expect(duplicate.outcome).toBe("duplicate");
+    expect(stale.ok).toBe(false);
+    if (!stale.ok) expect(stale.error.code).toBe("stale-revision");
+
+    const recovered = await repository.load(contractFixtureSession.sessionId);
+    expect(recovered?.liveDirector?.liveContext?.contextId).toBe(
+      "context-fixture-live-director-context-command",
+    );
+    const reconnectPublisher = new RecordingFixturePublisher();
+    const reconnectOrchestrator = new ChatXptOrchestrator({
+      ...dependencies(repository, reconnectPublisher),
+      audiencePointers: reader,
+    });
+    const resumed = await reconnectOrchestrator.execute(command("reconnect-command", 2));
+    expect(resumed.ok).toBe(true);
+    if (!resumed.ok || resumed.views === null) return;
+    expect(resumed.views.streamer.liveDirector?.liveContext?.contextId).toBe(
+      "context-fixture-live-director-context-command",
+    );
+    expect(resumed.views.viewer.liveDirector).toEqual({ publicContext: null });
+  });
+
+  it("rejects unavailable audience aggregates and intents expired at server acceptance", async () => {
+    const repository = new FixtureSessionStateRepository([initialState()]);
+    const orchestrator = new ChatXptOrchestrator({
+      ...dependencies(repository, new RecordingFixturePublisher()),
+      audiencePointers: new StaticFixtureAudiencePointerAggregateReader(),
+    });
+    const expiredIntent = streamerLiveDirectorIntentCommandSchema.parse({
+      ...liveDirectorIntentCommand("expired-intent-command"),
+      issuedAt: ACCEPTED_AT - 2_000,
+      intent: {
+        ...liveDirectorIntentCommand("expired-intent-command").intent!,
+        requestedExpiresAt: ACCEPTED_AT - 1_000,
+      },
+    });
+    const expired = await orchestrator.execute(expiredIntent);
+    expect(expired.ok).toBe(false);
+    if (!expired.ok) expect(expired.error.code).toBe("expired");
+
+    const missing = await orchestrator.execute(
+      liveDirectorContextCommand("missing-pointer-command", 0),
+    );
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) expect(missing.error.code).toBe("dependency-unavailable");
   });
 
   it("rejects reuse of a command ID with different canonical input", async () => {

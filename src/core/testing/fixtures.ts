@@ -1,6 +1,7 @@
 import {
   CONTRACT_VERSION,
   audienceSnapshotSchema,
+  audiencePointerAggregateSchema,
   candidateBatchSchema,
   contractEnvelopeSchema,
   gameplaySnapshotSchema,
@@ -16,6 +17,7 @@ import {
   streamerProfileSchema,
   viewerViewModelSchema,
   type ContractEnvelope,
+  type AudiencePointerAggregate,
   type QuestCycleState,
   type RoleViewModels,
   type SessionHistorySnapshot,
@@ -87,6 +89,71 @@ export const contractFixtureAudienceSnapshot = audienceSnapshotSchema.parse({
     },
   ],
 });
+
+export const contractFixtureAudiencePointerAggregate = audiencePointerAggregateSchema.parse({
+  envelope: {
+    ...contractFixtureEnvelope,
+    messageId: "fixture-pointer-aggregate",
+    occurredAt: FIXTURE_TIME - 5_000,
+    receivedAt: FIXTURE_TIME - 5_000,
+  },
+  pointerId: "fixture-pointer",
+  status: "known",
+  topic: "Try the quieter route",
+  observedAt: FIXTURE_TIME - 5_000,
+  windowStartedAt: FIXTURE_TIME - 30_000,
+  windowEndedAt: FIXTURE_TIME - 5_000,
+  createdAt: FIXTURE_TIME,
+  expiresAt: FIXTURE_TIME + 30_000,
+  confidence: 0.82,
+  relevance: 0.88,
+  intentAlignment: 0.9,
+  sarcasmRisk: false,
+  evidence: [
+    {
+      evidenceSignalId: "fixture-audience-topic-1",
+      participantKey: "ephemeral-participant-a",
+      messageFingerprint: "ephemeral-message-a",
+      observedAt: FIXTURE_TIME - 12_000,
+      deleted: false,
+    },
+    {
+      evidenceSignalId: "fixture-audience-topic-1-duplicate",
+      participantKey: "ephemeral-participant-a",
+      messageFingerprint: "ephemeral-message-a",
+      observedAt: FIXTURE_TIME - 12_000,
+      deleted: false,
+    },
+    {
+      evidenceSignalId: "fixture-audience-topic-2",
+      participantKey: "ephemeral-participant-a",
+      messageFingerprint: "ephemeral-message-b",
+      observedAt: FIXTURE_TIME - 10_000,
+      deleted: false,
+    },
+    {
+      evidenceSignalId: "fixture-audience-topic-3",
+      participantKey: "ephemeral-participant-b",
+      messageFingerprint: "ephemeral-message-c",
+      observedAt: FIXTURE_TIME - 9_000,
+      deleted: false,
+    },
+    {
+      evidenceSignalId: "fixture-audience-topic-4",
+      participantKey: "ephemeral-participant-c",
+      messageFingerprint: "ephemeral-message-d",
+      observedAt: FIXTURE_TIME - 8_000,
+      deleted: false,
+    },
+    {
+      evidenceSignalId: "fixture-audience-topic-5",
+      participantKey: "ephemeral-participant-c",
+      messageFingerprint: "ephemeral-message-e",
+      observedAt: FIXTURE_TIME - 7_000,
+      deleted: false,
+    },
+  ],
+}) as Extract<AudiencePointerAggregate, { status: "known" }>;
 
 export const contractFixtureLiveDirectorState = liveDirectorStateSchema.parse({
   declaredIntent: {

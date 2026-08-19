@@ -16,6 +16,11 @@ The application orchestrator and its injected ports are also public:
 import { ChatXptOrchestrator, type SessionStateRepository } from "@/core";
 ```
 
+Live Director audience analysis stages `AudiencePointerAggregate` through the
+public Core seam. Its opaque participant/message keys exist only for
+deduplication; `composeAudiencePointer` produces the retained, non-personal
+counts and evidence references committed by the orchestrator.
+
 Contract fixtures are explicitly non-live and import from `@/core/testing`:
 
 ```ts

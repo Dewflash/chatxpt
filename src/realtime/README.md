@@ -17,6 +17,16 @@ snapshot, discarding duplicate or older revisions.
 Local memory mode is a real development fallback, not evidence of shared-cloud
 or multi-browser Supabase execution. See `supabase/README.md` for that boundary.
 
+## Live Director context staging
+
+`EphemeralAudiencePointerAggregateRepository` hands one Role 2 aggregate to the
+Role 1 orchestrator without storing its opaque participant deduplication keys or
+message fingerprints in Supabase or authoritative command history. The
+orchestrator commits only the resulting Chat Pointer counts, time window,
+confidence, topic, and non-personal signal references. A new process may require
+Role 2 to restage an uncommitted aggregate; a committed Live Context recovers
+from the normal authoritative session state.
+
 ## Hosted board access
 
 `HostedBoardAccessService` is the UI-X08 server-side seam for the hosted Viewer
