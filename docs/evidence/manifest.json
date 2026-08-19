@@ -581,6 +581,59 @@
         "This is deterministic fixture evidence only; it does not prove real Twitch, OBS, Supabase Cloud, Vercel, provider, or multi-device execution.",
         "Cue suitability and lifecycle mechanics remain Role 3 follow-up, and no direct solution-fit or engagement effect is claimed."
       ]
+    },
+    {
+      "id": "E-20260819-R1-002",
+      "capturedAt": "2026-08-19T18:49:38+08:00",
+      "owner": { "role": "role-1", "github": "Dewflash" },
+      "reviewer": { "role": "role-1", "github": "Dewflash" },
+      "evidenceClass": "fixture-only",
+      "result": "passed",
+      "claim": "Canonical fixture tests prove monotonic declared intent, privacy-safe audience aggregation, source-separated private Live Context, one-revision projection, and memory-repository reconnect without retaining ephemeral participant/message keys.",
+      "resourceIds": [],
+      "surfaces": [
+        {
+          "name": "Core Live Director context composition boundary",
+          "deviceClass": "server",
+          "viewport": null
+        }
+      ],
+      "source": {
+        "gitCommit": "90726e6",
+        "branch": "role-1/live-director-02-live-context",
+        "prNumber": null
+      },
+      "authoritativeState": {
+        "sessionRef": "fixture-session",
+        "questCycleRef": "fixture-cycle",
+        "revision": 2
+      },
+      "inputs": [
+        {
+          "kind": "fixture",
+          "description": "Canonical declared-intent, audience-pointer, gameplay, permission, expiry, duplicate, deletion, sparse, conflicting, ambiguous, stale, and reconnect fixtures."
+        }
+      ],
+      "commands": [
+        "Run focused Live Director context, contract, orchestrator, permission, and persistence tests (5 files / 90 tests)",
+        "npm.cmd run test:contracts",
+        "npm.cmd run test:orchestrator",
+        "npm.cmd run test:integration",
+        "npm.cmd run check"
+      ],
+      "artifacts": [
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-19-live-director-context-fixture-memory.txt",
+          "mediaType": "text/plain",
+          "privacyReviewed": true,
+          "sha256": "ff207d47478d71580783ef91f03606efa8f58bf8e809a09567607ab9a617c62c"
+        }
+      ],
+      "limitations": [
+        "This is deterministic fixture evidence with a memory repository; it does not prove real Twitch chat, the Role 2 real producer, Supabase Cloud, Vercel, OBS, or multi-device realtime.",
+        "Role 3 cue suitability/lifecycle and exactly-three conversion remain separate passes, and no direct engagement, causal, or product-value effect is claimed."
+      ]
     }
   ]
 }
