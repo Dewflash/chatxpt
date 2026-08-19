@@ -2,16 +2,25 @@ import { describe, expect, it } from "vitest";
 
 import {
   CONTRACT_VERSION,
+  audiencePointerSchema,
+  declaredStreamIntentSchema,
   intelligenceSnapshotSchema,
+  questCycleStateSchema,
   streamerProfileSchema,
   type IntelligenceSnapshot,
   type NamedSignal,
+  type AudiencePointer,
+  type DeclaredStreamIntent,
 } from "../core";
 import {
   checkRecentQuestRepetition,
   decideActiveQuestInterruption,
   defaultCooldownEndsAt,
+  DefaultDirectorCueSuitabilityPolicy,
   DefaultInterventionPolicy,
+  DIRECTOR_CUE_ATTENTION_WINDOW_MILLISECONDS,
+  DIRECTOR_CUE_COOLDOWN_MILLISECONDS,
+  type DirectorCueSuitabilityInput,
 } from ".";
 import {
   ROLE_3_FIXTURE_TIME,
@@ -140,6 +149,61 @@ function restampIntelligence(
       envelope: { ...snapshot.audience.envelope, ...patch },
     },
   });
+}
+
+const fixtureDirectorIntent: Extract<DeclaredStreamIntent, { readonly status: "known" }> = {
+  status: "known",
+  intentId: "intent-build-safely",
+  goal: "Build safely",
+  objective: "Build safely while keeping chat involved",
+  desiredAudienceInvolvement: "Choose the next safe build",
+  authorId: "role-3-streamer",
+  updatedAt: ROLE_3_FIXTURE_TIME - 60_000,
+  expiresAt: ROLE_3_FIXTURE_TIME + 60_000,
+};
+
+function directorAudience(
+  patch: Partial<Extract<AudiencePointer, { readonly status: "known" }>> = {},
+): Extract<AudiencePointer, { readonly status: "known" }> {
+  const pointer = audiencePointerSchema.parse({
+    status: "known",
+    pointerId: "pointer-build-choice",
+    topic: "Choose the next safe build",
+    windowStartedAt: ROLE_3_FIXTURE_TIME - 10_000,
+    windowEndedAt: ROLE_3_FIXTURE_TIME - 1_000,
+    observedAt: ROLE_3_FIXTURE_TIME - 1_000,
+    createdAt: ROLE_3_FIXTURE_TIME - 1_000,
+    expiresAt: ROLE_3_FIXTURE_TIME + 29_000,
+    confidence: 0.9,
+    relevance: 0.8,
+    intentAlignment: 0.8,
+    uniqueParticipants: 3,
+    qualifyingMessages: 4,
+    sarcasmRisk: false,
+    evidenceSignalIds: ["audience-build-choice"],
+    ...patch,
+  });
+  if (pointer.status !== "known") {
+    throw new Error("Director Cue fixture must remain a known audience pointer");
+  }
+  return pointer;
+}
+
+function directorInput(
+  snapshot: IntelligenceSnapshot,
+  patch: Partial<DirectorCueSuitabilityInput> = {},
+): DirectorCueSuitabilityInput {
+  return {
+    currentState: role3FixtureIdleState,
+    intelligence: snapshot,
+    profile: fixtureProfile,
+    emergencyPaused: false,
+    declaredIntent: fixtureDirectorIntent,
+    audiencePointer: directorAudience(),
+    recentCues: [],
+    now: ROLE_3_FIXTURE_TIME,
+    ...patch,
+  };
 }
 
 describe("DefaultInterventionPolicy", () => {
@@ -296,6 +360,329 @@ describe("DefaultInterventionPolicy", () => {
       reasons: ["eligible"],
       evidenceSignalIds: ["activity", "boredom"],
     });
+  });
+});
+
+describe("DefaultDirectorCueSuitabilityPolicy", () => {
+  const policy = new DefaultDirectorCueSuitabilityPolicy();
+
+  it("offers one private cue during a fresh, quiet, source-labelled opportunity", () => {
+    const snapshot = intelligence([knownSignal("activity", "activity-intensity", 0.1)]);
+
+    expect(policy.decide(directorInput(snapshot))).toEqual({
+      disposition: "offer-cue",
+      score: 0.855,
+      reasons: ["eligible"],
+      evidenceReferences: [
+        "intent-build-safely",
+        "activity",
+        "pointer-build-choice",
+        "audience-build-choice",
+      ],
+    });
+  });
+
+  it("runs lifecycle, emergency, and safety gates before evidence scoring", () => {
+    const unsafe = intelligence([
+      unknownSignal("activity", "activity-intensity"),
+      knownSignal("risk", "safety-risk", true),
+    ]);
+    const proposedState = questCycleStateSchema.parse({
+      ...role3FixtureIdleState,
+      status: "proposed",
+      options: role3FixtureCandidateBatch.candidates,
+    });
+
+    expect(
+      policy.decide(
+        directorInput(unsafe, {
+          currentState: proposedState,
+          emergencyPaused: true,
+          declaredIntent: {
+            status: "unknown",
+            reason: "not-set",
+            observedAt: ROLE_3_FIXTURE_TIME,
+          },
+        }),
+      ),
+    ).toMatchObject({ disposition: "stay-silent", reasons: ["cycle-unavailable"] });
+    expect(
+      policy.decide(
+        directorInput(unsafe, {
+          emergencyPaused: true,
+          declaredIntent: {
+            status: "unknown",
+            reason: "not-set",
+            observedAt: ROLE_3_FIXTURE_TIME,
+          },
+        }),
+      ),
+    ).toMatchObject({ disposition: "stay-silent", reasons: ["emergency-paused"] });
+    expect(policy.decide(directorInput(unsafe))).toMatchObject({
+      disposition: "stay-silent",
+      reasons: ["unsafe-moment"],
+    });
+  });
+
+  it.each([
+    {
+      name: "active gameplay",
+      snapshot: intelligence([knownSignal("activity", "activity-intensity", 0.7)]),
+      reason: "active-gameplay",
+    },
+    {
+      name: "high-focus gameplay",
+      snapshot: intelligence([
+        knownSignal("activity", "activity-intensity", 0.1),
+        knownSignal("focus", "high-focus", true),
+      ]),
+      reason: "active-gameplay",
+    },
+    {
+      name: "a transition",
+      snapshot: intelligence([
+        knownSignal("activity", "activity-intensity", 0.1),
+        knownSignal("transition", "scene-transition", true),
+      ]),
+      reason: "transition",
+    },
+    {
+      name: "stale gameplay",
+      snapshot: intelligence([
+        knownSignal("activity", "activity-intensity", 0.1, {
+          observedAt: ROLE_3_FIXTURE_TIME - 15_001,
+        }),
+      ]),
+      reason: "insufficient-gameplay-evidence",
+    },
+    {
+      name: "unknown gameplay",
+      snapshot: intelligence([unknownSignal("activity", "activity-intensity")]),
+      reason: "insufficient-gameplay-evidence",
+    },
+  ])("waits through $name", ({ snapshot, reason }) => {
+    expect(policy.decide(directorInput(snapshot))).toMatchObject({
+      disposition: "wait",
+      reasons: [reason],
+    });
+  });
+
+  it("waits when the activity fact is not advertised as supported", () => {
+    const snapshot = intelligence([knownSignal("activity", "activity-intensity", 0.1)]);
+    const unsupported = intelligenceSnapshotSchema.parse({
+      ...snapshot,
+      gameplay: {
+        ...snapshot.gameplay,
+        capabilities: { ...snapshot.gameplay.capabilities, supportedSignals: [] },
+      },
+    });
+
+    expect(policy.decide(directorInput(unsupported))).toMatchObject({
+      disposition: "wait",
+      reasons: ["unsupported-gameplay-evidence"],
+    });
+  });
+
+  it.each([
+    {
+      name: "unknown audience context",
+      audiencePointer: audiencePointerSchema.parse({
+        status: "unknown",
+        reason: "not-enough-evidence",
+        observedAt: ROLE_3_FIXTURE_TIME,
+        evidenceSignalIds: [],
+      }),
+      reason: "missing-audience-context",
+    },
+    {
+      name: "conflicting chat",
+      audiencePointer: audiencePointerSchema.parse({
+        status: "conflicting",
+        reason: "competing-topics",
+        observedAt: ROLE_3_FIXTURE_TIME,
+        evidenceSignalIds: ["chat-conflict"],
+      }),
+      reason: "conflicting-audience",
+    },
+    {
+      name: "ambiguous chat",
+      audiencePointer: audiencePointerSchema.parse({
+        status: "ambiguous",
+        reason: "sarcasm-or-humour",
+        observedAt: ROLE_3_FIXTURE_TIME,
+        evidenceSignalIds: ["chat-ambiguous"],
+      }),
+      reason: "ambiguous-audience",
+    },
+    {
+      name: "permission-denied chat",
+      audiencePointer: audiencePointerSchema.parse({
+        status: "permission-denied",
+        reason: "audience-analysis-disabled",
+        observedAt: ROLE_3_FIXTURE_TIME,
+        evidenceSignalIds: [],
+      }),
+      reason: "permission-denied-audience-context",
+    },
+    {
+      name: "sparse chat",
+      audiencePointer: directorAudience({ uniqueParticipants: 1, qualifyingMessages: 1 }),
+      reason: "sparse-audience",
+    },
+    {
+      name: "sarcastic chat",
+      audiencePointer: directorAudience({ sarcasmRisk: true }),
+      reason: "sarcasm-risk",
+    },
+    {
+      name: "stale audience context",
+      audiencePointer: directorAudience({
+        windowStartedAt: ROLE_3_FIXTURE_TIME - 40_000,
+        windowEndedAt: ROLE_3_FIXTURE_TIME - 31_000,
+        observedAt: ROLE_3_FIXTURE_TIME - 30_001,
+        createdAt: ROLE_3_FIXTURE_TIME - 30_001,
+      }),
+      reason: "stale-audience-context",
+    },
+    {
+      name: "canonical stale audience pointer",
+      audiencePointer: audiencePointerSchema.parse({
+        ...directorAudience(),
+        status: "stale",
+        expiresAt: ROLE_3_FIXTURE_TIME - 1,
+        staleAt: ROLE_3_FIXTURE_TIME,
+      }),
+      reason: "stale-audience-context",
+    },
+    {
+      name: "weak audience context",
+      audiencePointer: directorAudience({ confidence: 0.64 }),
+      reason: "low-confidence-audience-context",
+    },
+  ])("does not fabricate suitability from $name", ({ audiencePointer, reason }) => {
+    const snapshot = intelligence([knownSignal("activity", "activity-intensity", 0.1)]);
+    expect(policy.decide(directorInput(snapshot, { audiencePointer }))).toMatchObject({
+      disposition: "wait",
+      reasons: [reason],
+    });
+  });
+
+  it("stays silent without a streamer-declared objective", () => {
+    const snapshot = intelligence([knownSignal("activity", "activity-intensity", 0.1)]);
+    expect(
+      policy.decide(
+        directorInput(snapshot, {
+          declaredIntent: declaredStreamIntentSchema.parse({
+            status: "unknown",
+            reason: "not-set",
+            observedAt: ROLE_3_FIXTURE_TIME,
+          }),
+        }),
+      ),
+    ).toMatchObject({
+      disposition: "stay-silent",
+      reasons: ["missing-declared-intent"],
+    });
+  });
+
+  it.each([
+    {
+      name: "stale",
+      declaredIntent: declaredStreamIntentSchema.parse({
+        ...fixtureDirectorIntent,
+        status: "stale",
+        expiresAt: ROLE_3_FIXTURE_TIME - 1,
+        staleAt: ROLE_3_FIXTURE_TIME,
+      }),
+      reason: "stale-declared-intent",
+    },
+    {
+      name: "permission denied",
+      declaredIntent: declaredStreamIntentSchema.parse({
+        status: "unknown",
+        reason: "permission-denied",
+        observedAt: ROLE_3_FIXTURE_TIME,
+      }),
+      reason: "permission-denied-declared-intent",
+    },
+  ])("fails closed when declared intent is $name", ({ declaredIntent, reason }) => {
+    const snapshot = intelligence([knownSignal("activity", "activity-intensity", 0.1)]);
+    expect(policy.decide(directorInput(snapshot, { declaredIntent }))).toMatchObject({
+      disposition: "stay-silent",
+      reasons: [reason],
+    });
+  });
+
+  it.each([
+    {
+      name: "cooldown",
+      recentCues: [
+        {
+          intentId: "other-intent",
+          topic: "A different topic",
+          offeredAt: ROLE_3_FIXTURE_TIME - DIRECTOR_CUE_COOLDOWN_MILLISECONDS + 1,
+        },
+      ],
+      reason: "cue-cooldown",
+    },
+    {
+      name: "attention budget",
+      recentCues: [1, 2, 3].map((index) => ({
+        intentId: `intent-${index}`,
+        topic: `Distinct topic ${index}`,
+        offeredAt:
+          ROLE_3_FIXTURE_TIME -
+          DIRECTOR_CUE_COOLDOWN_MILLISECONDS -
+          index * 1_000,
+      })),
+      reason: "attention-budget-exhausted",
+    },
+    {
+      name: "repeated topic",
+      recentCues: [
+        {
+          intentId: fixtureDirectorIntent.intentId,
+          topic: "Choose next safe build",
+          offeredAt: ROLE_3_FIXTURE_TIME - DIRECTOR_CUE_ATTENTION_WINDOW_MILLISECONDS - 1,
+        },
+      ],
+      reason: "repeated-cue",
+    },
+  ])("enforces the $name before another cue", ({ recentCues, reason }) => {
+    const snapshot = intelligence([knownSignal("activity", "activity-intensity", 0.1)]);
+    expect(policy.decide(directorInput(snapshot, { recentCues }))).toMatchObject({
+      disposition: "stay-silent",
+      reasons: [reason],
+    });
+  });
+
+  it("lets saved intensity affect only scoring and busy thresholds", () => {
+    const snapshot = intelligence([knownSignal("activity", "activity-intensity", 0.6)]);
+    const lowIntensity = streamerProfileSchema.parse({
+      ...fixtureProfile,
+      experience: { intensity: 0 },
+    });
+    const highIntensity = streamerProfileSchema.parse({
+      ...fixtureProfile,
+      experience: { intensity: 1 },
+    });
+
+    expect(policy.decide(directorInput(snapshot, { profile: lowIntensity }))).toMatchObject({
+      disposition: "wait",
+      reasons: ["active-gameplay"],
+    });
+    expect(policy.decide(directorInput(snapshot, { profile: highIntensity }))).toMatchObject({
+      disposition: "offer-cue",
+      reasons: ["eligible"],
+      score: 0.68,
+    });
+  });
+
+  it("replays identical inputs deterministically", () => {
+    const input = directorInput(
+      intelligence([knownSignal("activity", "activity-intensity", 0.25)]),
+    );
+    expect(policy.decide(input)).toEqual(policy.decide(input));
   });
 });
 

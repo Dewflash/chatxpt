@@ -1,7 +1,11 @@
 import {
+  audiencePointerSchema,
+  declaredStreamIntentSchema,
   intelligenceSnapshotSchema,
   questCycleStateSchema,
   streamerProfileSchema,
+  type AudiencePointer,
+  type DeclaredStreamIntent,
   type IntelligenceSnapshot,
   type NamedSignal,
   type QuestCycleState,
@@ -11,6 +15,10 @@ import {
 export const DEFAULT_COOLDOWN_MILLISECONDS = 120_000;
 export const DEFAULT_REPETITION_MILLISECONDS = 30 * 60_000;
 export const DEFAULT_REPETITION_CYCLES = 5;
+export const DIRECTOR_CUE_COOLDOWN_MILLISECONDS = 120_000;
+export const DIRECTOR_CUE_ATTENTION_WINDOW_MILLISECONDS = 10 * 60_000;
+export const DIRECTOR_CUE_ATTENTION_LIMIT = 3;
+export const DIRECTOR_CUE_REPETITION_MILLISECONDS = 30 * 60_000;
 
 export interface RecentQuestSummary {
   readonly title: string;
@@ -41,6 +49,58 @@ export interface InterventionDecision {
   readonly score: number;
   readonly reasons: readonly InterventionReason[];
   readonly evidenceSignalIds: readonly string[];
+}
+
+export type DirectorCueSuitability = "stay-silent" | "wait" | "offer-cue";
+
+export type DirectorCueSuitabilityReason =
+  | "eligible"
+  | "invalid-context"
+  | "cycle-unavailable"
+  | "emergency-paused"
+  | "missing-declared-intent"
+  | "unsupported-gameplay-evidence"
+  | "insufficient-gameplay-evidence"
+  | "active-gameplay"
+  | "transition"
+  | "unsafe-moment"
+  | "missing-audience-context"
+  | "permission-denied-audience-context"
+  | "sparse-audience"
+  | "conflicting-audience"
+  | "ambiguous-audience"
+  | "sarcasm-risk"
+  | "stale-audience-context"
+  | "low-confidence-audience-context"
+  | "stale-declared-intent"
+  | "permission-denied-declared-intent"
+  | "cue-cooldown"
+  | "attention-budget-exhausted"
+  | "repeated-cue"
+  | "below-cue-threshold";
+
+export interface RecentDirectorCueSummary {
+  readonly intentId: string;
+  readonly topic: string;
+  readonly offeredAt: number;
+}
+
+export interface DirectorCueSuitabilityInput {
+  readonly currentState: QuestCycleState;
+  readonly intelligence: IntelligenceSnapshot;
+  readonly profile: StreamerProfile;
+  readonly emergencyPaused: boolean;
+  readonly declaredIntent: DeclaredStreamIntent;
+  readonly audiencePointer: AudiencePointer;
+  readonly recentCues: readonly RecentDirectorCueSummary[];
+  readonly now: number;
+}
+
+export interface DirectorCueSuitabilityDecision {
+  readonly disposition: DirectorCueSuitability;
+  readonly score: number;
+  readonly reasons: readonly DirectorCueSuitabilityReason[];
+  readonly evidenceReferences: readonly string[];
 }
 
 export interface RepetitionDecision {
@@ -76,6 +136,10 @@ const MINIMUM_SIGNAL_CONFIDENCE = 0.65;
 const MAX_GAMEPLAY_AGE_MILLISECONDS = 15_000;
 const MAX_AUDIENCE_AGE_MILLISECONDS = 30_000;
 const DEFAULT_PROFILE_INTENSITY = 0.5;
+const MINIMUM_DIRECTOR_CUE_AUDIENCE_CONFIDENCE = 0.65;
+const MAXIMUM_DIRECTOR_CUE_AUDIENCE_AGE_MILLISECONDS = 30_000;
+const MINIMUM_DIRECTOR_CUE_PARTICIPANTS = 2;
+const MINIMUM_DIRECTOR_CUE_MESSAGES = 2;
 
 function profileTimingThresholds(profile: StreamerProfile) {
   const intensity = profile.experience.intensity ?? DEFAULT_PROFILE_INTENSITY;
@@ -87,6 +151,15 @@ function profileTimingThresholds(profile: StreamerProfile) {
 
 function reject(reason: InterventionReason): InterventionDecision {
   return { shouldPropose: false, score: 0, reasons: [reason], evidenceSignalIds: [] };
+}
+
+function cueDecision(
+  disposition: DirectorCueSuitability,
+  reason: DirectorCueSuitabilityReason,
+  score = 0,
+  evidenceReferences: readonly string[] = [],
+): DirectorCueSuitabilityDecision {
+  return { disposition, score, reasons: [reason], evidenceReferences };
 }
 
 function signalByKind(
@@ -155,6 +228,213 @@ function substantiallySimilar(left: string, right: string): boolean {
   const intersection = [...leftTokens].filter((token) => rightTokens.has(token)).length;
   const union = new Set([...leftTokens, ...rightTokens]).size;
   return intersection / union >= 0.7;
+}
+
+function directorCueThresholds(profile: StreamerProfile) {
+  const intensity = profile.experience.intensity ?? DEFAULT_PROFILE_INTENSITY;
+  return {
+    busyActivity: 0.55 + 0.2 * intensity,
+    suitability: 0.72 - 0.12 * intensity,
+  };
+}
+
+function recentCueHistoryIsValid(
+  recentCues: readonly RecentDirectorCueSummary[],
+  now: number,
+): boolean {
+  return recentCues.every(
+    (cue) =>
+      cue.intentId.trim().length > 0 &&
+      cue.intentId.length <= 120 &&
+      cue.topic.trim().length > 0 &&
+      cue.topic.length <= 240 &&
+      Number.isSafeInteger(cue.offeredAt) &&
+      cue.offeredAt >= 0 &&
+      cue.offeredAt <= now,
+  );
+}
+
+/**
+ * Pure Role 3 policy for the private Live Director cue opportunity.
+ *
+ * The policy consumes Role 1's canonical declared-intent and retained audience
+ * pointer contracts. No persistence, projection, or UI authority lives here.
+ */
+export class DefaultDirectorCueSuitabilityPolicy {
+  decide(input: DirectorCueSuitabilityInput): DirectorCueSuitabilityDecision {
+    const state = questCycleStateSchema.safeParse(input.currentState);
+    const intelligence = intelligenceSnapshotSchema.safeParse(input.intelligence);
+    const profile = streamerProfileSchema.safeParse(input.profile);
+    const intent = declaredStreamIntentSchema.safeParse(input.declaredIntent);
+    const pointer = audiencePointerSchema.safeParse(input.audiencePointer);
+    if (
+      !state.success ||
+      !intelligence.success ||
+      !profile.success ||
+      !intent.success ||
+      !pointer.success ||
+      !Number.isSafeInteger(input.now) ||
+      input.now < 0 ||
+      !recentCueHistoryIsValid(input.recentCues, input.now)
+    ) {
+      return cueDecision("stay-silent", "invalid-context");
+    }
+    if (
+      state.data.envelope.sessionId !== intelligence.data.envelope.sessionId ||
+      state.data.envelope.questCycleId !== intelligence.data.envelope.questCycleId ||
+      state.data.envelope.revision !== intelligence.data.envelope.revision ||
+      state.data.envelope.evidenceClass !== intelligence.data.envelope.evidenceClass
+    ) {
+      return cueDecision("stay-silent", "invalid-context");
+    }
+
+    // Hard lifecycle and safety gates always precede evidence scoring.
+    if (state.data.status !== "idle") {
+      return cueDecision("stay-silent", "cycle-unavailable");
+    }
+    if (input.emergencyPaused) {
+      return cueDecision("stay-silent", "emergency-paused");
+    }
+    if (unsafeMoment(intelligence.data, input.now)) {
+      return cueDecision("stay-silent", "unsafe-moment");
+    }
+    const declaredIntent = intent.data;
+    if (declaredIntent.status === "unknown") {
+      return cueDecision(
+        "stay-silent",
+        declaredIntent.reason === "permission-denied"
+          ? "permission-denied-declared-intent"
+          : "missing-declared-intent",
+      );
+    }
+    if (declaredIntent.status === "stale" || declaredIntent.expiresAt <= input.now) {
+      return cueDecision("stay-silent", "stale-declared-intent");
+    }
+    if (declaredIntent.updatedAt > input.now) {
+      return cueDecision("stay-silent", "invalid-context");
+    }
+
+    const gameplay = intelligence.data.gameplay;
+    if (!gameplay.capabilities.supportedSignals.includes("activity-intensity")) {
+      return cueDecision("wait", "unsupported-gameplay-evidence");
+    }
+    const activity = signalByKind(
+      gameplay.signals,
+      "activity-intensity",
+      input.now,
+      MAX_GAMEPLAY_AGE_MILLISECONDS,
+    );
+    const activityValue = numericSignal(activity);
+    if (activity === null || activityValue === null) {
+      return cueDecision("wait", "insufficient-gameplay-evidence");
+    }
+    if (
+      truthySignal(signalByKind(gameplay.signals, "transition", input.now, MAX_GAMEPLAY_AGE_MILLISECONDS)) ||
+      truthySignal(signalByKind(gameplay.signals, "scene-transition", input.now, MAX_GAMEPLAY_AGE_MILLISECONDS))
+    ) {
+      return cueDecision("wait", "transition", 0, [activity.signalId]);
+    }
+    const thresholds = directorCueThresholds(profile.data);
+    if (
+      activityValue >= thresholds.busyActivity ||
+      truthySignal(signalByKind(gameplay.signals, "fight", input.now, MAX_GAMEPLAY_AGE_MILLISECONDS)) ||
+      truthySignal(signalByKind(gameplay.signals, "high-focus", input.now, MAX_GAMEPLAY_AGE_MILLISECONDS))
+    ) {
+      return cueDecision("wait", "active-gameplay", 0, [activity.signalId]);
+    }
+
+    const audience = pointer.data;
+    if (audience.status === "unknown") {
+      return cueDecision("wait", "missing-audience-context", 0, [activity.signalId]);
+    }
+    if (audience.status === "permission-denied") {
+      return cueDecision(
+        "wait",
+        "permission-denied-audience-context",
+        0,
+        [activity.signalId, ...audience.evidenceSignalIds],
+      );
+    }
+    if (audience.status === "conflicting") {
+      return cueDecision("wait", "conflicting-audience", 0, [activity.signalId, ...audience.evidenceSignalIds]);
+    }
+    if (audience.status === "ambiguous") {
+      return cueDecision("wait", "ambiguous-audience", 0, [activity.signalId, ...audience.evidenceSignalIds]);
+    }
+    if (audience.status === "stale") {
+      return cueDecision("wait", "stale-audience-context", 0, [activity.signalId, ...audience.evidenceSignalIds]);
+    }
+    if (audience.status !== "known") {
+      return cueDecision("stay-silent", "invalid-context");
+    }
+    if (audience.expiresAt <= input.now) {
+      return cueDecision("wait", "stale-audience-context", 0, [activity.signalId, ...audience.evidenceSignalIds]);
+    }
+    const audienceAge = input.now - audience.observedAt;
+    if (audienceAge < 0) {
+      return cueDecision("stay-silent", "invalid-context");
+    }
+    if (audienceAge > MAXIMUM_DIRECTOR_CUE_AUDIENCE_AGE_MILLISECONDS) {
+      return cueDecision("wait", "stale-audience-context", 0, [activity.signalId, ...audience.evidenceSignalIds]);
+    }
+    if (audience.confidence < MINIMUM_DIRECTOR_CUE_AUDIENCE_CONFIDENCE) {
+      return cueDecision("wait", "low-confidence-audience-context", 0, [activity.signalId, ...audience.evidenceSignalIds]);
+    }
+    if (
+      audience.uniqueParticipants < MINIMUM_DIRECTOR_CUE_PARTICIPANTS ||
+      audience.qualifyingMessages < MINIMUM_DIRECTOR_CUE_MESSAGES
+    ) {
+      return cueDecision("wait", "sparse-audience", 0, [activity.signalId, ...audience.evidenceSignalIds]);
+    }
+    if (audience.sarcasmRisk) {
+      return cueDecision("wait", "sarcasm-risk", 0, [activity.signalId, ...audience.evidenceSignalIds]);
+    }
+
+    const recentCues = [...input.recentCues].sort(
+      (left, right) => right.offeredAt - left.offeredAt || left.topic.localeCompare(right.topic),
+    );
+    if (
+      recentCues.some(
+        (cue) => input.now - cue.offeredAt < DIRECTOR_CUE_COOLDOWN_MILLISECONDS,
+      )
+    ) {
+      return cueDecision("stay-silent", "cue-cooldown");
+    }
+    const attentionWindowCues = recentCues.filter(
+      (cue) => input.now - cue.offeredAt <= DIRECTOR_CUE_ATTENTION_WINDOW_MILLISECONDS,
+    );
+    if (attentionWindowCues.length >= DIRECTOR_CUE_ATTENTION_LIMIT) {
+      return cueDecision("stay-silent", "attention-budget-exhausted");
+    }
+    const repeatedCue = recentCues.some(
+      (cue) =>
+        cue.intentId === declaredIntent.intentId &&
+        input.now - cue.offeredAt <= DIRECTOR_CUE_REPETITION_MILLISECONDS &&
+        substantiallySimilar(cue.topic, audience.topic),
+    );
+    if (repeatedCue) {
+      return cueDecision("stay-silent", "repeated-cue");
+    }
+
+    const evidenceReferences = [
+      declaredIntent.intentId,
+      activity.signalId,
+      audience.pointerId,
+      ...audience.evidenceSignalIds,
+    ];
+    const score = Number(
+      (
+        0.35 * (1 - activityValue) +
+        0.25 * audience.relevance +
+        0.2 * audience.confidence +
+        0.2 * audience.intentAlignment
+      ).toFixed(4),
+    );
+    if (score < thresholds.suitability) {
+      return cueDecision("wait", "below-cue-threshold", score, evidenceReferences);
+    }
+    return cueDecision("offer-cue", "eligible", score, evidenceReferences);
+  }
 }
 
 export class DefaultInterventionPolicy {
