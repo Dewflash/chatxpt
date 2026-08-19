@@ -6,7 +6,7 @@ Update this file at the start and end of each Role 1 pass. Do not mark `DONE` wi
 
 Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan defines phase order, owner decisions, deadlines, and pass-level evidence.
 
-**Next:** begin R1-024 (`LD-R1-02`) from the landed R1-023 contract spine and deconflict its context input with Role 3's R3-009 suitability seam. Keep R1-015 and the team-owned Supabase preview moving where they do not overlap. Deconflict each Live Director wave before merge; role labels remain responsibility context, not permission gates.
+**Next:** begin R1-024 (`LD-R1-02`) from the landed R1-023 contract spine and deconflict its context input with Role 3's R3-009 suitability seam. If Role 1 resumes from a different account, start with `docs/roles/ROLE-1-RESUME-HANDOFF.md`. Keep R1-015 and the team-owned Supabase preview moving where they do not overlap. Deconflict each Live Director wave before merge; role labels remain responsibility context, not permission gates.
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
