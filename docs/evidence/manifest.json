@@ -634,6 +634,71 @@
         "This is deterministic fixture evidence with a memory repository; it does not prove real Twitch chat, the Role 2 real producer, Supabase Cloud, Vercel, OBS, or multi-device realtime.",
         "Role 3 cue suitability/lifecycle and exactly-three conversion remain separate passes, and no direct engagement, causal, or product-value effect is claimed."
       ]
+    },
+    {
+      "id": "E-20260819-R1-003",
+      "capturedAt": "2026-08-19T20:48:00+08:00",
+      "owner": { "role": "role-1", "github": "Dewflash" },
+      "reviewer": { "role": "role-1", "github": "Dewflash" },
+      "evidenceClass": "fixture-only",
+      "result": "passed",
+      "claim": "Canonical fixture browser renders show private source-separated Live Director controls in Studio and compact Live Config while preserving exactly three quest choices and a distinct public OBS-overlay boundary.",
+      "resourceIds": ["streamer-desktop-browser"],
+      "surfaces": [
+        {
+          "name": "Studio private Live Director",
+          "deviceClass": "desktop",
+          "viewport": "1440px CSS width"
+        },
+        {
+          "name": "Twitch Live Config private Live Director",
+          "deviceClass": "mobile",
+          "viewport": "420px CSS width"
+        }
+      ],
+      "source": {
+        "gitCommit": "b71c1ae",
+        "branch": "role-1/live-director-03-streamer-delivery",
+        "prNumber": null
+      },
+      "authoritativeState": {
+        "sessionRef": "ui-gateway-session",
+        "questCycleRef": "ui-gateway-cycle",
+        "revision": 4
+      },
+      "inputs": [
+        {
+          "kind": "fixture",
+          "description": "Canonical fixture goal, objective, source-separated context, privacy-safe audience counts, one proposed cue, health state, and exactly three voting options."
+        }
+      ],
+      "commands": [
+        "Render diagnostics/live-director through the actual StudioManagementSurface and TwitchLiveConfigSurface public entries",
+        "Use Edge DevTools device metrics at 420x900 and 1440x900 CSS viewports; measure document width and capture beyond the viewport",
+        "Run focused Studio, Live Config, command, server-session, orchestrator, and persistence tests (6 files / 65 tests)",
+        "Run npm.cmd run check (81 test files / 631 tests, lint, TypeScript, boundaries, evidence, runbook, production build, and client-secret scan)"
+      ],
+      "artifacts": [
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-19-role-1-live-director-live-config-fixture-only.png",
+          "mediaType": "image/png",
+          "privacyReviewed": true,
+          "sha256": "d4dc10604e34164e4ef6d2f2f08255403db4c0dbcf2dd21da5419b097be37f52"
+        },
+        {
+          "storage": "repository",
+          "reference": "docs/evidence/artifacts/2026-08-19-role-1-live-director-studio-fixture-only.png",
+          "mediaType": "image/png",
+          "privacyReviewed": true,
+          "sha256": "8fe64b7dbe371126dcfb063a8edaf1432cfa496a9fdbcf902d519a8d12e4aebe"
+        }
+      ],
+      "limitations": [
+        "This is fixture-only local browser evidence, not a Twitch-issued broadcaster JWT, real OBS Custom Dock, public OBS Browser Source, Supabase Cloud realtime, Vercel, real gameplay extraction, or a provider call.",
+        "The screenshots prove rendering and zero horizontal overflow at the measured widths; they do not prove real keyboard, screen-reader, Twitch-host, reconnect, or multi-device operation.",
+        "Turn into vote records the Role 3 conversion request but does not publish candidates until the separate exactly-three conversion pass lands; no engagement or solution-fit effect is claimed."
+      ]
     }
   ]
 }
