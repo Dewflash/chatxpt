@@ -1,11 +1,13 @@
 import {
   audiencePointerSchema,
   declaredStreamIntentSchema,
+  directorCueSchema,
   intelligenceSnapshotSchema,
   questCycleStateSchema,
   streamerProfileSchema,
   type AudiencePointer,
   type DeclaredStreamIntent,
+  type DirectorCue,
   type IntelligenceSnapshot,
   type NamedSignal,
   type QuestCycleState,
@@ -80,10 +82,32 @@ export type DirectorCueSuitabilityReason =
   | "below-cue-threshold";
 
 export interface RecentDirectorCueSummary {
+  readonly cueId: string;
   readonly intentId: string;
   readonly topic: string;
   readonly offeredAt: number;
+  /** The authoritative time the cue was consumed or invalidated. */
+  readonly resolvedAt: number;
+  readonly disposition: Exclude<
+    DirectorCue["state"],
+    "proposed" | "postponed"
+  >;
 }
+
+export interface DirectorCueHistoryInput {
+  readonly cue: DirectorCue;
+  /** Retained aggregate topic only; raw chat and viewer identity are never recorded. */
+  readonly topic: string;
+}
+
+const RESOLVED_DIRECTOR_CUE_STATES = new Set<RecentDirectorCueSummary["disposition"]>([
+  "acknowledged",
+  "dismissed",
+  "converted",
+  "stale",
+  "expired",
+  "cancelled",
+]);
 
 export interface DirectorCueSuitabilityInput {
   readonly currentState: QuestCycleState;
@@ -244,13 +268,87 @@ function recentCueHistoryIsValid(
 ): boolean {
   return recentCues.every(
     (cue) =>
+      typeof cue.intentId === "string" &&
       cue.intentId.trim().length > 0 &&
       cue.intentId.length <= 120 &&
+      typeof cue.topic === "string" &&
       cue.topic.trim().length > 0 &&
       cue.topic.length <= 240 &&
+      typeof cue.cueId === "string" &&
+      cue.cueId.trim().length > 0 &&
+      cue.cueId.length <= 120 &&
       Number.isSafeInteger(cue.offeredAt) &&
       cue.offeredAt >= 0 &&
-      cue.offeredAt <= now,
+      cue.offeredAt <= now &&
+      Number.isSafeInteger(cue.resolvedAt) &&
+      cue.resolvedAt >= cue.offeredAt &&
+      cue.resolvedAt <= now &&
+      RESOLVED_DIRECTOR_CUE_STATES.has(cue.disposition),
+  );
+}
+
+/**
+ * Creates the privacy-safe history item used by the cue attention policy.
+ * Active cues are deliberately omitted: only an authoritative consumed or
+ * invalidated cue starts the post-resolution cooldown.
+ */
+export function createDirectorCueHistorySummary(
+  input: DirectorCueHistoryInput,
+): RecentDirectorCueSummary | null {
+  const cue = directorCueSchema.safeParse(input.cue);
+  const topic = input.topic.trim();
+  if (
+    !cue.success ||
+    topic.length === 0 ||
+    topic.length > 240 ||
+    cue.data.state === "proposed" ||
+    cue.data.state === "postponed"
+  ) {
+    return null;
+  }
+  return {
+    cueId: cue.data.cueId,
+    intentId: cue.data.intentId,
+    topic,
+    offeredAt: cue.data.createdAt,
+    resolvedAt: cue.data.updatedAt,
+    disposition: cue.data.state,
+  };
+}
+
+/**
+ * Reconnect-safe history merge. Replaying the same authoritative cue cannot
+ * consume the attention budget twice; a later authoritative resolution wins.
+ */
+export function mergeDirectorCueHistory(
+  current: readonly RecentDirectorCueSummary[],
+  next: RecentDirectorCueSummary,
+  now: number,
+): readonly RecentDirectorCueSummary[] | null {
+  if (!recentCueHistoryIsValid([...current, next], now)) return null;
+  const byCueId = new Map<string, RecentDirectorCueSummary>();
+  for (const cue of [...current, next]) {
+    const existing = byCueId.get(cue.cueId);
+    if (
+      existing !== undefined &&
+      cue.resolvedAt === existing.resolvedAt &&
+      (cue.intentId !== existing.intentId ||
+        cue.topic !== existing.topic ||
+        cue.offeredAt !== existing.offeredAt ||
+        cue.disposition !== existing.disposition)
+    ) {
+      return null;
+    }
+    if (
+      existing === undefined ||
+      cue.resolvedAt > existing.resolvedAt
+    ) {
+      byCueId.set(cue.cueId, cue);
+    }
+  }
+  return [...byCueId.values()].sort(
+    (left, right) =>
+      right.resolvedAt - left.resolvedAt || left.cueId.localeCompare(right.cueId),
   );
 }
 
@@ -391,11 +489,11 @@ export class DefaultDirectorCueSuitabilityPolicy {
     }
 
     const recentCues = [...input.recentCues].sort(
-      (left, right) => right.offeredAt - left.offeredAt || left.topic.localeCompare(right.topic),
+      (left, right) => right.resolvedAt - left.resolvedAt || left.topic.localeCompare(right.topic),
     );
     if (
       recentCues.some(
-        (cue) => input.now - cue.offeredAt < DIRECTOR_CUE_COOLDOWN_MILLISECONDS,
+        (cue) => input.now - cue.resolvedAt < DIRECTOR_CUE_COOLDOWN_MILLISECONDS,
       )
     ) {
       return cueDecision("stay-silent", "cue-cooldown");
@@ -409,7 +507,7 @@ export class DefaultDirectorCueSuitabilityPolicy {
     const repeatedCue = recentCues.some(
       (cue) =>
         cue.intentId === declaredIntent.intentId &&
-        input.now - cue.offeredAt <= DIRECTOR_CUE_REPETITION_MILLISECONDS &&
+        input.now - cue.resolvedAt <= DIRECTOR_CUE_REPETITION_MILLISECONDS &&
         substantiallySimilar(cue.topic, audience.topic),
     );
     if (repeatedCue) {

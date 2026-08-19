@@ -75,8 +75,29 @@ export interface ReconcileDirectorCueInput {
   readonly sessionEnded: boolean;
   /** Role 1 sets this only after accepting a different canonical Live Context. */
   readonly contextChanged: boolean;
+  /** More specific accepted invalidation when Role 1 can identify it. */
+  readonly contextInvalidation?: DirectorCueContextInvalidation;
   readonly now: number;
 }
+
+export type DirectorCueContextInvalidation =
+  | "none"
+  | "ordinary-gameplay-change"
+  | "supporting-context-changed"
+  | "intent-updated"
+  | "audience-expired"
+  | "safety-changed"
+  | "quest-impossible";
+
+const DIRECTOR_CUE_CONTEXT_INVALIDATIONS = new Set<DirectorCueContextInvalidation>([
+  "none",
+  "ordinary-gameplay-change",
+  "supporting-context-changed",
+  "intent-updated",
+  "audience-expired",
+  "safety-changed",
+  "quest-impossible",
+]);
 
 function error(
   code: DomainError["code"],
@@ -189,12 +210,29 @@ function reconcileActiveCue(
   emergencyPaused: boolean,
   sessionEnded: boolean,
   contextChanged: boolean,
+  contextInvalidation: DirectorCueContextInvalidation = "none",
 ): DirectorCueResult | null {
   if (cue.state !== "proposed" && cue.state !== "postponed") return null;
   if (emergencyPaused) return terminalise(cue, "cancelled", now, "emergency-paused");
   if (sessionEnded) return terminalise(cue, "cancelled", now, "session-ended");
-  if (contextChanged) {
-    return terminalise(cue, "stale", now, "supporting-context-changed");
+  if (contextInvalidation === "safety-changed") {
+    return terminalise(cue, "cancelled", now, contextInvalidation);
+  }
+  if (contextInvalidation === "quest-impossible") {
+    return terminalise(cue, "stale", now, contextInvalidation);
+  }
+  if (
+    contextChanged ||
+    ["supporting-context-changed", "intent-updated", "audience-expired"].includes(
+      contextInvalidation,
+    )
+  ) {
+    return terminalise(
+      cue,
+      "stale",
+      now,
+      contextInvalidation === "none" ? "supporting-context-changed" : contextInvalidation,
+    );
   }
   const invalidation = invalidationReason(state, cue, now);
   if (invalidation === "expired") {
@@ -302,6 +340,7 @@ export class DefaultDirectorCueLifecycle implements DirectorCueLifecycle {
       input.emergencyPaused,
       false,
       false,
+      "none",
     );
     if (reconciled !== null) return reconciled;
     if (!cue.availableActions.includes(command.data.action)) {
@@ -366,6 +405,7 @@ export class DefaultDirectorCueLifecycle implements DirectorCueLifecycle {
       input.emergencyPaused,
       false,
       false,
+      "none",
     );
     if (reconciled !== null) return reconciled;
     if (cue.state !== "postponed") {
@@ -390,7 +430,16 @@ export class DefaultDirectorCueLifecycle implements DirectorCueLifecycle {
 
   reconcile(input: ReconcileDirectorCueInput): DirectorCueResult {
     const current = parseCurrent(input.current);
-    if (current === null || !Number.isSafeInteger(input.now) || input.now < 0) {
+    if (
+      current === null ||
+      !Number.isSafeInteger(input.now) ||
+      input.now < 0 ||
+      typeof input.emergencyPaused !== "boolean" ||
+      typeof input.sessionEnded !== "boolean" ||
+      typeof input.contextChanged !== "boolean" ||
+      (input.contextInvalidation !== undefined &&
+        !DIRECTOR_CUE_CONTEXT_INVALIDATIONS.has(input.contextInvalidation))
+    ) {
       return error("validation", "Director Cue reconciliation input is invalid");
     }
     if (current.cue === null) {
@@ -403,6 +452,7 @@ export class DefaultDirectorCueLifecycle implements DirectorCueLifecycle {
       input.emergencyPaused,
       input.sessionEnded,
       input.contextChanged,
+      input.contextInvalidation,
     );
     if (reconciled !== null) return reconciled;
     return accept(current.cue, []);

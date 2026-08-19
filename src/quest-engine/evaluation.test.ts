@@ -1,11 +1,26 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CONTRACT_VERSION,
   intelligenceSnapshotSchema,
+  liveDirectorStateSchema,
   streamerProfileSchema,
+  streamerLiveDirectorCueCommandSchema,
+  systemLiveDirectorCueCommandSchema,
+  type DirectorCueAction,
+  type LiveDirectorState,
   type QuestEngineResult,
 } from "../core";
-import { DefaultCandidateAssembler, DefaultQuestEngine } from ".";
+import { contractFixtureLiveDirectorState } from "../core/testing";
+import {
+  createDirectorCueHistorySummary,
+  DefaultCandidateAssembler,
+  DefaultDirectorCueConverter,
+  DefaultDirectorCueLifecycle,
+  DefaultQuestEngine,
+  mergeDirectorCueHistory,
+  type DirectorCueAuthority,
+} from ".";
 import {
   ROLE_3_FIXTURE_TIME,
   role3CandidateCases,
@@ -81,6 +96,112 @@ function assemble(candidates: readonly unknown[], gameName: string | null, seed:
     now: ROLE_3_FIXTURE_TIME,
     seed,
   });
+}
+
+const directorNow = contractFixtureLiveDirectorState.liveContext!.compiledAt;
+const directorAuthority = {
+  sessionId: "fixture-session",
+  questCycleId: "fixture-cycle",
+  revision: 0,
+} as const satisfies DirectorCueAuthority;
+const directorBaseState = liveDirectorStateSchema.parse({
+  ...contractFixtureLiveDirectorState,
+  cue: null,
+});
+const directorSuitability = {
+  disposition: "offer-cue" as const,
+  score: 0.84,
+  reasons: ["eligible"] as const,
+  evidenceReferences: ["fixture-intent", "fixture-pointer", "fixture-activity"],
+};
+
+function directorSystemCommand() {
+  return systemLiveDirectorCueCommandSchema.parse({
+    contractVersion: CONTRACT_VERSION,
+    sessionId: directorAuthority.sessionId,
+    questCycleId: directorAuthority.questCycleId,
+    commandId: "role-3-evaluation-cue-ready",
+    correlationId: "role-3-evaluation-cue-correlation",
+    expectedRevision: directorAuthority.revision,
+    issuedAt: directorNow,
+    actor: { kind: "system", actorId: "role-3-evaluation-system" },
+    type: "system.live-director-cue-ready",
+    cueId: "role-3-evaluation-cue",
+    liveContextId: directorBaseState.liveContext!.contextId,
+  });
+}
+
+function directorStreamerCommand(action: DirectorCueAction) {
+  return streamerLiveDirectorCueCommandSchema.parse({
+    contractVersion: CONTRACT_VERSION,
+    sessionId: directorAuthority.sessionId,
+    questCycleId: directorAuthority.questCycleId,
+    commandId: `role-3-evaluation-cue-${action}`,
+    correlationId: "role-3-evaluation-cue-correlation",
+    expectedRevision: directorAuthority.revision,
+    issuedAt: directorNow + 1_000,
+    actor: { kind: "broadcaster", actorId: "role-3-evaluation-broadcaster" },
+    type: "streamer.live-director-cue",
+    cueId: "role-3-evaluation-cue",
+    action,
+  });
+}
+
+function offeredDirectorState(): LiveDirectorState {
+  const offered = new DefaultDirectorCueLifecycle().offer({
+    authority: directorAuthority,
+    current: directorBaseState,
+    command: directorSystemCommand(),
+    suitability: directorSuitability,
+    now: directorNow,
+  });
+  if (!offered.ok) throw new Error(offered.error.message);
+  return liveDirectorStateSchema.parse({
+    ...directorBaseState,
+    cue: offered.decision.nextCue,
+    updatedAt: directorNow,
+  });
+}
+
+function resolveDirectorAction(action: DirectorCueAction) {
+  return new DefaultDirectorCueLifecycle().applyAction({
+    authority: directorAuthority,
+    current: offeredDirectorState(),
+    command: directorStreamerCommand(action),
+    emergencyPaused: false,
+    now: directorNow + 1_000,
+  });
+}
+
+function convertedDirectorState(): LiveDirectorState {
+  const converted = resolveDirectorAction("turn-into-vote");
+  if (!converted.ok) throw new Error(converted.error.message);
+  return liveDirectorStateSchema.parse({
+    ...directorBaseState,
+    cue: converted.decision.nextCue,
+    updatedAt: directorNow + 1_000,
+  });
+}
+
+function conversionInput(
+  overrides: Partial<Parameters<DefaultDirectorCueConverter["convert"]>[0]> = {},
+) {
+  return {
+    liveDirector: convertedDirectorState(),
+    envelope: { ...role3FixtureCandidateBatch.envelope, source: "quest-engine" as const },
+    candidates: null,
+    intelligence: evaluationIntelligence,
+    profile: evaluationProfile(null),
+    currentState: role3FixtureIdleState,
+    recentQuests: [],
+    now: directorNow + 1_000,
+    seed: "role-3-evaluation-director-conversion",
+    command: role3IntelligenceCommand(),
+    emergencyPaused: false,
+    sessionEnded: false,
+    questImpossible: false,
+    ...overrides,
+  };
 }
 
 describe("Role 3 engine evaluation fixtures", () => {
@@ -231,5 +352,97 @@ describe("Role 3 engine evaluation fixtures", () => {
       result: { reason: "Emergency pause cancelled the current quest cycle." },
     });
     expect(emergency.events[0]).toMatchObject({ eventType: "quest-cycle.emergency-cancelled" });
+  });
+
+  it.each([
+    ["acknowledge", "acknowledged"],
+    ["turn-into-vote", "converted"],
+    ["later", "postponed"],
+    ["dismiss", "dismissed"],
+  ] as const)("keeps the %s cue action server-authorised and deterministic", (action, state) => {
+    const first = resolveDirectorAction(action);
+    const replay = resolveDirectorAction(action);
+
+    expect(first).toEqual(replay);
+    expect(first).toMatchObject({ ok: true, decision: { nextCue: { state } } });
+    if (!first.ok) return;
+    expect(first.decision.events).toHaveLength(1);
+    expect(first.decision.events[0]?.attributes).toMatchObject({
+      cueId: "role-3-evaluation-cue",
+    });
+  });
+
+  it("converts provider absence into exactly three private, approval-ready fallbacks", () => {
+    const converter = new DefaultDirectorCueConverter();
+    const first = converter.convert(conversionInput());
+    const replay = converter.convert(conversionInput());
+
+    expect(first).toEqual(replay);
+    expect(first).toMatchObject({
+      ok: true,
+      readyForStreamerApproval: true,
+      decision: {
+        nextState: {
+          status: "proposed",
+          availableStreamerActions: expect.arrayContaining(["approve", "reject"]),
+        },
+      },
+    });
+    if (!first.ok) return;
+    expect(first.decision.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          eventType: "live-director.cue-conversion-ready",
+          attributes: expect.objectContaining({
+            candidateCount: 3,
+            fallbackCount: 3,
+            streamerApprovalRequired: true,
+            candidatePublication: false,
+          }),
+        }),
+      ]),
+    );
+    expect(first.batch.candidates).toHaveLength(3);
+    expect(
+      first.batch.candidates.every(
+        ({ generation }) => generation.method === "deterministic-fallback",
+      ),
+    ).toBe(true);
+  });
+
+  it.each([
+    ["emergency pause", { emergencyPaused: true }],
+    ["session end", { sessionEnded: true }],
+    ["impossible opportunity", { questImpossible: true }],
+  ] as const)("publishes nothing when %s invalidates conversion", (_name, patch) => {
+    expect(new DefaultDirectorCueConverter().convert(conversionInput(patch))).toMatchObject({
+      ok: false,
+      disposition: "no-publication",
+      code: "invalid-context",
+    });
+  });
+
+  it("records one privacy-safe resolved cue across reconnect replay", () => {
+    const dismissed = resolveDirectorAction("dismiss");
+    if (!dismissed.ok) throw new Error(dismissed.error.message);
+    const summary = createDirectorCueHistorySummary({
+      cue: dismissed.decision.nextCue,
+      topic: "Choose the next safe route",
+    });
+    if (summary === null) throw new Error("Expected a resolved cue summary");
+
+    const first = mergeDirectorCueHistory([], summary, directorNow + 1_000);
+    expect(first).not.toBeNull();
+    expect(mergeDirectorCueHistory(first!, summary, directorNow + 1_000)).toEqual(first);
+    expect(first).toEqual([
+      {
+        cueId: "role-3-evaluation-cue",
+        intentId: "fixture-intent",
+        topic: "Choose the next safe route",
+        offeredAt: directorNow,
+        resolvedAt: directorNow + 1_000,
+        disposition: "dismissed",
+      },
+    ]);
   });
 });

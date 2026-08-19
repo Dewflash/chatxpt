@@ -22,11 +22,45 @@ Fallback selection is deterministic from the caller-supplied session/cycle seed 
 
 `DefaultDirectorCueLifecycle` is the pure LD-R3-02 action authority behind the canonical cue state. It accepts only matching session/cycle/revision commands, derives the proposed actions, consumes acknowledge/convert/dismiss, postpones `Later` for ten authoritative seconds, and permits one resurface only while the same canonical context remains fresh. Expiry, context replacement, emergency pause, and session end fail closed to terminal cue states. Conversion emits intent to enter the existing exactly-three path but never publishes candidates or changes quest-cycle state directly; Role 1 still owns authentication, idempotency, scheduling, persistence, and broadcast.
 
+`DefaultDirectorCueConverter` is the pure LD-R3-03 bridge from that consumed `converted` cue into the existing `DefaultCandidateAssembler` and `DefaultQuestEngine` proposal path. Missing, malformed, provider, algorithmic, and deterministic candidates all face the same validator; rejected or absent candidates receive separately validated seeded fallbacks. Success stops at a canonical private `proposed` cycle with exactly three options and explicit approve/reject actions. Any invalid cue/context, fallback exhaustion, or proposal-boundary failure returns typed `no-publication`; it never starts voting or publishes directly to viewers.
+
 An `emergency-pause` command cancels the current cycle and emits `quest-cycle.emergency-cancelled`. Role 1 must persist the application-wide emergency latch and refuse new proposals until it is explicitly cleared. Ordinary resumable pause remains unavailable because the canonical lifecycle has neither a paused state nor a resume action.
 
 Voting opens for 30 seconds using authoritative time and rejects late votes. The merged neutral `system.vote-close` seam supplies Role 1's final accepted tally and current platform-neutral context without prescribing a winner. Role 3 resolves the highest tally, breaks ties from the session ID, cycle ID, and sorted tied IDs, and returns a typed no-activation cancellation for zero votes, a non-live session, or a winner that fails current safety, streamer-boundary, accessibility, or gameplay-fact validation. A valid winner activates immediately with zeroed progress and an absolute duration deadline. Role 1 continues to own voter identity, first-vote acceptance, deduplication, storage, scheduling, revisions, persistence, and broadcast. The current close context has no emergency-latch field, so the accepted emergency command path must cancel the voting cycle before close; Role 3 does not infer an unseen latch.
 
-[`EVALUATION.md`](./EVALUATION.md) records fixture-only failure and portability evidence for provider absence/malformed output, varied game genres, reconnect-relevant state reconstruction, and cancellation semantics. It does not upgrade component tests into live or end-to-end proof.
+[`EVALUATION.md`](./EVALUATION.md) records the fixture-only failure matrix for cue suitability,
+actions, timing, conversion, invalidation, cooldown, recovery, quest results, deterministic replay,
+provider/candidate failure, and varied game genres. It does not upgrade component tests into live or
+end-to-end proof.
+
+For the Live Director handoff, Role 1 composes the public seam in this order: suitability decides
+whether to stay silent, wait, or offer; the lifecycle authorises the private cue and streamer action;
+the converter reuses exactly-three assembly and stops at private streamer approval; the existing
+quest engine owns the approved cycle. A minimal composition shape is:
+
+```ts
+const suitability = cueSuitability.decide(canonicalOpportunity);
+const offered = cueLifecycle.offer({ ...authoritativeCueInput, suitability });
+const acted = cueLifecycle.applyAction(authoritativeStreamerAction);
+const proposal = cueConverter.convert({
+  ...authoritativeConversionInput,
+  liveDirector: stateContaining(acted),
+  candidates: untrustedCandidatesOrNull,
+});
+
+if (proposal.ok) {
+  // Persist the private `proposed` cycle; do not publish candidates to viewers yet.
+  await commitAuthoritativeDecision(proposal.decision);
+} else {
+  // Preserve the typed `no-publication` result and recovery reason.
+  await recordNoPublication(proposal.code, proposal.reason);
+}
+```
+
+The example names application-owned adapter functions intentionally: Role 3 does not prescribe
+persistence or transport. Role 1 must recheck emergency/session/impossibility authority at
+conversion, stamp accepted revisions/events, and project private versus public state. The full
+action/event/state catalogue, failure matrix, and limitations are in `EVALUATION.md`.
 
 `PROVIDER_QUALITY_RUBRIC.md` is Role 3's evaluation-only proposal for the joint Role 2/3 provider comparison. `provider-quality.ts` makes its hard gates, weighted threshold, and critical minimums deterministic. Neither file calls, selects, or integrates a provider; the D23 joint decision gates remain open until Role 2 supplies real operational trials and both roles send one recommendation to Role 1.
 

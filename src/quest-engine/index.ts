@@ -12,13 +12,21 @@ export type {
   ApplyDirectorCueActionInput,
   DirectorCueAuthority,
   DirectorCueDecision,
+  DirectorCueContextInvalidation,
   DirectorCueResult,
   OfferDirectorCueInput,
   ReconcileDirectorCueInput,
   ResurfaceDirectorCueInput,
 } from "./director-cue";
+export { DefaultDirectorCueConverter } from "./director-cue-conversion";
+export type {
+  DirectorCueConversionFailureCode,
+  DirectorCueConversionInput,
+  DirectorCueConversionResult,
+} from "./director-cue-conversion";
 export {
   checkRecentQuestRepetition,
+  createDirectorCueHistorySummary,
   decideActiveQuestInterruption,
   defaultCooldownEndsAt,
   DefaultDirectorCueSuitabilityPolicy,
@@ -30,6 +38,7 @@ export {
   DIRECTOR_CUE_ATTENTION_WINDOW_MILLISECONDS,
   DIRECTOR_CUE_COOLDOWN_MILLISECONDS,
   DIRECTOR_CUE_REPETITION_MILLISECONDS,
+  mergeDirectorCueHistory,
 } from "./intervention";
 export type {
   ActiveQuestInterruptionDecision,
@@ -38,6 +47,7 @@ export type {
   DirectorCueSuitabilityDecision,
   DirectorCueSuitabilityInput,
   DirectorCueSuitabilityReason,
+  DirectorCueHistoryInput,
   InterventionDecision,
   InterventionPolicyInput,
   InterventionReason,

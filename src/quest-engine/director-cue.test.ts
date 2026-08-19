@@ -253,6 +253,68 @@ describe("DefaultDirectorCueLifecycle", () => {
   });
 
   it.each([
+    ["intent-updated", "stale"],
+    ["audience-expired", "stale"],
+    ["quest-impossible", "stale"],
+    ["safety-changed", "cancelled"],
+  ] as const)("records specific %s invalidation", (contextInvalidation, state) => {
+    expect(
+      new DefaultDirectorCueLifecycle().reconcile({
+        current: proposedState(),
+        emergencyPaused: false,
+        sessionEnded: false,
+        contextChanged: false,
+        contextInvalidation,
+        now: NOW + 1_000,
+      }),
+    ).toMatchObject({
+      ok: true,
+      decision: { nextCue: { state, reason: contextInvalidation } },
+    });
+  });
+
+  it("keeps an ordinary gameplay change and reconstructed terminal cue stable", () => {
+    const lifecycle = new DefaultDirectorCueLifecycle();
+    const ordinary = lifecycle.reconcile({
+      current: proposedState(),
+      emergencyPaused: false,
+      sessionEnded: false,
+      contextChanged: false,
+      contextInvalidation: "ordinary-gameplay-change",
+      now: NOW + 1_000,
+    });
+    expect(ordinary).toMatchObject({
+      ok: true,
+      decision: { nextCue: { state: "proposed" }, events: [] },
+    });
+    if (!ordinary.ok) throw new Error(ordinary.error.message);
+    const dismissed = lifecycle.applyAction({
+      authority,
+      current: proposedState(),
+      command: streamerCommand("dismiss"),
+      emergencyPaused: false,
+      now: NOW + 1_000,
+    });
+    if (!dismissed.ok) throw new Error(dismissed.error.message);
+    const reconstructed = liveDirectorStateSchema.parse({
+      ...baseState,
+      cue: dismissed.decision.nextCue,
+    });
+    expect(
+      lifecycle.reconcile({
+        current: reconstructed,
+        emergencyPaused: true,
+        sessionEnded: true,
+        contextChanged: true,
+        now: NOW + 2_000,
+      }),
+    ).toEqual({
+      ok: true,
+      decision: { nextCue: dismissed.decision.nextCue, events: [] },
+    });
+  });
+
+  it.each([
     [true, false, "emergency-paused"],
     [false, true, "session-ended"],
   ] as const)("cancels for %s/%s authority state", (emergencyPaused, sessionEnded, reason) => {
