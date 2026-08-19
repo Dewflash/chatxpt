@@ -1,0 +1,34 @@
+ChatXPT LD-R1-01 canonical authority and privacy verification
+Captured: 2026-08-19T13:34:15+08:00
+Source commit: 49383cc
+Branch: role-1/live-director-01-contracts
+Evidence class: fixture-only
+
+Executed checks
+- npm.cmd run test:contracts
+  Result: 1 file passed; 30 tests passed.
+- npm.cmd run test:orchestrator
+  Result: 1 file passed; 20 tests passed.
+- npm.cmd run test:integration -- --run tests/integration/role-entrypoints.test.ts tests/integration/orchestrator.test.ts
+  Result: the repository integration script selected all 22 integration files; 131 tests passed.
+- npm.cmd run check
+  Result: lint, typecheck, role-boundary check, evidence checks, demo-runbook check,
+  evidence/client-secret tests, 79 Vitest files with 563 tests, production build, and
+  built-client secret scan all passed.
+
+Verified fixture assertions
+- Known, unknown, stale, conflicting, and privacy-denied Live Director states parse through the canonical Core contract.
+- Declared streamer intent, gameplay observations, and audience-derived facts remain separate source classes.
+- Streamer, viewer, and overlay projections share authoritative revision 1 after one accepted fixture cue command.
+- The streamer projection contains the private cue and reason.
+- The viewer projection contains only approved public context and structurally rejects private cue/pointer fields.
+- The OBS projection has no Live Director field and structurally rejects one.
+- Identical cue command replay returns the original receipt without deciding or publishing twice.
+- A stale cue command returns stale-revision before the fixture engine is invoked again.
+- Broadcaster/moderator/system command classes are enforced, cue expiry is schema-checked, and client-supplied lifecycle outcomes are rejected.
+
+Limitations
+- All inputs and identities were deterministic contract fixtures.
+- No real Twitch JWT, chat, viewer, OBS capture/browser source, Supabase Cloud, Vercel, or model-provider call was exercised.
+- Cue suitability and lifecycle mechanics remain Role 3 follow-up; the default engine fails the new cue commands closed until that public seam lands.
+- The result proves schema, projection, revision, idempotency, and privacy boundaries only. It is not live product or solution-fit evidence.

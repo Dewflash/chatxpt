@@ -4,7 +4,12 @@ import { contractEnvelopeSchema, identifierSchema, serviceHealthSchema } from ".
 import { streamerProfileSchema } from "./profile";
 import { questCycleStateSchema } from "./quests";
 import { participationCapabilitiesSchema, streamSessionSchema } from "./session";
-import { audienceSnapshotSchema, gameplaySnapshotSchema } from "./signals";
+import {
+  audienceSnapshotSchema,
+  gameplaySnapshotSchema,
+  liveDirectorStateSchema,
+  publicViewerContextSchema,
+} from "./signals";
 
 export const participationModeSchema = z.enum([
   "twitch-extension",
@@ -12,6 +17,14 @@ export const participationModeSchema = z.enum([
   "twitch-chat",
   "unavailable",
 ]);
+
+export const streamerLiveDirectorProjectionSchema = liveDirectorStateSchema;
+
+export const viewerLiveDirectorProjectionSchema = z
+  .object({
+    publicContext: publicViewerContextSchema.nullable(),
+  })
+  .strict();
 
 export const streamerViewModelSchema = z
   .object({
@@ -23,6 +36,7 @@ export const streamerViewModelSchema = z
     audience: audienceSnapshotSchema.nullable(),
     questCycle: questCycleStateSchema,
     emergencyPaused: z.boolean(),
+    liveDirector: streamerLiveDirectorProjectionSchema.nullable().optional(),
   })
   .strict()
   .superRefine((view, context) => {
@@ -88,6 +102,7 @@ export const viewerViewModelSchema = z
     acceptedCandidateId: identifierSchema.nullable(),
     questCycle: questCycleStateSchema,
     connection: serviceHealthSchema,
+    liveDirector: viewerLiveDirectorProjectionSchema.nullable().optional(),
   })
   .strict()
   .superRefine((view, context) => {
@@ -182,3 +197,7 @@ export const overlayViewModelSchema = z
 export type StreamerViewModel = z.infer<typeof streamerViewModelSchema>;
 export type ViewerViewModel = z.infer<typeof viewerViewModelSchema>;
 export type OverlayViewModel = z.infer<typeof overlayViewModelSchema>;
+export type StreamerLiveDirectorProjection = z.infer<
+  typeof streamerLiveDirectorProjectionSchema
+>;
+export type ViewerLiveDirectorProjection = z.infer<typeof viewerLiveDirectorProjectionSchema>;

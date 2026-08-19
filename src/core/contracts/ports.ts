@@ -15,6 +15,7 @@ import type {
   GameplayFrameObservation,
   GameplaySnapshot,
   IntelligenceSnapshot,
+  LiveDirectorState,
 } from "./signals";
 import type { OverlayViewModel, StreamerViewModel, ViewerViewModel } from "./views";
 
@@ -135,6 +136,7 @@ export interface ViewModelProjectionInput {
   readonly communityHype: number;
   readonly acceptedCandidateId: string | null;
   readonly connection: ServiceHealth;
+  readonly liveDirector?: LiveDirectorState | null;
 }
 
 export interface ViewModelProjector {

@@ -1,5 +1,6 @@
 import {
   acceptedVoteTallySnapshotSchema,
+  audiencePointerAggregateSchema,
   domainErrorSchema,
   gameplaySnapshotSchema,
   overlayViewModelSchema,
@@ -7,6 +8,7 @@ import {
   viewerViewModelSchema,
   type CandidateBatch,
   type AcceptedVoteTallySnapshot,
+  type AudiencePointerAggregate,
   type CommandEnvelope,
   type GameplaySnapshot,
   type QuestEngine,
@@ -19,6 +21,7 @@ import {
 import type {
   AcceptedVoteTallyReadInput,
   AcceptedVoteTallyReader,
+  AudiencePointerAggregateReader,
   CandidateBatchReader,
   CommandAuthorizer,
   CommitAuthoritativeStateInput,
@@ -135,6 +138,27 @@ export class StaticFixtureCandidateBatchReader implements CandidateBatchReader {
   }
 }
 
+export class StaticFixtureAudiencePointerAggregateReader
+  implements AudiencePointerAggregateReader
+{
+  constructor(private readonly aggregates: readonly AudiencePointerAggregate[] = []) {
+    for (const aggregate of aggregates) {
+      const parsed = audiencePointerAggregateSchema.parse(aggregate);
+      if (parsed.envelope.evidenceClass !== "fixture") {
+        throw new Error("Fixture audience pointer reader accepts only fixture-labelled aggregates");
+      }
+    }
+  }
+
+  async read(pointerId: string, sessionId: string): Promise<AudiencePointerAggregate | null> {
+    const aggregate = this.aggregates.find(
+      (candidate) =>
+        candidate.pointerId === pointerId && candidate.envelope.sessionId === sessionId,
+    );
+    return aggregate === undefined ? null : clone(aggregate);
+  }
+}
+
 export class FixtureCurrentGameplaySnapshotRepository
   implements CurrentGameplaySnapshotRepository
 {
@@ -247,6 +271,7 @@ export class CanonicalFixtureViewProjector implements ViewModelProjector {
         audience: input.audience,
         questCycle: input.questCycle,
         emergencyPaused: input.emergencyPaused,
+        ...(input.liveDirector === undefined ? {} : { liveDirector: input.liveDirector }),
       }),
       viewer: viewerViewModelSchema.parse({
         envelope: input.envelope,
@@ -261,6 +286,14 @@ export class CanonicalFixtureViewProjector implements ViewModelProjector {
         acceptedCandidateId: input.acceptedCandidateId,
         questCycle: input.questCycle,
         connection: input.connection,
+        ...(input.liveDirector === undefined
+          ? {}
+          : {
+              liveDirector:
+                input.liveDirector === null
+                  ? null
+                  : { publicContext: input.liveDirector.publicContext },
+            }),
       }),
       overlay: overlayViewModelSchema.parse({
         envelope: input.envelope,

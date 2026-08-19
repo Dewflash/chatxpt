@@ -1,5 +1,7 @@
 import type {
   AcceptedVoteTallyReader,
+  AudiencePointerAggregate,
+  AudiencePointerAggregateReader,
   AuthoritativeSessionState,
   CandidateBatch,
   CandidateBatchReader,
@@ -15,6 +17,11 @@ export type SnapshotRole = keyof RoleViewModels;
 
 export interface CandidateBatchRepository extends CandidateBatchReader {
   store(batch: CandidateBatch): Promise<void>;
+}
+
+/** Process-local staging only; participant/message deduplication keys never enter product history. */
+export interface AudiencePointerAggregateRepository extends AudiencePointerAggregateReader {
+  store(aggregate: AudiencePointerAggregate): Promise<void>;
 }
 
 export interface RoleSnapshotReader {
@@ -185,6 +192,7 @@ export interface ChatXptPersistenceRuntime {
   readonly hostedBoardSessions: HostedBoardSessionDirectory;
   readonly twitchChannelSessions: TwitchChannelSessionDirectory;
   readonly candidates: CandidateBatchRepository;
+  readonly audiencePointers: AudiencePointerAggregateRepository;
   readonly acceptedVotes: AcceptedVoteTallyReader;
   readonly gameplaySnapshots: CurrentGameplaySnapshotRepository;
   readonly snapshots: RoleSnapshotPublisher;

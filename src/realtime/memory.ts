@@ -24,6 +24,7 @@ import {
   type ViewerRecoveryState,
 } from "../core";
 import { buildSessionHistoryFromReceipts } from "./session-history";
+import { EphemeralAudiencePointerAggregateRepository } from "./live-director-context";
 import {
   PREPARING_SESSION_EXPIRY_MS,
   SESSION_RECONNECT_GRACE_MS,
@@ -596,6 +597,7 @@ export function createMemoryPersistenceRuntime() {
     hostedBoardSessions: backend,
     twitchChannelSessions: backend,
     candidates: backend,
+    audiencePointers: new EphemeralAudiencePointerAggregateRepository(),
     acceptedVotes: backend,
     gameplaySnapshots: backend,
     snapshots: backend,

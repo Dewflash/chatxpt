@@ -3,6 +3,7 @@ import type {
   CommandEnvelope,
   DomainError,
   GameplaySnapshot,
+  LiveDirectorState,
   QuestCycleState,
   RecentQuestSummary,
   QuestEngineEvent,
@@ -22,6 +23,7 @@ export interface AuthoritativeSessionState {
   readonly emergencyPaused: boolean;
   readonly communityHype: number;
   readonly recentQuests?: readonly RecentQuestSummary[];
+  readonly liveDirector?: LiveDirectorState | null;
 }
 
 export interface ProjectionContext {

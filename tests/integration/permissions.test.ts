@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   streamerQuestCommandSchema,
   streamerQuestProgressCommandSchema,
+  streamerLiveDirectorCueCommandSchema,
+  streamerLiveDirectorIntentCommandSchema,
+  systemLiveDirectorContextCommandSchema,
   systemQuestProgressCommandSchema,
   systemQuestTickCommandSchema,
   systemVoteCloseCommandSchema,
@@ -137,6 +140,72 @@ describe("server-authoritative command permissions", () => {
     expect(await authorizer.authorize(tick, state)).toBeNull();
     expect(await authorizer.authorize(progress, state)).toBeNull();
     expect(await authorizer.authorize(moderatorProgress, state)).toBeNull();
+  });
+
+  it("keeps Live Director intent, context, and cue actions in their permission classes", async () => {
+    const state = liveState();
+    const intent = streamerLiveDirectorIntentCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: state.session.sessionId,
+      questCycleId: null,
+      commandId: "live-director-intent",
+      correlationId: "live-director-intent-correlation",
+      expectedRevision: 0,
+      issuedAt: FIXTURE_NOW,
+      actor: { kind: "broadcaster", actorId: state.session.broadcasterId },
+      type: "streamer.live-director-intent",
+      action: "set",
+      intent: {
+        goal: "Reach shelter safely",
+        objective: "Invite chat to choose the next safe route.",
+        desiredAudienceInvolvement: "Vote on the route.",
+        requestedExpiresAt: FIXTURE_NOW + 60_000,
+      },
+    });
+    const context = systemLiveDirectorContextCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: state.session.sessionId,
+      questCycleId: state.questCycle.envelope.questCycleId,
+      commandId: "live-director-context",
+      correlationId: "live-director-context-correlation",
+      expectedRevision: 0,
+      issuedAt: FIXTURE_NOW,
+      actor: { kind: "system", actorId: "fixture-orchestrator" },
+      type: "system.live-director-context-ready",
+      liveContextId: "live-director-context",
+      audiencePointerId: null,
+    });
+    const cue = streamerLiveDirectorCueCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: state.session.sessionId,
+      questCycleId: state.questCycle.envelope.questCycleId,
+      commandId: "live-director-cue",
+      correlationId: "live-director-cue-correlation",
+      expectedRevision: 0,
+      issuedAt: FIXTURE_NOW,
+      actor: { kind: "moderator", actorId: "fixture-moderator" },
+      type: "streamer.live-director-cue",
+      cueId: "fixture-cue",
+      action: "dismiss",
+    });
+    const actors = new Map([
+      [intent.commandId, grant("broadcaster", state.session.broadcasterId)],
+      [context.commandId, grant("system", "fixture-orchestrator")],
+      [
+        cue.commandId,
+        grant("moderator", "fixture-moderator", {
+          moderatorForBroadcasterIds: [state.session.broadcasterId],
+        }),
+      ],
+    ]);
+    const authorizer = new ServerCommandAuthorizer(
+      new StaticVerifiedActorResolver(actors),
+      () => FIXTURE_NOW,
+    );
+
+    expect(await authorizer.authorize(intent, state)).toBeNull();
+    expect(await authorizer.authorize(context, state)).toBeNull();
+    expect(await authorizer.authorize(cue, state)).toBeNull();
   });
 
   it("allows only the owning broadcaster full streamer command authority", async () => {

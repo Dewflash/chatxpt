@@ -1,0 +1,39 @@
+R1-024 / LD-R1-02 — Live Director private context composition
+
+Source commit: 90726e6
+Branch: role-1/live-director-02-live-context
+Evidence class: fixture-only inputs with memory-repository reconnect coverage
+
+Commands and results
+
+- Focused Live Director context, contract, orchestrator, permission, and persistence tests: 5 files / 90 tests passed.
+- npm.cmd run test:contracts: 1 file / 31 tests passed.
+- npm.cmd run test:orchestrator: 1 file / 23 tests passed.
+- npm.cmd run test:integration: 22 files / 137 tests passed.
+- npm.cmd run check: lint, typecheck, boundaries, evidence checks, demo-runbook checks, 80 files / 583 Vitest tests, production build, and built-client secret scan passed.
+- git diff --check: passed.
+
+What this run verifies
+
+- Broadcaster-declared intent is server-timestamped, monotonic, expires honestly, and cannot be replaced through a stale command.
+- Audience inputs deduplicate repeated participant/message evidence, exclude deleted evidence, and retain only bounded aggregate counts and source references.
+- Three unique participants and five unique qualifying messages can produce a known pointer; one participant remains sparse and is not labelled audience consensus.
+- Unknown, stale, conflicting, ambiguous, and permission-denied states stay explicit.
+- Gameplay observations from the future are not promoted into current fact.
+- Streamer says, ChatXPT detects, and Chat suggests remain separate private source classes.
+- One authoritative revision is projected after persistence, and memory-repository reconnect recovers the composed state.
+- Viewer and overlay projections contain no participant key, message fingerprint, raw chat, private pointer evidence, or private Live Context.
+
+Privacy boundary
+
+- participantKey and messageFingerprint exist only in the ephemeral process-local aggregate input for deduplication.
+- Neither field reaches authoritative state, command receipts, ViewerViewModel, OverlayViewModel, or durable history.
+- The aggregate contract has no raw chat text field.
+
+Limitations
+
+- Inputs are deterministic fixtures; this is not real Twitch chat or Role 2 real-producer evidence.
+- Reconnect uses the memory persistence adapter, not Supabase Cloud or multi-device realtime.
+- No OBS Browser Source, UI, Vercel, or OpenAI provider runtime was exercised.
+- Role 3 cue suitability/lifecycle and exactly-three quest conversion remain separate passes; open Role 3 PR #151 must consume the canonical input types.
+- No engagement, causal, or product-value claim is made.

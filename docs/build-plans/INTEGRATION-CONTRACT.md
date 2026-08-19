@@ -42,6 +42,7 @@ Names may be refined in R1-P02, but responsibilities and dependency direction ar
 | Role 1 | `AudienceEventSource` | Role 2 | Normalised chat/activity event with Twitch payload removed |
 | Role 1 | `StreamerProfileReader` | Role 1 orchestrator for Roles 2/3 | Validated saved preferences, restrictions, game context, and version |
 | Role 2 | `IntelligenceProvider` | Role 1 orchestrator | Gameplay/audience snapshots with provenance, confidence, freshness, and `unknown` |
+| Role 2 | `AudiencePointerAggregate` | Role 1 orchestrator | Ephemeral, source-labelled topic evidence with opaque participant/message deduplication keys; Role 1 retains only counts, time window, confidence, and non-personal signal references |
 | Role 2 | `CandidateProvider` | Role 1 orchestrator | Exactly three candidates passed to Role 3 with traceable context and provider/algorithmic status |
 | Role 3 | `QuestEngine` | Role 1 orchestrator | Pure command/state decision boundary returning events, state, allowed actions, and typed rejection |
 | Role 1 | `StreamerViewModel` + `StreamerCommand` | Role 4 | Streamer-safe state plus commands accepted by the orchestrator |
@@ -82,6 +83,7 @@ correlationId
 - Token expiry, revoked access, Supabase write failure, network loss, and partial broadcast failure have explicit health/error states.
 - Broadcaster/moderator commands, viewer commands, system analysis, and read-only overlay access use separate permission classes.
 - Raw frames are not persisted. Raw chat is preferably processed in memory; if retained for debugging, Role 1 implements automated deletion within the accepted 24-hour maximum.
+- Audience-pointer participant deduplication keys and message fingerprints are process-local inputs only. They never enter authoritative state, command receipts, realtime snapshots, session history, viewer projections, or OBS projections.
 
 ## Shared files and dependency coordination
 

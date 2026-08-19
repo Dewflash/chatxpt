@@ -1,6 +1,7 @@
 import {
   CONTRACT_VERSION,
   acceptedVoteTallySnapshotSchema,
+  audiencePointerAggregateSchema,
   candidateBatchSchema,
   commandEnvelopeSchema,
   domainErrorSchema,
@@ -14,6 +15,7 @@ import {
   streamerViewModelSchema,
   audienceSnapshotSchema,
   gameplaySnapshotSchema,
+  liveDirectorStateSchema,
   timestampSchema,
   viewerViewModelSchema,
   type CommandEnvelope,
@@ -24,12 +26,18 @@ import {
   type RoleViewModels,
   type ViewModelProjectionInput,
   type AcceptedVoteTallySnapshot,
+  type AudiencePointerAggregate,
   type QuestProgressValidationContext,
   type VoteCloseValidationContext,
 } from "../contracts";
 import type { OrchestratorDependencies } from "./ports";
 import { canonicalJsonStringify, commandFingerprint } from "./fingerprint";
 import { deriveGameplayServiceHealth, upsertGameplayServiceHealth } from "./gameplay-health";
+import {
+  LiveDirectorContextCompositionError,
+  applyDeclaredStreamIntent,
+  composeLiveDirectorContext,
+} from "./live-director-context";
 import type {
   AcceptedCommandReceipt,
   AuthoritativeSessionState,
@@ -71,6 +79,9 @@ function stateInvariantError(state: AuthoritativeSessionState): DomainError | nu
     !questCycleStateSchema.safeParse(state.questCycle).success ||
     (state.gameplay !== null && !gameplaySnapshotSchema.safeParse(state.gameplay).success) ||
     (state.audience !== null && !audienceSnapshotSchema.safeParse(state.audience).success) ||
+    (state.liveDirector !== undefined &&
+      state.liveDirector !== null &&
+      !liveDirectorStateSchema.safeParse(state.liveDirector).success) ||
     state.services.some((service) => !serviceHealthSchema.safeParse(service).success) ||
     typeof state.emergencyPaused !== "boolean" ||
     !Number.isSafeInteger(state.communityHype) ||
@@ -276,6 +287,51 @@ function authoritativeProfileSettingsUpdate(
   return { state, events: [event.data] };
 }
 
+function authoritativeLiveDirectorUpdate(
+  dependencies: OrchestratorDependencies,
+  command: CommandEnvelope,
+  current: AuthoritativeSessionState,
+  acceptedAt: number,
+  liveDirector: NonNullable<AuthoritativeSessionState["liveDirector"]>,
+  event: QuestEngineDecision["events"][number],
+): { state: AuthoritativeSessionState; events: AcceptedCommandReceipt["events"] } | DomainError {
+  const revision = current.session.revision + 1;
+  const questCycle = questCycleStateSchema.parse({
+    ...current.questCycle,
+    envelope: authoritativeEnvelope(
+      dependencies,
+      command,
+      current,
+      current.questCycle.envelope.questCycleId,
+      revision,
+      acceptedAt,
+      "quest-state",
+    ),
+  });
+  const state: AuthoritativeSessionState = {
+    ...current,
+    session: { ...current.session, revision },
+    questCycle,
+    liveDirector,
+  };
+  const parsedEvent = questEngineEventSchema.safeParse({
+    envelope: authoritativeEnvelope(
+      dependencies,
+      command,
+      state,
+      questCycle.envelope.questCycleId,
+      revision,
+      acceptedAt,
+      "quest-event",
+    ),
+    event,
+  });
+  if (!parsedEvent.success) {
+    return error("internal", "Authoritative Live Director event stamping failed", true);
+  }
+  return { state, events: [parsedEvent.data] };
+}
+
 function projectionInput(
   dependencies: OrchestratorDependencies,
   command: CommandEnvelope,
@@ -307,6 +363,7 @@ function projectionInput(
     communityHype: state.communityHype,
     acceptedCandidateId: context.acceptedCandidateId,
     connection: context.connection,
+    liveDirector: state.liveDirector,
   };
 }
 
@@ -483,6 +540,39 @@ export class ChatXptOrchestrator {
       candidateBatch = parsedBatch.data;
     }
 
+    let audiencePointerAggregate: AudiencePointerAggregate | null = null;
+    if (
+      command.type === "system.live-director-context-ready" &&
+      command.audiencePointerId !== null
+    ) {
+      let untrustedAggregate: unknown;
+      try {
+        untrustedAggregate = await this.dependencies.audiencePointers.read(
+          command.audiencePointerId,
+          command.sessionId,
+        );
+      } catch {
+        return {
+          ok: false,
+          error: error("dependency-unavailable", "Audience pointer aggregate lookup failed", true),
+        };
+      }
+      if (untrustedAggregate === null) {
+        return {
+          ok: false,
+          error: error("dependency-unavailable", "Audience pointer aggregate is unavailable", true),
+        };
+      }
+      const parsedAggregate = audiencePointerAggregateSchema.safeParse(untrustedAggregate);
+      if (!parsedAggregate.success || parsedAggregate.data.pointerId !== command.audiencePointerId) {
+        return {
+          ok: false,
+          error: error("validation", "Audience pointer aggregate does not match its command"),
+        };
+      }
+      audiencePointerAggregate = parsedAggregate.data;
+    }
+
     let acceptedAt: number;
     try {
       acceptedAt = this.dependencies.clock.now();
@@ -566,6 +656,73 @@ export class ChatXptOrchestrator {
         authoritative = authoritativeProfileSettingsUpdate(this.dependencies, command, current, acceptedAt);
       } catch {
         return { ok: false, error: error("internal", "Authoritative profile update failed", true) };
+      }
+    } else if (command.type === "streamer.live-director-intent") {
+      try {
+        const liveDirector = applyDeclaredStreamIntent(current, command, acceptedAt);
+        authoritative = authoritativeLiveDirectorUpdate(
+          this.dependencies,
+          command,
+          current,
+          acceptedAt,
+          liveDirector,
+          {
+            eventType: "live-director.intent-updated",
+            attributes: {
+              action: command.action,
+              intentId:
+                liveDirector.declaredIntent.status === "unknown"
+                  ? null
+                  : liveDirector.declaredIntent.intentId,
+              priorContextInvalidated: (current.liveDirector?.liveContext ?? null) !== null,
+            },
+          },
+        );
+      } catch (caught) {
+        if (caught instanceof LiveDirectorContextCompositionError) {
+          return { ok: false, error: error(caught.code, caught.message) };
+        }
+        return {
+          ok: false,
+          error: error("internal", "Authoritative declared intent update failed", true),
+        };
+      }
+    } else if (command.type === "system.live-director-context-ready") {
+      try {
+        const liveDirector = composeLiveDirectorContext({
+          state: current,
+          command,
+          aggregate: audiencePointerAggregate,
+          acceptedAt,
+        });
+        const pointer = liveDirector.audiencePointer;
+        const retainedPointer =
+          pointer?.status === "known" || pointer?.status === "stale" ? pointer : null;
+        authoritative = authoritativeLiveDirectorUpdate(
+          this.dependencies,
+          command,
+          current,
+          acceptedAt,
+          liveDirector,
+          {
+            eventType: "live-director.context-composed",
+            attributes: {
+              contextId: command.liveContextId,
+              audiencePointerStatus: pointer?.status ?? "unknown",
+              uniqueParticipants: retainedPointer?.uniqueParticipants ?? 0,
+              qualifyingMessages: retainedPointer?.qualifyingMessages ?? 0,
+              rawChatRetained: false,
+            },
+          },
+        );
+      } catch (caught) {
+        if (caught instanceof LiveDirectorContextCompositionError) {
+          return { ok: false, error: error(caught.code, caught.message) };
+        }
+        return {
+          ok: false,
+          error: error("internal", "Authoritative Live Context composition failed", true),
+        };
       }
     } else {
       let untrustedEngineResult: unknown;
