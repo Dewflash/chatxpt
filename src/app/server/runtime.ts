@@ -6,12 +6,13 @@ import {
   CanonicalViewProjector,
   ChatXptOrchestrator,
   type MessageIdFactory,
+  type DirectorCueLifecycle,
   type ProjectionContextResolver,
   type QuestEngine,
   type ServerClock,
   type ViewModelProjector,
 } from "@/core";
-import { createDefaultQuestEngine } from "@/quest-engine";
+import { createDefaultQuestEngine, DefaultDirectorCueLifecycle } from "@/quest-engine";
 import {
   ServerCommandAuthorizer,
   bindPersistenceRuntime,
@@ -41,6 +42,7 @@ class RequestActorResolver implements VerifiedCommandActorResolver {
 export interface ChatXptServerRuntimeDependencies {
   readonly persistence: ConfiguredPersistenceRuntime;
   readonly engine?: QuestEngine;
+  readonly directorCues?: DirectorCueLifecycle;
   readonly projector?: ViewModelProjector;
   readonly clock?: ServerClock;
   readonly ids?: MessageIdFactory;
@@ -50,6 +52,7 @@ export interface ChatXptServerRuntimeDependencies {
 export class ChatXptServerRuntime {
   readonly persistence: ConfiguredPersistenceRuntime;
   private readonly engine: QuestEngine;
+  private readonly directorCues: DirectorCueLifecycle;
   private readonly projector: ViewModelProjector;
   private readonly clock: ServerClock;
   private readonly ids: MessageIdFactory;
@@ -57,6 +60,7 @@ export class ChatXptServerRuntime {
   constructor(dependencies: ChatXptServerRuntimeDependencies) {
     this.persistence = dependencies.persistence;
     this.engine = dependencies.engine ?? createDefaultQuestEngine();
+    this.directorCues = dependencies.directorCues ?? new DefaultDirectorCueLifecycle();
     this.projector = dependencies.projector ?? new CanonicalViewProjector();
     this.clock = dependencies.clock ?? { now: Date.now };
     this.ids = dependencies.ids ?? new RuntimeMessageIds();
@@ -76,6 +80,7 @@ export class ChatXptServerRuntime {
         {
           authorizer,
           engine: this.engine,
+          directorCues: this.directorCues,
           projectionContext,
           projector: this.projector,
           clock: this.clock,

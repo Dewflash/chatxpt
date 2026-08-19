@@ -3,7 +3,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { createFixtureUiGatewaySnapshot, streamerViewModelSchema } from "../core";
-import { contractFixtureUiX01ReadinessCatalog } from "../core/testing";
+import {
+  contractFixtureLiveDirectorStateCatalog,
+  contractFixtureUiX01ReadinessCatalog,
+} from "../core/testing";
 import { TwitchConfigSurface, TwitchLiveConfigSurface } from "./twitch-config";
 
 function mixedGenerationView() {
@@ -24,7 +27,11 @@ function mixedGenerationView() {
 
 describe("TwitchConfigSurface", () => {
   it("keeps infrequent setup compact and routes detailed management back to Studio", () => {
-    const view = createFixtureUiGatewaySnapshot().views.streamer;
+    const base = createFixtureUiGatewaySnapshot().views.streamer;
+    const view = streamerViewModelSchema.parse({
+      ...base,
+      liveDirector: contractFixtureLiveDirectorStateCatalog["live-director.known.v1"],
+    });
     const readiness = contractFixtureUiX01ReadinessCatalog["r4.setup.misconfigured.v1"];
     const html = renderToStaticMarkup(h(TwitchConfigSurface, {
       view,
@@ -135,5 +142,48 @@ describe("TwitchLiveConfigSurface", () => {
     expect(html).toContain("Loading live controls");
     expect(html).toContain("Open full Studio");
     expect(html).not.toContain("Sidequest intensity");
+  });
+
+  it("keeps Live Director compact, private, source-separated, and dock-ready", () => {
+    const base = createFixtureUiGatewaySnapshot().views.streamer;
+    const view = streamerViewModelSchema.parse({
+      ...base,
+      liveDirector: contractFixtureLiveDirectorStateCatalog["live-director.known.v1"],
+    });
+    const html = renderToStaticMarkup(h(TwitchLiveConfigSurface, {
+      view,
+      popoutHref: "/studio/live-director?display=popout",
+      onCommand: () => undefined,
+    }));
+
+    expect(html).toContain("Live Director");
+    expect(html).toContain(">Private<");
+    expect(html).toContain("Streamer says");
+    expect(html).toContain("ChatXPT detects");
+    expect(html).toContain("Chat suggests");
+    expect(html).toContain("Turn into vote");
+    expect(html).toContain("Private pop-out or OBS Custom Dock");
+    expect(html).toContain('href="/studio/live-director?display=popout"');
+    expect(html).toContain("It is not the public OBS overlay");
+  });
+
+  it("renders offline, permission, and reconnect boundaries without local authority", () => {
+    const base = createFixtureUiGatewaySnapshot().views.streamer;
+    const deniedOffline = streamerViewModelSchema.parse({
+      ...base,
+      session: { ...base.session, status: "offline" },
+      liveDirector: contractFixtureLiveDirectorStateCatalog["live-director.privacy-denied.v1"],
+    });
+    const offlineHtml = renderToStaticMarkup(h(TwitchLiveConfigSurface, { view: deniedOffline }));
+    const loadingHtml = renderToStaticMarkup(h(TwitchLiveConfigSurface, {
+      view: null,
+      commandMessage: "Reconnecting to the authoritative streamer session.",
+    }));
+
+    expect(offlineHtml).toContain("Live Director is not live");
+    expect(offlineHtml).toContain("Permission Denied");
+    expect(offlineHtml).not.toContain("Turn into vote");
+    expect(loadingHtml).toContain("Private authority required");
+    expect(loadingHtml).toContain("Reconnecting to the authoritative streamer session");
   });
 });

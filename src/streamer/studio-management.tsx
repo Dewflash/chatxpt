@@ -39,6 +39,7 @@ import {
   type StreamerUiCommand,
 } from "./streamer-commands";
 import { summarizeGameplayHealth } from "./gameplay-health";
+import { LiveDirectorControls } from "./live-director-controls";
 import { summarizeQuestGeneration } from "./quest-generation-health";
 
 import styles from "./studio-management.module.css";
@@ -710,6 +711,7 @@ export function StudioManagementSurface({
         <nav aria-label="Studio management sections">
           <a href="#profile-defaults-heading">Profile &amp; defaults</a>
           <a href="#session-overrides-heading">This session</a>
+          <a href="#live-director-heading">Live Director</a>
           <a href="#health-recovery-heading">Health &amp; recovery</a>
           <a href="#live-quests-heading">Live sidequests</a>
         </nav>
@@ -755,6 +757,21 @@ export function StudioManagementSurface({
           pending={pending}
         />
         <SessionOverridePanel view={view} />
+        <section className={styles.section} aria-labelledby="live-director-heading">
+          <div className={styles.sectionHeading}>
+            <div>
+              <p className={styles.eyebrow}>Private Live Director</p>
+              <h2 id="live-director-heading">Direct the moment without blending sources</h2>
+            </div>
+            <StatusBadge tone="diagnostic">Broadcaster only</StatusBadge>
+          </div>
+          <LiveDirectorControls
+            view={view}
+            pending={pending}
+            onCommand={onCommand}
+            commandFactory={commandFactory}
+          />
+        </section>
         <HealthAndRecovery
           view={view}
           readiness={readiness}

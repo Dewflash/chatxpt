@@ -4,6 +4,7 @@ import {
   audiencePointerAggregateSchema,
   candidateBatchSchema,
   commandEnvelopeSchema,
+  directorCueSchema,
   domainErrorSchema,
   overlayViewModelSchema,
   questCycleStateSchema,
@@ -724,6 +725,74 @@ export class ChatXptOrchestrator {
           error: error("internal", "Authoritative Live Context composition failed", true),
         };
       }
+    } else if (command.type === "streamer.live-director-cue") {
+      if (current.liveDirector === undefined || current.liveDirector === null) {
+        return { ok: false, error: error("validation", "There is no Live Director state to update") };
+      }
+      let untrustedCueResult: unknown;
+      try {
+        untrustedCueResult = await this.dependencies.directorCues.applyAction({
+          authority: {
+            sessionId: current.session.sessionId,
+            questCycleId: current.questCycle.envelope.questCycleId ?? "",
+            revision: current.session.revision,
+          },
+          current: current.liveDirector,
+          command,
+          emergencyPaused: current.emergencyPaused,
+          now: acceptedAt,
+        });
+      } catch {
+        return { ok: false, error: error("internal", "Director Cue lifecycle failed unexpectedly", true) };
+      }
+      if (
+        typeof untrustedCueResult !== "object" ||
+        untrustedCueResult === null ||
+        !("ok" in untrustedCueResult) ||
+        typeof untrustedCueResult.ok !== "boolean"
+      ) {
+        return { ok: false, error: error("internal", "Director Cue lifecycle returned an invalid result") };
+      }
+      if (!untrustedCueResult.ok) {
+        const parsedError = domainErrorSchema.safeParse(
+          (untrustedCueResult as { readonly error?: unknown }).error,
+        );
+        return {
+          ok: false,
+          error: parsedError.success
+            ? parsedError.data
+            : error("internal", "Director Cue lifecycle returned an invalid error"),
+        };
+      }
+      const decision = (untrustedCueResult as { readonly decision?: unknown }).decision;
+      if (typeof decision !== "object" || decision === null) {
+        return { ok: false, error: error("internal", "Director Cue lifecycle omitted its decision") };
+      }
+      const parsedCue = directorCueSchema.safeParse(
+        (decision as { readonly nextCue?: unknown }).nextCue,
+      );
+      const parsedEvents = questEngineEventDraftSchema.array().length(1).safeParse(
+        (decision as { readonly events?: unknown }).events,
+      );
+      if (!parsedCue.success || !parsedEvents.success) {
+        return { ok: false, error: error("internal", "Director Cue lifecycle returned invalid state") };
+      }
+      const liveDirector = liveDirectorStateSchema.safeParse({
+        ...current.liveDirector,
+        cue: parsedCue.data,
+        updatedAt: acceptedAt,
+      });
+      if (!liveDirector.success) {
+        return { ok: false, error: error("internal", "Director Cue transition violated Live Director state") };
+      }
+      authoritative = authoritativeLiveDirectorUpdate(
+        this.dependencies,
+        command,
+        current,
+        acceptedAt,
+        liveDirector.data,
+        parsedEvents.data[0],
+      );
     } else {
       let untrustedEngineResult: unknown;
       if (command.type === "streamer.emergency-clear") {

@@ -45,6 +45,7 @@ import {
   contractFixtureQuestCycle,
   contractFixtureSession,
 } from "../../src/core/testing";
+import { DefaultDirectorCueLifecycle } from "../../src/quest-engine";
 
 const ACCEPTED_AT = contractFixtureQuestCycle.envelope.occurredAt + 1_000;
 
@@ -194,6 +195,7 @@ function dependencies(
     gameplaySnapshots: new FixtureCurrentGameplaySnapshotRepository(),
     repository,
     engine,
+    directorCues: new DefaultDirectorCueLifecycle(),
     projectionContext: new FixtureProjectionContextResolver({
       participationMode: "hosted-board",
       viewerId: null,
@@ -709,7 +711,11 @@ describe("Role 1 application orchestrator", () => {
 
     expect(first.ok).toBe(true);
     if (!first.ok || first.views === null) return;
-    expect(first.views.streamer.liveDirector?.cue?.reason).toContain("Chat is asking");
+    expect(first.views.streamer.liveDirector?.cue).toMatchObject({
+      state: "postponed",
+      reason: "Streamer postponed this cue once",
+      availableActions: [],
+    });
     expect(first.views.viewer.liveDirector).toEqual({
       publicContext: contractFixtureLiveDirectorState.publicContext,
     });
@@ -728,7 +734,7 @@ describe("Role 1 application orchestrator", () => {
     expect(stale.ok).toBe(false);
     if (stale.ok) return;
     expect(stale.error.code).toBe("stale-revision");
-    expect(engine.calls).toBe(1);
+    expect(engine.calls).toBe(0);
     expect(publisher.published).toHaveLength(1);
   });
 

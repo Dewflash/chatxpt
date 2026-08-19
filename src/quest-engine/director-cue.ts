@@ -6,6 +6,7 @@ import {
   systemLiveDirectorCueCommandSchema,
   type DirectorCue,
   type DirectorCueAction,
+  type DirectorCueLifecycle,
   type DomainError,
   type LiveDirectorState,
   type QuestEngineEventDraft,
@@ -211,7 +212,7 @@ function parseCurrent(value: LiveDirectorState): LiveDirectorState | null {
 }
 
 /** Pure LD-R3-02 lifecycle. Role 1 remains the command and runtime authority. */
-export class DefaultDirectorCueLifecycle {
+export class DefaultDirectorCueLifecycle implements DirectorCueLifecycle {
   offer(input: OfferDirectorCueInput): DirectorCueResult {
     const command = systemLiveDirectorCueCommandSchema.safeParse(input.command);
     const current = parseCurrent(input.current);
