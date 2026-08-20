@@ -94,6 +94,26 @@ describe("algorithmic candidate strategy", () => {
     );
   });
 
+  it("uses Minecraft-aware templates when Minecraft is the selected game", async () => {
+    const provider = createValidatingCandidateProvider(createAlgorithmicCandidateStrategy());
+    const batch = await provider.generate({
+      envelope: contractFixtureCandidateBatch.envelope,
+      intelligence: await fixtureIntelligence(),
+      profile: {
+        ...contractFixtureProfile,
+        gameId: "minecraft",
+        gameName: "Minecraft",
+      },
+      recentQuestTitles: [],
+      activeChatXptQuest: null,
+    });
+
+    expect(batch.candidates).toHaveLength(3);
+    expect(batch.candidates.every((candidate) => candidate.instruction.includes("Minecraft")))
+      .toBe(true);
+    expect(JSON.stringify(batch)).not.toMatch(/\b(?:health|hunger|hotbar|sleep|biome|monster|damage cause)\b/iu);
+  });
+
   it("cites only known canonical signal IDs and never raw chat text", async () => {
     const audience = intelligenceSnapshotSchema.parse({
       envelope: {

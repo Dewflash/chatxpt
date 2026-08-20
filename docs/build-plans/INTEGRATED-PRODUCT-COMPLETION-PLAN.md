@@ -356,8 +356,8 @@ Connect Twitch
 | Ordinary-chat audience intelligence | Non-vote Twitch messages are ignored by the app ingress. | ICP-05 |
 | Live Analytics page | ICP-01 route shell exists with Overview, Activity, Topics, and Session History sections; connected ordinary-chat producer, topics, watchlist counts, and history remain incomplete. | ICP-05 |
 | Automatic topics plus watchlist counts | Aggregate contract/UI/persistence are incomplete. | ICP-05 |
-| Game-aware algorithmic candidates | Current templates explicitly describe themselves as game-neutral. | ICP-06 |
-| Game-aware deterministic fallback | Current Role 3 fallback library is game-neutral. | ICP-06 |
+| Game-aware algorithmic candidates | Credential-free algorithmic generation now prefers Minecraft-aware templates when Minecraft is selected or evidenced, and remains game-neutral for other games. Final evaluation/testing remains open. | ICP-06 |
+| Game-aware deterministic fallback | Role 3 deterministic fallback now prefers Minecraft-aware safe definitions when Minecraft is selected or evidenced, and remains game-neutral for other games. Final evaluation/testing remains open. | ICP-06 |
 | Correct weak-evidence OpenAI prompt | Current instruction requests game-neutral fallback. | ICP-06 |
 | Automatic eligible-cycle candidate call | Candidate provider and intervention coordinator are test-only composition. | ICP-06 |
 | Dedicated Live Quests page | ICP-01 route shell exists with Now, Recommendations, Why, Voting, and Results sections; full recommendation/review/voting/result workspace remains incomplete. | ICP-06 |

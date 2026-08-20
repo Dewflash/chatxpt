@@ -204,6 +204,54 @@ const fallbackLibrary: readonly FallbackDefinition[] = [
   },
 ] as const;
 
+const minecraftFallbackLibrary: readonly FallbackDefinition[] = [
+  {
+    key: "minecraft-next-goal",
+    title: "Next Goal Check",
+    instruction: "Name one Minecraft goal, then make your next choice support it.",
+    durationSeconds: 60,
+    difficulty: "easy",
+    rewardPoints: 100,
+    rationale: "A Minecraft-specific fallback that uses the selected game without claiming unsupported HUD or world facts.",
+  },
+  {
+    key: "minecraft-audience-route",
+    title: "Chat Chooses the Vibe",
+    instruction: "Ask chat for a cautious or bold Minecraft approach, then follow the winning vibe.",
+    durationSeconds: 60,
+    difficulty: "medium",
+    rewardPoints: 200,
+    rationale: "A Minecraft-specific audience prompt that stays safe when exact game facts are unknown.",
+  },
+  {
+    key: "minecraft-choice-explain",
+    title: "Explain the Choice",
+    instruction: "Before your next Minecraft action, explain what you are trying to achieve.",
+    durationSeconds: 45,
+    difficulty: "easy",
+    rewardPoints: 100,
+    rationale: "A Minecraft-specific planning prompt with no unsupported claim about exact game state.",
+  },
+  {
+    key: "minecraft-teach-moment",
+    title: "Teach the Moment",
+    instruction: "Share one Minecraft tip that fits your current plan before continuing.",
+    durationSeconds: 45,
+    difficulty: "easy",
+    rewardPoints: 100,
+    rationale: "A Minecraft-specific teaching fallback that does not depend on parsed HUD facts.",
+  },
+  {
+    key: "minecraft-recap",
+    title: "Blocky Recap",
+    instruction: "Give a quick Minecraft recap of your last decision and what you will try next.",
+    durationSeconds: 60,
+    difficulty: "medium",
+    rewardPoints: 200,
+    rationale: "A Minecraft-specific recap that remains measurable without inferring exact game state.",
+  },
+] as const;
+
 const safetyRules = [
   {
     category: "sensitive-data",
@@ -627,6 +675,30 @@ function stableHash(value: string): number {
   return hash >>> 0;
 }
 
+function isMinecraftAssembly(input: CandidateAssemblyInput): boolean {
+  const profileGame = `${input.profile.gameId ?? ""} ${input.profile.gameName ?? ""}`.toLowerCase();
+  const gameplayGame = `${input.intelligence.gameplay.capabilities.gameId ?? ""}`.toLowerCase();
+  return profileGame.includes("minecraft") || gameplayGame.includes("minecraft");
+}
+
+function sortedFallbacks(
+  values: readonly FallbackDefinition[],
+  seed: string,
+): readonly FallbackDefinition[] {
+  return [...values].sort((left, right) => {
+    const difference = stableHash(`${seed}:${left.key}`) - stableHash(`${seed}:${right.key}`);
+    return difference !== 0 ? difference : left.key.localeCompare(right.key);
+  });
+}
+
+function selectedFallbackLibrary(input: CandidateAssemblyInput): readonly FallbackDefinition[] {
+  if (!isMinecraftAssembly(input)) return sortedFallbacks(fallbackLibrary, input.seed);
+  return [
+    ...sortedFallbacks(minecraftFallbackLibrary, `${input.seed}:minecraft`),
+    ...sortedFallbacks(fallbackLibrary, `${input.seed}:generic`),
+  ];
+}
+
 function fallbackCandidate(definition: FallbackDefinition, input: CandidateAssemblyInput): QuestCandidate {
   return questCandidateSchema.parse({
     candidateId: `fallback-${definition.key}-${stableHash(`${input.seed}:${definition.key}`).toString(36)}`,
@@ -698,10 +770,7 @@ export class DefaultCandidateAssembler {
       if (accepted.length === 3) break;
       validate(candidate, "provided");
     }
-    const orderedFallbacks = [...fallbackLibrary].sort((left, right) => {
-      const difference = stableHash(`${input.seed}:${left.key}`) - stableHash(`${input.seed}:${right.key}`);
-      return difference !== 0 ? difference : left.key.localeCompare(right.key);
-    });
+    const orderedFallbacks = selectedFallbackLibrary(input);
     for (const definition of orderedFallbacks) {
       if (accepted.length === 3) break;
       validate(fallbackCandidate(definition, input), "fallback");
