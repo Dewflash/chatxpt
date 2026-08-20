@@ -18,6 +18,10 @@ Before starting a pass, read in this order:
 
 `LIVE-DIRECTOR-IMPLEMENTATION-PLAN.md` records D-074's three-surface rule and D-075's accepted keep/defer/reject scope. It is active source authority for ten isolated passes: five driven by Role 1 and five driven by Role 3. The plan remains evidence-gated—activation does not prove solution fit—and it supplements the Role 1/Role 3 plans without replacing the existing runtime-responsibility, exactly-three, fallback, privacy, or real-evidence rules.
 
+## Active integrated product completion plan
+
+`INTEGRATED-PRODUCT-COMPLETION-PLAN.md` records the D-083/D-085 completion bar, owner-reviewed snapshot gate, complete unavailable-capability inventory, and the cross-role vertical slices that turn the current partial surfaces and disconnected runtime seams into one owner-testable streamer product. It supersedes older runtime-first sequencing only where D-085 says so; all role boundaries, privacy/safety rules, exact-three authority, and real-input evidence requirements remain.
+
 ## Responsibility for the plans
 
 - Role 1 defines required phases, order, outcomes, deadlines, acceptance criteria, and integration boundaries for Roles 1-3.
