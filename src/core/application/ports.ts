@@ -9,6 +9,7 @@ import type {
   GameplaySnapshot,
   LiveDirectorState,
   QuestEngine,
+  QuestEngineDecision,
   QuestEngineEventDraft,
   RoleViewModels,
   StreamerLiveDirectorCueCommand,
@@ -155,6 +156,27 @@ export interface DirectorCueLifecycle {
   ): Promise<DirectorCueLifecycleResult> | DirectorCueLifecycleResult;
 }
 
+export interface DirectorCueProposalInput {
+  readonly current: AuthoritativeSessionState;
+  readonly liveDirector: LiveDirectorState;
+  readonly command: StreamerLiveDirectorCueCommand;
+  readonly now: number;
+}
+
+export type DirectorCueProposalResult =
+  | { readonly ok: true; readonly decision: QuestEngineDecision }
+  | { readonly ok: false; readonly error: DomainError };
+
+/**
+ * Public composition seam for candidate generation plus Role 3 conversion.
+ * The orchestrator remains the only persistence and broadcast authority.
+ */
+export interface DirectorCueProposalCoordinator {
+  propose(
+    input: DirectorCueProposalInput,
+  ): Promise<DirectorCueProposalResult> | DirectorCueProposalResult;
+}
+
 export interface OrchestratorDependencies {
   readonly authorizer: CommandAuthorizer;
   readonly candidateBatches: CandidateBatchReader;
@@ -165,6 +187,7 @@ export interface OrchestratorDependencies {
   readonly engine: QuestEngine;
   readonly directorCues: DirectorCueLifecycle;
   readonly directorCueConverter: DirectorCueConverter;
+  readonly directorCueProposals?: DirectorCueProposalCoordinator;
   readonly projectionContext: ProjectionContextResolver;
   readonly projector: ViewModelProjector;
   readonly publisher: StatePublisher;

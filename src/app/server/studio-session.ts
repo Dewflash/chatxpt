@@ -372,28 +372,21 @@ export class StudioSessionApplication {
     if (!result.ok) {
       throw commandError(result.error.code, result.error.message, result.error.retryable);
     }
-    let state = result.receipt.state;
+    const state = result.receipt.state;
     let message =
       result.delivery === "published"
         ? "Authoritative change saved and broadcast."
         : "Authoritative change saved; realtime delivery is recovering.";
     if (
       parsedCommand.data.type === "streamer.live-director-cue" &&
-      parsedCommand.data.action === "turn-into-vote"
+      parsedCommand.data.action === "turn-into-vote" &&
+      state.questCycle.status === "proposed" &&
+      state.questCycle.options.length === 3
     ) {
-      const conversion = await this.dependencies.runtime.requestDirectorCueConversion(
-        state,
-        new StudioProjectionContext(this.now),
-      );
-      if (conversion.ok) {
-        state = conversion.receipt.state;
-        message =
-          conversion.delivery === "published"
-            ? "Three private quest options are ready for streamer approval."
-            : "Three private quest options are saved; realtime delivery is recovering.";
-      } else {
-        message = `Cue saved, but quest options are not ready: ${conversion.error.message}`;
-      }
+      message =
+        result.delivery === "published"
+          ? "Three private quest options are ready for streamer approval."
+          : "Three private quest options are saved; realtime delivery is recovering.";
     }
     return {
       ...(await this.surfaceState(state, authorized.twitchVerified)),

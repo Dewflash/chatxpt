@@ -17,6 +17,7 @@ import {
   type DirectorCueLifecycle,
   type AuthoritativeSessionState,
   type OrchestratorResult,
+  type DirectorCueProposalCoordinator,
   type ProjectionContextResolver,
   type QuestEngine,
   type ServerClock,
@@ -28,6 +29,7 @@ import {
   DefaultDirectorCueConverter,
   DefaultDirectorCueLifecycle,
   DefaultInterventionPolicy,
+  DefaultLiveDirectorProposalCoordinator,
 } from "@/quest-engine";
 import {
   ServerCommandAuthorizer,
@@ -61,6 +63,7 @@ export interface ChatXptServerRuntimeDependencies {
   readonly candidateProvider?: CandidateProvider;
   readonly directorCues?: DirectorCueLifecycle;
   readonly directorCueConverter?: DirectorCueConverter;
+  readonly directorCueProposals?: DirectorCueProposalCoordinator;
   readonly projector?: ViewModelProjector;
   readonly clock?: ServerClock;
   readonly ids?: MessageIdFactory;
@@ -73,6 +76,7 @@ export class ChatXptServerRuntime {
   private readonly candidateProvider: CandidateProvider;
   private readonly directorCues: DirectorCueLifecycle;
   private readonly directorCueConverter: DirectorCueConverter;
+  private readonly directorCueProposals: DirectorCueProposalCoordinator;
   private readonly projector: ViewModelProjector;
   private readonly clock: ServerClock;
   private readonly ids: MessageIdFactory;
@@ -84,6 +88,9 @@ export class ChatXptServerRuntime {
       dependencies.candidateProvider ?? createConfiguredCandidateProvider().provider;
     this.directorCues = dependencies.directorCues ?? new DefaultDirectorCueLifecycle();
     this.directorCueConverter = dependencies.directorCueConverter ?? new DefaultDirectorCueConverter();
+    this.directorCueProposals =
+      dependencies.directorCueProposals ??
+      new DefaultLiveDirectorProposalCoordinator(this.candidateProvider);
     this.projector = dependencies.projector ?? new CanonicalViewProjector();
     this.clock = dependencies.clock ?? { now: Date.now };
     this.ids = dependencies.ids ?? new RuntimeMessageIds();
@@ -105,6 +112,7 @@ export class ChatXptServerRuntime {
           engine: this.engine,
           directorCues: this.directorCues,
           directorCueConverter: this.directorCueConverter,
+          directorCueProposals: this.directorCueProposals,
           projectionContext,
           projector: this.projector,
           clock: this.clock,
@@ -113,118 +121,6 @@ export class ChatXptServerRuntime {
         this.persistence,
       ),
     ).execute(command);
-  }
-
-  async requestDirectorCueConversion(
-    state: AuthoritativeSessionState,
-    projectionContext: ProjectionContextResolver,
-  ): Promise<OrchestratorResult> {
-    if (state.gameplay === null) {
-      return {
-        ok: false,
-        error: domainErrorSchema.parse({
-          code: "dependency-unavailable",
-          message: "Director Cue conversion needs current gameplay context",
-          retryable: true,
-        }),
-      };
-    }
-    const now = this.clock.now();
-    const cueId = state.liveDirector?.cue?.cueId ?? "no-cue";
-    const commandId = `director-cue-conversion-${state.session.sessionId}-${state.session.revision}-${cueId}`;
-    const existing = await this.persistence.sessions.findReceipt(commandId);
-    if (existing !== null) {
-      return {
-        ok: true,
-        outcome: "duplicate",
-        receipt: existing,
-        views: null,
-        delivery: "not-republished",
-      };
-    }
-    const envelope = {
-      contractVersion: CONTRACT_VERSION,
-      sessionId: state.session.sessionId,
-      questCycleId: state.questCycle.envelope.questCycleId,
-      messageId: `candidate-batch-${randomUUID()}`,
-      correlationId: `director-cue-conversion-${randomUUID()}`,
-      revision: state.session.revision,
-      occurredAt: now,
-      receivedAt: now,
-      source: "orchestrator" as const,
-      evidenceClass: state.questCycle.envelope.evidenceClass,
-    };
-    const audience =
-      state.audience !== null &&
-      state.audience.envelope.sessionId === envelope.sessionId &&
-      state.audience.envelope.questCycleId === envelope.questCycleId &&
-      state.audience.envelope.revision === envelope.revision &&
-      state.audience.envelope.evidenceClass === envelope.evidenceClass
-        ? state.audience
-        : {
-            envelope,
-            sampleSize: 0,
-            signals: [],
-          };
-    const intelligence = intelligenceSnapshotSchema.safeParse({
-      envelope,
-      gameplay: state.gameplay,
-      audience,
-    });
-    if (!intelligence.success) {
-      return {
-        ok: false,
-        error: domainErrorSchema.parse({
-          code: "validation",
-          message: "Director Cue conversion context is not canonical",
-          retryable: false,
-        }),
-      };
-    }
-    let batch: CandidateBatch;
-    try {
-      batch = await this.candidateProvider.generate({
-        envelope,
-        intelligence: intelligence.data,
-        profile: state.profile,
-        recentQuestTitles: (state.recentQuests ?? []).map((quest) => quest.title),
-        activeChatXptQuest: null,
-      });
-      await this.persistence.candidates.store(batch);
-    } catch {
-      return {
-        ok: false,
-        error: domainErrorSchema.parse({
-          code: "dependency-unavailable",
-          message: "Director Cue candidate generation failed",
-          retryable: true,
-        }),
-      };
-    }
-    const command = systemIntelligenceCommandSchema.parse({
-      contractVersion: CONTRACT_VERSION,
-      sessionId: state.session.sessionId,
-      questCycleId: state.questCycle.envelope.questCycleId,
-      commandId,
-      correlationId: envelope.correlationId,
-      expectedRevision: state.session.revision,
-      issuedAt: now,
-      actor: { kind: "system", actorId: "role1-director-cue-converter" },
-      type: "system.intelligence-ready",
-      candidateBatchId: batch.envelope.messageId,
-    });
-    return this.execute(
-      command,
-      {
-        kind: "system",
-        actorId: "role1-director-cue-converter",
-        expiresAt: null,
-        moderatorForBroadcasterIds: [],
-        voterKey: null,
-        participationModes: [],
-      },
-      projectionContext,
-    );
   }
 
   async requestEligibleCycleProposal(
