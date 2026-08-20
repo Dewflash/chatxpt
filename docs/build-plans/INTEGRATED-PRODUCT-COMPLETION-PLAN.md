@@ -346,7 +346,7 @@ Connect Twitch
 | Twitch game pre-fill with correction | Start currently relies on manually entered game data. | ICP-02 |
 | Production Game Capture | `/studio/gameplay/capture` now mounts a product capture screen that reuses the OBS Virtual Camera analyzer and gameplay ingress grant/snapshot boundary; it still requires manual setup keys and real OBS proof. | ICP-02 |
 | Automatic Game Capture reconnect | The product capture screen refreshes short-lived ingress grants while running and remembers the selected game profile plus last successful capture time in browser-local storage; full permission/device-loss recovery is still incomplete. | ICP-02 |
-| Complete profile editing | Game, safety lists, quest preferences, and accessibility are view-only. | ICP-03 |
+| Complete profile editing | Profile & Defaults now emits the existing authoritative profile-settings command for game, intensity, creativity, safety lists, quest preferences, and accessibility. Presets, richer validation, and final UI/testing remain incomplete. | ICP-03 |
 | Named stream presets | No preset schema, persistence, or UI exists. | ICP-03 |
 | Current-stream overrides | Controls are disabled and no patch/clear authority exists. | ICP-03 |
 | Canonical runtime intelligence composition | Role 2 provider/coordinator ports exist but are not mounted in the production runtime. | ICP-04/ICP-06 |

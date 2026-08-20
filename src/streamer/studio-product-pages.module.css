@@ -182,6 +182,70 @@
   gap: var(--cx-space-md);
 }
 
+.profileForm {
+  display: grid;
+  gap: var(--cx-space-md);
+}
+
+.compactField {
+  min-width: 0;
+  display: grid;
+  gap: var(--cx-space-xs);
+  color: var(--cx-color-text-muted);
+  font-size: var(--cx-font-size-sm);
+  font-weight: var(--cx-font-weight-medium);
+}
+
+.compactField input,
+.compactField textarea,
+.profileForm button {
+  min-width: 0;
+  border: 1px solid var(--cx-color-border);
+  border-radius: var(--cx-radius-md);
+  color: var(--cx-color-text);
+  background: var(--cx-color-surface-raised);
+  font: inherit;
+}
+
+.compactField input {
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+}
+
+.compactField input[type="range"] {
+  padding: 0;
+  accent-color: var(--cx-color-primary);
+}
+
+.compactField textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+  padding: 0.75rem;
+}
+
+.profileForm button {
+  min-height: 2.5rem;
+  justify-self: start;
+  padding: 0.625rem 0.8rem;
+  border-color: var(--cx-color-primary);
+  color: var(--cx-color-primary-contrast);
+  background: var(--cx-color-primary);
+  font-weight: var(--cx-font-weight-medium);
+  cursor: pointer;
+}
+
+.profileForm button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.compactField input:focus-visible,
+.compactField textarea:focus-visible,
+.profileForm button:focus-visible {
+  outline: none;
+  box-shadow: var(--cx-focus-ring);
+}
+
 .metric {
   display: grid;
   gap: var(--cx-space-xs);

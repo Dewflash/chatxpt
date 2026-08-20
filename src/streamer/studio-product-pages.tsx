@@ -17,8 +17,10 @@ import {
   type ProductAvailability,
 } from "./studio-availability";
 import {
+  buildProfileSettingsCommand,
   buildSetupCommand,
   defaultStreamerCommandFactory,
+  editableDefaultsFromView,
   type StreamerCommandFactory,
   type StreamerUiCommand,
 } from "./streamer-commands";
@@ -130,6 +132,26 @@ function actionAllowed(
   action: StreamerSetupAction,
 ): boolean {
   return service?.allowedActions.includes(action) ?? false;
+}
+
+function listToText(values: readonly string[]): string {
+  return values.join("\n");
+}
+
+function textToList(value: FormDataEntryValue | null): string[] {
+  if (typeof value !== "string") return [];
+  return value
+    .split(/\n|,/u)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function gameIdFromName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-|-$/gu, "").slice(0, 80) || "custom-game";
+}
+
+function clampUnit(value: number, fallback: number): number {
+  return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : fallback;
 }
 
 function unavailableCard(title: string, detail: string, nextStep?: string) {
@@ -532,29 +554,114 @@ function LiveQuestsPage({ view }: { readonly view: StreamerViewModel | null }) {
   );
 }
 
-function ProfilePage({ view }: { readonly view: StreamerViewModel | null }) {
+function ProfilePage({
+  view,
+  pending,
+  onCommand,
+  commandFactory,
+}: {
+  readonly view: StreamerViewModel | null;
+  readonly pending: boolean;
+  readonly onCommand?: (command: StreamerUiCommand) => void;
+  readonly commandFactory: StreamerCommandFactory;
+}) {
   const profile = view?.profile ?? null;
+  const saved = view === null ? null : editableDefaultsFromView(view);
   return (
     <CardGrid className={styles.grid}>
-      <PageSectionCard
-        title="Personality"
-        badge={profile === null ? "No profile" : "Saved profile"}
-        badgeTone={profile === null ? "neutral" : "success"}
-        detail={profile === null ? "Start a broadcaster session to load saved defaults." : `Intensity ${Math.round((profile.experience.intensity ?? 0.5) * 100)}%, creativity ${Math.round((profile.experience.creativity ?? 0.5) * 100)}%.`}
-      />
+      <Card className={styles.card}>
+        <StatusBadge tone={profile === null ? "neutral" : "success"}>
+          {profile === null ? "No profile" : "Saved profile"}
+        </StatusBadge>
+        <h3>Personality</h3>
+        <form
+          className={styles.profileForm}
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (view === null || saved === null || onCommand === undefined) return;
+            const data = new FormData(event.currentTarget);
+            const gameName = String(data.get("gameName") ?? "").trim();
+            const intensity = Number(data.get("intensity") ?? saved.experience.intensity ?? 0.5);
+            const creativity = Number(data.get("creativity") ?? saved.experience.creativity ?? 0.5);
+            const gameId = gameName.length === 0
+              ? null
+              : profile?.gameName === gameName
+                ? saved.gameId ?? gameIdFromName(gameName)
+                : gameIdFromName(gameName);
+            onCommand(buildProfileSettingsCommand(view, {
+              ...saved,
+              gameId,
+              gameName: gameName.length === 0 ? null : gameName,
+              experience: {
+                ...saved.experience,
+                intensity: clampUnit(intensity, saved.experience.intensity ?? 0.5),
+                creativity: clampUnit(creativity, saved.experience.creativity ?? 0.5),
+              },
+            }, commandFactory));
+          }}
+        >
+          <label className={styles.compactField}>
+            Game
+            <input name="gameName" defaultValue={profile?.gameName ?? ""} disabled={view === null || pending} placeholder="Minecraft" />
+          </label>
+          <label className={styles.compactField}>
+            Intensity
+            <input name="intensity" type="range" min="0" max="1" step="0.05" defaultValue={profile?.experience.intensity ?? 0.5} disabled={view === null || pending} />
+          </label>
+          <label className={styles.compactField}>
+            Creativity
+            <input name="creativity" type="range" min="0" max="1" step="0.05" defaultValue={profile?.experience.creativity ?? 0.5} disabled={view === null || pending} />
+          </label>
+          <button type="submit" disabled={view === null || pending || onCommand === undefined}>
+            {pending ? "Saving..." : "Save profile"}
+          </button>
+        </form>
+      </Card>
       {unavailableCard("Stream Presets", "Competitive, Chill, Educational, Community, and custom presets are not connected yet.", "Use saved defaults for now")}
-      <PageSectionCard
-        title="Safety"
-        badge={profile === null ? "Waiting" : "Saved"}
-        badgeTone={profile === null ? "neutral" : "success"}
-        detail={profile === null ? "No saved profile loaded." : `${profile.restrictions.length + profile.forbiddenQuestTypes.length} saved limits are active.`}
-      />
-      <PageSectionCard
-        title="Accessibility"
-        badge={profile === null ? "Waiting" : "Saved"}
-        badgeTone={profile === null ? "neutral" : "success"}
-        detail={profile === null ? "No saved accessibility preferences loaded." : profile.accessibilityNeeds.length === 0 ? "No extra accessibility preferences saved." : profile.accessibilityNeeds.join(", ")}
-      />
+      <Card className={styles.card}>
+        <StatusBadge tone={profile === null ? "neutral" : "success"}>{profile === null ? "Waiting" : "Saved"}</StatusBadge>
+        <h3>Safety</h3>
+        <label className={styles.compactField}>
+          Safety limits
+          <textarea form="profile-lists-form" name="restrictions" defaultValue={listToText(profile?.restrictions ?? [])} disabled={view === null || pending} />
+        </label>
+        <label className={styles.compactField}>
+          Preferred sidequests
+          <textarea form="profile-lists-form" name="preferredQuestTypes" defaultValue={listToText(profile?.preferredQuestTypes ?? [])} disabled={view === null || pending} />
+        </label>
+        <label className={styles.compactField}>
+          Forbidden sidequests
+          <textarea form="profile-lists-form" name="forbiddenQuestTypes" defaultValue={listToText(profile?.forbiddenQuestTypes ?? [])} disabled={view === null || pending} />
+        </label>
+      </Card>
+      <Card className={styles.card}>
+        <StatusBadge tone={profile === null ? "neutral" : "success"}>{profile === null ? "Waiting" : "Saved"}</StatusBadge>
+        <h3>Accessibility</h3>
+        <form
+          id="profile-lists-form"
+          className={styles.profileForm}
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (view === null || saved === null || onCommand === undefined) return;
+            const data = new FormData(event.currentTarget);
+            onCommand(buildProfileSettingsCommand(view, {
+              ...saved,
+              restrictions: textToList(data.get("restrictions")),
+              preferredQuestTypes: textToList(data.get("preferredQuestTypes")),
+              forbiddenQuestTypes: textToList(data.get("forbiddenQuestTypes")),
+              accessibilityNeeds: textToList(data.get("accessibilityNeeds")),
+            }, commandFactory));
+          }}
+        >
+          <label className={styles.compactField}>
+            Accessibility needs
+            <textarea name="accessibilityNeeds" defaultValue={listToText(profile?.accessibilityNeeds ?? [])} disabled={view === null || pending} />
+          </label>
+          <button type="submit" disabled={view === null || pending || onCommand === undefined}>
+            {pending ? "Saving..." : "Save limits"}
+          </button>
+        </form>
+      </Card>
     </CardGrid>
   );
 }
@@ -612,7 +719,16 @@ function PageBody({ page, view, readiness }: {
   if (page === "gameplay") return <GameplayPage view={view} readiness={readiness} />;
   if (page === "live-analytics") return <LiveAnalyticsPage view={view} />;
   if (page === "live-quests") return <LiveQuestsPage view={view} />;
-  if (page === "profile") return <ProfilePage view={view} />;
+  if (page === "profile") {
+    return (
+      <ProfilePage
+        view={view}
+        pending={pending}
+        onCommand={onCommand}
+        commandFactory={commandFactory}
+      />
+    );
+  }
   if (page === "stream-settings") return <StreamSettingsPage view={view} />;
   return <TestLabPage />;
 }
