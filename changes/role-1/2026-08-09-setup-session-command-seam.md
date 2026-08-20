@@ -7,4 +7,4 @@
 
 ## Verification
 
-- Pending in this pass: focused contract/UI gateway tests and `npm run check`.
+- `npm run test -- src/core/contracts.test.ts src/core/application/ui-gateway.test.ts src/streamer/streamer-commands.test.ts` was covered by the 20 August repository consistency rerun; the encompassing seven-file run passed 94 tests, and full `npm run check` passed 82 Vitest files / 666 tests plus the production build.

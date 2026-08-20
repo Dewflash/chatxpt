@@ -6,4 +6,4 @@
 
 ## Verification
 
-- Pending in this pass: focused contract/viewer tests and `npm run check`.
+- `npm run test -- src/core/contracts.test.ts src/core/application/ui-gateway.test.ts tests/integration/role-entrypoints.test.ts` was covered by the 20 August repository consistency rerun; the encompassing seven-file run passed 94 tests, and full `npm run check` passed 82 Vitest files / 666 tests plus the production build.

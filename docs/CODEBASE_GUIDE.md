@@ -368,6 +368,7 @@ The following tables cover files that define architecture, runtime behaviour, co
 | File or group | What it does |
 | --- | --- |
 | `scripts/check-role-boundaries.mjs` | Parses imports with TypeScript, enforces allowed role dependencies and public entrypoints, and permits only the explicit temporary app-to-legacy exception. |
+| `scripts/check-repository-hygiene.mjs` | Rejects tracked local/build artifacts, broken relative Markdown links, and stale merged change-fragment verification claims. |
 | `scripts/check-client-secrets.mjs` | Scans source/build output for server-only environment names and configured secret values that must not reach browser bundles. |
 | `scripts/check-evidence-manifest.mjs` | Validates evidence records, privacy fields, immutable revisions, evidence classes, and artifact references. |
 | `scripts/check-demo-runbook.mjs` | Checks that the golden rehearsal runbook preserves required resources, phases, real/fixture distinctions, revision proof, and safety guardrails. |
@@ -410,7 +411,7 @@ The following tables cover files that define architecture, runtime behaviour, co
 
 ## 9. Testing, build, and deployment
 
-`npm run check` is the repository-wide handoff gate. It runs linting, TypeScript validation, ownership-boundary checks, evidence/runbook validation, secret-exposure tests, the Vitest suite, a production Next.js build, and a built-client secret scan.
+`npm run check` is the repository-wide handoff gate. It runs linting, TypeScript validation, ownership-boundary and repository-hygiene checks, evidence/runbook validation, secret-exposure tests, the Vitest suite, a production Next.js build, and a built-client secret scan.
 
 Useful narrower commands include:
 
@@ -418,7 +419,9 @@ Useful narrower commands include:
 npm run test:contracts
 npm run test:integration
 npm run test:persistence
+npm run test:hygiene
 npm run check:boundaries
+npm run check:hygiene
 npm run check:evidence
 npm run build
 ```
