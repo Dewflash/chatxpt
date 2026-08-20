@@ -75,14 +75,16 @@ describe("TwitchLiveConfigSurface", () => {
     expect(html).not.toContain("AI intelligence active");
   });
 
-  it("distinguishes temporary intensity from the saved default without pretending to persist it", () => {
+  it("supports a current-stream intensity override without changing the saved default", () => {
     const view = createFixtureUiGatewaySnapshot().views.streamer;
-    const html = renderToStaticMarkup(h(TwitchLiveConfigSurface, { view }));
+    const html = renderToStaticMarkup(h(TwitchLiveConfigSurface, { view, onCommand: () => undefined }));
 
     expect(html).toContain("This session");
     expect(html).toContain("Follows saved");
-    expect(html).toContain("Temporary intensity stays disabled until the runtime supplies a session override and reset command");
-    expect(html).toContain("The saved default is not changed here");
+    expect(html).toContain("Apply for this stream");
+    expect(html).toContain("Reset to saved");
+    expect(html).toContain("Saved profile defaults remain unchanged");
+    expect(html).not.toContain("Temporary intensity stays disabled");
   });
 
   it("shows only current authoritative quest actions and keeps emergency pause immediate", () => {

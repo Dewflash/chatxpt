@@ -6,6 +6,7 @@ import {
   domainErrorSchema,
   gameplaySnapshotSchema,
   intelligenceSnapshotSchema,
+  resolveEffectiveStreamerProfile,
   systemIntelligenceCommandSchema,
   type CandidateProvider,
   type DirectorCueProposalCoordinator,
@@ -118,12 +119,16 @@ export class DefaultLiveDirectorProposalCoordinator
     }
 
     let generatedCandidates: readonly unknown[] | null = null;
+    const effectiveProfile = resolveEffectiveStreamerProfile(
+      input.current.profile,
+      input.current.sessionOverride,
+    );
     try {
       const generated = candidateBatchSchema.safeParse(
         await this.candidates.generate({
           envelope,
           intelligence: intelligence.data,
-          profile: input.current.profile,
+          profile: effectiveProfile,
           recentQuestTitles: (input.current.recentQuests ?? []).map(({ title }) => title),
           activeChatXptQuest: activeQuestSummary(input),
         }),
@@ -158,7 +163,7 @@ export class DefaultLiveDirectorProposalCoordinator
       envelope,
       candidates: generatedCandidates,
       intelligence: intelligence.data,
-      profile: input.current.profile,
+      profile: effectiveProfile,
       currentState: input.current.questCycle,
       recentQuests: input.current.recentQuests ?? [],
       now: input.now,

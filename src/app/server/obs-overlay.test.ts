@@ -37,6 +37,21 @@ async function context() {
 }
 
 describe("ObsOverlayApplication", () => {
+  it("lets authorised Studio issue an overlay URL without exposing the setup key", async () => {
+    const { overlay, started } = await context();
+
+    await expect(overlay.issueGrantForStudio(
+      "https://chatxpt.example",
+      { sessionId: started.view.session.sessionId },
+      started.view.session.sessionId,
+    )).resolves.toMatchObject({ descriptor: { width: 1920, height: 1080 } });
+    await expect(overlay.issueGrantForStudio(
+      "https://chatxpt.example",
+      { sessionId: started.view.session.sessionId },
+      "another-session",
+    )).rejects.toMatchObject({ code: "forbidden" });
+  });
+
   it("issues a fragment-held read grant and projects authoritative overlay state", async () => {
     const { overlay, started } = await context();
     const issued = await overlay.issueGrant(OVERLAY_KEY, "https://chatxpt.example", {

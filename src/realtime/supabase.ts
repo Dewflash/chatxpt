@@ -99,6 +99,9 @@ const acceptedVoteRecoveryRowSchema = z
       .passthrough(),
   })
   .passthrough();
+const viewerSessionPointsRowSchema = z
+  .object({ session_points: z.number().int().nonnegative().max(100_000) })
+  .passthrough();
 const hostedBoardSessionRowSchema = z
   .object({
     session_id: z.string().min(1).max(128),
@@ -328,6 +331,17 @@ export class SupabaseChatXptDataApi {
       .eq("quest_cycle_id", questCycleId)
       .eq("participation_type", "vote")
       .eq("payload->>voterKey", voterKey)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
+  }
+
+  async loadViewerSessionPoints(sessionId: string, voterKey: string): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("viewer_session_points")
+      .select("session_points")
+      .eq("session_id", sessionId)
+      .eq("voter_key", voterKey)
       .maybeSingle();
     throwIfError(error);
     return data;
@@ -610,18 +624,20 @@ export class SupabaseViewerRecoveryReader implements ViewerRecoveryReader {
   constructor(private readonly api: SupabaseChatXptDataApi) {}
 
   async readViewerRecovery(input: ViewerRecoveryReadInput): Promise<ViewerRecoveryState> {
-    const raw = await this.api.loadViewerAcceptedVote(
-      input.sessionId,
-      input.questCycleId,
-      input.voterKey,
-    );
+    const [raw, rawPoints] = await Promise.all([
+      this.api.loadViewerAcceptedVote(input.sessionId, input.questCycleId, input.voterKey),
+      this.api.loadViewerSessionPoints(input.sessionId, input.voterKey),
+    ]);
+    const sessionPoints = rawPoints === null
+      ? 0
+      : viewerSessionPointsRowSchema.parse(rawPoints).session_points;
     if (raw === null) {
       return viewerRecoveryStateSchema.parse({
         sessionId: input.sessionId,
         questCycleId: input.questCycleId,
         acceptedCandidateId: null,
         acceptedAt: null,
-        sessionPoints: 0,
+        sessionPoints,
         sourceMode: null,
       });
     }
@@ -631,7 +647,7 @@ export class SupabaseViewerRecoveryReader implements ViewerRecoveryReader {
       questCycleId: input.questCycleId,
       acceptedCandidateId: row.candidate_id,
       acceptedAt: Date.parse(row.accepted_at),
-      sessionPoints: 0,
+      sessionPoints,
       sourceMode: row.payload.sourceMode,
     });
   }

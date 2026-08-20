@@ -113,7 +113,7 @@ export function resolveTwitchSetupReadiness(
     ],
     limitations: [
       "No Twitch secrets are included in this response or rendered route.",
-      "The viewer EBS verifies Extension JWTs and the chat webhook verifies EventSub HMAC delivery; OAuth/subscription creation and real Twitch delivery remain external setup work.",
+      "Studio creates the OAuth chat subscription; the viewer EBS verifies Extension JWTs and the chat webhook verifies every EventSub HMAC delivery.",
       "Twitch Asset Hosting compliance, Local Test, or Hosted Test evidence must be recorded separately before Twitch is described as live.",
     ],
   };

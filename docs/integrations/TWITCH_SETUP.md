@@ -25,8 +25,10 @@ Set these only in local `.env.local`, Vercel, or the relevant deployment secret 
 TWITCH_CLIENT_ID
 TWITCH_CLIENT_SECRET
 TWITCH_EXTENSION_CLIENT_ID
+TWITCH_EXTENSION_ASSET_ORIGIN  # exact cross-origin Local Test asset origin when separate from the EBS
 TWITCH_EXTENSION_SECRET  # base64 Extension signing secret
 TWITCH_EVENTSUB_SECRET   # independent webhook HMAC secret, 32-100 printable ASCII characters
+CHATXPT_PUBLIC_BASE_URL  # deployed HTTPS origin, or a trusted tunnel origin for testing
 CHATXPT_STUDIO_SETUP_KEY # private value of at least 32 characters
 CHATXPT_HOSTED_BOARD_SECRET
 CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY
@@ -35,29 +37,43 @@ CHATXPT_OBS_OVERLAY_SETUP_KEY
 
 Never prefix Twitch or Studio secrets with `NEXT_PUBLIC_`, paste them into issues, or include them in Twitch Extension client bundles.
 
-## Manual broadcaster session start
+## Broadcaster connection
 
-Full Twitch OAuth and EventSub subscription automation remains an explicit later integration. The deployed build already verifies signed EventSub webhook challenges/notifications and routes exact `1`/`2`/`3` messages through the authoritative vote ledger. For the current bounded setup path:
+Studio now owns the OAuth authorization-code flow and `channel.chat.message`
+EventSub subscription. The normal streamer does not handle a server key.
 
 1. Open `/studio` over HTTPS (or localhost during development).
-2. Enter the real numeric Twitch channel ID, display name, optional Game Profile pair, and `CHATXPT_STUDIO_SETUP_KEY`.
-3. The server creates one authoritative live session for that channel, maps Twitch JWT `channel_id` to it, and exchanges the setup key for an HttpOnly grant that expires after 12 hours.
-4. The browser does not store either secret or grant in local/session storage. Config and Live Config use Twitch's broadcaster JWT instead of the Studio cookie.
-5. Start Gameplay Capture and request its separate session-scoped ingress grant. A session start alone is not proof that Twitch or Gameplay Capture ran.
-6. Authorise the chat user with Twitch's required `user:read:chat` scope. If the webhook subscription is created with an app access token, Twitch additionally requires `user:bot` for that chat user and either broadcaster `channel:bot` authorisation or moderator status.
-7. Create the version `1` `channel.chat.message` EventSub webhook subscription against `/api/twitch/eventsub`, with `broadcaster_user_id` set to the channel and `user_id` set to the authorised chat user. Use the same `TWITCH_EVENTSUB_SECRET`; Twitch requires webhook subscription creation with an app access token. This external subscription step and successful signed challenge are required before real chat votes can arrive.
+2. Choose **Connect Twitch**. Studio sends a random state-bound request for
+   `user:read:chat`, `user:bot`, and `channel:bot`.
+3. The callback exchanges and validates the code server-side, verifies the app
+   and broadcaster identity, imports the current channel game, and requests the
+   version `1` signed chat webhook subscription.
+4. Studio creates or reopens one `preparing` session and places only a signed,
+   expiring Studio grant in an HttpOnly cookie. Twitch tokens and secrets are
+   never returned to the client or committed to product state.
+5. Open the persistent Gameplay Capture tab and allow OBS Virtual Camera. Studio
+   issues its capture and overlay grants through the cookie; the streamer never
+   enters the gameplay or overlay setup keys.
+6. Correct the imported game in **Profile & Defaults** if necessary. **Start
+   ChatXPT** stays blocked until Twitch configuration and a current Gameplay
+   Capture snapshot are available.
+
+On localhost, Twitch cannot verify an HTTP EventSub webhook. Use a trusted HTTPS
+tunnel and set `CHATXPT_PUBLIC_BASE_URL` for a real chat test. The diagnostic
+manual session form remains collapsed on the Studio connection screen for
+credential recovery only.
 
 ## Verification
 
 Before claiming Twitch readiness:
 
 1. Confirm `/api/twitch/setup/readiness` reports the callback URL, Extension paths, missing variables, and setup limitations without returning secret values.
-2. Confirm an unauthorised OAuth callback request returns safe JSON and no Twitch secrets.
+2. Confirm an unauthorised OAuth callback safely redirects to Studio with no Twitch secrets.
 3. Confirm the Twitch app has the deployed callback URL and HTTPS EventSub webhook configured; complete Twitch's signed callback challenge.
 4. Run `npm run dev:twitch`, configure `https://localhost:3000/` as the Testing Base URI, and confirm the local certificate is trusted in each test browser.
-5. Start the broadcaster session in `/studio`, generate exactly three sidequests through the canonical runtime, open the installed panel, and confirm select-then-confirm vote acknowledgement, hidden-before-ack/live-after-ack tallies, countdown, winner, active progress/result, token refresh, and reconnect recovery.
-6. Confirm the Twitch Extension has `viewer.html`, `config.html`, and optional `live-config.html` configured. For Asset Hosting, set the exact trusted EBS origin in `twitch-extension/assets/environment.js` and add it to Twitch's URL-fetching allowlist.
-7. During an open vote, send exact `1`, `2`, and `3` messages from separate authorised chatters. Confirm repeated delivery is idempotent, one viewer cannot change their first vote, ordinary chat is ignored, and the OBS overlay shows the authoritative result without per-vote chat spam.
+5. Connect Twitch in `/studio`, connect OBS Virtual Camera, start ChatXPT, generate exactly three sidequests through the canonical runtime, open the installed panel, and confirm select-then-confirm vote acknowledgement, hidden-before-ack/live-after-ack tallies, countdown, winner, active progress/result, token refresh, and reconnect recovery.
+6. Confirm the Twitch Extension has `viewer.html`, `config.html`, and optional `live-config.html` configured. For Asset Hosting, set the exact trusted EBS origin in `twitch-extension/assets/environment.js` and add it to Twitch's URL-fetching allowlist. Hosted broadcaster endpoints allow only `https://<TWITCH_EXTENSION_CLIENT_ID>.ext-twitch.tv`; if Local Test assets use a separate base origin, set that exact origin in `TWITCH_EXTENSION_ASSET_ORIGIN` so Config and Live Config preflights succeed.
+7. During an open vote, send exact `1`, `2`, and `3` messages from separate authorised chatters. Confirm repeated delivery is idempotent, one viewer cannot change their first vote, ordinary chat changes only privacy-safe aggregate analytics, and the OBS overlay shows the authoritative result without per-vote chat spam.
 8. Run the focused setup tests:
 
 ```bash

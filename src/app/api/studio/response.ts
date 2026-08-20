@@ -10,8 +10,77 @@ export const STUDIO_SESSION_COOKIE = "chatxpt_studio_session";
 
 export const studioHeaders = {
   "cache-control": "no-store",
-  vary: "Authorization, Cookie, X-ChatXPT-Studio-Setup-Key",
+  vary: "Authorization, Cookie, Origin, X-ChatXPT-Studio-Setup-Key",
 };
+
+type StudioCorsEnvironment = Readonly<{
+  TWITCH_EXTENSION_ASSET_ORIGIN?: string;
+  TWITCH_EXTENSION_CLIENT_ID?: string;
+}>;
+
+function exactOrigin(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (
+      (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))) ||
+      url.username ||
+      url.password ||
+      url.pathname !== "/" ||
+      url.search ||
+      url.hash
+    ) return null;
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+/** Restricts Twitch Asset Hosting CORS to the registered Extension and one exact Local Test origin. */
+export function isAllowedStudioCorsOrigin(
+  origin: string | null,
+  source: StudioCorsEnvironment = {
+    TWITCH_EXTENSION_ASSET_ORIGIN: process.env.TWITCH_EXTENSION_ASSET_ORIGIN,
+    TWITCH_EXTENSION_CLIENT_ID: process.env.TWITCH_EXTENSION_CLIENT_ID,
+  },
+): boolean {
+  const candidate = exactOrigin(origin);
+  if (candidate === null) return false;
+  const clientId = source.TWITCH_EXTENSION_CLIENT_ID?.trim() ?? "";
+  const hostedOrigin = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/iu.test(clientId)
+    ? `https://${clientId.toLowerCase()}.ext-twitch.tv`
+    : null;
+  const localTestOrigin = exactOrigin(source.TWITCH_EXTENSION_ASSET_ORIGIN);
+  return candidate === hostedOrigin || candidate === localTestOrigin;
+}
+
+export function studioCorsHeaders(request: Request, allowedMethods: readonly string[]): Headers {
+  const headers = new Headers(studioHeaders);
+  const origin = request.headers.get("origin");
+  if (!isAllowedStudioCorsOrigin(origin)) return headers;
+  headers.set("access-control-allow-origin", origin!);
+  headers.set("access-control-allow-methods", allowedMethods.join(", "));
+  headers.set("access-control-allow-headers", "Authorization, Content-Type");
+  headers.set("access-control-max-age", "600");
+  return headers;
+}
+
+export function studioPreflightResponse(request: Request, allowedMethods: readonly string[]) {
+  if (!isAllowedStudioCorsOrigin(request.headers.get("origin"))) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "forbidden-origin",
+          message: "This origin is not authorised to control ChatXPT Studio",
+          retryable: false,
+        },
+      },
+      { status: 403, headers: studioHeaders },
+    );
+  }
+  return new NextResponse(null, { status: 204, headers: studioCorsHeaders(request, allowedMethods) });
+}
 
 export function assertSecureStudioRequest(request: Request): void {
   const url = new URL(request.url);
@@ -39,7 +108,7 @@ const statuses: Record<StudioSessionApplicationErrorCode, number> = {
   internal: 500,
 };
 
-export function studioErrorResponse(caught: unknown) {
+export function studioErrorResponse(caught: unknown, headers: HeadersInit = studioHeaders) {
   if (caught instanceof BoundedJsonError) {
     return NextResponse.json(
       {
@@ -50,7 +119,7 @@ export function studioErrorResponse(caught: unknown) {
           retryable: false,
         },
       },
-      { status: caught.kind === "too-large" ? 413 : 400, headers: studioHeaders },
+      { status: caught.kind === "too-large" ? 413 : 400, headers },
     );
   }
   if (caught instanceof StudioSessionApplicationError) {
@@ -59,7 +128,7 @@ export function studioErrorResponse(caught: unknown) {
         ok: false,
         error: { code: caught.code, message: caught.message, retryable: caught.retryable },
       },
-      { status: statuses[caught.code], headers: studioHeaders },
+      { status: statuses[caught.code], headers },
     );
   }
   return NextResponse.json(
@@ -71,6 +140,6 @@ export function studioErrorResponse(caught: unknown) {
         retryable: true,
       },
     },
-    { status: 500, headers: studioHeaders },
+    { status: 500, headers },
   );
 }

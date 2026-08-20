@@ -43,6 +43,24 @@
   cursor: pointer;
 }
 .bootstrapCard button:disabled { opacity: 0.58; cursor: wait; }
+.oauthButton {
+  display: grid;
+  min-height: 48px;
+  place-items: center;
+  border-radius: 10px;
+  color: #0c0912;
+  background: #d7ff52;
+  font-weight: 900;
+  text-decoration: none;
+}
+.manualFallback {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(12, 9, 18, 0.52);
+}
+.manualFallback summary { cursor: pointer; color: #d6d0e4; font-weight: 800; }
+.manualFallback[open] { display: grid; gap: 14px; }
 .error { color: #ff887d !important; }
 .grantNote {
   padding: 12px;

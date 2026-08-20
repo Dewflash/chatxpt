@@ -773,6 +773,8 @@ export class DefaultQuestEngine implements QuestEngine {
       case "streamer.session-override":
         return error("unavailable-capability", "Session overrides are handled by the Role 1 state seam");
       case "streamer.live-director-intent":
+      case "system.audience-snapshot-ready":
+      case "system.gameplay-snapshot-ready":
       case "system.live-director-context-ready":
       case "system.live-director-cue-ready":
         return error(

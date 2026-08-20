@@ -95,6 +95,9 @@ describe("Twitch Extension upload package", () => {
     expect(broadcasterJs).toContain("authorization: `Bearer ${token}`");
     expect(broadcasterJs).not.toContain("localStorage");
     expect(broadcasterJs).toContain('type: "streamer.quest"');
+    expect(broadcasterJs).toContain('type: "streamer.session-override"');
+    expect(broadcasterJs).toContain("Apply for this stream");
+    expect(broadcasterJs).not.toContain("remains unavailable until the canonical override contract lands");
     expect(combinedHtml).toContain("Vote for the sidequest");
     expect(combinedHtml).not.toContain("Role 1");
     expect(combinedHtml).not.toContain("Role 4");

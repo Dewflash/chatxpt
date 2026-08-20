@@ -15,6 +15,10 @@
   let selectedCandidateId = null;
   let pending = false;
   let confirmAction = null;
+  let confirmCycleId = null;
+  let intensityDraft = null;
+  let intensityDirty = false;
+  let intensitySource = null;
 
   function trustedApiBase(value) {
     try {
@@ -101,6 +105,21 @@
     return `<div><span>${escapeHtml(label)}</span><strong data-health="${escapeHtml(status)}">${escapeHtml(titleCase(status))}</strong></div>`;
   }
 
+  function effectiveStreamIntensity() {
+    const profile = view.profile;
+    const override = view.sessionOverride || null;
+    const presetId = override && override.presetId ? override.presetId : profile.selectedPresetId;
+    const preset = (profile.streamPresets || []).find((candidate) => candidate.presetId === presetId);
+    const saved = preset && typeof preset.experience.intensity === "number"
+      ? preset.experience.intensity
+      : typeof profile.experience.intensity === "number"
+        ? profile.experience.intensity
+        : 0.5;
+    return override && typeof override.experiencePatch.intensity === "number"
+      ? override.experiencePatch.intensity
+      : saved;
+  }
+
   function questAction(action, label, danger) {
     const needsCandidate = ["approve", "reject", "start"].includes(action);
     const disabled = pending || (needsCandidate && !selectedCandidateId);
@@ -110,6 +129,17 @@
 
   function renderLiveConfig() {
     const cycle = view.questCycle;
+    if (confirmCycleId !== cycle.envelope.questCycleId) {
+      confirmAction = null;
+      confirmCycleId = cycle.envelope.questCycleId;
+    }
+    const effectiveIntensity = effectiveStreamIntensity();
+    const nextIntensitySource = `${view.session.sessionId}:${view.sessionOverride ? view.sessionOverride.appliedAt : "saved"}:${effectiveIntensity}`;
+    if (!intensityDirty || intensitySource !== nextIntensitySource) {
+      intensityDraft = effectiveIntensity;
+      intensityDirty = false;
+      intensitySource = nextIntensitySource;
+    }
     if (!selectedCandidateId) {
       selectedCandidateId = cycle.activeCandidateId || (cycle.options[0] && cycle.options[0].candidateId) || null;
     }
@@ -150,7 +180,15 @@
       actions.includes("emergency-pause")
         ? questAction("emergency-pause", "Emergency pause", true)
         : "",
-      '<section class="control-note"><strong>This session follows saved defaults</strong><p>Temporary sidequest intensity remains unavailable until the canonical override contract lands.</p></section>',
+      '<section class="quick-intensity">',
+      `<div class="control-row"><strong>This session</strong><span>${view.sessionOverride ? "Temporary override" : "Follows saved"}</span></div>`,
+      `<label><span>Sidequest intensity</span><output id="quick-intensity-value">${Math.round(intensityDraft * 100)}%</output><input id="quick-intensity" type="range" min="0" max="1" step="0.05" value="${intensityDraft}" ${pending ? "disabled" : ""}></label>`,
+      '<div class="quick-intensity-actions">',
+      `<button id="apply-intensity" type="button" ${pending || intensityDraft === effectiveIntensity ? "disabled" : ""}>Apply for this stream</button>`,
+      `<button id="reset-intensity" type="button" ${pending || !view.sessionOverride ? "disabled" : ""}>Reset to saved</button>`,
+      "</div>",
+      "<p>Changes apply only to the current stream. Saved profile defaults remain unchanged.</p>",
+      "</section>",
     ].join("");
 
     content.querySelectorAll("[data-candidate-id]").forEach((button) => {
@@ -171,6 +209,20 @@
         progressOutput.textContent = `${Math.round(Number(progressInput.value) * 100)}%`;
       });
       progressButton.addEventListener("click", () => void requestProgress(Number(progressInput.value)));
+    }
+    const intensityInput = document.getElementById("quick-intensity");
+    const intensityOutput = document.getElementById("quick-intensity-value");
+    const applyIntensity = document.getElementById("apply-intensity");
+    const resetIntensity = document.getElementById("reset-intensity");
+    if (intensityInput && intensityOutput && applyIntensity && resetIntensity) {
+      intensityInput.addEventListener("input", () => {
+        intensityDraft = Number(intensityInput.value);
+        intensityDirty = true;
+        intensityOutput.textContent = `${Math.round(intensityDraft * 100)}%`;
+        applyIntensity.disabled = pending || intensityDraft === effectiveIntensity;
+      });
+      applyIntensity.addEventListener("click", () => void requestSessionOverride("apply"));
+      resetIntensity.addEventListener("click", () => void requestSessionOverride("clear"));
     }
   }
 
@@ -241,10 +293,32 @@
     };
   }
 
+  function buildSessionOverrideCommand(action) {
+    const id = commandId(`session-override-${action}`);
+    const override = view.sessionOverride || null;
+    return {
+      contractVersion: "1.0.0",
+      sessionId: view.session.sessionId,
+      questCycleId: null,
+      commandId: id,
+      correlationId: id,
+      expectedRevision: view.envelope.revision,
+      issuedAt: Date.now(),
+      actor: { kind: "broadcaster", actorId: view.profile.streamerId },
+      type: "streamer.session-override",
+      action,
+      presetId: action === "apply" && override ? override.presetId : null,
+      experiencePatch: action === "apply"
+        ? { ...(override ? override.experiencePatch : {}), intensity: intensityDraft }
+        : {},
+    };
+  }
+
   async function requestAction(action) {
     if (!view || pending) return;
     if (["cancel", "skip", "fail"].includes(action) && confirmAction !== action) {
       confirmAction = action;
+      confirmCycleId = view.questCycle.envelope.questCycleId;
       message.textContent = `Confirm ${titleCase(action).toLowerCase()} to change the authoritative sidequest.`;
       renderLiveConfig();
       return;
@@ -294,6 +368,37 @@
       message.textContent = payload.message || "Manual sidequest progress saved.";
     } catch (error) {
       message.textContent = error instanceof Error ? error.message : "Progress response interrupted";
+    } finally {
+      pending = false;
+      renderLiveConfig();
+    }
+  }
+
+  async function requestSessionOverride(action) {
+    if (!view || pending || (action === "apply" && typeof intensityDraft !== "number")) return;
+    pending = true;
+    message.textContent = action === "clear"
+      ? "Resetting this stream to saved defaults…"
+      : "Applying temporary intensity…";
+    renderLiveConfig();
+    try {
+      const response = await authorizedFetch("/api/studio/commands", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(buildSessionOverrideCommand(action)),
+      });
+      const payload = await response.json();
+      if (payload.view) view = payload.view;
+      if (payload.readiness) readiness = payload.readiness;
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error && payload.error.message ? payload.error.message : "Intensity update was rejected");
+      }
+      intensityDirty = false;
+      message.textContent = payload.message || (action === "clear"
+        ? "Saved defaults restored for this stream."
+        : "Temporary intensity applied to this stream.");
+    } catch (error) {
+      message.textContent = error instanceof Error ? error.message : "Intensity response interrupted";
     } finally {
       pending = false;
       renderLiveConfig();

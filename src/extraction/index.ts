@@ -3,8 +3,13 @@ export type {
   AudienceExtractionPipeline,
   GameplayExtractionPipeline,
 } from "./ports";
-export { createAudienceSignalPipeline } from "./audience-pipeline";
-export type { AudienceSignalPipelineOptions } from "./audience-pipeline";
+export { AudienceAnalyticsAccumulator, createAudienceSignalPipeline } from "./audience-pipeline";
+export type {
+  AudienceAnalyticsTopic,
+  AudienceAnalyticsTopicEvidence,
+  AudienceAnalyticsUpdate,
+  AudienceSignalPipelineOptions,
+} from "./audience-pipeline";
 export {
   assessExtractionEvidenceAsset,
   extractionAssetAcquisitionSchema,

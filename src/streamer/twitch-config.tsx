@@ -13,18 +13,20 @@ import {
   StatusBadge,
   type StatusTone,
 } from "../design-system";
-import type {
-  ServiceHealth,
-  StreamerQuestAction,
-  StreamerReadinessView,
-  StreamerSetupAction,
-  StreamerSetupService,
-  StreamerViewModel,
+import {
+  resolveEffectiveStreamerProfile,
+  type ServiceHealth,
+  type StreamerQuestAction,
+  type StreamerReadinessView,
+  type StreamerSetupAction,
+  type StreamerSetupService,
+  type StreamerViewModel,
 } from "../core";
 import {
   buildEmergencyClearCommand,
   buildQuestCommand,
   buildQuestProgressCommand,
+  buildSessionOverrideCommand,
   buildSetupCommand,
   defaultStreamerCommandFactory,
   type StreamerCommandFactory,
@@ -266,11 +268,24 @@ export function TwitchLiveConfigSurface({
     cycleKey,
     value: view?.questCycle.progress?.value ?? 0,
   });
+  const effectiveIntensity = view === null
+    ? 0.5
+    : resolveEffectiveStreamerProfile(view.profile, view.sessionOverride).experience.intensity ?? 0.5;
+  const intensitySourceKey = view === null
+    ? "loading"
+    : `${view.session.sessionId}:${view.sessionOverride?.appliedAt ?? "saved"}:${effectiveIntensity}`;
+  const [intensityDraft, setIntensityDraft] = useState({
+    sourceKey: intensitySourceKey,
+    value: effectiveIntensity,
+  });
   const selectedCandidateId = selection.cycleKey === cycleKey ? selection.candidateId : defaultCandidate;
   const confirmAction = confirmation?.cycleKey === cycleKey ? confirmation.action : null;
   const manualProgress = progressDraft.cycleKey === cycleKey
     ? progressDraft.value
     : view?.questCycle.progress?.value ?? 0;
+  const quickIntensity = intensityDraft.sourceKey === intensitySourceKey
+    ? intensityDraft.value
+    : effectiveIntensity;
 
   if (view === null) {
     return (
@@ -287,6 +302,7 @@ export function TwitchLiveConfigSurface({
   }
 
   const currentView = view;
+  const sessionOverride = currentView.sessionOverride ?? null;
   const cycle = currentView.questCycle;
   const active = cycle.options.find((option) => option.candidateId === cycle.activeCandidateId);
   const pending = pendingCommandId !== null;
@@ -412,13 +428,47 @@ export function TwitchLiveConfigSurface({
         <section className={styles.compactSection} aria-labelledby="quick-intensity-heading">
           <ControlRow>
             <h2 id="quick-intensity-heading">This session</h2>
-            <StatusBadge tone="info">Follows saved</StatusBadge>
+            <StatusBadge tone={sessionOverride ? "warning" : "info"}>
+              {sessionOverride ? "Temporary override" : "Follows saved"}
+            </StatusBadge>
           </ControlRow>
-          <label className={styles.disabledRange}>
-            <span>Sidequest intensity <output>{`${Math.round((currentView.profile.experience.intensity ?? 0.5) * 100)}%`}</output></span>
-            <input type="range" min="0" max="1" value={currentView.profile.experience.intensity ?? 0.5} disabled readOnly />
+          <label className={styles.quickIntensity}>
+            <span>Sidequest intensity <output>{`${Math.round(quickIntensity * 100)}%`}</output></span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={quickIntensity}
+              disabled={onCommand === undefined || pending}
+              onChange={(event) => setIntensityDraft({
+                sourceKey: intensitySourceKey,
+                value: Number(event.currentTarget.value),
+              })}
+            />
           </label>
-          <p>Temporary intensity stays disabled until the runtime supplies a session override and reset command. The saved default is not changed here.</p>
+          <div className={styles.noticeActions}>
+            <Button
+              variant="secondary"
+              disabled={onCommand === undefined || pending || quickIntensity === effectiveIntensity}
+              onClick={() => onCommand?.(buildSessionOverrideCommand(
+                currentView,
+                { ...sessionOverride?.experiencePatch, intensity: quickIntensity },
+                commandFactory,
+                sessionOverride?.presetId ?? null,
+              ))}
+            >
+              Apply for this stream
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={onCommand === undefined || pending || sessionOverride === null}
+              onClick={() => onCommand?.(buildSessionOverrideCommand(currentView, null, commandFactory))}
+            >
+              Reset to saved
+            </Button>
+          </div>
+          <p>Changes apply only to the current stream. Saved profile defaults remain unchanged.</p>
         </section>
 
         <section className={styles.actionSection} aria-label="Sidequest actions">

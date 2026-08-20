@@ -112,9 +112,23 @@ export class ObsOverlayApplication {
     } catch (caught) {
       throw authError(caught);
     }
+    return this.issueGrantForStudio(baseUrl, input);
+  }
+
+  async issueGrantForStudio(
+    baseUrl: string,
+    input: unknown,
+    authorizedSessionId?: string,
+  ): Promise<ObsOverlayGrantResult> {
     const parsed = grantRequestSchema.safeParse(input);
     if (!parsed.success) {
       throw new ObsOverlayApplicationError("validation", "OBS Browser Source setup is invalid");
+    }
+    if (authorizedSessionId !== undefined && parsed.data.sessionId !== authorizedSessionId) {
+      throw new ObsOverlayApplicationError(
+        "forbidden",
+        "Studio authorization does not belong to the requested overlay session",
+      );
     }
     const state = await this.loadSession(parsed.data.sessionId);
     if (state.session.status !== "preparing" && state.session.status !== "live") {

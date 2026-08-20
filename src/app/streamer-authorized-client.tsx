@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 
 import type { StreamerReadinessView, StreamerViewModel } from "@/core";
+import { connectRealtimeSnapshot } from "@/app/realtime-snapshot-client";
 import {
   PersistentStreamOverlaySurface,
   StudioManagementSurface,
@@ -98,10 +99,8 @@ function StudioCaptureAndOverlaySetup({ sessionId }: { readonly sessionId: strin
     try {
       const response = await fetch("/api/obs/overlay/grant", {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-chatxpt-obs-overlay-setup-key": String(data.get("overlaySetupKey") ?? ""),
-        },
+        headers: { "content-type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           sessionId,
           width: Number(data.get("overlayWidth")),
@@ -133,7 +132,7 @@ function StudioCaptureAndOverlaySetup({ sessionId }: { readonly sessionId: strin
   }
 
   return (
-    <aside className={styles.integrationSetup} aria-label="Stream input and broadcast output setup">
+    <aside id="broadcast-output-setup" className={styles.integrationSetup} aria-label="Stream input and broadcast output setup">
       <section>
         <p className={styles.setupEyebrow}>Stream input</p>
         <h2>Gameplay Capture</h2>
@@ -141,7 +140,7 @@ function StudioCaptureAndOverlaySetup({ sessionId }: { readonly sessionId: strin
           Open the capture surface, choose the game profile, and connect OBS Virtual Camera. Only
           normalized game facts are sent to this session; frames stay in the browser.
         </p>
-        <a href="/studio/gameplay/capture">
+        <a href="/studio/gameplay/capture" target="_blank" rel="noreferrer">
           Open Gameplay Capture
         </a>
       </section>
@@ -153,10 +152,6 @@ function StudioCaptureAndOverlaySetup({ sessionId }: { readonly sessionId: strin
           Source. This output never accepts votes or streamer commands.
         </p>
         <form onSubmit={generateOverlay}>
-          <label>
-            Server-only OBS overlay setup key
-            <input name="overlaySetupKey" type="password" required autoComplete="off" />
-          </label>
           <div className={styles.dimensionRow}>
             <label>Width<input name="overlayWidth" type="number" defaultValue="1920" min="1" max="7680" required /></label>
             <label>Height<input name="overlayHeight" type="number" defaultValue="1080" min="1" max="4320" required /></label>
@@ -201,6 +196,26 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
   }, [token]);
 
   useEffect(() => {
+    const parameters = new URLSearchParams(window.location.search);
+    const oauth = parameters.get("oauth");
+    const notice = window.setTimeout(() => {
+      if (oauth === "connected") {
+        setMessage(
+          parameters.get("eventsub") === "pending"
+            ? "Twitch connected. Channel game details were imported and chat delivery is being verified."
+            : "Twitch connected. Channel game details were imported; chat delivery still needs recovery.",
+        );
+      } else if (oauth === "error") {
+        setError("Twitch connection did not finish. Retry Twitch authorization or use the diagnostic fallback.");
+      }
+    }, 0);
+    if (oauth !== null) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    return () => window.clearTimeout(notice);
+  }, []);
+
+  useEffect(() => {
     if (isStudioAuthenticatedSurface(surface)) return;
     let stopped = false;
     let attempts = 0;
@@ -241,7 +256,15 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       });
       const payload = (await response.json()) as SurfacePayload;
       if (!response.ok || !payload.ok || payload.view === undefined || payload.readiness === undefined) {
-        if ((surface === "studio" || surface === "studio-home") && response.status === 401) setRequiresBootstrap(true);
+        if (
+          isStudioAuthenticatedSurface(surface) &&
+          (response.status === 401 || response.status === 404)
+        ) {
+          setView(null);
+          setReadiness(null);
+          setRoomCode(null);
+          setRequiresBootstrap(true);
+        }
         setError(payload.error?.message ?? "Studio state is unavailable.");
         return;
       }
@@ -261,13 +284,71 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
     if (!active) return;
     const controller = new AbortController();
     const initial = window.setTimeout(() => void refresh(controller.signal), 0);
-    const interval = window.setInterval(() => void refresh(controller.signal), 2_000);
+    const interval = window.setInterval(() => void refresh(controller.signal), 10_000);
     return () => {
       controller.abort();
       window.clearTimeout(initial);
       window.clearInterval(interval);
     };
   }, [refresh, surface, token]);
+
+  useEffect(() => {
+    const sessionId = view?.session.sessionId;
+    if (sessionId === undefined) return;
+    let stopped = false;
+    let disconnect: (() => Promise<void>) | null = null;
+    void connectRealtimeSnapshot({
+      role: "streamer",
+      sessionId,
+      surfaceAuthorization: token,
+      loadLatest: async () => {
+        const response = await fetch("/api/studio/session", {
+          headers: requestHeaders(),
+          credentials: "include",
+          cache: "no-store",
+        });
+        const payload = (await response.json()) as SurfacePayload;
+        return response.ok && payload.ok ? payload.view ?? null : null;
+      },
+      onSnapshot: (snapshot) => {
+        if (!stopped) setView(snapshot);
+      },
+    }).then((release) => {
+      if (stopped) void release?.();
+      else disconnect = release;
+    }).catch(() => {
+      // The regular authorised read remains the recovery path.
+    });
+    return () => {
+      stopped = true;
+      void disconnect?.();
+    };
+  }, [requestHeaders, token, view?.session.sessionId]);
+
+  useEffect(() => {
+    if (view?.session.status !== "live") return;
+    const sendPresence = (action: "heartbeat" | "disconnect", keepalive = false) => {
+      void fetch("/api/studio/presence", {
+        method: "POST",
+        headers: { ...requestHeaders(), "content-type": "application/json" },
+        credentials: "include",
+        cache: "no-store",
+        keepalive,
+        body: JSON.stringify({ action }),
+      }).catch(() => {
+        // The next heartbeat or authorised read performs recovery.
+      });
+    };
+    const initial = window.setTimeout(() => sendPresence("heartbeat"), 0);
+    const interval = window.setInterval(() => sendPresence("heartbeat"), 30_000);
+    const disconnect = () => sendPresence("disconnect", true);
+    window.addEventListener("pagehide", disconnect);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(interval);
+      window.removeEventListener("pagehide", disconnect);
+    };
+  }, [requestHeaders, view?.session.status]);
 
   async function startSession(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -299,7 +380,6 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       }
       setView(payload.view);
       setReadiness(payload.readiness);
-      setRoomCode(payload.roomCode ?? null);
       setRoomCode(payload.roomCode ?? null);
       setRequiresBootstrap(false);
       setMessage("Broadcaster session started. Twitch surfaces can now map the signed channel JWT to this session.");
@@ -337,7 +417,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
     }
   }, [refresh, requestHeaders]);
 
-  if ((surface === "studio" || surface === "studio-home") && requiresBootstrap && view === null) {
+  if (isStudioAuthenticatedSurface(surface) && requiresBootstrap && view === null) {
     return (
       <main className={styles.bootstrap}>
         <section className={styles.bootstrapCard}>
@@ -346,36 +426,40 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
             <h1>Start the broadcaster session</h1>
           </div>
           <p>
-            This manual server-authorized step creates the real channel-to-session mapping used by
-            the Twitch Extension, Gameplay Capture, hosted Quest Board, and OBS overlay.
+            Connect the broadcaster account once. ChatXPT verifies Twitch, imports the channel game,
+            prepares signed chat delivery, and creates the session used by every surface.
           </p>
-          <form onSubmit={startSession}>
-            <label>
-              Twitch channel ID
-              <input name="channelId" required autoComplete="off" />
-            </label>
-            <label>
-              Streamer display name
-              <input name="displayName" required autoComplete="name" />
-            </label>
-            <label>
-              Game ID (optional; supply with game name)
-              <input name="gameId" autoComplete="off" />
-            </label>
-            <label>
-              Game name (optional; supply with game ID)
-              <input name="gameName" autoComplete="off" />
-            </label>
-            <label>
-              Server-only Studio setup key
-              <input name="setupKey" type="password" required autoComplete="off" />
-            </label>
-            <button type="submit" disabled={starting}>{starting ? "Starting…" : "Start session"}</button>
-          </form>
-          <p className={styles.grantNote}>
-            The setup key is sent only over this HTTPS request and is not stored in browser storage.
-            The server returns an HttpOnly, expiring session cookie.
-          </p>
+          <a className={styles.oauthButton} href="/api/twitch/oauth/start">Connect Twitch</a>
+          <details className={styles.manualFallback}>
+            <summary>Diagnostic manual setup</summary>
+            <p>Use this only when external Twitch credentials are unavailable during local recovery.</p>
+            <form onSubmit={startSession}>
+              <label>
+                Twitch channel ID
+                <input name="channelId" required autoComplete="off" />
+              </label>
+              <label>
+                Streamer display name
+                <input name="displayName" required autoComplete="name" />
+              </label>
+              <label>
+                Game ID (optional; supply with game name)
+                <input name="gameId" autoComplete="off" />
+              </label>
+              <label>
+                Game name (optional; supply with game ID)
+                <input name="gameName" autoComplete="off" />
+              </label>
+              <label>
+                Server-only Studio setup key
+                <input name="setupKey" type="password" required autoComplete="off" />
+              </label>
+              <button type="submit" disabled={starting}>{starting ? "Starting…" : "Start diagnostic session"}</button>
+            </form>
+            <p className={styles.grantNote}>
+              The setup key is sent only over this HTTPS request and is never stored in browser storage.
+            </p>
+          </details>
           {error ? <p className={styles.error} role="alert">{error}</p> : null}
         </section>
       </main>
@@ -386,14 +470,24 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
   const productPage = studioProductPages[surface];
   if (productPage !== undefined) {
     return (
-      <StudioProductPageSurface
-        page={productPage}
-        view={view}
-        readiness={readiness}
-        commandMessage={commandMessage}
-        pendingCommandId={pendingCommandId}
-        onCommand={(command) => void dispatchCommand(command)}
-      />
+      <>
+        <StudioProductPageSurface
+          page={productPage}
+          view={view}
+          readiness={readiness}
+          commandMessage={commandMessage}
+          pendingCommandId={pendingCommandId}
+          onCommand={(command) => void dispatchCommand(command)}
+        />
+        {productPage === "test-lab" && view !== null
+          ? <StudioCaptureAndOverlaySetup sessionId={view.session.sessionId} />
+          : null}
+        {roomCode ? (
+          <div className={styles.roomBanner}>
+            Hosted Quest Board: <strong>{roomCode}</strong> · <a href={`/quest-board/${encodeURIComponent(roomCode)}`} target="_blank" rel="noreferrer">Open viewer link</a>
+          </div>
+        ) : null}
+      </>
     );
   }
   if (surface === "config") {

@@ -54,6 +54,7 @@ const startSessionSchema = z
   });
 
 const STUDIO_GRANT_TTL_MS = 12 * 60 * 60 * 1_000;
+const studioPresenceSchema = z.object({ action: z.enum(["heartbeat", "disconnect"]) }).strict();
 
 export type StudioSessionApplicationErrorCode =
   | "misconfigured"
@@ -169,7 +170,11 @@ export class StudioSessionApplication {
     this.nextId = dependencies.nextId ?? randomUUID;
   }
 
-  async start(setupKey: string | null, input: unknown): Promise<StudioSessionStartResult> {
+  async start(
+    setupKey: string | null,
+    input: unknown,
+    twitchVerified = false,
+  ): Promise<StudioSessionStartResult> {
     try {
       this.grants.authenticateSetupKey(setupKey);
     } catch (caught) {
@@ -180,6 +185,8 @@ export class StudioSessionApplication {
       throw new StudioSessionApplicationError("validation", "Studio session setup is invalid");
     }
 
+    const lifecycle = new SessionLifecycleService(this.persistence.lifecycle);
+    await lifecycle.expireDue(this.now());
     let state: AuthoritativeSessionState;
     const existing = await this.persistence.twitchChannelSessions.findTwitchChannelSession(
       parsed.data.channelId,
@@ -260,7 +267,6 @@ export class StudioSessionApplication {
         emergencyPaused: false,
         communityHype: 0,
       });
-      const lifecycle = new SessionLifecycleService(this.persistence.lifecycle);
       const created = await lifecycle.create(stateAtRevisionZero, createdAt);
       if (!created.ok) {
         throw commandError(created.error.code, created.error.message, created.error.retryable);
@@ -274,15 +280,36 @@ export class StudioSessionApplication {
       grantId: `studio-${this.nextId()}`,
       sessionId: state.session.sessionId,
       broadcasterId: state.session.broadcasterId,
+      twitchVerified,
       expiresAt,
     });
-    const surface = await this.surfaceState(state, false);
+    const surface = await this.surfaceState(state, twitchVerified);
     return { ...surface, grant, expiresAt };
   }
 
   async read(cookieGrant: string | null, authorizationHeader: string | null): Promise<StudioSurfaceState> {
     const authorized = await this.authorize(cookieGrant, authorizationHeader);
     return this.surfaceState(authorized.state, authorized.twitchVerified);
+  }
+
+  async presence(
+    cookieGrant: string | null,
+    authorizationHeader: string | null,
+    input: unknown,
+  ) {
+    const parsed = studioPresenceSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new StudioSessionApplicationError("validation", "Studio presence request is invalid");
+    }
+    const authorized = await this.authorize(cookieGrant, authorizationHeader);
+    const lifecycle = new SessionLifecycleService(this.persistence.lifecycle);
+    const result = parsed.data.action === "heartbeat"
+      ? await lifecycle.heartbeat(authorized.state.session.sessionId, this.now())
+      : await lifecycle.disconnect(authorized.state.session.sessionId, this.now());
+    if (!result.ok) {
+      throw commandError(result.error.code, result.error.message, result.error.retryable);
+    }
+    return result.value;
   }
 
   async execute(
@@ -465,7 +492,11 @@ export class StudioSessionApplication {
     if (state.session.broadcasterId !== grant.broadcasterId) {
       throw new StudioSessionApplicationError("forbidden", "Studio grant no longer owns this session");
     }
-    return { state, actor: this.broadcasterActor(state, grant.expiresAt), twitchVerified: false };
+    return {
+      state,
+      actor: this.broadcasterActor(state, grant.expiresAt),
+      twitchVerified: grant.twitchVerified ?? false,
+    };
   }
 
   private async loadSession(sessionId: string): Promise<AuthoritativeSessionState> {

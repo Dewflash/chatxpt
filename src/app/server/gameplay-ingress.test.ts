@@ -129,6 +129,19 @@ describe("authenticated gameplay snapshot ingress", () => {
     ).resolves.toMatchObject({ envelope: { messageId: "live-gameplay-1" } });
   });
 
+  it("lets an authorised Studio session issue capture grants without exposing the setup key", async () => {
+    const { application, state } = await setup();
+
+    await expect(application.issueGrantForStudio(
+      { sessionId: state.session.sessionId },
+      state.session.sessionId,
+    )).resolves.toMatchObject({ authority: { sessionId: state.session.sessionId } });
+    await expect(application.issueGrantForStudio(
+      { sessionId: state.session.sessionId },
+      "another-session",
+    )).rejects.toMatchObject({ code: "forbidden" });
+  });
+
   it("makes an accepted ingress snapshot available to the sole orchestrator on its next command", async () => {
     const { application, persistence, state } = await setup();
     const grant = await application.issueGrant(KEY, { sessionId: state.session.sessionId });
@@ -192,6 +205,62 @@ describe("authenticated gameplay snapshot ingress", () => {
     );
     expect(result).toMatchObject({ ok: false, error: { code: "validation" } });
     expect(engineGameplayMessageId).toBe("live-gameplay-1");
+  });
+
+  it("publishes each accepted live snapshot into current Studio state when the runtime is connected", async () => {
+    const { persistence, state } = await setup();
+    const started = authoritativeSessionStateSchema.parse({
+      ...state,
+      session: {
+        ...state.session,
+        status: "live",
+        revision: state.session.revision + 1,
+        startedAt: FIXTURE_NOW + 500,
+      },
+      questCycle: {
+        ...state.questCycle,
+        envelope: {
+          ...state.questCycle.envelope,
+          revision: state.session.revision + 1,
+          occurredAt: FIXTURE_NOW + 500,
+          receivedAt: FIXTURE_NOW + 500,
+        },
+      },
+    });
+    await persistence.lifecycle.commitLifecycle({
+      sessionId: state.session.sessionId,
+      operationId: "start-for-gameplay-publication",
+      action: "start",
+      expectedRevision: state.session.revision,
+      nextState: started,
+      occurredAt: FIXTURE_NOW + 500,
+      endReason: null,
+    });
+    const runtime = new ChatXptServerRuntime({
+      persistence,
+      clock: new FixedFixtureClock(FIXTURE_NOW + 1_000),
+      ids: new SequenceFixtureMessageIds(),
+    });
+    const application = new GameplayIngressApplication({
+      persistence,
+      runtime,
+      setupKey: KEY,
+      now: () => FIXTURE_NOW + 1_000,
+      nextId: () => "published-grant",
+    });
+    const grant = await application.issueGrant(KEY, { sessionId: started.session.sessionId });
+    const result = await application.ingest(
+      `Bearer ${grant.token}`,
+      liveSnapshot(started, FIXTURE_NOW + 1_000),
+    );
+    const current = await persistence.sessions.load(started.session.sessionId);
+    const streamer = await persistence.snapshots.readSnapshot(started.session.sessionId, "streamer");
+
+    expect(result.result.status).toBe("accepted");
+    expect(result.proposal.status).not.toBe("failed");
+    expect(current?.session.revision).toBeGreaterThan(started.session.revision);
+    expect(current?.gameplay?.signals.length).toBeGreaterThan(0);
+    expect(streamer?.gameplay?.signals.length).toBeGreaterThan(0);
   });
 
   it("preserves duplicate retry, bounds burst cadence, and rejects fixture or stale capture", async () => {

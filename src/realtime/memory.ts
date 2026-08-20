@@ -100,6 +100,8 @@ export class MemoryChatXptPersistence
       sourceMode: "twitch-extension" | "hosted-board" | "twitch-chat";
     }
   >();
+  private readonly sessionPointsByVoter = new Map<string, number>();
+  private readonly rewardedCycleVoters = new Set<string>();
 
   async bootstrap(input: BootstrapSessionInput): Promise<void> {
     const state = authoritativeSessionStateSchema.parse(input.state);
@@ -206,6 +208,7 @@ export class MemoryChatXptPersistence
         },
       );
     }
+    this.awardTerminalRewards(receipt);
     const updatedLifecycle = this.lifecycle.get(input.command.sessionId);
     if (updatedLifecycle !== undefined) {
       updatedLifecycle.lastActivityAt = input.acceptedAt;
@@ -253,6 +256,9 @@ export class MemoryChatXptPersistence
     const vote = this.voteLedger.get(
       this.voteKey(input.sessionId, input.questCycleId, input.voterKey),
     );
+    const sessionPoints = this.sessionPointsByVoter.get(
+      this.sessionVoterKey(input.sessionId, input.voterKey),
+    ) ?? 0;
     return viewerRecoveryStateSchema.parse(
       vote === undefined
         ? {
@@ -260,7 +266,7 @@ export class MemoryChatXptPersistence
             questCycleId: input.questCycleId,
             acceptedCandidateId: null,
             acceptedAt: null,
-            sessionPoints: 0,
+            sessionPoints,
             sourceMode: null,
           }
         : {
@@ -268,7 +274,7 @@ export class MemoryChatXptPersistence
             questCycleId: input.questCycleId,
             acceptedCandidateId: vote.candidateId,
             acceptedAt: vote.acceptedAt,
-            sessionPoints: 0,
+            sessionPoints,
             sourceMode: vote.sourceMode,
           },
     );
@@ -585,6 +591,42 @@ export class MemoryChatXptPersistence
 
   private voteKey(sessionId: string, questCycleId: string, voterKey: string): string {
     return JSON.stringify([sessionId, questCycleId, voterKey]);
+  }
+
+  private sessionVoterKey(sessionId: string, voterKey: string): string {
+    return JSON.stringify([sessionId, voterKey]);
+  }
+
+  private awardTerminalRewards(receipt: AcceptedCommandReceipt): void {
+    for (const event of receipt.events) {
+      const attributes = event.event.attributes;
+      const rewardPoints = attributes.rewardPointsAwarded;
+      if (
+        attributes.outcome !== "succeeded" ||
+        typeof rewardPoints !== "number" ||
+        !Number.isSafeInteger(rewardPoints) ||
+        rewardPoints <= 0 ||
+        event.envelope.questCycleId === null
+      ) {
+        continue;
+      }
+      for (const vote of this.voteLedger.values()) {
+        if (
+          vote.sessionId !== receipt.state.session.sessionId ||
+          vote.questCycleId !== event.envelope.questCycleId
+        ) {
+          continue;
+        }
+        const rewardedKey = this.voteKey(vote.sessionId, vote.questCycleId, vote.voterKey);
+        if (this.rewardedCycleVoters.has(rewardedKey)) continue;
+        this.rewardedCycleVoters.add(rewardedKey);
+        const sessionKey = this.sessionVoterKey(vote.sessionId, vote.voterKey);
+        this.sessionPointsByVoter.set(
+          sessionKey,
+          Math.min(100_000, (this.sessionPointsByVoter.get(sessionKey) ?? 0) + rewardPoints),
+        );
+      }
+    }
   }
 }
 

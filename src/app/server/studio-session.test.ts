@@ -174,6 +174,11 @@ describe("StudioSessionApplication", () => {
     expect(result.view.session.status).toBe("live");
     expect(result.readiness.services.find((service) => service.service === "session")?.allowedActions)
       .toContain("end-session");
+
+    await expect(context.application.presence(started.grant, null, { action: "heartbeat" }))
+      .resolves.toMatchObject({ status: "live", reconnectDeadlineAt: null });
+    await expect(context.application.presence(started.grant, null, { action: "disconnect" }))
+      .resolves.toMatchObject({ status: "live", reconnectDeadlineAt: NOW + 10 * 60 * 1_000 });
   });
 
   it("accepts authoritative profile commands through the HttpOnly grant identity", async () => {
@@ -195,12 +200,21 @@ describe("StudioSessionApplication", () => {
       actor: { kind: "broadcaster", actorId: "channel-1" },
       type: "streamer.profile-settings",
       experiencePatch: { intensity: 0.7 },
+      keywordWatchlist: ["diamonds", "food supplies"],
+      streamPresets: started.view.profile.streamPresets,
+      selectedPresetId: "chill",
     });
 
     const result = await context.application.execute(started.grant, null, command);
     expect(result.outcome).toBe("committed");
     expect(result.view.profile.experience.intensity).toBe(0.7);
+    expect(result.view.profile.keywordWatchlist).toEqual(["diamonds", "food supplies"]);
+    expect(result.view.profile.selectedPresetId).toBe("chill");
     expect(result.view.session.revision).toBe(started.view.session.revision + 1);
+
+    const restored = await context.application.read(started.grant, null);
+    expect(restored.view.profile.selectedPresetId).toBe("chill");
+    expect(restored.view.profile.keywordWatchlist).toEqual(["diamonds", "food supplies"]);
   });
 
   it("persists private declared intent through the same broadcaster-authorised command path", async () => {
@@ -259,6 +273,21 @@ describe("StudioSessionApplication", () => {
     await expect(
       context.application.read(null, `Bearer ${twitchJwt("viewer")}`),
     ).rejects.toMatchObject({ code: "forbidden" } satisfies Partial<StudioSessionApplicationError>);
+  });
+
+  it("keeps OAuth verification in the signed HttpOnly Studio grant", async () => {
+    const context = application();
+    const started = await context.application.start(SETUP_KEY, {
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    }, true);
+
+    const reopened = await context.application.read(started.grant, null);
+    expect(reopened.readiness.liveInputsUsed).toBe(true);
+    expect(reopened.readiness.services.find((service) => service.service === "twitch")?.health.message)
+      .toContain("authorization verified");
   });
 
   it("rejects an invalid bootstrap key before creating state", async () => {

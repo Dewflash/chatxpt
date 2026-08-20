@@ -7,6 +7,7 @@ import {
   streamerQuestCommandSchema,
   streamerQuestProgressCommandSchema,
   streamerServiceCommandSchema,
+  streamerSessionOverrideCommandSchema,
 } from "../core";
 import { contractFixtureStreamerView } from "../core/testing";
 import {
@@ -16,6 +17,7 @@ import {
   buildProfileSettingsCommand,
   buildQuestCommand,
   buildQuestProgressCommand,
+  buildSessionOverrideCommand,
   buildSetupCommand,
   editableDefaultsFromView,
   profileDefaultsChanged,
@@ -39,6 +41,8 @@ describe("Role 4 streamer command builders", () => {
       preferredQuestTypes: ["exploration", "chat-choice"],
       forbiddenQuestTypes: [...draft.forbiddenQuestTypes, "inventory-trash"],
       accessibilityNeeds: ["high-contrast", "reduced-motion"],
+      keywordWatchlist: ["diamonds", "food supplies"],
+      selectedPresetId: "competitive",
       voting: { ...draft.voting, voteVisibility: "hidden-until-close" as const },
       rewards: { ...draft.rewards, rewardDisplay: "session-points" as const },
     };
@@ -59,8 +63,27 @@ describe("Role 4 streamer command builders", () => {
       preferredQuestTypes: ["exploration", "chat-choice"],
       forbiddenQuestTypes: expect.arrayContaining(["inventory-trash"]),
       accessibilityNeeds: ["high-contrast", "reduced-motion"],
+      keywordWatchlist: ["diamonds", "food supplies"],
+      selectedPresetId: "competitive",
       voting: { voteVisibility: "hidden-until-close" },
       rewards: { rewardDisplay: "session-points" },
+    });
+  });
+
+  it("builds a current-stream preset override without rewriting saved defaults", () => {
+    const command = buildSessionOverrideCommand(
+      contractFixtureStreamerView,
+      { intensity: 0.35, creativity: 0.7 },
+      factory,
+      "chill",
+    );
+
+    expect(streamerSessionOverrideCommandSchema.safeParse(command).success).toBe(true);
+    expect(command).toMatchObject({
+      type: "streamer.session-override",
+      action: "apply",
+      presetId: "chill",
+      experiencePatch: { intensity: 0.35, creativity: 0.7 },
     });
   });
 

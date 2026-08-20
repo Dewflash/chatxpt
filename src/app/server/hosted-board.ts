@@ -176,7 +176,8 @@ export class HostedBoardApplication {
 
     const requestedAt = this.now();
     const expiresAt = requestedAt + GRANT_TTL_MS;
-    const principalId = `hosted-principal-${this.nextId()}`;
+    // Production nextId is randomUUID, matching the Supabase auth/grant column.
+    const principalId = this.nextId();
     const access = await new HostedBoardAccessService(
       this.persistence.hostedBoardSessions,
       this.persistence.accessGrants,

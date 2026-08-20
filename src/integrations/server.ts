@@ -34,3 +34,11 @@ export {
   type TwitchEventSubPayload,
   type VerifyTwitchEventSubInput,
 } from "./twitch/eventsub";
+export {
+  TWITCH_OAUTH_SCOPES,
+  TwitchOAuthClient,
+  TwitchOAuthError,
+  twitchAuthorizationUrl,
+  type TwitchOAuthConfiguration,
+  type TwitchOAuthConnection,
+} from "./twitch/oauth";

@@ -286,6 +286,67 @@ describe("production-shaped memory persistence integration", () => {
     expect(deadlineTally.acceptedVoteCount).toBe(0);
   });
 
+  it("restores non-zero session-scoped points for participating viewers after success", async () => {
+    const runtime = await preparedRuntime();
+    const voteOrchestrator = new ChatXptOrchestrator(
+      bindPersistenceRuntime(logicDependencies(), runtime),
+    );
+    expect(await voteOrchestrator.execute(
+      voteCommand("rewarded-viewer-vote", 0, "twitch-extension"),
+    )).toMatchObject({ ok: true });
+
+    const rewardDependencies = logicDependencies();
+    const rewardOrchestrator = new ChatXptOrchestrator(
+      bindPersistenceRuntime({
+        ...rewardDependencies,
+        engine: new ScriptedFixtureQuestEngine((input) => ({
+          ok: true,
+          decision: {
+            nextState: structuredClone(input.currentState),
+            events: [{
+              eventType: "quest-cycle.terminal",
+              attributes: {
+                outcome: "succeeded",
+                rewardPointsAwarded: 100,
+                hypeDelta: 10,
+              },
+            }],
+          },
+        })),
+      }, runtime),
+    );
+    const terminal = streamerQuestCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: contractFixtureQuestCycle.envelope.questCycleId,
+      commandId: "reward-terminal-success",
+      correlationId: "reward-terminal-correlation",
+      expectedRevision: 1,
+      issuedAt: FIXTURE_NOW + 1_000,
+      actor: { kind: "broadcaster", actorId: contractFixtureSession.broadcasterId },
+      type: "streamer.quest",
+      action: "succeed",
+      candidateId: contractFixtureCandidateBatch.candidates[0].candidateId,
+    });
+    expect(await rewardOrchestrator.execute(terminal)).toMatchObject({ ok: true });
+
+    const restored = await runtime.viewerRecovery.readViewerRecovery({
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: contractFixtureQuestCycle.envelope.questCycleId ?? "missing-cycle",
+      voterKey: "fixture-session-scoped-voter",
+    });
+    const otherViewer = await runtime.viewerRecovery.readViewerRecovery({
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: contractFixtureQuestCycle.envelope.questCycleId ?? "missing-cycle",
+      voterKey: "another-session-scoped-voter",
+    });
+
+    expect(restored.sessionPoints).toBe(100);
+    expect(otherViewer.sessionPoints).toBe(0);
+    expect((await runtime.sessions.load(contractFixtureSession.sessionId))?.communityHype).toBe(10);
+    expect(restored).not.toHaveProperty("crossStreamPoints");
+  });
+
   it("returns one commit and one stale result for concurrent expected revisions", async () => {
     const runtime = await preparedRuntime();
     const orchestrator = new ChatXptOrchestrator(

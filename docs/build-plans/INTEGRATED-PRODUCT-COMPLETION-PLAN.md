@@ -12,7 +12,13 @@
 
 Turn the current collection of contracts, diagnostic tools, fixture surfaces, and partially mounted features into one coherent streamer product whose visible capabilities work end to end.
 
-The product is complete only when the same authoritative session travels through real Twitch and OBS inputs, ChatXPT intelligence, deterministic quest decisions, persistence/realtime, streamer controls, viewer participation, the OBS overlay, rewards, recovery, and history. Passing component tests or rendering fixture data is not product completion.
+The product is complete only when the same authoritative session travels through real Twitch and OBS inputs, ChatXPT intelligence, deterministic quest decisions, persistence/realtime, streamer controls, viewer participation, the OBS overlay, rewards, and recovery. Passing component tests or rendering fixture data is not product completion.
+
+**Owner scope update (20 August 2026):** post-stream analytics and the dedicated
+history product are deferred for a later owner discussion. Current-session
+privacy-safe analytics, terminal quest state, rewards, and reconnect recovery
+remain required in this pass. The deferral narrows ICP-08/ICP-09 and must not be
+misrepresented as a completed post-stream experience.
 
 This plan covers the complete agreed scope and records every currently unavailable capability. It supplements the role plans; `AGENTS.md`, `docs/DECISIONS.md`, and `docs/build-plans/INTEGRATION-CONTRACT.md` remain higher authority.
 
@@ -306,23 +312,23 @@ Implementation begins only after the owner accepts the snapshot gate. Each slice
 
 **Exit evidence:** Real Supabase two-device vote/reconnect; first-vote-final; duplicate and stale handling; reward recovery; Twitch Extension/hosted/chat parity; real OBS Browser Source; structural privacy tests for overlay and viewer snapshots.
 
-### ICP-08 — Test Lab, history, recovery, and canonical route migration
+### ICP-08 — Test Lab, recovery, and canonical route migration
 
-**User outcome:** Streamers can inspect authorised Test Lab scenarios and session history without confusing samples with a live session; the canonical Studio becomes the product entry point without losing legacy functionality.
+**User outcome:** Streamers can inspect authorised Test Lab scenarios without confusing samples with a live session, recover each live boundary, and use the canonical Studio entry point without losing the legacy diagnostic.
 
 **Work:**
 
 - Mount `/studio/test-lab` in normal streamer navigation.
 - Support team-owned/authorised video and live capture, source selection, observed/unknown output, and recovery while clearly distinguishing Sample from Live inside the lab.
 - Do not reuse broad tester disclaimers on ordinary product pages.
-- Build post-stream history from privacy-safe quest outcomes, aggregate participation, points/hype changes, and non-causal summaries.
+- Keep the existing privacy-safe history read model compatible, but defer the dedicated post-stream analytics/history UI and completion claim.
 - Complete product recovery actions for Twitch, Game Capture, Viewer Voting, Broadcast Overlay, realtime, token expiry, session expiry, and dependency outage.
 - Run the canonical seven-step workflow twice without manual repair.
 - After parity, redirect `/` to `/studio` and move the legacy Control Room and legacy sidequest path behind protected diagnostics without deleting functionality.
 
 **Primary responsibility areas:** `src/streamer/`, diagnostics routes, history reader/persistence, app routing, integration tests.
 
-**Exit evidence:** Streamer Test Lab route; authorised-input policy; sample/live distinction; history privacy; two canonical parity runs; route migration test; legacy diagnostic recovery path.
+**Exit evidence:** Streamer Test Lab route; authorised-input policy; sample/live distinction; current-session privacy; two canonical parity runs; route migration test; legacy diagnostic recovery path. Post-stream analytics/history remains deferred.
 
 ### ICP-09 — Full real-input acceptance and owner handoff
 
@@ -341,7 +347,7 @@ Connect Twitch
 -> two viewers vote through the Twitch Extension
 -> authoritative winner appears in Extension, Studio, and OBS
 -> quest progresses and ends
--> points, hype, result, and history persist
+-> points, hype, and result persist
 -> reconnect restores correct private and shared state
 -> provider-unavailable run completes through the game-aware fallback
 ```
@@ -358,33 +364,33 @@ Connect Twitch
 
 | Capability currently unavailable or incomplete | Current reality | Planned slice |
 | --- | --- | --- |
-| Self-service Twitch connection and recovery | Secure manual mapping exists; full OAuth/EventSub product setup is incomplete. | ICP-02 |
+| Self-service Twitch connection and recovery | OAuth, validation, channel-game import, signed Studio recovery, and HTTPS EventSub subscription creation are implemented; real Twitch proof, revoked-subscription recovery, and token refresh remain external/follow-up. | ICP-02 |
 | Correct readiness-gated start | Source now keeps setup sessions in `preparing`, gates explicit Start on Twitch/Game Capture readiness, and transitions to `live` only through the lifecycle command. Final test execution and real capture/Twitch evidence remain open. | ICP-02 |
-| Twitch game pre-fill with correction | Start currently relies on manually entered game data. | ICP-02 |
-| Production Game Capture | `/studio/gameplay/capture` now mounts a product capture screen that reuses the OBS Virtual Camera analyzer and gameplay ingress grant/snapshot boundary; it still requires manual setup keys and real OBS proof. | ICP-02 |
-| Automatic Game Capture reconnect | The product capture screen refreshes short-lived ingress grants while running and remembers the selected game profile plus last successful capture time in browser-local storage; full permission/device-loss recovery is still incomplete. | ICP-02 |
-| Complete profile editing | Profile & Defaults now emits the existing authoritative profile-settings command for game, intensity, creativity, safety lists, quest preferences, and accessibility. Presets, richer validation, and final UI/testing remain incomplete. | ICP-03 |
-| Named stream presets | No preset schema, persistence, or UI exists. | ICP-03 |
-| Current-stream overrides | A broadcaster-only `streamer.session-override` command, optional authoritative override state, streamer projection, and Stream Settings apply/reset controls now exist for current-stream intensity/creativity. Preset-aware effective settings and final tests remain incomplete. | ICP-03 |
+| Twitch game pre-fill with correction | OAuth imports the channel game and Profile & Defaults lets the streamer correct it before Start. Real Twitch proof remains open. | ICP-02 |
+| Production Game Capture | `/studio/gameplay/capture` uses the OBS Virtual Camera analyzer and Studio-authorised ingress grants without exposing setup keys. Real OBS proof remains open. | ICP-02 |
+| Automatic Game Capture reconnect | Grants refresh while running; the last successful source is remembered; an already-granted browser permission triggers one automatic reconnect attempt. Device denial/loss still exposes explicit recovery. | ICP-02 |
+| Complete profile editing | Profile & Defaults persists game, intensity, creativity, safety, accessibility, watchlist, exactly-three behavior, and reward/vote display controls. | ICP-03 |
+| Named stream presets | Three starter presets and create/duplicate/edit/delete/select custom presets persist through the authoritative profile. | ICP-03 |
+| Current-stream overrides | Stream Settings applies/reset session intensity and creativity overrides and displays the effective preset-aware settings. | ICP-03 |
 | Canonical runtime intelligence composition | Source now mounts the configured candidate provider and intervention coordinator in the server runtime for cue conversion and eligible-cycle proposal requests. Final test execution and real-input proof remain open. | ICP-04/ICP-06 |
-| Automatic Live Director refresh | Context composition exists but no production producer/scheduler emits it. | ICP-04 |
-| Gameplay Engine page | ICP-01 route shell exists with Overview, Game Capture, Understanding, and Health & Recovery sections and links to `/studio/gameplay/capture`; full understanding workflow remains incomplete. | ICP-04 |
+| Automatic Live Director refresh | Accepted bounded gameplay and ordinary-chat snapshots publish canonical signals and request one policy-gated proposal per eligible revision. Real live-input proof remains open. | ICP-04 |
+| Gameplay Engine page | Connected Game Capture, supported facts, stream-period understanding, current/previous behavioral stats, health, combat, exploration, and recovery are implemented. | ICP-04 |
 | Public `Up next` | Overlay projection now has a sanitized nullable `upNext` field derived from authoritative quest-cycle state or a known typed Current Objective with selected-game-compatible fresh gameplay evidence; final tests remain open. | ICP-04/ICP-07 |
-| Ordinary-chat audience intelligence | Non-vote Twitch messages are ignored by the app ingress. | ICP-05 |
-| Live Analytics page | ICP-01 route shell exists with Overview, Activity, Topics, and Session History sections; connected ordinary-chat producer, topics, watchlist counts, and history remain incomplete. | ICP-05 |
-| Automatic topics plus watchlist counts | Aggregate contract/UI/persistence are incomplete. | ICP-05 |
+| Ordinary-chat audience intelligence | Twitch chat is aggregated with dedupe, pseudonymous participant lifecycle, mood, rate, previous-window comparison, topics, and watchlist counts; raw ordinary text remains ephemeral. Real EventSub proof remains open. | ICP-05 |
+| Live Analytics page | Connected current-session vibe, audience mood, activity, participants, participation, topics, watchlist, and previous-window comparisons are implemented. Dedicated post-stream history is owner-deferred. | ICP-05 |
+| Automatic topics plus watchlist counts | Privacy-safe topic ranking and owner-configured watchlist counts are implemented and projected to Studio. | ICP-05 |
 | Game-aware algorithmic candidates | Credential-free algorithmic generation now prefers Minecraft-aware templates when Minecraft is selected or evidenced, and remains game-neutral for other games. Final evaluation/testing remains open. | ICP-06 |
 | Game-aware deterministic fallback | Role 3 deterministic fallback now prefers Minecraft-aware safe definitions when Minecraft is selected or evidenced, and remains game-neutral for other games. Final evaluation/testing remains open. | ICP-06 |
 | Correct weak-evidence OpenAI prompt | Source now keeps weak exact evidence strict while allowing safe Minecraft-aware, non-state-claiming provider instructions for selected/evidenced Minecraft sessions. Final provider/evaluation execution remains open. | ICP-06 |
 | Automatic eligible-cycle candidate call | Accepted live gameplay ingress now asks the server runtime for one policy-gated proposal per session/cycle/revision; denied moments do not call candidate generation. Final tests and real-input evidence remain open. | ICP-06 |
-| Dedicated Live Quests page | ICP-01 route shell exists with Now, Recommendations, Why, Voting, and Results sections; full recommendation/review/voting/result workspace remains incomplete. | ICP-06 |
-| Realtime client subscriptions | Studio/viewer/hosted/OBS normally poll every 1.5–2 seconds. | ICP-07 |
-| Persistent private viewer points | Recovery returns `sessionPoints: 0`. | ICP-07 |
+| Dedicated Live Quests page | Exactly three proposals, reasons, vote state, approve/reject/skip/cancel/outcome controls, rewards, and result state are implemented. | ICP-06 |
+| Realtime client subscriptions | Studio, hosted board, Next-hosted Twitch viewer, and OBS use private authorised Supabase subscriptions with stale-revision rejection and 10-second HTTP recovery. The standalone Twitch Asset Hosting package retains signed EBS polling and still needs real Twitch proof. | ICP-07 |
+| Persistent private viewer points | Memory/Supabase session-point ledgers award successful participants once per cycle and recover only the authorised viewer's total. | ICP-07 |
 | OBS `Up next` rendering | OBS overlay source now renders the public `upNext` field while staying read-only; final tests and real OBS Browser Source proof remain open. | ICP-07 |
-| Authoritative Home surface previews | Home now has concise current-state compositions and gated Start/End controls; deeper tabbed previews remain incomplete. | ICP-07 |
-| Streamer-facing Test Lab route | ICP-01 route shell exists with Sample/Live Source, Capture Controls, Observed/Unknown, and Recovery sections; sample/live controls and policy-backed recovery remain incomplete. | ICP-08 |
-| Complete history/recovery experience | Read models exist in parts; dedicated product flow is incomplete. | ICP-08 |
-| Canonical `/` routing | `/` still mounts the legacy Control Room. | ICP-08 after parity |
+| Authoritative Home surface previews | Home presents Current Stream, Live Director, up to three Live Quests, Stream Engagement, Chat Analytics, integrations, and presets with authoritative controls. | ICP-07 |
+| Streamer-facing Test Lab route | Test Lab provides live Gameplay Capture launch/status/recovery, key-free OBS URL generation, viewer fallback link, integration readiness, and diagnostic boundaries. | ICP-08 |
+| Post-stream analytics and dedicated history | Deferred by the owner; current-session aggregate analytics and the existing privacy-safe read model remain. | Deferred |
+| Canonical `/` routing | `/` redirects to the one `/studio` app; the legacy control room is retained only at `/diagnostics/control-room`. | ICP-08 |
 | Real Twitch/OBS/Supabase/provider proof | Source and fixture tests do not prove the external workflow. | ICP-09 |
 
 ### Intentionally unavailable until a later owner decision

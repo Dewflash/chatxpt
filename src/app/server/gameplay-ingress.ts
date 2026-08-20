@@ -1,6 +1,6 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { z } from "zod";
 
@@ -61,7 +61,7 @@ export class GameplayIngressApplicationError extends Error {
 
 export interface GameplayIngressApplicationDependencies {
   readonly persistence: ChatXptPersistenceRuntime;
-  readonly runtime?: Pick<ChatXptServerRuntime, "requestEligibleCycleProposal">;
+  readonly runtime?: Pick<ChatXptServerRuntime, "execute" | "requestEligibleCycleProposal">;
   readonly setupKey: string;
   readonly now?: () => number;
   readonly nextId?: () => string;
@@ -80,7 +80,7 @@ export interface GameplayIngressResult {
 }
 
 export type GameplayIngressProposalResult =
-  | { readonly status: "not-requested"; readonly reason: "duplicate-snapshot" | "rejected-snapshot" | "preparing-session" | "runtime-unavailable" }
+  | { readonly status: "not-requested"; readonly reason: "duplicate-snapshot" | "rejected-snapshot" | "preparing-session" | "runtime-unavailable" | "publication-throttled" }
   | { readonly status: "not-eligible" }
   | { readonly status: "submitted" | "duplicate" }
   | { readonly status: "failed"; readonly message: string; readonly retryable: boolean };
@@ -139,13 +139,17 @@ function authApplicationError(caught: unknown): GameplayIngressApplicationError 
 export class GameplayIngressApplication {
   private readonly persistence: ChatXptPersistenceRuntime;
   private readonly grants: GameplayIngressGrantAuthority;
-  private readonly runtime?: Pick<ChatXptServerRuntime, "requestEligibleCycleProposal">;
+  private readonly runtime?: Pick<
+    ChatXptServerRuntime,
+    "execute" | "requestEligibleCycleProposal"
+  >;
   private readonly now: () => number;
   private readonly nextId: () => string;
   private readonly recentByGrant = new Map<
     string,
     { messageId: string; acceptedAt: number; expiresAt: number }
   >();
+  private readonly lastPublishedBySession = new Map<string, number>();
 
   constructor(dependencies: GameplayIngressApplicationDependencies) {
     this.persistence = dependencies.persistence;
@@ -161,9 +165,22 @@ export class GameplayIngressApplication {
     } catch (caught) {
       throw authApplicationError(caught);
     }
+    return this.issueGrantForStudio(input);
+  }
+
+  async issueGrantForStudio(
+    input: unknown,
+    authorizedSessionId?: string,
+  ): Promise<GameplayIngressGrantResult> {
     const parsed = grantRequestSchema.safeParse(input);
     if (!parsed.success) {
       throw new GameplayIngressApplicationError("validation", "Gameplay ingress grant is invalid");
+    }
+    if (authorizedSessionId !== undefined && parsed.data.sessionId !== authorizedSessionId) {
+      throw new GameplayIngressApplicationError(
+        "forbidden",
+        "Studio authorization does not belong to the requested capture session",
+      );
     }
     const state = await this.loadActiveSession(parsed.data.sessionId);
     const expiresAt = this.now() + GRANT_TTL_MS;
@@ -258,10 +275,7 @@ export class GameplayIngressApplication {
       });
     }
     const proposal = await this.maybeRequestEligibleCycleProposal(state, result);
-    const latestState =
-      result.status === "rejected" && result.reason === "state-mismatch"
-        ? await this.loadActiveSession(grant.sessionId)
-        : state;
+    const latestState = await this.loadActiveSession(grant.sessionId);
     return { result, authority: authoritySnapshot(latestState), proposal };
   }
 
@@ -273,11 +287,61 @@ export class GameplayIngressApplication {
     if (result.status === "duplicate") return { status: "not-requested", reason: "duplicate-snapshot" };
     if (state.session.status !== "live") return { status: "not-requested", reason: "preparing-session" };
     if (this.runtime === undefined) return { status: "not-requested", reason: "runtime-unavailable" };
+    const publishedAt = this.lastPublishedBySession.get(state.session.sessionId);
+    if (publishedAt !== undefined && this.now() - publishedAt < 1_000) {
+      return { status: "not-requested", reason: "publication-throttled" };
+    }
+    const actor = {
+      kind: "system" as const,
+      actorId: "gameplay-snapshot-ingress",
+      expiresAt: null,
+      moderatorForBroadcasterIds: [],
+      voterKey: null,
+      participationModes: [],
+    };
+    const projectionContext = new GameplayIngressProjectionContext(this.now);
+    const commandId = `gameplay-snapshot-${createHash("sha256")
+      .update(`${state.session.sessionId}:${result.snapshot.envelope.messageId}`)
+      .digest("hex")
+      .slice(0, 32)}`;
+    let promoted: Awaited<ReturnType<ChatXptServerRuntime["execute"]>>;
+    try {
+      promoted = await this.runtime.execute(
+        {
+          contractVersion: "1.0.0",
+          sessionId: state.session.sessionId,
+          questCycleId: state.questCycle.envelope.questCycleId,
+          commandId,
+          correlationId: result.snapshot.envelope.correlationId,
+          expectedRevision: state.session.revision,
+          issuedAt: this.now(),
+          actor: { kind: actor.kind, actorId: actor.actorId },
+          type: "system.gameplay-snapshot-ready",
+          snapshot: result.snapshot,
+        },
+        actor,
+        projectionContext,
+      );
+    } catch {
+      return {
+        status: "failed",
+        message: "Gameplay snapshot publication failed",
+        retryable: true,
+      };
+    }
+    if (!promoted.ok) {
+      return {
+        status: "failed",
+        message: promoted.error.message,
+        retryable: promoted.error.retryable,
+      };
+    }
+    this.lastPublishedBySession.set(state.session.sessionId, this.now());
     let proposal: Awaited<ReturnType<ChatXptServerRuntime["requestEligibleCycleProposal"]>>;
     try {
       proposal = await this.runtime.requestEligibleCycleProposal(
-        { ...state, gameplay: result.snapshot },
-        new GameplayIngressProjectionContext(this.now),
+        promoted.receipt.state,
+        projectionContext,
       );
     } catch {
       return {

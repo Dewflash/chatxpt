@@ -18,6 +18,7 @@ import {
   type StreamerQuestCommand,
   type StreamerQuestProgressCommand,
   type StreamerRewardPreferences,
+  type StreamPreset,
   type StreamerServiceCommand,
   type StreamerSetupAction,
   type StreamerSetupServiceId,
@@ -48,6 +49,9 @@ export interface EditableProfileDefaults {
   readonly preferredQuestTypes: readonly string[];
   readonly forbiddenQuestTypes: readonly string[];
   readonly accessibilityNeeds: readonly string[];
+  readonly keywordWatchlist: readonly string[];
+  readonly streamPresets: readonly StreamPreset[];
+  readonly selectedPresetId: string | null;
   readonly voting: StreamerVotingPreferences;
   readonly rewards: StreamerRewardPreferences;
 }
@@ -103,6 +107,15 @@ export function editableDefaultsFromView(view: StreamerViewModel): EditableProfi
     preferredQuestTypes: [...view.profile.preferredQuestTypes],
     forbiddenQuestTypes: [...view.profile.forbiddenQuestTypes],
     accessibilityNeeds: [...view.profile.accessibilityNeeds],
+    keywordWatchlist: [...view.profile.keywordWatchlist],
+    streamPresets: view.profile.streamPresets.map((preset) => ({
+      ...preset,
+      experience: { ...preset.experience },
+      preferredQuestTypes: [...preset.preferredQuestTypes],
+      voting: { ...preset.voting },
+      rewards: { ...preset.rewards },
+    })),
+    selectedPresetId: view.profile.selectedPresetId,
     voting: { ...view.profile.voting },
     rewards: { ...view.profile.rewards },
   };
@@ -133,6 +146,15 @@ export function buildProfileSettingsCommand(
     preferredQuestTypes: [...draft.preferredQuestTypes],
     forbiddenQuestTypes: [...draft.forbiddenQuestTypes],
     accessibilityNeeds: [...draft.accessibilityNeeds],
+    keywordWatchlist: [...draft.keywordWatchlist],
+    streamPresets: draft.streamPresets.map((preset) => ({
+      ...preset,
+      experience: { ...preset.experience },
+      preferredQuestTypes: [...preset.preferredQuestTypes],
+      voting: { ...preset.voting },
+      rewards: { ...preset.rewards },
+    })),
+    selectedPresetId: draft.selectedPresetId,
     voting: draft.voting,
     rewards: draft.rewards,
   });
@@ -142,12 +164,14 @@ export function buildSessionOverrideCommand(
   view: StreamerViewModel,
   experiencePatch: Readonly<Record<string, number>> | null,
   factory: StreamerCommandFactory = defaultStreamerCommandFactory,
+  presetId: string | null = null,
 ): StreamerSessionOverrideCommand {
   return streamerSessionOverrideCommandSchema.parse({
     ...metadata(view, factory, experiencePatch === null ? "session-override-clear" : "session-override-apply"),
     questCycleId: null,
     type: "streamer.session-override",
     action: experiencePatch === null ? "clear" : "apply",
+    presetId: experiencePatch === null ? null : presetId,
     experiencePatch: experiencePatch ?? {},
   });
 }

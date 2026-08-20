@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { OverlayViewModel } from "@/core";
+import { connectRealtimeSnapshot } from "@/app/realtime-snapshot-client";
 import { ObsQuestOverlaySurface } from "@/viewer";
 
 import styles from "./page.module.css";
@@ -17,8 +18,10 @@ export function ObsOverlayClient() {
   const [view, setView] = useState<OverlayViewModel | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [setupError, setSetupError] = useState<string | null>(null);
-  const tokenRef = useRef<string | null>(null);
-  const sessionIdRef = useRef<string | null>(null);
+  const [connection, setConnection] = useState<{
+    readonly token: string;
+    readonly sessionId: string;
+  } | null>(null);
 
   useEffect(() => {
     document.documentElement.dataset.surface = "obs-overlay";
@@ -36,13 +39,11 @@ export function ObsOverlayClient() {
         delete document.documentElement.dataset.surface;
       };
     }
-    tokenRef.current = token;
-    sessionIdRef.current = sessionId;
+    const ready = window.setTimeout(() => setConnection({ token, sessionId }), 0);
     url.hash = "";
     window.history.replaceState(null, document.title, `${url.pathname}${url.search}`);
     return () => {
-      tokenRef.current = null;
-      sessionIdRef.current = null;
+      window.clearTimeout(ready);
       delete document.documentElement.dataset.surface;
     };
   }, []);
@@ -52,16 +53,14 @@ export function ObsOverlayClient() {
     let activeController: AbortController | null = null;
 
     const refresh = async () => {
-      const token = tokenRef.current;
-      const sessionId = sessionIdRef.current;
-      if (token === null || sessionId === null) return;
+      if (connection === null) return;
       activeController?.abort();
       activeController = new AbortController();
       try {
         const response = await fetch(
-          `/api/obs/overlay/state?sessionId=${encodeURIComponent(sessionId)}`,
+          `/api/obs/overlay/state?sessionId=${encodeURIComponent(connection.sessionId)}`,
           {
-            headers: { authorization: `Bearer ${token}` },
+            headers: { authorization: `Bearer ${connection.token}` },
             cache: "no-store",
             signal: activeController.signal,
           },
@@ -84,7 +83,7 @@ export function ObsOverlayClient() {
     };
 
     const initial = window.setTimeout(() => void refresh(), 0);
-    const interval = window.setInterval(() => void refresh(), 1_500);
+    const interval = window.setInterval(() => void refresh(), 10_000);
     const clock = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => {
       stopped = true;
@@ -93,7 +92,45 @@ export function ObsOverlayClient() {
       window.clearInterval(interval);
       window.clearInterval(clock);
     };
-  }, []);
+  }, [connection]);
+
+  useEffect(() => {
+    if (connection === null) return;
+    let stopped = false;
+    let disconnect: (() => Promise<void>) | null = null;
+    void connectRealtimeSnapshot({
+      role: "overlay",
+      sessionId: connection.sessionId,
+      surfaceAuthorization: connection.token,
+      loadLatest: async () => {
+        const response = await fetch(
+          `/api/obs/overlay/state?sessionId=${encodeURIComponent(connection.sessionId)}`,
+          {
+            headers: { authorization: `Bearer ${connection.token}` },
+            cache: "no-store",
+          },
+        );
+        const payload = (await response.json()) as OverlayPayload;
+        return response.ok && payload.ok ? payload.view ?? null : null;
+      },
+      onSnapshot: (snapshot) => {
+        if (!stopped) {
+          setView(snapshot);
+          setSetupError(null);
+          setNow(Date.now());
+        }
+      },
+    }).then((release) => {
+      if (stopped) void release?.();
+      else disconnect = release;
+    }).catch(() => {
+      // The authorised state read remains the reconnect path.
+    });
+    return () => {
+      stopped = true;
+      void disconnect?.();
+    };
+  }, [connection]);
 
   return (
     <main className={`${styles.root} canonical-obs-overlay`}>

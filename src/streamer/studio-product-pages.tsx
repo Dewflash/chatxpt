@@ -1,16 +1,18 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Card, CardGrid, DesignSystemRoot, Notice, StatusBadge } from "../design-system";
-import type {
-  StreamerReadinessView,
-  StreamerSetupAction,
-  StreamerSetupService,
-  StreamerViewModel,
+import {
+  resolveEffectiveStreamerProfile,
+  resolveSelectedStreamPreset,
+  type StreamPreset,
+  type StreamerReadinessView,
+  type StreamerSetupAction,
+  type StreamerSetupService,
+  type StreamerViewModel,
 } from "../core";
 import { summarizeGameplayHealth } from "./gameplay-health";
-import { summarizeQuestGeneration } from "./quest-generation-health";
 import {
   readinessAvailability,
   unavailableAvailability,
@@ -18,6 +20,9 @@ import {
 } from "./studio-availability";
 import {
   buildProfileSettingsCommand,
+  buildEmergencyClearCommand,
+  buildQuestCommand,
+  buildQuestProgressCommand,
   buildSessionOverrideCommand,
   buildSetupCommand,
   defaultStreamerCommandFactory,
@@ -81,7 +86,7 @@ const PAGE_COPY: Readonly<Record<StudioProductPage, { readonly eyebrow: string; 
   profile: {
     eyebrow: "Profile & Defaults",
     title: "Settings that return next stream",
-    body: "Manage personality, safety, game preferences, accessibility, voting, rewards, and future presets.",
+    body: "Manage personality, safety, game preferences, accessibility, voting, rewards, and stream presets.",
   },
   "stream-settings": {
     eyebrow: "Stream Settings",
@@ -93,6 +98,15 @@ const PAGE_COPY: Readonly<Record<StudioProductPage, { readonly eyebrow: string; 
     title: "Check gameplay inputs",
     body: "Use approved sample or live capture checks without confusing samples with the active stream.",
   },
+};
+
+const PAGE_SECTIONS: Readonly<Partial<Record<StudioProductPage, readonly string[]>>> = {
+  gameplay: ["Overview", "Game Capture", "Understanding", "Health & Recovery"],
+  "live-analytics": ["Overview", "Activity", "Topics", "Session History"],
+  "live-quests": ["Now", "Recommendations", "Voting", "Results"],
+  profile: ["Personality", "Stream Presets", "Safety", "Accessibility"],
+  "stream-settings": ["Saved Source", "Session Override", "Reset to Saved"],
+  "test-lab": ["Sample / Live Source", "Capture Controls", "Observed / Unknown", "Recovery"],
 };
 
 function titleCase(value: string): string {
@@ -155,16 +169,82 @@ function clampUnit(value: number, fallback: number): number {
   return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : fallback;
 }
 
-function unavailableCard(title: string, detail: string, nextStep?: string) {
-  const availability = unavailableAvailability(detail, nextStep);
-  return (
-    <Card className={styles.card}>
-      <StatusBadge tone={availability.tone}>{availability.badge}</StatusBadge>
-      <h3>{title}</h3>
-      <p>{availability.detail}</p>
-      <AvailabilityAction availability={availability} />
-    </Card>
+type SignalSnapshot = NonNullable<StreamerViewModel["gameplay"] | StreamerViewModel["audience"]>;
+
+function signalByKind(snapshot: SignalSnapshot | null, ...kinds: readonly string[]) {
+  return snapshot?.signals.find((signal) => kinds.includes(signal.kind)) ?? null;
+}
+
+function knownSignalValue(snapshot: SignalSnapshot | null, ...kinds: readonly string[]) {
+  const signal = signalByKind(snapshot, ...kinds);
+  return signal?.observation.status === "known" ? signal.observation.value : null;
+}
+
+function signalStatusText(snapshot: SignalSnapshot | null, kind: string): string {
+  const signal = signalByKind(snapshot, kind);
+  if (signal === null) return "Unknown";
+  if (signal.observation.status === "known") return String(signal.observation.value);
+  if (signal.observation.status === "stale") return "Stale";
+  if (signal.observation.status === "unavailable") return "Unavailable";
+  return titleCase(signal.observation.reason);
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.round(seconds / 60);
+  return `${minutes} min`;
+}
+
+function formatElapsed(startedAt: number | null, now = Date.now()): string {
+  if (startedAt === null) return "Not started";
+  const minutes = Math.max(0, Math.floor((now - startedAt) / 60_000));
+  if (minutes < 60) return `${minutes} min`;
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+}
+
+function formatSessionTime(observedAt: number, startedAt: number | null): string {
+  if (startedAt === null || observedAt < startedAt) return new Date(observedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const seconds = Math.floor((observedAt - startedAt) / 1_000);
+  const minutes = Math.floor(seconds / 60);
+  return `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function gameplayTempo(view: StreamerViewModel | null): string {
+  if (view?.gameplay === null || view === null) return "Unknown";
+  const activity = knownSignalValue(
+    view.gameplay,
+    "minecraft-activity",
+    "game-vision-state",
+    "activity-intensity",
   );
+  if (typeof activity === "number") {
+    return activity >= 0.7 ? "Energetic" : activity >= 0.35 ? "Steady" : "Calm";
+  }
+  const value = String(activity ?? "").toLowerCase();
+  if (/combat|fight|active|high/u.test(value)) return "Energetic";
+  if (/explor|mining|building|steady/u.test(value)) return "Steady";
+  if (/quiet|stable|sleep|menu|calm/u.test(value)) return "Calm";
+  if (/transition/u.test(value)) return "Changing";
+  return "Unknown";
+}
+
+function audienceMood(view: StreamerViewModel | null): string {
+  if (view?.audience === null || view === null) return "Unknown";
+  const intent = knownSignalValue(view.audience, "audience-intent");
+  const energy = knownSignalValue(view.audience, "audience-energy");
+  if (typeof intent === "string" && intent !== "neutral") {
+    return titleCase(intent);
+  }
+  if (typeof energy !== "number") return "Unknown";
+  if (energy >= 0.72) return "Excited";
+  if (energy >= 0.45) return "Engaged";
+  if (energy >= 0.25) return "Curious";
+  return "Quiet";
+}
+
+function activePreset(view: StreamerViewModel | null): StreamPreset | null {
+  if (view === null) return null;
+  return resolveSelectedStreamPreset(view.profile, view.sessionOverride);
 }
 
 function HealthStrip({ view, readiness }: {
@@ -173,7 +253,23 @@ function HealthStrip({ view, readiness }: {
 }) {
   const twitch = readinessAvailability(readiness, "twitch", "Connect Twitch before starting ChatXPT.");
   const obs = readinessAvailability(readiness, "obs-capture", "Allow OBS Virtual Camera from Studio when capture is ready.");
-  const voting = readinessAvailability(readiness, "realtime", "Viewer Voting connects after realtime session state is available.");
+  const realtime = readinessAvailability(readiness, "realtime", "Viewer Voting connects after session state is available.");
+  const participationModes = view === null
+    ? []
+    : [
+        ...(view.session.capabilities.twitchExtension ? ["Twitch Extension"] : []),
+        ...(view.session.capabilities.hostedViewerBoard ? ["hosted Quest Board"] : []),
+        ...(view.session.capabilities.twitchChatVoting ? ["Twitch chat"] : []),
+      ];
+  const voting: ProductAvailability = participationModes.length === 0
+    ? unavailableAvailability("No viewer participation path is available for this session.", "Review Twitch setup")
+    : {
+        state: "available",
+        badge: realtime.state === "available" ? "Ready" : "Fallback ready",
+        tone: realtime.state === "available" ? "success" : "warning",
+        detail: `${participationModes.join(", ")} ${realtime.state === "available" ? participationModes.length === 1 ? "shares" : "share" : participationModes.length === 1 ? "remains" : "remain"} ${realtime.state === "available" ? "private live state." : "available through authorised recovery reads."}`,
+        nextStep: realtime.state === "available" ? "Ready" : "Review connection",
+      };
   const overlay = view === null
     ? unavailableAvailability("Broadcast Overlay connects after a broadcaster session exists.", "Open Studio")
     : view.session.status === "live"
@@ -197,7 +293,9 @@ function HealthStrip({ view, readiness }: {
         <StatusBadge tone={twitch.tone}>{twitch.badge}</StatusBadge>
         <h3>Twitch</h3>
         <p>{twitch.detail}</p>
-        <AvailabilityAction availability={twitch} />
+        {twitch.state === "available"
+          ? <AvailabilityAction availability={twitch} />
+          : <a href="/api/twitch/oauth/start">Connect Twitch</a>}
       </Card>
       <Card className={styles.card}>
         <StatusBadge tone={obs.tone}>{obs.badge}</StatusBadge>
@@ -321,13 +419,10 @@ function HomeStatePanel({
   const session = serviceById(readiness, "session");
   const canStart = view !== null && readiness?.ready === true && actionAllowed(session, "start-session") && onCommand !== undefined;
   const canEnd = view !== null && actionAllowed(session, "end-session") && onCommand !== undefined;
-  const gameplay = view === null ? null : summarizeGameplayHealth(view.gameplay);
-  const generation = view === null || view.questCycle.options.length === 0
-    ? null
-    : summarizeQuestGeneration(view.questCycle.options);
+  const preset = activePreset(view);
 
   return (
-    <section className={styles.homePanel} aria-labelledby="home-state-heading">
+    <section className={styles.readyHero} data-mode={mode} aria-labelledby="home-state-heading">
       <div className={styles.homeSummary}>
         <StatusBadge tone={mode === "live" || mode === "ready" ? "success" : mode === "cannot-connect" || mode === "reconnecting" ? "warning" : "neutral"}>
           {copy.badge}
@@ -359,27 +454,186 @@ function HomeStatePanel({
           <a href={mode === "live" ? "/studio/live-quests" : "/studio/gameplay"}>
             {mode === "live" ? "Open Live Quests" : "Review setup"}
           </a>
+          {mode === "ready" ? <a href="/studio/profile">Change current game</a> : null}
         </div>
       </div>
-      <dl className={styles.homeMetrics}>
-        <div>
-          <dt>Stream vibe</dt>
-          <dd>{view?.audience === null || view === null ? "Unknown" : `${view.audience.signals.length} audience signals`}</dd>
-        </div>
-        <div>
-          <dt>Gameplay</dt>
-          <dd>{gameplay?.label ?? "No signal yet"}</dd>
-        </div>
-        <div>
-          <dt>Sidequests</dt>
-          <dd>{generation?.label ?? "Waiting for three options"}</dd>
-        </div>
+      <dl className={styles.readyDetails}>
         <div>
           <dt>Game</dt>
-          <dd>{view?.profile.gameName ?? "No game selected"}</dd>
+          <dd>{view?.profile.gameName ?? "Not selected"}</dd>
+        </div>
+        <div>
+          <dt>Preset</dt>
+          <dd>{preset?.name ?? "Saved defaults"}</dd>
+        </div>
+        <div>
+          <dt>Approval</dt>
+          <dd>Manual</dd>
+        </div>
+        <div>
+          <dt>Voting</dt>
+          <dd>{view?.session.capabilities.twitchExtension ? "Twitch + fallbacks" : "Fallbacks only"}</dd>
         </div>
       </dl>
     </section>
+  );
+}
+
+function HomeQuestSummary({ view }: { readonly view: StreamerViewModel }) {
+  const cycle = view.questCycle;
+  const totalVotes = cycle.voteTallies.reduce((sum, tally) => sum + tally.votes, 0);
+  const ranked = cycle.options
+    .map((option) => ({
+      option,
+      votes: cycle.voteTallies.find((tally) => tally.candidateId === option.candidateId)?.votes ?? 0,
+    }))
+    .sort((left, right) => right.votes - left.votes);
+  const leader = ranked[0] ?? null;
+  return (
+    <article className={styles.engagementCard}>
+      <div className={styles.panelHeading}>
+        <div>
+          <StatusBadge tone={cycle.status === "voting" ? "info" : cycle.status === "active" ? "success" : "neutral"}>
+            {titleCase(cycle.status)}
+          </StatusBadge>
+          <h2>Live Quests</h2>
+        </div>
+        <a href="/studio/live-quests">Open quests</a>
+      </div>
+      {leader === null ? (
+        <p>Waiting for a safe, validated three-option proposal.</p>
+      ) : (
+        <div className={styles.questList}>
+          {ranked.slice(0, 3).map(({ option, votes }, index) => (
+            <div className={styles.questLeader} key={option.candidateId}>
+              <span className={styles.questNumber}>{index + 1}</span>
+              <span><small>{cycle.status === "voting" && index === 0 ? "Leading" : "Validated option"}</small><strong>{option.title}</strong><em>{option.instruction}</em></span>
+              <strong>{cycle.status === "voting" ? `${totalVotes === 0 ? 0 : Math.round((votes / totalVotes) * 100)}%` : formatDuration(option.durationSeconds)}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className={styles.cardFooter}>
+        <span>{cycle.options.length === 3 ? `${totalVotes} votes · 3 safe options` : "No official vote is open"}</span>
+        <span>Manual approval</span>
+      </div>
+    </article>
+  );
+}
+
+function HomeChatSummary({ view }: { readonly view: StreamerViewModel }) {
+  const pointer = view.liveDirector?.audiencePointer ?? null;
+  const topic = pointer?.status === "known" || pointer?.status === "stale" ? pointer.topic : null;
+  const messageRate = knownSignalValue(view.audience, "audience-message-rate");
+  const messagesPerMinute = typeof messageRate === "number" ? messageRate : null;
+  return (
+    <article className={styles.engagementCard}>
+      <div className={styles.panelHeading}>
+        <div><StatusBadge tone={view.audience === null ? "neutral" : "success"}>{view.audience === null ? "Waiting" : "Listening"}</StatusBadge><h2>Chat Analytics</h2></div>
+        <a href="/studio/live-analytics">Open analytics</a>
+      </div>
+      <div className={styles.chatVibe}>
+        <span><small>Audience mood</small><strong>{audienceMood(view)}</strong><em>Previous meaningful state appears after enough chat history.</em></span>
+        <b>{messagesPerMinute ?? "—"}<small>msg/min</small></b>
+      </div>
+      <div className={styles.topicChips}>
+        {topic ? <span>{topic}</span> : <span>No repeated topic yet</span>}
+        {view.profile.keywordWatchlist.slice(0, 2).map((keyword) => <span key={keyword}>{keyword}</span>)}
+      </div>
+      <div className={styles.cardFooter}>
+        <span>{pointer?.status === "known" ? `${pointer.uniqueParticipants} active participants` : "Participation building"}</span>
+        <span>{view.audience === null ? "Waiting for chat" : "Current session only"}</span>
+      </div>
+    </article>
+  );
+}
+
+function HomeSurfacePreview({ view }: { readonly view: StreamerViewModel }) {
+  const [tab, setTab] = useState<"streamer" | "viewer" | "overlay">("streamer");
+  const cycle = view.questCycle;
+  const active = cycle.options.find((option) => option.candidateId === cycle.activeCandidateId) ?? null;
+  const previewHref = tab === "streamer"
+    ? "/studio/live-director?display=popout"
+    : tab === "viewer"
+      ? "/studio/test-lab#viewer-voting-check"
+      : "/studio/test-lab#broadcast-output-setup";
+  return (
+    <article className={styles.previewPanel}>
+      <div className={styles.panelHeading}>
+        <div><span className={styles.sectionLabel}>Live surfaces</span><h2>What your stream sees</h2></div>
+        <a href={previewHref}>{tab === "streamer" ? "Open full view" : "Open setup check"}</a>
+      </div>
+      <div className={styles.previewTabs} role="tablist" aria-label="Live surface preview">
+        {(["streamer", "viewer", "overlay"] as const).map((value) => (
+          <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)}>
+            {value === "streamer" ? "Streamer View" : value === "viewer" ? "Twitch Extension" : "OBS Overlay"}
+          </button>
+        ))}
+      </div>
+      <div className={styles.previewStage}>
+        {tab === "streamer" ? (
+          <div className={styles.dockPreview}>
+            <small>Private streamer companion</small>
+            <strong>{view.liveDirector?.cue?.reason ?? "Waiting for a fresh Live Director cue."}</strong>
+            <p>{cycle.options.length === 3 ? "Three private quest options are ready for review." : "Gameplay and audience context stay off the broadcast."}</p>
+          </div>
+        ) : tab === "viewer" ? (
+          <div className={styles.viewerPreview}>
+            <small>{cycle.status === "voting" ? "Choose the next quest" : "ChatXPT Sidequests"}</small>
+            {cycle.options.length === 3 ? cycle.options.map((option, index) => <span key={option.candidateId}><b>{index + 1}</b><strong>{option.title}</strong><em>{titleCase(option.difficulty)} · {option.rewardPoints} pts</em></span>) : <p>No official vote is open.</p>}
+          </div>
+        ) : (
+          <div className={styles.overlayPreview}>
+            <small>Up next</small>
+            <strong>{active?.title ?? view.liveDirector?.publicContext?.currentDecision ?? "Hidden until context is safe to publish"}</strong>
+            <p>{cycle.status === "voting" ? "Viewers are choosing from three sidequests." : "Only concise public quest state appears over gameplay."}</p>
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function LiveHomeDashboard({ view, readiness, pending, onCommand, commandFactory }: {
+  readonly view: StreamerViewModel;
+  readonly readiness?: StreamerReadinessView | null;
+  readonly pending: boolean;
+  readonly onCommand?: (command: StreamerUiCommand) => void;
+  readonly commandFactory: StreamerCommandFactory;
+}) {
+  const gameplay = summarizeGameplayHealth(view.gameplay);
+  const preset = activePreset(view);
+  const sessionService = serviceById(readiness, "session");
+  const canEnd = actionAllowed(sessionService, "end-session") && onCommand !== undefined;
+  const knownFacts = view.gameplay?.signals.filter((signal) => signal.observation.status === "known").length ?? 0;
+  const contextFact = view.liveDirector?.liveContext?.facts.find((fact) => fact.sourceClass === "gameplay-observed" && fact.status === "known") ?? null;
+  return (
+    <div className={styles.liveHome}>
+      <article className={styles.currentStream}>
+        <div className={styles.currentStreamHeader}>
+          <div><StatusBadge tone="success">Live</StatusBadge><h2>{view.profile.gameName ?? "Current stream"}</h2><small>{preset?.name ?? "Saved defaults"} · {formatElapsed(view.session.startedAt, view.envelope.receivedAt)}</small></div>
+          <HomeControlButton label="End ChatXPT session" disabledLabel="End unavailable" disabled={!canEnd} pending={pending} onClick={() => onCommand?.(buildSetupCommand(view, "session", "end-session", commandFactory))} />
+        </div>
+        <div className={styles.directorReading}>
+          <span className={styles.orbit} aria-hidden="true" />
+          <div><small>Live Director · OBS + Game Engine</small><strong>{contextFact?.value === null || contextFact === null ? `${gameplayTempo(view)} gameplay is being read now.` : String(contextFact.value)}</strong><p>{view.liveDirector?.cue?.reason ?? `ChatXPT has ${knownFacts} supported current game facts and will wait when the moment is not suitable for a quest.`}</p></div>
+        </div>
+        <dl className={styles.captureBrief}>
+          <div><dt>Session phase</dt><dd>{view.session.status === "live" ? `Live · ${formatElapsed(view.session.startedAt, view.envelope.receivedAt)}` : titleCase(view.session.status)}</dd></div>
+          <div><dt>Gameplay tempo</dt><dd>{gameplayTempo(view)}</dd></div>
+          <div><dt>Current risk</dt><dd>{signalStatusText(view.gameplay, "minecraft-danger")}</dd></div>
+          <div><dt>Game reading</dt><dd>{gameplay.label}</dd></div>
+        </dl>
+        <div className={styles.directorMeta}><span>Stream vibe: <b>{preset?.name ?? "Saved defaults"}</b></span><span>Game facts: <b>{knownFacts} known</b></span><a href="/studio/gameplay">Open Gameplay Engine</a></div>
+      </article>
+      <section className={styles.engagementSection} aria-labelledby="engagement-heading">
+        <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Stream engagement</span><h2 id="engagement-heading">Audience response and live sidequests</h2></div></div>
+        <div className={styles.engagementGrid}><HomeQuestSummary view={view} /><HomeChatSummary view={view} /></div>
+      </section>
+      <HomeSurfacePreview view={view} />
+      <a className={styles.settingsSummary} href="/studio/stream-settings"><span><small>This stream</small><strong>{preset?.name ?? "Saved defaults"}</strong></span><span>{Math.round((resolveEffectiveStreamerProfile(view.profile, view.sessionOverride).experience.intensity ?? 0.5) * 100)}% intensity · Viewer voting {view.session.capabilities.twitchExtension ? "on" : "using fallback"} · Manual approval</span></a>
+      <HealthStrip view={view} readiness={readiness} />
+    </div>
   );
 }
 
@@ -390,6 +644,10 @@ function HomePage({ view, readiness, pending, onCommand, commandFactory }: {
   readonly onCommand?: (command: StreamerUiCommand) => void;
   readonly commandFactory: StreamerCommandFactory;
 }) {
+  const mode = homeMode(view, readiness);
+  if (mode === "live" && view !== null) {
+    return <LiveHomeDashboard view={view} readiness={readiness} pending={pending} onCommand={onCommand} commandFactory={commandFactory} />;
+  }
   return (
     <>
       <HomeStatePanel
@@ -400,41 +658,19 @@ function HomePage({ view, readiness, pending, onCommand, commandFactory }: {
         commandFactory={commandFactory}
       />
       <HealthStrip view={view} readiness={readiness} />
-      <section className={styles.section} aria-labelledby="home-next-heading">
-        <h2 id="home-next-heading">Open the right workspace</h2>
-        <CardGrid className={styles.grid}>
-          <WorkspaceCard title="Gameplay Engine" href="/studio/gameplay" detail="Capture health, supported facts, unknowns, and recovery." />
-          <WorkspaceCard title="Live Analytics" href="/studio/live-analytics" detail="Audience energy, mood, participation, topics, and session history." />
-          <WorkspaceCard title="Live Quests" href="/studio/live-quests" detail="Recommendations, voting, progress, results, and emergency controls." />
-        </CardGrid>
-      </section>
     </>
   );
 }
 
-function WorkspaceCard({ title, href, detail }: {
-  readonly title: string;
-  readonly href: string;
-  readonly detail: string;
-}) {
-  return (
-    <Card className={styles.card}>
-      <h3>{title}</h3>
-      <p>{detail}</p>
-      <div className={styles.actions}>
-        <a href={href}>Open</a>
-      </div>
-    </Card>
-  );
-}
-
 function PageSectionCard({
+  id,
   title,
   badge,
   badgeTone = "neutral",
   detail,
   children,
 }: {
+  readonly id?: string;
   readonly title: string;
   readonly badge?: string;
   readonly badgeTone?: ProductAvailability["tone"];
@@ -442,7 +678,7 @@ function PageSectionCard({
   readonly children?: ReactNode;
 }) {
   return (
-    <Card className={styles.card}>
+    <Card id={id ?? gameIdFromName(title)} className={styles.card}>
       {badge ? <StatusBadge tone={badgeTone}>{badge}</StatusBadge> : null}
       <h3>{title}</h3>
       <p>{detail}</p>
@@ -460,98 +696,219 @@ function GameplayPage({
 }) {
   const gameplay = view === null ? null : summarizeGameplayHealth(view.gameplay);
   const capture = readinessAvailability(readiness, "obs-capture", "Connect Game Capture before ChatXPT can inspect supported gameplay facts.");
+  const snapshot = view?.gameplay ?? null;
+  const metrics = snapshot?.captureMetrics ?? null;
+  const knownFacts = snapshot?.signals.filter((signal) => signal.observation.status === "known").length ?? 0;
+  const gameplayFacts = view?.liveDirector?.liveContext?.facts.filter((fact) => fact.sourceClass === "gameplay-observed") ?? [];
+  const timeline = gameplayFacts
+    .filter((fact) => fact.status === "known" || fact.status === "stale")
+    .sort((left, right) => left.observedAt - right.observedAt)
+    .slice(-4);
+  const primaryMetrics = [
+    { label: "Processing coverage", value: metrics === null ? "Unknown" : `${Math.round(metrics.processingCoverage * 100)}%`, detail: metrics === null ? "Capture has not reported coverage" : "Known facts across the latest normalized snapshot" },
+    { label: "Frames processed", value: metrics?.framesProcessed.toLocaleString() ?? "Unknown", detail: "Frames analysed in this browser capture run" },
+    { label: "Analysis rate", value: metrics?.cadenceFps === null || metrics === null ? "Unknown" : `${metrics.cadenceFps.toFixed(1)} / sec`, detail: "Current observed capture cadence" },
+    { label: "Processing latency", value: metrics?.lastLatencyMs === null || metrics === null ? "Unknown" : `${metrics.lastLatencyMs} ms`, detail: "Latest frame-to-normalized-snapshot delay" },
+    { label: "Last frame", value: metrics === null ? "Unknown" : formatSessionTime(metrics.observedAt, view?.session.startedAt ?? null), detail: metrics === null ? "No accepted capture metrics" : "Latest accepted observation" },
+    { label: "HUD / OCR", value: metrics === null ? "Unknown" : titleCase(metrics.ocrStatus), detail: "Exact HUD facts remain unknown when confidence is weak" },
+    { label: "Normalized facts", value: metrics?.normalizedFactCount.toString() ?? knownFacts.toString(), detail: "Current known facts; raw frames retained: 0" },
+    { label: "Dropped frames", value: metrics?.droppedFrames === null || metrics === null ? "Unknown" : metrics.droppedFrames.toString(), detail: "Shown only when the capture source reports it" },
+  ] as const;
   return (
-    <CardGrid className={styles.grid}>
-      <PageSectionCard
-        title="Overview"
-        badge={gameplay?.label ?? "No signal yet"}
-        badgeTone={gameplay?.tone ?? "neutral"}
-        detail={view?.gameplay === null || view === null ? "Connect Game Capture to let ChatXPT read supported gameplay facts." : `${titleCase(view.gameplay.capabilities.tier)} is active for ${view.gameplay.capabilities.gameId ?? "the selected game"}.`}
-      />
-      <PageSectionCard
-        title="Game Capture"
-        badge={capture.badge}
-        badgeTone={capture.tone}
-        detail={capture.detail}
-      >
-        <div className={styles.actions}>
-          <a href="/studio/gameplay/capture">Open Capture Setup</a>
-          <AvailabilityAction availability={capture} />
+    <div className={styles.gameplayWorkspace}>
+      <article id="overview" className={styles.engineNow}>
+        <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>ChatXPT understanding</span><h2>What is happening now</h2></div><StatusBadge tone={gameplay?.tone ?? "neutral"}>{gameplay?.label ?? "Waiting"}</StatusBadge></div>
+        <div className={styles.engineReading}><span className={styles.orbit} aria-hidden="true" /><div><strong>{gameplayTempo(view)} gameplay in the current stream period.</strong><p>{snapshot === null ? "Connect Game Capture to establish a trusted gameplay period." : `${knownFacts} supported facts are known. ${gameplay?.unknownCount ?? 0} remain unknown, and ChatXPT will not use them to invent quest context.`}</p></div></div>
+        <div className={styles.timeline} aria-label="Meaningful stream period timeline">
+          {view?.session.startedAt !== null && view?.session.startedAt !== undefined ? <span><b>00:00</b><strong>Game session started</strong><small>Observed · broadcaster session</small></span> : null}
+          {timeline.map((fact) => {
+            const provenance = fact.status === "stale" || /infer|classif|estimate/iu.test(fact.method) ? "Inferred" : "Observed";
+            return <span key={fact.factId}><b>{formatSessionTime(fact.observedAt, view?.session.startedAt ?? null)}</b><strong>{titleCase(fact.kind)}</strong><small>{provenance} · {fact.value === null ? titleCase(fact.status) : String(fact.value)}</small></span>;
+          })}
+          {timeline.length === 0 ? <span><b>Now</b><strong>Current period unknown</strong><small>Waiting for a meaningful supported transition</small></span> : null}
         </div>
-      </PageSectionCard>
-      <PageSectionCard
-        title="Understanding"
-        detail="ChatXPT separates known, unknown, and stale facts instead of guessing missing gameplay state."
-      >
-        <dl className={styles.list}>
-          <div><dt>Known facts</dt><dd>{gameplay?.knownCount ?? 0}</dd></div>
-          <div><dt>Unknown facts</dt><dd>{gameplay?.unknownCount ?? 0}</dd></div>
-          <div><dt>Stale facts</dt><dd>{gameplay?.staleCount ?? 0}</dd></div>
+        <dl className={styles.engineStats}>
+          <div><dt>Stream period</dt><dd>{view?.session.status === "live" ? `Live · ${formatElapsed(view.session.startedAt, view.envelope.receivedAt)}` : titleCase(view?.session.status ?? "waiting")}</dd><small>From broadcaster session time</small></div>
+          <div><dt>Gameplay tempo</dt><dd>{gameplayTempo(view)}</dd><small>Separate from Stream vibe and Audience mood</small></div>
+          <div><dt>Current activity</dt><dd>{signalStatusText(snapshot, "minecraft-activity")}</dd><small>Specific only when supported</small></div>
+          <div><dt>Current risk</dt><dd>{signalStatusText(snapshot, "minecraft-danger")}</dd><small>No cause is guessed from motion alone</small></div>
         </dl>
-      </PageSectionCard>
-      <PageSectionCard
-        title="Health & Recovery"
-        badge={capture.state === "available" ? "Ready" : "Needs setup"}
-        badgeTone={capture.tone}
-        detail={capture.state === "available" ? "Capture is currently healthy enough for the selected stream state." : "Recovery actions stay unavailable until the production capture controller is connected here."}
-      >
-        <div className={styles.actions}>
-          <a href="/studio/gameplay/capture">Reconnect Capture</a>
-          <AvailabilityAction availability={capture.state === "available" ? capture : unavailableAvailability("Recovery actions stay unavailable until the production capture controller is connected here.", "Use setup recovery")} />
-        </div>
-      </PageSectionCard>
-    </CardGrid>
+      </article>
+
+      <div className={styles.engineColumns}>
+        <article id="game-capture" className={styles.captureCard}>
+          <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Game Capture</span><h2>OBS processing</h2></div><StatusBadge tone={capture.tone}>{capture.badge}</StatusBadge></div>
+          <div className={styles.captureSource}><strong>OBS Virtual Camera</strong><small>{snapshot === null ? capture.detail : `${titleCase(snapshot.capabilities.tier)} · frames remain local`}</small></div>
+          <div className={styles.captureMetrics} aria-label="Game capture processing metrics">
+            {primaryMetrics.map((metric) => <span key={metric.label}><small>{metric.label}</small><b>{metric.value}</b><em>{metric.detail}</em></span>)}
+          </div>
+          <div className={styles.actions}><a href="/studio/gameplay/capture" target="_blank" rel="noreferrer">{capture.state === "available" ? "Open capture controls" : "Connect or recover capture"}</a></div>
+          <details className={styles.diagnostics}><summary>Advanced diagnostics</summary><p>Support tier: {snapshot === null ? "Unknown" : titleCase(snapshot.capabilities.tier)}. Capture method: {customerSafeLabel(snapshot?.capabilities.adapterId, "Universal visual path")}. Lower-level transport details remain secondary to the trusted facts below.</p></details>
+        </article>
+
+        <article id="understanding" className={styles.understandingPanel}>
+          <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Supported game facts</span><h2>Current understanding</h2></div><span className={styles.softLabel}>Only reliable facts affect quests</span></div>
+          <div className={styles.factList}>
+            {snapshot === null ? <p>Gameplay facts are unknown until Game Capture supplies a trusted snapshot.</p> : snapshot.signals.map((signal) => {
+              const observation = signal.observation;
+              const value = observation.status === "known" ? String(observation.value) : observation.status === "stale" ? String(observation.previousValue ?? "Stale") : observation.status === "unknown" ? titleCase(observation.reason) : observation.reason;
+              return <div key={signal.signalId}><span><strong>{titleCase(signal.kind)}</strong><small>{value}</small></span><em data-status={observation.status}>{observation.status === "known" ? "Observed" : titleCase(observation.status)}</em></div>;
+            })}
+          </div>
+          <div className={styles.understandingNote}><strong>Quest-safe interpretation</strong><small>Known facts may shape a quest. Inferred facts stay labelled. Unknown, stale, conflicting, or unsupported facts never become a precise claim.</small></div>
+        </article>
+      </div>
+      <PageSectionCard title="Health & Recovery" badge={capture.state === "available" ? "Ready" : "Needs attention"} badgeTone={capture.tone} detail={capture.detail}><div className={styles.actions}><a href="/studio/gameplay/capture" target="_blank" rel="noreferrer">Open Game Capture recovery</a><AvailabilityAction availability={capture} /></div></PageSectionCard>
+    </div>
   );
 }
 
 function LiveAnalyticsPage({ view }: { readonly view: StreamerViewModel | null }) {
   const audience = view?.audience ?? null;
+  const pointer = view?.liveDirector?.audiencePointer ?? null;
+  const knownPointer = pointer?.status === "known" || pointer?.status === "stale" ? pointer : null;
+  const messageRate = knownSignalValue(audience, "audience-message-rate");
+  const activeParticipants = knownSignalValue(audience, "audience-active-participants");
+  const returning = knownSignalValue(audience, "audience-returning-participants");
+  const newlyActive = knownSignalValue(audience, "audience-newly-active-participants");
+  const recentlyInactive = knownSignalValue(audience, "audience-recently-inactive-participants");
+  const previousMood = knownSignalValue(audience, "audience-previous-mood");
+  const previousRate = knownSignalValue(audience, "audience-previous-message-rate");
+  const questVotes = view?.questCycle.voteTallies.reduce((sum, tally) => sum + tally.votes, 0) ?? 0;
+  const topicRows: Array<{ readonly label: string; readonly count: number | null; readonly detail: string }> = [];
+  if (knownPointer !== null) {
+    topicRows.push({ label: knownPointer.topic, count: knownPointer.qualifyingMessages, detail: `${knownPointer.uniqueParticipants} session participants` });
+  }
+  for (const keyword of view?.profile.keywordWatchlist ?? []) {
+    const count = knownSignalValue(audience, `audience-watchlist-${gameIdFromName(keyword)}`);
+    topicRows.push({ label: keyword, count: typeof count === "number" ? count : null, detail: "Streamer watchlist" });
+  }
   return (
-    <CardGrid className={styles.grid}>
-      <PageSectionCard
-        title="Overview"
-        badge={audience === null ? "Waiting" : "Active"}
-        badgeTone={audience === null ? "neutral" : "info"}
-        detail="Live Analytics keeps only aggregate audience health, not raw messages or viewer usernames."
-      />
-      <PageSectionCard
-        title="Activity"
-        badge={audience === null ? "Waiting" : "Active"}
-        badgeTone={audience === null ? "neutral" : "info"}
-        detail={audience === null ? "Connect Twitch chat to show privacy-safe audience activity." : `${audience.signals.length} aggregate audience signals are available.`}
-      />
-      {unavailableCard("Topics", "Topic detection and watchlist counts are not connected yet. Raw chat and usernames will not be shown.", "Available after audience setup")}
-      {unavailableCard("Session History", "Aggregate audience history is not connected to this page yet.", "Available after history setup")}
-    </CardGrid>
+    <div className={styles.analyticsWorkspace}>
+      <div id="overview" className={styles.analyticsGrid}>
+        <article><small>Audience mood</small><strong>{audienceMood(view)}</strong><p>{audience === null ? "Waiting for authorised Twitch chat activity." : "Inferred from the current rolling activity window."}</p><span>Previously: {typeof previousMood === "string" ? titleCase(previousMood) : "not enough history yet"}</span></article>
+        <article><small>Chat activity</small><strong>{typeof messageRate === "number" ? `${messageRate} messages/min` : audience === null ? "Waiting" : `${audience.sampleSize * 2} estimated/min`}</strong><p>{typeof activeParticipants === "number" ? `${activeParticipants} active participants in the current window.` : "Unique activity appears only when session-scoped participant keys support it."}</p><span>Previous equal window: {typeof previousRate === "number" ? `${previousRate} messages/min` : "not available yet"}</span></article>
+        <article><small>Quest participation</small><strong>{questVotes} votes</strong><p>Official votes from the current authoritative quest cycle.</p><span>{view?.questCycle.status === "voting" ? "Voting is open now" : `Current state: ${titleCase(view?.questCycle.status ?? "waiting")}`}</span></article>
+      </div>
+
+      <article id="topics" className={styles.topicPanel}>
+        <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Current topics</span><h2>What the audience is reacting to</h2></div><a href="/studio/profile#watchlist">Edit watchlist</a></div>
+        <div className={styles.topicList}>
+          {topicRows.length === 0 ? <p>No repeated topic has passed the current confidence boundary.</p> : topicRows.map((topic) => <div key={`${topic.label}-${topic.detail}`}><span><strong>{topic.label}</strong><small>{topic.detail}</small></span><em>{topic.count === null ? "Waiting" : `${topic.count} mentions`}</em></div>)}
+        </div>
+        <p className={styles.privacyNote}>ChatXPT stores aggregate counts here—not viewer names or raw messages.</p>
+      </article>
+
+      <article id="activity" className={styles.participationPanel}>
+        <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Participation flow</span><h2>How the audience is active now</h2></div><span className={styles.softLabel}>Current session</span></div>
+        <div className={styles.flowSummary}>
+          <span><b>{typeof newlyActive === "number" ? newlyActive : "—"}</b><small>Newly active</small></span>
+          <span><b>{typeof returning === "number" ? returning : "—"}</b><small>Returning</small></span>
+          <span><b>{typeof recentlyInactive === "number" ? recentlyInactive : "—"}</b><small>Recently inactive</small></span>
+          <span><b>{typeof activeParticipants === "number" ? activeParticipants : knownPointer?.uniqueParticipants ?? "—"}</b><small>Active now</small></span>
+        </div>
+        <p>Returning appears only when a privacy-safe participant key proves earlier activity in this session. This does not claim exact Twitch joins, departures, or cross-session identity.</p>
+      </article>
+
+      <PageSectionCard title="Session History" badge="Current session" badgeTone="info" detail="Current rolling aggregates update during this stream. A post-stream summary is not included on this page yet." />
+    </div>
   );
 }
 
-function LiveQuestsPage({ view }: { readonly view: StreamerViewModel | null }) {
+function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
+  readonly view: StreamerViewModel | null;
+  readonly pending: boolean;
+  readonly onCommand?: (command: StreamerUiCommand) => void;
+  readonly commandFactory: StreamerCommandFactory;
+}) {
   const cycle = view?.questCycle ?? null;
   const active = cycle?.options.find((option) => option.candidateId === cycle.activeCandidateId) ?? null;
+  const [selectedCandidateDraft, setSelectedCandidateId] = useState<string | null>(null);
+  const selectedCandidateId = cycle?.options.some(
+    (option) => option.candidateId === selectedCandidateDraft,
+  )
+    ? selectedCandidateDraft
+    : active?.candidateId ?? cycle?.options[0]?.candidateId ?? null;
+  const cycleId = cycle?.envelope.questCycleId ?? null;
+  const [confirmationDraft, setConfirmationDraft] = useState<{
+    readonly cycleId: string | null;
+    readonly action: "cancel" | "skip" | "fail";
+  } | null>(null);
+  const confirmAction = confirmationDraft?.cycleId === cycleId && cycle?.availableStreamerActions.includes(confirmationDraft.action)
+    ? confirmationDraft.action
+    : null;
+  const serverManualProgress = cycle?.progress?.value ?? 0;
+  const [manualProgressDraft, setManualProgressDraft] = useState<{
+    readonly cycleId: string | null;
+    readonly serverValue: number;
+    readonly value: number;
+  } | null>(null);
+  const manualProgress = manualProgressDraft?.cycleId === cycleId &&
+    manualProgressDraft.serverValue === serverManualProgress
+    ? manualProgressDraft.value
+    : serverManualProgress;
+  const totalVotes = cycle?.voteTallies.reduce((sum, tally) => sum + tally.votes, 0) ?? 0;
+  const actionLabels = {
+    approve: "Approve selected",
+    reject: "Reject selected",
+    start: "Start selected",
+    pause: "Pause sidequest",
+    cancel: "Cancel sidequest",
+    skip: "Skip sidequest",
+    succeed: "Mark succeeded",
+    fail: "Mark failed",
+    "emergency-pause": "Emergency pause",
+  } as const;
+  function sendAction(action: keyof typeof actionLabels) {
+    if (view === null) return;
+    const candidateId = ["approve", "reject", "start"].includes(action) ? selectedCandidateId : null;
+    onCommand?.(buildQuestCommand(view, action, candidateId, commandFactory));
+    setConfirmationDraft(null);
+  }
   return (
-    <CardGrid className={styles.grid}>
-      <PageSectionCard
-        title="Now"
-        badge={cycle === null ? "Waiting" : titleCase(cycle.status)}
-        badgeTone={cycle === null ? "neutral" : "info"}
-        detail={active === null ? "No sidequest is active." : `${active.title} is active.`}
-      />
-      <PageSectionCard
-        title="Recommendations"
-        badge={cycle?.options.length === 3 ? "Three options" : "Waiting"}
-        badgeTone={cycle?.options.length === 3 ? "success" : "neutral"}
-        detail={cycle === null || cycle.options.length !== 3 ? "ChatXPT will not open voting until exactly three validated options are ready." : "Three validated options are available for streamer review."}
-      />
-      <PageSectionCard
-        title="Why"
-        badge={cycle?.options.length === 3 ? "Available" : "Waiting"}
-        badgeTone={cycle?.options.length === 3 ? "info" : "neutral"}
-        detail={cycle?.options[0]?.rationale ?? "Reasoning appears after ChatXPT has a validated three-option proposal."}
-      />
-      {unavailableCard("Voting", "Full voting controls are not connected here yet. Compact controls remain available in Live Config.", "Use Live Config for now")}
-      {unavailableCard("Results", "Result controls and history summaries are not connected to this page yet.", "Available after quest workflow setup")}
-    </CardGrid>
+    <div className={styles.questWorkspace}>
+      <article id="now" className={styles.nowQuest}>
+        <div><StatusBadge tone={cycle?.status === "voting" ? "info" : cycle?.status === "active" ? "success" : "neutral"}>{cycle === null ? "Waiting" : titleCase(cycle.status)}</StatusBadge><h2>Now</h2><strong>{active === null ? cycle?.status === "voting" ? "Viewers are choosing the next sidequest" : "No sidequest is active" : active.title}</strong><p>{cycle === null || cycle.options.length !== 3 ? "ChatXPT waits until exactly three safe, game-compatible options are validated." : "All three options passed the deterministic safety and game-fit boundary before appearing here."}</p></div>
+        {view?.emergencyPaused ? <button type="button" className={styles.primaryAction} disabled={pending || onCommand === undefined} onClick={() => onCommand?.(buildEmergencyClearCommand(view, commandFactory))}>Clear emergency pause</button> : cycle?.availableStreamerActions.includes("emergency-pause") ? <button type="button" className={styles.dangerAction} disabled={pending || onCommand === undefined} onClick={() => sendAction("emergency-pause")}>Pause new quests</button> : null}
+      </article>
+
+      <section id="recommendations" aria-labelledby="recommendations-heading">
+        <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Recommendations</span><h2 id="recommendations-heading">Exactly three official choices</h2></div><span className={styles.softLabel}>{cycle?.options.length === 3 ? `${totalVotes} votes` : "Waiting for validation"}</span></div>
+        {cycle?.options.length === 3 ? (
+          <div className={styles.questCards}>
+            {cycle.options.map((option, index) => {
+              const votes = cycle.voteTallies.find((tally) => tally.candidateId === option.candidateId)?.votes ?? 0;
+              const share = totalVotes === 0 ? 0 : Math.round((votes / totalVotes) * 100);
+              return (
+                <button key={option.candidateId} type="button" className={selectedCandidateId === option.candidateId ? styles.selectedQuest : styles.questCard} aria-pressed={selectedCandidateId === option.candidateId} onClick={() => setSelectedCandidateId(option.candidateId)}>
+                  <span className={styles.questNumber}>{index + 1}</span><StatusBadge tone={selectedCandidateId === option.candidateId ? "success" : "neutral"}>{cycle.status === "voting" ? `${share}%` : selectedCandidateId === option.candidateId ? "Selected" : "Option"}</StatusBadge><h3>{option.title}</h3><p>{option.instruction}</p><div className={styles.questTags}><span>{titleCase(option.difficulty)}</span><span>{formatDuration(option.durationSeconds)}</span><span>{option.rewardPoints} pts</span></div>
+                </button>
+              );
+            })}
+          </div>
+        ) : <Notice title="No official three-option proposal">No partial batch is shown or opened for voting.</Notice>}
+      </section>
+
+      <article className={styles.whyPanel}><div><span className={styles.sectionLabel}>Why these were recommended</span><h2>Game fit, timing, and audience context</h2><p>{cycle?.options.find((option) => option.candidateId === selectedCandidateId)?.rationale ?? "Select a validated recommendation to see its private streamer rationale."}</p></div><small>Provider output is never authoritative until deterministic validation passes.</small></article>
+
+      <article id="voting" className={styles.questControls}>
+        <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Voting & controls</span><h2>Authoritative stream controls</h2></div><StatusBadge tone={cycle === null ? "neutral" : "info"}>{cycle === null ? "Waiting" : titleCase(cycle.status)}</StatusBadge></div>
+        <div className={styles.actions}>
+          {cycle?.availableStreamerActions.filter((action) => action !== "emergency-pause").map((action) => (
+            <button key={action} type="button" className={["cancel", "skip", "fail"].includes(action) ? styles.dangerAction : styles.secondaryButton} disabled={pending || onCommand === undefined || (["approve", "reject", "start"].includes(action) && selectedCandidateId === null)} onClick={() => {
+              if (action === "cancel" || action === "skip" || action === "fail") {
+                setConfirmationDraft({ cycleId, action });
+              }
+              else sendAction(action);
+            }}>{actionLabels[action]}</button>
+          ))}
+        </div>
+        {confirmAction !== null ? <Notice tone="danger" title={`Confirm ${actionLabels[confirmAction].toLowerCase()}`}><div className={styles.actions}><button type="button" className={styles.dangerAction} disabled={pending} onClick={() => sendAction(confirmAction)}>Confirm</button><button type="button" className={styles.secondaryButton} onClick={() => setConfirmationDraft(null)}>Keep current sidequest</button></div></Notice> : null}
+        {cycle?.status === "active" && cycle.completionRule?.mode === "manual" && view !== null ? <label className={styles.compactField}>Manual progress: {Math.round(manualProgress * 100)}%<input type="range" min="0" max="1" step="0.05" value={manualProgress} disabled={pending || onCommand === undefined} onChange={(event) => setManualProgressDraft({ cycleId, serverValue: serverManualProgress, value: Number(event.currentTarget.value) })} /><button type="button" className={styles.secondaryButton} disabled={pending || onCommand === undefined || manualProgress === serverManualProgress} onClick={() => onCommand?.(buildQuestProgressCommand(view, manualProgress, commandFactory))}>Update progress</button></label> : null}
+      </article>
+
+      <PageSectionCard title="Results" badge={cycle?.result === null || cycle === null ? "No result yet" : titleCase(cycle.result.outcome)} badgeTone={cycle?.result?.outcome === "succeeded" ? "success" : cycle?.result === null || cycle === null ? "neutral" : "warning"} detail={cycle?.result === null || cycle === null ? "The authoritative result appears here after success, failure, cancellation, skip, or expiry." : `${cycle.result.reason} · ${cycle.result.rewardPointsAwarded} points awarded.`} />
+    </div>
   );
 }
 
@@ -568,13 +925,38 @@ function ProfilePage({
 }) {
   const profile = view?.profile ?? null;
   const saved = view === null ? null : editableDefaultsFromView(view);
+  const selectedPresetId = profile?.selectedPresetId ?? profile?.streamPresets[0]?.presetId ?? null;
+  const selectedPreset = profile?.streamPresets.find((preset) => preset.presetId === selectedPresetId) ?? profile?.streamPresets[0] ?? null;
+
+  function commitProfile(next: NonNullable<typeof saved>) {
+    if (view === null || onCommand === undefined) return;
+    onCommand(buildProfileSettingsCommand(view, next, commandFactory));
+  }
+
+  function selectPreset(presetId: string) {
+    if (saved !== null) commitProfile({ ...saved, selectedPresetId: presetId });
+  }
+
+  function duplicatePreset() {
+    if (selectedPreset === null || saved === null) return;
+    const presetId = commandFactory.createId("preset").slice(0, 120);
+    const nextPreset: StreamPreset = {
+      ...selectedPreset,
+      presetId,
+      name: `${selectedPreset.name} Copy`.slice(0, 48),
+      origin: "custom",
+      experience: { ...selectedPreset.experience },
+      preferredQuestTypes: [...selectedPreset.preferredQuestTypes],
+      voting: { ...selectedPreset.voting },
+      rewards: { ...selectedPreset.rewards },
+    };
+    commitProfile({ ...saved, streamPresets: [...saved.streamPresets, nextPreset], selectedPresetId: presetId });
+  }
+
   return (
-    <CardGrid className={styles.grid}>
-      <Card className={styles.card}>
-        <StatusBadge tone={profile === null ? "neutral" : "success"}>
-          {profile === null ? "No profile" : "Saved profile"}
-        </StatusBadge>
-        <h3>Personality</h3>
+    <div className={styles.profileWorkspace}>
+      <Card id="personality" className={styles.profileIdentity}>
+        <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Personality</span><h2>Saved stream defaults</h2></div><StatusBadge tone={profile === null ? "neutral" : "success"}>{profile === null ? "Waiting" : "Saved profile"}</StatusBadge></div>
         <form
           className={styles.profileForm}
           onSubmit={(event) => {
@@ -582,8 +964,6 @@ function ProfilePage({
             if (view === null || saved === null || onCommand === undefined) return;
             const data = new FormData(event.currentTarget);
             const gameName = String(data.get("gameName") ?? "").trim();
-            const intensity = Number(data.get("intensity") ?? saved.experience.intensity ?? 0.5);
-            const creativity = Number(data.get("creativity") ?? saved.experience.creativity ?? 0.5);
             const gameId = gameName.length === 0
               ? null
               : profile?.gameName === gameName
@@ -593,51 +973,109 @@ function ProfilePage({
               ...saved,
               gameId,
               gameName: gameName.length === 0 ? null : gameName,
-              experience: {
-                ...saved.experience,
-                intensity: clampUnit(intensity, saved.experience.intensity ?? 0.5),
-                creativity: clampUnit(creativity, saved.experience.creativity ?? 0.5),
-              },
             }, commandFactory));
           }}
         >
           <label className={styles.compactField}>
             Game
-            <input name="gameName" defaultValue={profile?.gameName ?? ""} disabled={view === null || pending} placeholder="Minecraft" />
-          </label>
-          <label className={styles.compactField}>
-            Intensity
-            <input name="intensity" type="range" min="0" max="1" step="0.05" defaultValue={profile?.experience.intensity ?? 0.5} disabled={view === null || pending} />
-          </label>
-          <label className={styles.compactField}>
-            Creativity
-            <input name="creativity" type="range" min="0" max="1" step="0.05" defaultValue={profile?.experience.creativity ?? 0.5} disabled={view === null || pending} />
+            <input
+              key={profile?.gameName ?? "loading-game"}
+              name="gameName"
+              defaultValue={profile?.gameName ?? ""}
+              disabled={view === null || pending}
+              placeholder="Minecraft"
+            />
           </label>
           <button type="submit" disabled={view === null || pending || onCommand === undefined}>
-            {pending ? "Saving..." : "Save profile"}
+            {pending ? "Saving..." : "Save current game"}
           </button>
         </form>
       </Card>
-      {unavailableCard("Stream Presets", "Competitive, Chill, Educational, Community, and custom presets are not connected yet.", "Use saved defaults for now")}
-      <Card className={styles.card}>
-        <StatusBadge tone={profile === null ? "neutral" : "success"}>{profile === null ? "Waiting" : "Saved"}</StatusBadge>
-        <h3>Safety</h3>
+
+      <div id="stream-presets" className={styles.presetWorkspace}>
+        <article className={styles.presetLibrary}>
+          <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Stream Presets</span><h2>Choose a starting style</h2></div><button type="button" className={styles.iconButton} aria-label="Create preset" disabled={saved === null || pending || onCommand === undefined} onClick={duplicatePreset}>+</button></div>
+          <div className={styles.presetList}>
+            {profile?.streamPresets.map((preset) => <button key={preset.presetId} type="button" aria-pressed={preset.presetId === selectedPresetId} onClick={() => selectPreset(preset.presetId)} disabled={pending || onCommand === undefined}><span className={styles.presetGlyph}>{preset.name.slice(0, 1).toUpperCase()}</span><span><strong>{preset.name}</strong><small>{preset.description}</small></span><em>{preset.presetId === selectedPresetId ? "Selected" : "Open"}</em></button>)}
+          </div>
+          <button type="button" className={styles.secondaryButton} disabled={saved === null || pending || onCommand === undefined} onClick={duplicatePreset}>Create custom preset</button>
+        </article>
+
+        <article className={styles.presetEditor}>
+          {selectedPreset === null ? <p>Load a saved profile to edit stream presets.</p> : (
+            <form key={selectedPreset.presetId} className={styles.profileForm} onSubmit={(event) => {
+              event.preventDefault();
+              if (saved === null) return;
+              const data = new FormData(event.currentTarget);
+              const updated: StreamPreset = {
+                ...selectedPreset,
+                name: String(data.get("presetName") ?? selectedPreset.name).trim().slice(0, 48),
+                description: String(data.get("presetDescription") ?? selectedPreset.description).trim().slice(0, 180),
+                experience: {
+                  ...selectedPreset.experience,
+                  intensity: clampUnit(Number(data.get("presetIntensity")), selectedPreset.experience.intensity ?? 0.5),
+                  creativity: clampUnit(Number(data.get("presetCreativity")), selectedPreset.experience.creativity ?? 0.5),
+                  playfulness: clampUnit(Number(data.get("presetPlayfulness")), selectedPreset.experience.playfulness ?? 0.5),
+                },
+                preferredQuestTypes: textToList(data.get("presetQuestTypes")),
+                voting: {
+                  ...selectedPreset.voting,
+                  voteVisibility: data.get("voteVisibility") === "hidden-until-close"
+                    ? "hidden-until-close"
+                    : "live-tally",
+                  showCountdown: data.get("showCountdown") === "on",
+                },
+                rewards: {
+                  ...selectedPreset.rewards,
+                  rewardDisplay:
+                    data.get("rewardDisplay") === "session-points"
+                      ? "session-points"
+                      : data.get("rewardDisplay") === "community-hype"
+                        ? "community-hype"
+                        : "session-points-and-hype",
+                  showRewardPreview: data.get("showRewardPreview") === "on",
+                },
+              };
+              commitProfile({ ...saved, streamPresets: saved.streamPresets.map((preset) => preset.presetId === updated.presetId ? updated : preset), selectedPresetId: updated.presetId });
+            }}>
+              <div className={styles.presetEditorHead}><div><StatusBadge tone="success">{selectedPreset.presetId === profile?.selectedPresetId ? "Selected default" : "Preset"}</StatusBadge><h2>{selectedPreset.name}</h2><p>{selectedPreset.description}</p></div></div>
+              <label className={styles.compactField}>Preset name<input name="presetName" defaultValue={selectedPreset.name} maxLength={48} required disabled={pending} /></label>
+              <label className={styles.compactField}>Description<input name="presetDescription" defaultValue={selectedPreset.description} maxLength={180} required disabled={pending} /></label>
+              <div className={styles.presetBalance}>
+                <label className={styles.compactField}>Quest intensity<input name="presetIntensity" type="range" min="0" max="1" step="0.05" defaultValue={selectedPreset.experience.intensity ?? 0.5} disabled={pending} /></label>
+                <label className={styles.compactField}>Creativity<input name="presetCreativity" type="range" min="0" max="1" step="0.05" defaultValue={selectedPreset.experience.creativity ?? 0.5} disabled={pending} /></label>
+                <label className={styles.compactField}>Playfulness<input name="presetPlayfulness" type="range" min="0" max="1" step="0.05" defaultValue={selectedPreset.experience.playfulness ?? 0.5} disabled={pending} /></label>
+                <label className={styles.compactField}>Preferred quest styles<textarea name="presetQuestTypes" defaultValue={listToText(selectedPreset.preferredQuestTypes)} disabled={pending} /></label>
+                <label className={styles.compactField}>Vote results<select name="voteVisibility" defaultValue={selectedPreset.voting.voteVisibility} disabled={pending}><option value="live-tally">Show live tally</option><option value="hidden-until-close">Reveal when voting closes</option></select></label>
+                <label className={styles.compactField}>Reward display<select name="rewardDisplay" defaultValue={selectedPreset.rewards.rewardDisplay} disabled={pending}><option value="session-points-and-hype">Session points + community hype</option><option value="session-points">Session points</option><option value="community-hype">Community hype</option></select></label>
+                <label className={styles.checkField}><input name="showCountdown" type="checkbox" defaultChecked={selectedPreset.voting.showCountdown} disabled={pending} /> Show voting countdown</label>
+                <label className={styles.checkField}><input name="showRewardPreview" type="checkbox" defaultChecked={selectedPreset.rewards.showRewardPreview} disabled={pending} /> Preview quest rewards</label>
+              </div>
+              <div className={styles.presetRules}><span><strong>Viewer voting</strong><small>Extension with hosted board and chat fallbacks</small></span><span><strong>Manual approval</strong><small>The streamer reviews each official batch</small></span><span><strong>Session rewards</strong><small>{titleCase(selectedPreset.rewards.rewardDisplay)}</small></span><span><strong>Global boundaries</strong><small>Safety and accessibility below always apply</small></span></div>
+              <div className={styles.presetActions}><button type="button" className={styles.secondaryButton} disabled={pending || onCommand === undefined} onClick={duplicatePreset}>Duplicate</button>{selectedPreset.origin === "custom" && saved !== null ? <button type="button" className={styles.dangerAction} disabled={pending || onCommand === undefined || saved.streamPresets.length === 1} onClick={() => {
+                const remaining = saved.streamPresets.filter((preset) => preset.presetId !== selectedPreset.presetId);
+                const nextSelected = remaining[0]?.presetId ?? null;
+                commitProfile({ ...saved, streamPresets: remaining, selectedPresetId: nextSelected });
+              }}>Delete</button> : null}<button type="submit" disabled={pending || onCommand === undefined}>Save preset</button></div>
+            </form>
+          )}
+        </article>
+      </div>
+
+      <Card id="safety" className={styles.globalBoundaries}>
+        <div><StatusBadge tone={profile === null ? "neutral" : "success"}>{profile === null ? "Waiting" : "Global boundaries"}</StatusBadge><h3>Safety & Accessibility</h3><p>These boundaries apply to every preset and cannot be weakened by a live override.</p></div>
         <label className={styles.compactField}>
           Safety limits
-          <textarea form="profile-lists-form" name="restrictions" defaultValue={listToText(profile?.restrictions ?? [])} disabled={view === null || pending} />
+          <textarea key={listToText(profile?.restrictions ?? []) || "loading-restrictions"} form="profile-lists-form" name="restrictions" defaultValue={listToText(profile?.restrictions ?? [])} disabled={view === null || pending} />
         </label>
         <label className={styles.compactField}>
           Preferred sidequests
-          <textarea form="profile-lists-form" name="preferredQuestTypes" defaultValue={listToText(profile?.preferredQuestTypes ?? [])} disabled={view === null || pending} />
+          <textarea key={listToText(profile?.preferredQuestTypes ?? []) || "loading-preferred"} form="profile-lists-form" name="preferredQuestTypes" defaultValue={listToText(profile?.preferredQuestTypes ?? [])} disabled={view === null || pending} />
         </label>
         <label className={styles.compactField}>
           Forbidden sidequests
-          <textarea form="profile-lists-form" name="forbiddenQuestTypes" defaultValue={listToText(profile?.forbiddenQuestTypes ?? [])} disabled={view === null || pending} />
+          <textarea key={listToText(profile?.forbiddenQuestTypes ?? []) || "loading-forbidden"} form="profile-lists-form" name="forbiddenQuestTypes" defaultValue={listToText(profile?.forbiddenQuestTypes ?? [])} disabled={view === null || pending} />
         </label>
-      </Card>
-      <Card className={styles.card}>
-        <StatusBadge tone={profile === null ? "neutral" : "success"}>{profile === null ? "Waiting" : "Saved"}</StatusBadge>
-        <h3>Accessibility</h3>
         <form
           id="profile-lists-form"
           className={styles.profileForm}
@@ -651,19 +1089,24 @@ function ProfilePage({
               preferredQuestTypes: textToList(data.get("preferredQuestTypes")),
               forbiddenQuestTypes: textToList(data.get("forbiddenQuestTypes")),
               accessibilityNeeds: textToList(data.get("accessibilityNeeds")),
+              keywordWatchlist: textToList(data.get("keywordWatchlist")),
             }, commandFactory));
           }}
         >
-          <label className={styles.compactField}>
+          <label id="accessibility" className={styles.compactField}>
             Accessibility needs
-            <textarea name="accessibilityNeeds" defaultValue={listToText(profile?.accessibilityNeeds ?? [])} disabled={view === null || pending} />
+            <textarea key={listToText(profile?.accessibilityNeeds ?? []) || "loading-accessibility"} name="accessibilityNeeds" defaultValue={listToText(profile?.accessibilityNeeds ?? [])} disabled={view === null || pending} />
+          </label>
+          <label className={styles.compactField} id="watchlist">
+            Keyword watchlist
+            <textarea key={listToText(profile?.keywordWatchlist ?? []) || "loading-watchlist"} name="keywordWatchlist" defaultValue={listToText(profile?.keywordWatchlist ?? [])} disabled={view === null || pending} />
           </label>
           <button type="submit" disabled={view === null || pending || onCommand === undefined}>
-            {pending ? "Saving..." : "Save limits"}
+            {pending ? "Saving..." : "Save global boundaries"}
           </button>
         </form>
       </Card>
-    </CardGrid>
+    </div>
   );
 }
 
@@ -679,19 +1122,23 @@ function StreamSettingsPage({
   readonly commandFactory: StreamerCommandFactory;
 }) {
   const override = view?.sessionOverride ?? null;
-  const savedIntensity = view?.profile.experience.intensity ?? 0.5;
-  const savedCreativity = view?.profile.experience.creativity ?? 0.5;
-  const effectiveIntensity = override?.experiencePatch.intensity ?? savedIntensity;
-  const effectiveCreativity = override?.experiencePatch.creativity ?? savedCreativity;
+  const savedProfile = view === null ? null : resolveEffectiveStreamerProfile(view.profile, null);
+  const effectiveProfile = view === null ? null : resolveEffectiveStreamerProfile(view.profile, override);
+  const savedPreset = view === null ? null : resolveSelectedStreamPreset(view.profile, null);
+  const effectivePreset = view === null ? null : resolveSelectedStreamPreset(view.profile, override);
+  const savedIntensity = savedProfile?.experience.intensity ?? 0.5;
+  const savedCreativity = savedProfile?.experience.creativity ?? 0.5;
+  const effectiveIntensity = effectiveProfile?.experience.intensity ?? savedIntensity;
+  const effectiveCreativity = effectiveProfile?.experience.creativity ?? savedCreativity;
   return (
-    <CardGrid className={styles.grid}>
+    <div className={styles.settingsWorkspace}>
       <PageSectionCard
         title="Saved Source"
         badge={view === null ? "Waiting" : "Saved defaults"}
         badgeTone={view === null ? "neutral" : "info"}
-        detail={view === null ? "Start a session to see current-stream settings." : `Saved defaults: intensity ${Math.round(savedIntensity * 100)}%, creativity ${Math.round(savedCreativity * 100)}%.`}
+        detail={view === null ? "Start a session to see current-stream settings." : `${savedPreset?.name ?? "Saved defaults"}: intensity ${Math.round(savedIntensity * 100)}%, creativity ${Math.round(savedCreativity * 100)}%.`}
       />
-      <Card className={styles.card}>
+      <Card id="session-override" className={styles.card}>
         <StatusBadge tone={override === null ? "neutral" : "warning"}>
           {override === null ? "Using defaults" : "Temporary override"}
         </StatusBadge>
@@ -699,9 +1146,10 @@ function StreamSettingsPage({
         <p>
           {override === null
             ? "This stream currently follows saved profile defaults."
-            : `This stream is using temporary values: intensity ${Math.round(effectiveIntensity * 100)}%, creativity ${Math.round(effectiveCreativity * 100)}%.`}
+            : `This stream uses ${effectivePreset?.name ?? "a temporary configuration"}: intensity ${Math.round(effectiveIntensity * 100)}%, creativity ${Math.round(effectiveCreativity * 100)}%.`}
         </p>
         <form
+          key={`${effectivePreset?.presetId ?? "saved"}:${effectiveIntensity}:${effectiveCreativity}:${override?.appliedAt ?? "defaults"}`}
           className={styles.profileForm}
           onSubmit={(event) => {
             event.preventDefault();
@@ -710,9 +1158,16 @@ function StreamSettingsPage({
             onCommand(buildSessionOverrideCommand(view, {
               intensity: clampUnit(Number(data.get("intensity") ?? effectiveIntensity), effectiveIntensity),
               creativity: clampUnit(Number(data.get("creativity") ?? effectiveCreativity), effectiveCreativity),
-            }, commandFactory));
+            }, commandFactory, String(data.get("presetId") ?? "") || null));
           }}
         >
+          <label className={styles.compactField}>
+            Current-stream preset
+            <select name="presetId" defaultValue={effectivePreset?.presetId ?? ""} disabled={view === null || pending || onCommand === undefined}>
+              <option value="">Saved default</option>
+              {view?.profile.streamPresets.map((preset) => <option key={preset.presetId} value={preset.presetId}>{preset.name}</option>)}
+            </select>
+          </label>
           <label className={styles.compactField}>
             Current-stream intensity
             <input name="intensity" type="range" min="0" max="1" step="0.05" defaultValue={effectiveIntensity} disabled={view === null || pending || onCommand === undefined} />
@@ -726,7 +1181,7 @@ function StreamSettingsPage({
           </button>
         </form>
       </Card>
-      <Card className={styles.card}>
+      <Card id="reset-to-saved" className={styles.card}>
         <StatusBadge tone={override === null ? "neutral" : "info"}>
           {override === null ? "No override" : "Reset available"}
         </StatusBadge>
@@ -747,23 +1202,29 @@ function StreamSettingsPage({
           Reset to saved defaults
         </button>
       </Card>
-    </CardGrid>
+    </div>
   );
 }
 
-function TestLabPage() {
+function TestLabPage({ view, readiness }: {
+  readonly view: StreamerViewModel | null;
+  readonly readiness?: StreamerReadinessView | null;
+}) {
+  const capture = readinessAvailability(readiness, "obs-capture", "Connect OBS Virtual Camera before running the live capture check.");
+  const voting = readinessAvailability(readiness, "twitch", "Connect Twitch and install the Extension before checking viewer voting.");
   return (
-    <CardGrid className={styles.grid}>
-      {unavailableCard("Sample / Live Source", "Sample checks and live source checks are not connected yet. They will stay separate from the active stream.", "Available after Test Lab setup")}
-      {unavailableCard("Capture Controls", "Capture controls are not connected to Test Lab yet.", "Available after capture setup")}
-      <PageSectionCard
-        title="Observed / Unknown"
-        badge="Waiting"
-        badgeTone="neutral"
-        detail="Observed facts and unknown facts will appear here without upgrading samples into live stream state."
-      />
-      {unavailableCard("Recovery", "Permission, source, and reconnect recovery controls are not connected to Test Lab yet.", "Available after recovery setup")}
-    </CardGrid>
+    <div className={styles.testWorkspace}>
+      <Notice tone="warning" title="Sample checks stay separate from live state">A sample never becomes the judged live gameplay or Twitch evidence. Live checks use the current authorised session and are labelled separately.</Notice>
+      <div className={styles.testGrid}>
+        <article><span className={styles.testIcon}>01</span><strong>Game Capture</strong><p>Use OBS Virtual Camera in a persistent capture tab while you move through Studio.</p><StatusBadge tone={capture.tone}>{capture.badge}</StatusBadge><a href="/studio/gameplay/capture" target="_blank" rel="noreferrer">Run live capture check</a></article>
+        <article id="viewer-voting-check"><span className={styles.testIcon}>02</span><strong>Viewer Voting</strong><p>Open the installed panel from the Twitch channel. A direct browser tab cannot create a Twitch viewer identity.</p><StatusBadge tone={voting.tone}>{voting.badge}</StatusBadge><span className={styles.disabledAction}>Test through Twitch Local or Hosted Test</span></article>
+        <article><span className={styles.testIcon}>03</span><strong>Broadcast Overlay</strong><p>Check voting, active quest, result, reconnect, and sanitised Up next output.</p><StatusBadge tone={view?.session.status === "live" ? "success" : "neutral"}>{view?.session.status === "live" ? "Session live" : "Waiting for live session"}</StatusBadge><a href="#broadcast-output-setup">Generate below</a></article>
+      </div>
+      <PageSectionCard title="Sample / Live Source" badge={view?.gameplay?.envelope.evidenceClass === "live" ? "Live source" : "No live source"} badgeTone={view?.gameplay?.envelope.evidenceClass === "live" ? "success" : "neutral"} detail={view?.gameplay?.envelope.evidenceClass === "live" ? "The current gameplay snapshot came from the live capture boundary." : "No sample is presented as a live gameplay snapshot."} />
+      <PageSectionCard title="Capture Controls" badge={capture.badge} badgeTone={capture.tone} detail={capture.detail}><div className={styles.actions}><a href="/studio/gameplay/capture" target="_blank" rel="noreferrer">Open persistent capture tab</a></div></PageSectionCard>
+      <PageSectionCard title="Observed / Unknown" badge={view?.gameplay === null || view === null ? "Waiting" : "Current snapshot"} badgeTone={view?.gameplay === null || view === null ? "neutral" : "info"} detail={view?.gameplay === null || view === null ? "Observed and unknown facts appear after a trusted capture check." : `${view.gameplay.signals.filter((signal) => signal.observation.status === "known").length} observed and ${view.gameplay.signals.filter((signal) => signal.observation.status !== "known").length} unknown, stale, or unavailable facts.`} />
+      <PageSectionCard title="Recovery" badge={capture.state === "available" && voting.state === "available" ? "Ready" : "Action available"} badgeTone={capture.state === "available" && voting.state === "available" ? "success" : "warning"} detail="Use the source-specific action above for camera permission, device loss, Twitch authorization, or viewer-state recovery." />
+    </div>
   );
 }
 
@@ -788,7 +1249,7 @@ function PageBody({ page, view, readiness, pending, onCommand, commandFactory }:
   }
   if (page === "gameplay") return <GameplayPage view={view} readiness={readiness} />;
   if (page === "live-analytics") return <LiveAnalyticsPage view={view} />;
-  if (page === "live-quests") return <LiveQuestsPage view={view} />;
+  if (page === "live-quests") return <LiveQuestsPage view={view} pending={pending} onCommand={onCommand} commandFactory={commandFactory} />;
   if (page === "profile") {
     return (
       <ProfilePage
@@ -809,7 +1270,7 @@ function PageBody({ page, view, readiness, pending, onCommand, commandFactory }:
       />
     );
   }
-  return <TestLabPage />;
+  return <TestLabPage view={view} readiness={readiness} />;
 }
 
 export function StudioProductPageSurface({
@@ -828,7 +1289,7 @@ export function StudioProductPageSurface({
       <aside className={styles.sidebar} aria-label="Studio navigation">
         <div className={styles.brand}>
           <strong>ChatXPT Studio</strong>
-          <small>{view?.profile.displayName ?? "Streamer workspace"}</small>
+          <small>{customerSafeLabel(view?.profile.displayName, "Streamer workspace")}</small>
         </div>
         <nav className={styles.nav}>
           {NAV_ITEMS.map((item) => (
@@ -853,6 +1314,13 @@ export function StudioProductPageSurface({
             <small>{view?.profile.gameName ?? "No game selected"}</small>
           </div>
         </section>
+        {PAGE_SECTIONS[page] ? (
+          <nav className={styles.sectionNav} aria-label={`${copy.title} sections`}>
+            {PAGE_SECTIONS[page]?.map((section) => (
+              <a key={section} href={`#${gameIdFromName(section)}`}>{section}</a>
+            ))}
+          </nav>
+        ) : null}
         {commandMessage ? <Notice tone="warning" title="Studio status">{commandMessage}</Notice> : null}
         <PageBody
           page={page}

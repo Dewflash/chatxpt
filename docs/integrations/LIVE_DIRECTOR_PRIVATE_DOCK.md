@@ -19,7 +19,7 @@ It is not the public `/obs-overlay` Browser Source:
 ## OBS Custom Browser Dock
 
 1. In OBS, open **Docks → Custom Browser Docks**.
-2. If this OBS browser profile has not been authorised, temporarily point the dock to `/studio`, start or reopen the broadcaster session with the server-only Studio setup key, and wait for Studio to load. The key is sent only to the local/HTTPS server and is not stored in browser storage.
+2. If this OBS browser profile has not been authorised, temporarily point the dock to `/studio`, connect Twitch or reopen the signed broadcaster session, and wait for Studio to load. The normal product flow never asks for a server setup key.
 3. Change the dock URL to `/studio/live-director?display=dock` on the same ChatXPT origin.
 4. Confirm the dock shows **Private**, the correct streamer/session revision, and the source-separated context.
 5. Keep the dock out of the OBS scene and recording crop. A Custom Dock is private control UI; a Browser Source added to a scene is public broadcast output.

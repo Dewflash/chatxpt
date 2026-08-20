@@ -159,6 +159,8 @@ export function StudioGameplayCaptureClient() {
   const [ingressStatus, setIngressStatus] = useState("Waiting for Studio session");
   const [acceptedSnapshots, setAcceptedSnapshots] = useState(0);
   const controllerRef = useRef<AbortController | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const autoAttemptedRef = useRef(false);
   const selectedProfile = useMemo(() => selectionFor(game), [game]);
 
   useEffect(() => {
@@ -179,7 +181,11 @@ export function StudioGameplayCaptureClient() {
         setView(payload.view);
         setReadiness(payload.readiness);
         setCapturePreference(savedPreference);
-        setGame(savedPreference?.game ?? gameFromProfile(payload.view));
+        setGame(
+          savedPreference !== null && savedPreference.sessionId === payload.view.session.sessionId
+            ? savedPreference.game
+            : gameFromProfile(payload.view),
+        );
         setIngressStatus("Studio session ready");
         setSessionError(null);
       } catch {
@@ -192,6 +198,27 @@ export function StudioGameplayCaptureClient() {
       controllerRef.current?.abort();
     };
   }, []);
+
+  useEffect(() => {
+    if (
+      view === null ||
+      capturePreference?.lastConnectedAt === null ||
+      capturePreference === null ||
+      capturePreference.sessionId !== view.session.sessionId ||
+      running ||
+      autoAttemptedRef.current
+    ) return;
+    autoAttemptedRef.current = true;
+    let stopped = false;
+    void navigator.permissions?.query({ name: "camera" as PermissionName }).then((permission) => {
+      if (!stopped && permission.state === "granted") formRef.current?.requestSubmit();
+    }).catch(() => {
+      // Browsers without camera permission-query support keep the explicit Connect action.
+    });
+    return () => {
+      stopped = true;
+    };
+  }, [capturePreference, running, view]);
 
   function stop() {
     controllerRef.current?.abort();
@@ -218,8 +245,6 @@ export function StudioGameplayCaptureClient() {
     event.preventDefault();
     if (running || view === null) return;
     const currentView = view;
-    const data = new FormData(event.currentTarget);
-    const setupKey = String(data.get("gameplaySetupKey") ?? "");
     const controller = new AbortController();
     controllerRef.current = controller;
     setError(null);
@@ -236,10 +261,8 @@ export function StudioGameplayCaptureClient() {
     }> {
       const response = await fetch("/api/gameplay/ingress/grant", {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-chatxpt-gameplay-setup-key": setupKey,
-        },
+        headers: { "content-type": "application/json" },
+        credentials: "include",
         cache: "no-store",
         signal: controller.signal,
         body: JSON.stringify({ sessionId: currentView.session.sessionId }),
@@ -257,9 +280,6 @@ export function StudioGameplayCaptureClient() {
     }
 
     try {
-      if (setupKey.trim().length === 0) {
-        throw new Error("Enter the server-only Gameplay Capture setup key.");
-      }
       const issued = await issueIngressGrant();
       ingressGrant = issued.grant;
       ingressAuthority = issued.authority;
@@ -281,6 +301,7 @@ export function StudioGameplayCaptureClient() {
       });
       const analyzer = new MultiGameVisionAnalyzer();
       let frameCount = 0;
+      const captureStartedAt = Date.now();
       for await (const output of streamMultiGameVisionAssessments(source, {
         sampler: createBrowserCanvasPixelSampler(),
         sampleWidth: 160,
@@ -296,7 +317,35 @@ export function StudioGameplayCaptureClient() {
           ingressGrant = refreshed.grant;
           ingressAuthority = refreshed.authority;
         }
-        const snapshot = buildMultiGameGameplaySnapshot(output);
+        const builtSnapshot = buildMultiGameGameplaySnapshot(output);
+        const knownFactCount = builtSnapshot.signals.filter(
+          (signal) => signal.observation.status === "known",
+        ).length;
+        const elapsedSeconds = Math.max(0.001, (Date.now() - captureStartedAt) / 1_000);
+        const hudStatus = assessment.brawlHud?.status ?? assessment.minecraftHud?.status ?? null;
+        const snapshot = {
+          ...builtSnapshot,
+          captureMetrics: {
+            observedAt: output.frame.capturedAt,
+            framesProcessed: frameCount,
+            processingCoverage:
+              builtSnapshot.signals.length === 0
+                ? 0
+                : knownFactCount / builtSnapshot.signals.length,
+            cadenceFps: Number((frameCount / elapsedSeconds).toFixed(2)),
+            lastLatencyMs: Math.max(0, Date.now() - output.frame.capturedAt),
+            droppedFrames: null,
+            ocrStatus:
+              hudStatus === null
+                ? "not-required" as const
+                : hudStatus === "standard-like" || hudStatus === "vanilla-like" || hudStatus === "minecraft-like"
+                  ? "ready" as const
+                  : hudStatus === "hud-hidden" || hudStatus === "insufficient-resolution"
+                    ? "unavailable" as const
+                    : "unknown" as const,
+            normalizedFactCount: knownFactCount,
+          },
+        };
         const response = await fetch("/api/gameplay/ingress/snapshot", {
           method: "POST",
           headers: {
@@ -386,14 +435,10 @@ export function StudioGameplayCaptureClient() {
           <li>Click <strong>Start Virtual Camera</strong> in OBS.</li>
           <li>Select the game profile below, then allow camera access in the browser.</li>
         </ol>
-        <form onSubmit={(event) => void start(event)}>
+        <form ref={formRef} onSubmit={(event) => void start(event)}>
           <label className={styles.field}>
             Current Studio session
             <input value={view?.session.sessionId ?? "Loading Studio session"} readOnly />
-          </label>
-          <label className={styles.field}>
-            Server-only Gameplay Capture setup key
-            <input name="gameplaySetupKey" type="password" disabled={running || view === null} required autoComplete="off" />
           </label>
           <label className={styles.field}>
             Game profile

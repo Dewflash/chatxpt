@@ -9,6 +9,7 @@ import {
   Role1InterventionCoordinator,
   domainErrorSchema,
   intelligenceSnapshotSchema,
+  resolveEffectiveStreamerProfile,
   type CandidateProvider,
   type MessageIdFactory,
   type DirectorCueConverter,
@@ -197,8 +198,12 @@ export class ChatXptServerRuntime {
       },
       () => this.clock.now(),
     );
+    const effectiveState: AuthoritativeSessionState = {
+      ...state,
+      profile: resolveEffectiveStreamerProfile(state.profile, state.sessionOverride),
+    };
     const result = await coordinator.run({
-      state,
+      state: effectiveState,
       intelligence: intelligence.data,
       recentQuests: state.recentQuests ?? [],
       candidateInputEnvelope: envelope,

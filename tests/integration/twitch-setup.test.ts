@@ -115,17 +115,16 @@ describe("Twitch setup readiness", () => {
     expect(JSON.stringify(body)).not.toContain("fixture-eventsub-secret");
   });
 
-  it("keeps the OAuth callback reserved and safe before token exchange exists", async () => {
+  it("rejects an OAuth callback that lacks the matching HttpOnly state", async () => {
     const response = await twitchOAuthCallbackGET(
       new Request("https://preview.example.test/api/twitch/oauth/callback?code=fixture"),
     );
 
-    expect(response.status).toBe(501);
+    expect(response.status).toBe(307);
     expect(response.headers.get("cache-control")).toBe("no-store");
-    await expect(response.json()).resolves.toMatchObject({
-      ok: false,
-      error: { code: "twitch-oauth-not-enabled" },
-    });
+    expect(response.headers.get("location")).toBe(
+      "https://preview.example.test/studio?oauth=error&reason=state",
+    );
   });
 
   it("renders exact Twitch html surface shells without requiring credentials", () => {
