@@ -8,7 +8,11 @@ import {
   systemIntelligenceCommandSchema,
   type ProjectionContextResolver,
 } from "@/core";
-import { createMemoryPersistenceRuntime, type VerifiedCommandActor } from "@/realtime";
+import {
+  SessionLifecycleService,
+  createMemoryPersistenceRuntime,
+  type VerifiedCommandActor,
+} from "@/realtime";
 
 import { HostedBoardApplication, HostedBoardApplicationError } from "./hosted-board";
 import { ChatXptServerRuntime } from "./runtime";
@@ -36,6 +40,13 @@ async function createContext() {
     gameId: null,
     gameName: null,
   });
+  const live = await new SessionLifecycleService(persistence.lifecycle).start(
+    started.view.session.sessionId,
+    started.view.session.revision,
+    NOW,
+    `hosted-session-start-${++id}`,
+  );
+  if (!live.ok) throw new Error(live.error.message);
   const hosted = new HostedBoardApplication({
     runtime,
     secret: HOSTED_SECRET,

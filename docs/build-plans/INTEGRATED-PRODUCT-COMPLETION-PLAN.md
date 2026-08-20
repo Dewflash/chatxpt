@@ -32,7 +32,10 @@ The implementation must not reopen these choices unless the owner explicitly cha
 - Home is a concise one-viewport control centre, not a page containing every feature.
 - Dedicated primary pages are Gameplay Engine, Live Analytics, Live Quests, Profile & Defaults, Stream Settings, and Test Lab.
 - Streamers may create named presets; Competitive, Chill, Educational, and Community are starter examples.
-- Home shows `Stream vibe`; Live Analytics separately shows `Audience mood`.
+- Home shows the streamer-selected `Stream vibe` separately from a compact Stream Engagement summary of inferred `Audience mood`, chat activity, and prominent topics or keywords. Live Analytics provides the detailed audience state and history.
+- Ready-to-start Home shows the Twitch-prefilled game with an obvious correction path before session start. Preparing, reconnecting, and ended reuse the same Home shell with state-specific status, consequence, and recovery instead of becoming new pages.
+- Gameplay Engine presents timestamped material stream periods with observed/inferred/unknown provenance, separates inferred Gameplay tempo from Stream vibe and Audience mood, and places Supported Game Facts beside eight equal-sized primary capture-processing metrics. Lower-level diagnostics stay secondary.
+- Live Analytics compares categorical states with the previous meaningful state, compares numeric metrics with the preceding equal-length window, and may show privacy-safe newly active, returning, recently inactive, and active-now participation. `Returning` is current-session only unless a later accepted privacy boundary permits more.
 - Live Analytics includes automatically detected topics and an optional streamer watchlist while retaining only aggregates, not raw viewer messages or usernames.
 - Official voting requires exactly three validated, game-aware quests. Idle previews may show zero to three pre-approved options.
 - Manual streamer approval remains the MVP default before a proposed batch reaches voting.
@@ -99,6 +102,20 @@ The owner cues and reviews snapshots before UI implementation begins. The snapsh
 
 The gate exits when the owner accepts hierarchy, visible information, unavailable states, interaction placement, responsive intent, and streamer-facing copy. Snapshot approval does not mark any feature implemented.
 
+## Rebased capability-to-interface reconciliation
+
+The completed Minecraft/product and Live Director branches map into the accepted interface as follows. These mappings do not create parallel pages or expose private runtime data.
+
+| Landed capability | Accepted interface | UI consequence |
+| --- | --- | --- |
+| Twitch-prefilled game and persistent Minecraft-aware profile | Ready-to-start Home; Profile & Defaults | Show the selected game and `Change current game` before start; use Profile & Defaults for the full saved editor. |
+| Readiness gate and session lifecycle | Home | Reuse Home for preparing, live, reconnecting, ended, and blocking connection failure. Do not add another mode page. |
+| Capture preferences and reconnect support | Gameplay Engine; Test Lab | Keep ordinary capture evidence in Game Capture and recovery/check actions in the existing capture sections. |
+| Saved defaults plus current-session overrides | Profile & Defaults; Stream Settings | Keep saved values and temporary stream changes separate; no Home editor expansion. |
+| Eligible-cycle generation and one-command Live Director conversion | Current Stream; Live Quests | The cue can publish exactly three validated proposals once; review, approval, voting, and results remain in Live Quests. |
+| Sanitised public quest projections | Twitch Extension; hosted Quest Board; OBS Overlay | Existing public previews consume only public quest fields; no private reasoning, provider, cue, or streamer context appears. |
+| Public expiring `Up next` | OBS Overlay preview | Show at most one concise line when authoritative and compatible; hide it when evidence is insufficient. |
+
 ## Canonical runtime composition
 
 There is one runtime path:
@@ -137,8 +154,8 @@ Contract names may remain additive, but these responsibilities must be represent
 | Streamer profile | Persist named presets, personality, quest preferences, safety, accessibility, voting, rewards, game selection, and keyword watchlist. |
 | Effective stream settings | Represent saved source, selected preset, session-only overrides, effective values, and reset-to-saved without browser-local authority. |
 | Session lifecycle/readiness | Separate disconnected, connected/no stream, preparing, ready, live, reconnecting, and ended. Starting cannot silently bypass readiness. |
-| Gameplay view | Project capture health, supported facts, freshness, confidence, explicit unknown/error, and plain-language understanding without leaking diagnostic internals. |
-| Audience intelligence | Carry privacy-safe energy, activity, mood, participation, repeated topics, watchlist counts, freshness, sample size, and current-session aggregates. |
+| Gameplay view | Project capture health, grouped processing coverage/frames/cadence/latency/drop/OCR/fact counts, timestamped material periods, gameplay tempo, supported facts, freshness, confidence, explicit provenance, unknown/error, and plain-language understanding without leaking raw diagnostic internals. |
+| Audience intelligence | Carry privacy-safe energy, activity, mood, participation, repeated topics, watchlist counts, freshness, sample size, prior-state/equal-window comparisons, and current-session newly-active/returning/recently-inactive aggregates when supported by session-scoped participant keys. |
 | Candidate provider | Return exactly three game-aware candidates or typed exhaustion with provider/algorithmic status kept private where appropriate. |
 | Live Director | Add the missing production scheduler/producer commands and refresh context after relevant gameplay, audience, objective, or lifecycle changes. |
 | Public `Up next` | Add a sanitised, expiring, game-compatible field to the overlay projection; exclude `Now`, transcript, reasoning, usernames, provider data, and private cues. |

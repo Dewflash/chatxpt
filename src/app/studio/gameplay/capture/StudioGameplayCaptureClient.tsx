@@ -217,6 +217,7 @@ export function StudioGameplayCaptureClient() {
   async function start(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (running || view === null) return;
+    const currentView = view;
     const data = new FormData(event.currentTarget);
     const setupKey = String(data.get("gameplaySetupKey") ?? "");
     const controller = new AbortController();
@@ -241,7 +242,7 @@ export function StudioGameplayCaptureClient() {
         },
         cache: "no-store",
         signal: controller.signal,
-        body: JSON.stringify({ sessionId: view.session.sessionId }),
+        body: JSON.stringify({ sessionId: currentView.session.sessionId }),
       });
       const payload = (await response.json()) as GameplayIngressPayload;
       if (!response.ok || !payload.ok || payload.grant === undefined) {
@@ -266,7 +267,7 @@ export function StudioGameplayCaptureClient() {
       rememberCapturePreference({ game, connected: true });
       const capture = new MediaStreamVideoFrameCapture(mediaStream, { stopStreamOnEnd: true });
       const source = new BrowserMediaFrameSource({
-        sessionId: view.session.sessionId,
+        sessionId: currentView.session.sessionId,
         correlationId: `studio-gameplay-capture-${Date.now()}`,
         capture,
         evidenceClass: ingressAuthority.evidenceClass ?? "live",

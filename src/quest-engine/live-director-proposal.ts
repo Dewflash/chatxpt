@@ -38,6 +38,15 @@ function inputEnvelope(input: DirectorCueProposalInput) {
   });
 }
 
+function activeQuestSummary(input: DirectorCueProposalInput): string | null {
+  const { questCycle } = input.current;
+  if (questCycle.activeCandidateId === null) return null;
+  const active = questCycle.options.find(
+    ({ candidateId }) => candidateId === questCycle.activeCandidateId,
+  );
+  return active === undefined ? null : `${active.title}: ${active.instruction}`.trim().slice(0, 240);
+}
+
 /**
  * Work-conserving R3-014 adapter. It invokes Role 2 generation when canonical
  * gameplay is available, treats provider failure as normal fallback input,
@@ -116,6 +125,7 @@ export class DefaultLiveDirectorProposalCoordinator
           intelligence: intelligence.data,
           profile: input.current.profile,
           recentQuestTitles: (input.current.recentQuests ?? []).map(({ title }) => title),
+          activeChatXptQuest: activeQuestSummary(input),
         }),
       );
       if (

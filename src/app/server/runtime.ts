@@ -9,8 +9,6 @@ import {
   Role1InterventionCoordinator,
   domainErrorSchema,
   intelligenceSnapshotSchema,
-  systemIntelligenceCommandSchema,
-  type CandidateBatch,
   type CandidateProvider,
   type MessageIdFactory,
   type DirectorCueConverter,

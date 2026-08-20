@@ -16,11 +16,13 @@ function render(props: Partial<StudioSetupShellProps> = {}): string {
 }
 
 describe("StudioSetupShell", () => {
-  it("keeps fixture previews visibly separate from live readiness evidence", () => {
+  it("keeps preview state visibly separate from live readiness", () => {
     const html = render();
 
-    expect(html).toContain("Fixture preview");
-    expect(html).toContain("Not live workflow evidence");
+    expect(html).toContain("Preview only");
+    expect(html).toContain("Live connection not confirmed");
+    expect(html).not.toContain("Fixture preview");
+    expect(html).not.toContain("Not live workflow evidence");
     expect(html).toContain("Overall readiness unconfirmed");
     expect(html).toContain("Start session");
     expect(html).toMatch(/<button[^>]*disabled[^>]*>.*Start session/su);
@@ -29,7 +31,7 @@ describe("StudioSetupShell", () => {
     expect(html).not.toMatch(/\b\d+% ready\b/iu);
   });
 
-  it("renders only the service health supplied by the authorised view", () => {
+  it("renders only the service health supplied by the Studio view", () => {
     const html = render({
       view: {
         ...contractFixtureStreamerView,
@@ -58,7 +60,7 @@ describe("StudioSetupShell", () => {
     expect(html).toContain("Obs Capture");
     expect(html).toContain("Permission denied");
     expect(html).toContain("Retry permitted");
-    expect(html).toContain("Actions are intentionally unavailable in this slice");
+    expect(html).toContain("Actions are unavailable for now");
   });
 
   it("handles out-of-range observation times without failing the shell", () => {
@@ -105,25 +107,25 @@ describe("StudioSetupShell", () => {
     expect(html).toContain("Activity Intensity");
     expect(html).toContain("Unknown");
     expect(html).toContain("Confidence");
-    expect(html).toContain("Quest generation status is not reported yet");
+    expect(html).toContain("Sidequest generation status is not reported yet");
   });
 
   it("renders an honest loading state without a fabricated snapshot", () => {
     const html = render({ view: null, loading: true });
 
     expect(html).toContain('aria-busy="true"');
-    expect(html).toContain("Loading authorised status");
+    expect(html).toContain("Loading Studio status");
     expect(html).toContain("Checking your Studio snapshot");
     expect(html).not.toContain("Readiness checklist");
     expect(html).not.toContain("Saved profile");
   });
 
-  it("retains the last revision while reconnecting but leaves actions unavailable", () => {
+  it("retains the last Studio state while reconnecting but leaves actions unavailable", () => {
     const html = render({ reconnecting: true });
 
     expect(html).toContain('aria-live="polite"');
-    expect(html).toContain("The last authorised revision remains visible");
-    expect(html).toContain("Revision 0");
+    expect(html).toContain("The last Studio state remains visible");
+    expect(html).not.toContain("Revision 0");
     expect(html).toMatch(/<button[^>]*disabled[^>]*>.*Start session/su);
   });
 

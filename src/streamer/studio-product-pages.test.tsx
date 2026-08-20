@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 
 import { createFixtureUiGatewaySnapshot } from "../core";
 import { contractFixtureUiX01ReadinessCatalog } from "../core/testing";
-import type { StreamerUiCommand } from "./streamer-commands";
 import { StudioProductPageSurface, type StudioProductPage } from "./studio-product-pages";
 
 const pages: readonly StudioProductPage[] = [
@@ -113,7 +112,7 @@ describe("StudioProductPageSurface", () => {
       page: "home",
       view,
       readiness,
-      onCommand: (_command: StreamerUiCommand) => undefined,
+      onCommand: () => undefined,
     }));
 
     expect(html).toContain("Resolve the highlighted setup blocker before starting ChatXPT.");
@@ -131,7 +130,7 @@ describe("StudioProductPageSurface", () => {
       page: "home",
       view,
       readiness: contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"],
-      onCommand: (_command: StreamerUiCommand) => undefined,
+      onCommand: () => undefined,
     }));
 
     expect(html).toContain("ChatXPT is live for this stream");
