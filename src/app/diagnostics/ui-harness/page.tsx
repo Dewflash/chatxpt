@@ -119,6 +119,9 @@ export default function UiHarnessPage() {
           <ul className={styles.list}>
             <li>Read-only: {snapshot.views.overlay.readOnly ? "true" : "false"}</li>
             <li>Connection: {snapshot.views.overlay.connection.status}</li>
+            <li>
+              Up next: {snapshot.views.overlay.upNext?.title ?? "hidden until public evidence exists"}
+            </li>
             <li className={styles.warning}>OBS Browser Source is not verified by this page.</li>
           </ul>
         </SurfacePanel>

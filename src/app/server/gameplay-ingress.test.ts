@@ -113,6 +113,7 @@ describe("authenticated gameplay snapshot ingress", () => {
 
     await expect(application.ingest(`Bearer ${grant.token}`, snapshot)).resolves.toMatchObject({
       result: { status: "accepted" },
+      liveDirector: { status: "not-requested", reason: "runtime-unavailable" },
       authority: {
         sessionId: state.session.sessionId,
         revision: state.session.revision,
@@ -127,6 +128,44 @@ describe("authenticated gameplay snapshot ingress", () => {
         evidenceClass: "live",
       }),
     ).resolves.toMatchObject({ envelope: { messageId: "live-gameplay-1" } });
+  });
+
+  it("requests a Live Director context refresh for an accepted gameplay snapshot", async () => {
+    const { persistence, state } = await setup();
+    let refreshGameplayMessageId: string | null = null;
+    const application = new GameplayIngressApplication({
+      persistence,
+      setupKey: KEY,
+      now: () => FIXTURE_NOW + 1_000,
+      nextId: () => "grant-1",
+      runtime: {
+        async requestLiveDirectorContextRefresh(runtimeState) {
+          refreshGameplayMessageId = runtimeState.gameplay?.envelope.messageId ?? null;
+          return {
+            ok: true,
+            outcome: "committed",
+            receipt: null,
+            views: null,
+            delivery: "published",
+          } as unknown as Awaited<
+            ReturnType<ChatXptServerRuntime["requestLiveDirectorContextRefresh"]>
+          >;
+        },
+        async requestEligibleCycleProposal() {
+          throw new Error("Preparing gameplay ingress should not request a candidate proposal.");
+        },
+      },
+    });
+    const grant = await application.issueGrant(KEY, { sessionId: state.session.sessionId });
+
+    await expect(
+      application.ingest(`Bearer ${grant.token}`, liveSnapshot(state, FIXTURE_NOW + 1_000)),
+    ).resolves.toMatchObject({
+      result: { status: "accepted" },
+      liveDirector: { status: "submitted" },
+      proposal: { status: "not-requested", reason: "preparing-session" },
+    });
+    expect(refreshGameplayMessageId).toBe("live-gameplay-1");
   });
 
   it("makes an accepted ingress snapshot available to the sole orchestrator on its next command", async () => {

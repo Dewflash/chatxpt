@@ -5,6 +5,16 @@ import type {
   NamedSignal,
   QuestCandidate,
 } from "../core";
+import { buildGenericGameStateContext } from "../extraction/game-state-context";
+import {
+  knownMinecraftFact,
+  minecraftSupportedFacts,
+  minecraftUnknownFacts,
+  unknownMinecraftFact,
+  type MinecraftAwareContext,
+  type MinecraftFact,
+  type MinecraftFactStatus,
+} from "../extraction/minecraft-state";
 import { ProviderGenerationError } from "./provider-fallback";
 import type { CandidateGenerationStrategy } from "./providers";
 
@@ -98,10 +108,35 @@ interface ProviderSignalContext {
   readonly ageMs: number;
 }
 
+const MINECRAFT_CONTEXT_SIGNAL_MAP = {
+  hudLayout: "minecraft-hud-layout",
+  healthHearts: "minecraft-health-hearts",
+  hungerShanks: "minecraft-hunger-shanks",
+  armorPoints: "minecraft-armor-points",
+  hotbarVisible: "minecraft-hotbar-visible",
+  selectedHotbarCategory: "minecraft-selected-hotbar-category",
+  menuState: "minecraft-menu-state",
+  activity: "minecraft-activity",
+  danger: "minecraft-danger",
+  recentDamage: "minecraft-recent-damage",
+  likelyDamageCause: "minecraft-likely-damage-cause",
+  visibleHostile: "minecraft-visible-hostile",
+  biomeOrEnvironment: "minecraft-biome-environment",
+} as const;
+
+const MINECRAFT_CONTEXT_FRESHNESS_MS = 3_000;
+const PROVIDER_MINIMUM_SIGNAL_CONFIDENCE = 0.75;
+const PROVIDER_GAMEPLAY_SIGNAL_FRESHNESS_MS = 3_000;
+const PROVIDER_AUDIENCE_SIGNAL_FRESHNESS_MS = 30_000;
+
 const providerInstructions = `You propose livestream sidequests for ChatXPT.
 Return exactly three meaningfully different options: one lower-risk stabilising option, one skill or tactical option, and one audience/personality option.
 Use only the supplied normalized facts. Never invent HUD values, items, maps, modes, objectives, scores, team states, game rules, emotions, or player intent.
-If evidence is unknown, stale, unsupported, or low-confidence, use a broadly measurable game-neutral quest.
+If a fact is unknown, stale, unsupported, or low-confidence, do not cite or imply that fact.
+Treat gameState.facts as the cross-game vocabulary. Use it for general game claims such as health, resource, defense, loadout, menu, activity, combat risk, objective, timer, score, or environment only when the relevant fact is known.
+When exact evidence is weak, choose broadly measurable game-neutral quests for non-Minecraft games. For Minecraft, choose safe Minecraft-aware quests about goals, choices, route planning, explanation, or chat-guided style without claiming health, hunger, hotbar, sleep, inventory, biome, hostile mobs, held items, damage cause, danger, menu state, objective completion, or location unless the corresponding minecraft.gameFacts entry is known and cited.
+For Minecraft, treat the minecraft.gameFacts block as the game-specific layer on top of gameState: use a Minecraft fact only when its status is known, and do not infer sleep, biome, hostile mob, item, damage cause, danger, menu, quest intent, or player objective from other fields.
+Weak and strong models receive the same typed context; never compensate for model uncertainty by inventing facts or sourceSignalIds.
 Every sourceSignalIds entry must exactly match an available known signal ID supplied in the input. Use an empty list when a quest does not rely on one.
 Respect every restriction, forbidden quest type, and accessibility need. Avoid team sabotage, throwing, griefing, wagering, humiliation, sexual content, discrimination, illegal activity, dangerous activity, and real-world physical dares.
 Keep each option understandable at a glance, measurable, and achievable during the current match. Titles must be concise. Rationale is producer-only.
@@ -114,19 +149,217 @@ function normalizedSignalValue(signal: NamedSignal): string | number | boolean |
   return value.trim().slice(0, 80);
 }
 
-function signalContext(signal: NamedSignal, now: number): ProviderSignalContext {
+function signalIsEligible(signal: NamedSignal, now: number, maximumAgeMs: number): boolean {
+  const ageMs = now - signal.observation.provenance.observedAt;
+  return signal.observation.status === "known" &&
+    ageMs >= 0 &&
+    ageMs <= maximumAgeMs &&
+    signal.observation.provenance.confidence >= PROVIDER_MINIMUM_SIGNAL_CONFIDENCE;
+}
+
+function signalContext(
+  signal: NamedSignal,
+  now: number,
+  maximumAgeMs: number,
+): ProviderSignalContext {
+  const ageMs = now - signal.observation.provenance.observedAt;
+  const eligible = signalIsEligible(signal, now, maximumAgeMs);
   return {
     signalId: signal.signalId,
     kind: signal.kind,
-    status: signal.observation.status,
-    value: normalizedSignalValue(signal),
+    status: eligible
+      ? "known"
+      : signal.observation.status === "known" && ageMs > maximumAgeMs
+        ? "stale"
+        : signal.observation.status === "known"
+          ? "unknown"
+          : signal.observation.status,
+    value: eligible ? normalizedSignalValue(signal) : undefined,
     confidence: signal.observation.provenance.confidence,
-    ageMs: Math.max(0, now - signal.observation.provenance.observedAt),
+    ageMs,
+  };
+}
+
+function observationStatusToMinecraftStatus(status: NamedSignal["observation"]["status"]): Exclude<MinecraftFactStatus, "known"> {
+  if (status === "stale") return "stale";
+  if (status === "unavailable") return "unsupported";
+  return "unknown";
+}
+
+function minecraftFactFromSignal(input: {
+  readonly signal: NamedSignal | undefined;
+  readonly now: number;
+  readonly method: string;
+  readonly reason: string;
+}): MinecraftFact {
+  const { signal, now, method, reason } = input;
+  if (signal === undefined) {
+    return unknownMinecraftFact(reason, {
+      observedAt: now,
+      method,
+      reason,
+    });
+  }
+  const observedAt = signal.observation.provenance.observedAt;
+  const ageMs = now - observedAt;
+  const base = {
+    observedAt,
+    expiresAt: observedAt + MINECRAFT_CONTEXT_FRESHNESS_MS,
+    method: signal.observation.provenance.method,
+    sourceSignalIds: [signal.signalId],
+    confidence: signal.observation.provenance.confidence,
+  };
+  if (
+    signal.observation.status === "known" &&
+    signalIsEligible(signal, now, MINECRAFT_CONTEXT_FRESHNESS_MS)
+  ) {
+    return knownMinecraftFact(signal.observation.value, base);
+  }
+  if (signal.observation.status === "known" && ageMs < 0) {
+    return unknownMinecraftFact(
+      "The Minecraft fact is timestamped in the future and cannot support the current AI request.",
+      base,
+      "conflicting",
+    );
+  }
+  if (
+    signal.observation.status === "known" &&
+    signal.observation.provenance.confidence < PROVIDER_MINIMUM_SIGNAL_CONFIDENCE
+  ) {
+    return unknownMinecraftFact(
+      "The Minecraft fact is below the minimum confidence for the current AI request.",
+      base,
+    );
+  }
+  return unknownMinecraftFact(
+    signal.observation.status === "known"
+      ? "The Minecraft fact is stale for the current AI request."
+      : signal.observation.reason,
+    base,
+    signal.observation.status === "known"
+      ? "stale"
+      : observationStatusToMinecraftStatus(signal.observation.status),
+  );
+}
+
+function buildMinecraftContext(input: CandidateInput, now: number): MinecraftAwareContext | null {
+  if (
+    input.profile.gameId !== "minecraft" &&
+    input.intelligence.gameplay.capabilities.gameId !== "minecraft"
+  ) {
+    return null;
+  }
+  const bySignalId = new Map(
+    input.intelligence.gameplay.signals.map((signal) => [signal.signalId, signal]),
+  );
+  const method = "minecraft-provider-context-v1";
+  const gameFacts = {
+    edition: knownMinecraftFact("java", {
+      observedAt: now,
+      method: "streamer-game-profile",
+      sourceSignalIds: [],
+      confidence: input.profile.gameId === "minecraft" ? 0.9 : 0.7,
+    }),
+    mode: unknownMinecraftFact("Minecraft mode is not confirmed by the current detector.", {
+      observedAt: now,
+      method,
+      reason: "Minecraft mode is not confirmed by the current detector.",
+    }),
+    hudLayout: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.hudLayout),
+      now,
+      method,
+      reason: "Minecraft HUD layout is not confirmed.",
+    }),
+    healthHearts: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.healthHearts),
+      now,
+      method,
+      reason: "Minecraft health hearts are not confirmed.",
+    }),
+    hungerShanks: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.hungerShanks),
+      now,
+      method,
+      reason: "Minecraft hunger shanks are not confirmed.",
+    }),
+    armorPoints: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.armorPoints),
+      now,
+      method,
+      reason: "Minecraft armor points are not parsed by the current detector.",
+    }),
+    hotbarVisible: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.hotbarVisible),
+      now,
+      method,
+      reason: "Minecraft hotbar visibility is not confirmed.",
+    }),
+    selectedHotbarCategory: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.selectedHotbarCategory),
+      now,
+      method,
+      reason: "Minecraft selected hotbar item category is not parsed by the current detector.",
+    }),
+    menuState: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.menuState),
+      now,
+      method,
+      reason: "Minecraft menu, inventory, sleep, and death screens are not parsed by the current detector.",
+    }),
+    activity: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.activity),
+      now,
+      method,
+      reason: "Minecraft-specific activity such as mining, building, or fighting is not classified by the current detector.",
+    }),
+    danger: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.danger),
+      now,
+      method,
+      reason: "Minecraft danger state is not classified by the current detector.",
+    }),
+    recentDamage: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.recentDamage),
+      now,
+      method,
+      reason: "Recent Minecraft damage is not detected by the current detector.",
+    }),
+    likelyDamageCause: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.likelyDamageCause),
+      now,
+      method,
+      reason: "Minecraft damage cause is not classified by the current detector.",
+    }),
+    visibleHostile: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.visibleHostile),
+      now,
+      method,
+      reason: "Visible Minecraft hostile mobs are not detected by the current detector.",
+    }),
+    biomeOrEnvironment: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.biomeOrEnvironment),
+      now,
+      method,
+      reason: "Minecraft biome or environment is not classified by the current detector.",
+    }),
+  };
+  return {
+    gameId: "minecraft",
+    gameFacts,
+    streamerIntent: {
+      streamerGoal: null,
+    },
+    activeChatXptQuest: input.activeChatXptQuest,
+    supportedFacts: [...minecraftSupportedFacts(gameFacts)],
+    unknownFacts: [...minecraftUnknownFacts(gameFacts)],
   };
 }
 
 function providerContext(input: CandidateInput): string {
   const now = input.envelope.occurredAt;
+  const gameState = buildGenericGameStateContext(input, now);
+  const minecraft = buildMinecraftContext(input, now);
   return JSON.stringify({
     game: {
       gameId: input.profile.gameId,
@@ -134,10 +367,13 @@ function providerContext(input: CandidateInput): string {
       supportTier: input.intelligence.gameplay.capabilities.tier,
       supportedSignals: input.intelligence.gameplay.capabilities.supportedSignals,
     },
-    gameplaySignals: input.intelligence.gameplay.signals.map((signal) => signalContext(signal, now)),
+    gameState,
+    gameplaySignals: input.intelligence.gameplay.signals.map((signal) =>
+      signalContext(signal, now, PROVIDER_GAMEPLAY_SIGNAL_FRESHNESS_MS)),
     audience: {
       sampleSize: input.intelligence.audience.sampleSize,
-      signals: input.intelligence.audience.signals.map((signal) => signalContext(signal, now)),
+      signals: input.intelligence.audience.signals.map((signal) =>
+        signalContext(signal, now, PROVIDER_AUDIENCE_SIGNAL_FRESHNESS_MS)),
     },
     streamer: {
       experience: input.profile.experience,
@@ -146,16 +382,23 @@ function providerContext(input: CandidateInput): string {
       forbiddenQuestTypes: input.profile.forbiddenQuestTypes,
       accessibilityNeeds: input.profile.accessibilityNeeds,
     },
+    ...(minecraft === null ? {} : { minecraft }),
     recentQuestTitles: input.recentQuestTitles,
   });
 }
 
 function knownSignalIds(input: CandidateInput): ReadonlySet<string> {
-  return new Set(
-    [...input.intelligence.gameplay.signals, ...input.intelligence.audience.signals]
-      .filter(({ observation }) => observation.status === "known")
-      .map(({ signalId }) => signalId),
-  );
+  const now = input.envelope.occurredAt;
+  const known = new Set<string>();
+  for (const [signals, maximumAgeMs] of [
+    [input.intelligence.gameplay.signals, PROVIDER_GAMEPLAY_SIGNAL_FRESHNESS_MS],
+    [input.intelligence.audience.signals, PROVIDER_AUDIENCE_SIGNAL_FRESHNESS_MS],
+  ] as const) {
+    for (const signal of signals) {
+      if (signalIsEligible(signal, now, maximumAgeMs)) known.add(signal.signalId);
+    }
+  }
+  return known;
 }
 
 function candidateConfidence(sourceSignalIds: readonly string[]): number {

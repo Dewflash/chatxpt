@@ -13,6 +13,7 @@ import {
   questEngineEventSchema,
   serviceHealthSchema,
   streamSessionSchema,
+  streamerSessionOverrideSchema,
   streamerProfileSchema,
   streamerViewModelSchema,
   audienceSnapshotSchema,
@@ -22,6 +23,7 @@ import {
   viewerViewModelSchema,
   type CommandEnvelope,
   type ContractEnvelope,
+  type CandidateBatch,
   type DomainError,
   type QuestEngineResult,
   type QuestEngineDecision,
@@ -252,10 +254,16 @@ function authoritativeProfileSettingsUpdate(
   const profile = streamerProfileSchema.safeParse({
     ...current.profile,
     revision: current.profile.revision + 1,
+    gameId: command.game?.gameId ?? current.profile.gameId,
+    gameName: command.game?.gameName ?? current.profile.gameName,
     experience: {
       ...current.profile.experience,
       ...command.experiencePatch,
     },
+    restrictions: command.restrictions ?? current.profile.restrictions,
+    preferredQuestTypes: command.preferredQuestTypes ?? current.profile.preferredQuestTypes,
+    forbiddenQuestTypes: command.forbiddenQuestTypes ?? current.profile.forbiddenQuestTypes,
+    accessibilityNeeds: command.accessibilityNeeds ?? current.profile.accessibilityNeeds,
     voting: {
       ...current.profile.voting,
       ...command.voting,
@@ -300,6 +308,54 @@ function authoritativeProfileSettingsUpdate(
   });
   if (!event.success) {
     return error("internal", "Authoritative profile event stamping produced invalid state", true);
+  }
+  return { state, events: [event.data] };
+}
+
+function authoritativeSessionOverrideUpdate(
+  dependencies: OrchestratorDependencies,
+  command: Extract<CommandEnvelope, { type: "streamer.session-override" }>,
+  current: AuthoritativeSessionState,
+  acceptedAt: number,
+): { state: AuthoritativeSessionState; events: AcceptedCommandReceipt["events"] } | DomainError {
+  const revision = current.session.revision + 1;
+  const nextOverride =
+    command.action === "clear"
+      ? null
+      : streamerSessionOverrideSchema.parse({
+          appliedAt: acceptedAt,
+          experiencePatch: command.experiencePatch,
+        });
+  const questCycle = questCycleStateSchema.parse({
+    ...current.questCycle,
+    envelope: authoritativeEnvelope(
+      dependencies,
+      command,
+      current,
+      current.questCycle.envelope.questCycleId,
+      revision,
+      acceptedAt,
+      "quest-state",
+    ),
+  });
+  const state: AuthoritativeSessionState = {
+    ...current,
+    session: { ...current.session, revision },
+    questCycle,
+    sessionOverride: nextOverride,
+  };
+  const event = questEngineEventSchema.safeParse({
+    envelope: authoritativeEnvelope(dependencies, command, state, null, revision, acceptedAt, "quest-event"),
+    event: {
+      eventType: "profile.session-override-updated",
+      attributes: {
+        action: command.action,
+        experienceKeysChanged: Object.keys(command.experiencePatch).length,
+      },
+    },
+  });
+  if (!event.success) {
+    return error("internal", "Authoritative session override event stamping produced invalid state", true);
   }
   return { state, events: [event.data] };
 }
@@ -380,6 +436,7 @@ function projectionInput(
     communityHype: state.communityHype,
     acceptedCandidateId: context.acceptedCandidateId,
     connection: context.connection,
+    sessionOverride: state.sessionOverride,
     liveDirector: state.liveDirector,
   };
 }
@@ -533,7 +590,7 @@ export class ChatXptOrchestrator {
       };
     }
 
-    let candidateBatch = null;
+    let candidateBatch: CandidateBatch | null = null;
     if (command.type === "system.intelligence-ready") {
       try {
         candidateBatch = await this.dependencies.candidateBatches.read(
@@ -677,6 +734,12 @@ export class ChatXptOrchestrator {
         authoritative = authoritativeProfileSettingsUpdate(this.dependencies, command, current, acceptedAt);
       } catch {
         return { ok: false, error: error("internal", "Authoritative profile update failed", true) };
+      }
+    } else if (command.type === "streamer.session-override") {
+      try {
+        authoritative = authoritativeSessionOverrideUpdate(this.dependencies, command, current, acceptedAt);
+      } catch {
+        return { ok: false, error: error("internal", "Authoritative session override update failed", true) };
       }
     } else if (command.type === "streamer.live-director-intent") {
       try {

@@ -31,8 +31,12 @@ describe("Role 2 provider boundaries", () => {
   });
 
   it("wraps a generation strategy and emits exactly three canonical candidates", async () => {
+    const calls: unknown[] = [];
     const strategy: CandidateGenerationStrategy = {
-      generate: () => contractFixtureCandidateBatch.candidates,
+      generate: (input) => {
+        calls.push(input);
+        return contractFixtureCandidateBatch.candidates;
+      },
     };
     const provider = createValidatingCandidateProvider(strategy);
 
@@ -42,8 +46,12 @@ describe("Role 2 provider boundaries", () => {
         intelligence: await intelligence(),
         profile: contractFixtureProfile,
         recentQuestTitles: [],
+        activeChatXptQuest: "  Active Quest: survive safely.  ",
       }),
     ).resolves.toEqual(contractFixtureCandidateBatch);
+    expect(calls[0]).toMatchObject({
+      activeChatXptQuest: "Active Quest: survive safely.",
+    });
   });
 
   it("rejects a strategy that returns fewer than three candidates", async () => {
@@ -57,6 +65,7 @@ describe("Role 2 provider boundaries", () => {
         intelligence: await intelligence(),
         profile: contractFixtureProfile,
         recentQuestTitles: [],
+        activeChatXptQuest: null,
       }),
     ).rejects.toThrow();
   });
@@ -73,8 +82,30 @@ describe("Role 2 provider boundaries", () => {
         intelligence: await intelligence(),
         profile: contractFixtureProfile,
         recentQuestTitles: [],
+        activeChatXptQuest: null,
       }),
     ).rejects.toThrow();
+  });
+
+  it("rejects malformed active quest context before invoking a generation strategy", async () => {
+    let called = false;
+    const provider = createValidatingCandidateProvider({
+      generate: () => {
+        called = true;
+        return contractFixtureCandidateBatch.candidates;
+      },
+    });
+
+    await expect(
+      provider.generate({
+        envelope: contractFixtureCandidateBatch.envelope,
+        intelligence: await intelligence(),
+        profile: contractFixtureProfile,
+        recentQuestTitles: [],
+        activeChatXptQuest: " ",
+      }),
+    ).rejects.toThrow("activeChatXptQuest");
+    expect(called).toBe(false);
   });
 
   it("honours cancellation before invoking a provider strategy", async () => {
@@ -95,6 +126,7 @@ describe("Role 2 provider boundaries", () => {
           intelligence: await intelligence(),
           profile: contractFixtureProfile,
           recentQuestTitles: [],
+          activeChatXptQuest: null,
         },
         controller.signal,
       ),

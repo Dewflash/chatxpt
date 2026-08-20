@@ -126,10 +126,48 @@ export type {
 } from "./adaptive-sampling";
 export { fingerprintMinecraftHud, measureRegionVisualFeatures } from "./minecraft-hud";
 export type {
+  MinecraftHudFact,
   MinecraftHudFingerprint,
   MinecraftHudFingerprintStatus,
   RegionVisualFeatures,
 } from "./minecraft-hud";
+export {
+  isKnownMinecraftFact,
+  knownMinecraftFact,
+  minecraftAwareContextSchema,
+  minecraftFactSchema,
+  minecraftFactStatusSchema,
+  minecraftGameFactsSchema,
+  minecraftIntentContextSchema,
+  minecraftSupportedFacts,
+  minecraftUnknownFacts,
+  unknownMinecraftFact,
+} from "./minecraft-state";
+export {
+  buildGenericGameStateContext,
+  genericGameFactSchema,
+  genericGameFactStatusSchema,
+  genericGameStateContextSchema,
+} from "./game-state-context";
+export { detectMinecraftMenuState } from "./minecraft-menu";
+export { deriveMinecraftRuntimeFacts } from "./minecraft-runtime";
+export { detectMinecraftSceneFacts } from "./minecraft-scene";
+export type {
+  GenericGameFact,
+  GenericGameFactStatus,
+  GenericGameStateContext,
+} from "./game-state-context";
+export type {
+  MinecraftAwareContext,
+  MinecraftFact,
+  MinecraftFactInput,
+  MinecraftFactStatus,
+  MinecraftGameFacts,
+  MinecraftIntentContext,
+} from "./minecraft-state";
+export type { MinecraftMenuState } from "./minecraft-menu";
+export type { MinecraftRuntimeFacts } from "./minecraft-runtime";
+export type { MinecraftSceneFacts } from "./minecraft-scene";
 export {
   fingerprintBrawlHud,
   parseBrawlOutcomeText,

@@ -165,6 +165,7 @@ describe("TwitchLiveConfigSurface", () => {
     expect(html).toContain("Private pop-out or OBS Custom Dock");
     expect(html).toContain('href="/studio/live-director?display=popout"');
     expect(html).toContain("It is not the public OBS overlay");
+    expect(html).toContain("read-only stream context");
   });
 
   it("renders offline, permission, and reconnect boundaries without local authority", () => {

@@ -5,6 +5,7 @@ import type {
 } from "../core";
 import { buildGameplaySnapshot, type SignalCandidateGroup } from "./snapshots";
 import type { MultiGameVisionAssessment } from "./multi-game-vision";
+import type { MinecraftHudFact, MinecraftHudFingerprint } from "./minecraft-hud";
 
 const MINIMUM_CONFIDENCE = 0.75;
 const CONFLICT_CONFIDENCE_DELTA = 0.1;
@@ -46,6 +47,18 @@ function group(
             provenance: { ...fallbackProvenance, confidence: observed.confidence },
           }],
   };
+}
+
+function isConfirmedMinecraftHud(status: MinecraftHudFingerprint["status"] | undefined): boolean {
+  return status === "vanilla-like" || status === "minecraft-like";
+}
+
+function minecraftHudFactObservation<T extends string | number | boolean>(
+  fact: MinecraftHudFact<T> | undefined,
+): { readonly value: T; readonly confidence: number } | null {
+  return fact?.status === "known" && fact.value !== null
+    ? { value: fact.value, confidence: fact.confidence }
+    : null;
 }
 
 /** Projects private multi-game analysis into the existing game-neutral contract. */
@@ -107,22 +120,102 @@ export function buildMultiGameGameplaySnapshot(input: {
   ];
 
   if (input.assessment.profile.gameId === "minecraft") {
+    const minecraftHud = input.assessment.minecraftHud;
+    const hudProvenance = provenance(
+      input.frame,
+      input.assessment,
+      minecraftHud?.confidence ?? 0,
+      "minecraft-hud-fingerprint-v1",
+    );
+    const factProvenance = provenance(
+      input.frame,
+      input.assessment,
+      minecraftHud?.confidence ?? 0,
+      "minecraft-hud-pixel-facts-v1",
+    );
     groups.push(
       group(
         "minecraft-hud-layout",
         "minecraft-hud-layout",
-        provenance(
-          input.frame,
-          input.assessment,
-          input.assessment.minecraftHud?.confidence ?? 0,
-          "minecraft-hud-fingerprint-v1",
-        ),
-        input.assessment.minecraftHud?.status === "vanilla-like"
+        hudProvenance,
+        isConfirmedMinecraftHud(minecraftHud?.status)
           ? {
-              value: "vanilla-like",
-              confidence: input.assessment.minecraftHud.confidence,
+              value: minecraftHud?.status ?? "minecraft-like",
+              confidence: minecraftHud?.confidence ?? 0,
             }
           : null,
+      ),
+      group(
+        "minecraft-health-hearts",
+        "minecraft-health-hearts",
+        factProvenance,
+        minecraftHudFactObservation(minecraftHud?.facts.healthHearts),
+      ),
+      group(
+        "minecraft-hunger-shanks",
+        "minecraft-hunger-shanks",
+        factProvenance,
+        minecraftHudFactObservation(minecraftHud?.facts.hungerShanks),
+      ),
+      group(
+        "minecraft-armor-points",
+        "minecraft-armor-points",
+        factProvenance,
+        minecraftHudFactObservation(minecraftHud?.facts.armorPoints),
+      ),
+      group(
+        "minecraft-hotbar-visible",
+        "minecraft-hotbar-visible",
+        factProvenance,
+        minecraftHudFactObservation(minecraftHud?.facts.hotbarVisible),
+      ),
+      group(
+        "minecraft-selected-hotbar-category",
+        "minecraft-selected-hotbar-category",
+        factProvenance,
+        minecraftHudFactObservation(minecraftHud?.facts.selectedHotbarCategory),
+      ),
+      group(
+        "minecraft-menu-state",
+        "minecraft-menu-state",
+        factProvenance,
+        minecraftHudFactObservation(input.assessment.minecraftRuntimeFacts?.menuState),
+      ),
+      group(
+        "minecraft-activity",
+        "minecraft-activity",
+        factProvenance,
+        minecraftHudFactObservation(input.assessment.minecraftRuntimeFacts?.activity),
+      ),
+      group(
+        "minecraft-danger",
+        "minecraft-danger",
+        factProvenance,
+        minecraftHudFactObservation(input.assessment.minecraftRuntimeFacts?.danger),
+      ),
+      group(
+        "minecraft-recent-damage",
+        "minecraft-recent-damage",
+        factProvenance,
+        minecraftHudFactObservation(input.assessment.minecraftRuntimeFacts?.recentDamage),
+      ),
+      group(
+        "minecraft-likely-damage-cause",
+        "minecraft-likely-damage-cause",
+        factProvenance,
+        minecraftHudFactObservation(input.assessment.minecraftRuntimeFacts?.likelyDamageCause),
+      ),
+      group(
+        "minecraft-visible-hostile",
+        "minecraft-visible-hostile",
+        factProvenance,
+        minecraftHudFactObservation(input.assessment.minecraftRuntimeFacts?.visibleHostile),
+      ),
+      group(
+        "minecraft-biome-environment",
+        "minecraft-biome-environment",
+        factProvenance,
+        minecraftHudFactObservation(input.assessment.minecraftRuntimeFacts?.biomeOrEnvironment),
       ),
     );
   }

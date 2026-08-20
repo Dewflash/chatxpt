@@ -194,18 +194,6 @@ export class StudioSessionApplication {
         );
       }
       state = loaded;
-      if (state.session.status === "preparing") {
-        const started = await new SessionLifecycleService(this.persistence.lifecycle).start(
-          state.session.sessionId,
-          state.session.revision,
-          this.now(),
-          `studio-start-${this.nextId()}`,
-        );
-        if (!started.ok) {
-          throw commandError(started.error.code, started.error.message, started.error.retryable);
-        }
-        state = started.value.state;
-      }
     } else {
       const createdAt = this.now();
       const sessionId = `session-${this.nextId()}`;
@@ -277,16 +265,7 @@ export class StudioSessionApplication {
       if (!created.ok) {
         throw commandError(created.error.code, created.error.message, created.error.retryable);
       }
-      const started = await lifecycle.start(
-        sessionId,
-        0,
-        this.now(),
-        `studio-start-${this.nextId()}`,
-      );
-      if (!started.ok) {
-        throw commandError(started.error.code, started.error.message, started.error.retryable);
-      }
-      state = started.value.state;
+      state = created.value.state;
     }
 
     const expiresAt = this.now() + STUDIO_GRANT_TTL_MS;
@@ -317,10 +296,41 @@ export class StudioSessionApplication {
       const command = serviceCommand.data;
       this.assertCommandIdentity(command, authorized);
       if (command.type === "streamer.session") {
+        if (command.action === "start") {
+          const hydratedState = await this.hydrateGameplay(authorized.state);
+          const readiness = await this.readiness(hydratedState, authorized.twitchVerified, this.now());
+          const sessionService = readiness.services.find((service) => service.service === "session");
+          if (
+            !readiness.ready ||
+            !sessionService?.allowedActions.includes("start-session") ||
+            hydratedState.session.status !== "preparing"
+          ) {
+            throw new StudioSessionApplicationError(
+              "dependency-unavailable",
+              readiness.label,
+              readiness.blockerCodes.length > 0,
+            );
+          }
+          const started = await new SessionLifecycleService(this.persistence.lifecycle).start(
+            command.sessionId,
+            command.expectedRevision,
+            this.now(),
+            command.commandId,
+          );
+          if (!started.ok) {
+            throw commandError(started.error.code, started.error.message, started.error.retryable);
+          }
+          const startedState = { ...started.value.state, gameplay: hydratedState.gameplay };
+          return {
+            ...(await this.surfaceState(startedState, authorized.twitchVerified)),
+            outcome: "committed",
+            message: "ChatXPT session started.",
+          };
+        }
         if (command.action !== "end") {
           throw new StudioSessionApplicationError(
             "unavailable-capability",
-            "This session is already started",
+            "This session action is unavailable",
           );
         }
         const ended = await new SessionLifecycleService(this.persistence.lifecycle).end(
@@ -363,13 +373,20 @@ export class StudioSessionApplication {
       throw commandError(result.error.code, result.error.message, result.error.retryable);
     }
     const state = result.receipt.state;
+    const isDirectorCueProposal =
+      parsedCommand.data.type === "streamer.live-director-cue" &&
+      parsedCommand.data.action === "turn-into-vote";
+    const message = isDirectorCueProposal
+      ? result.delivery === "published"
+        ? "Three private quest options are ready for streamer approval."
+        : "Three private quest options are saved; realtime delivery is recovering."
+      : result.delivery === "published"
+        ? "Authoritative change saved and broadcast."
+        : "Authoritative change saved; realtime delivery is recovering.";
     return {
       ...(await this.surfaceState(state, authorized.twitchVerified)),
       outcome: result.outcome,
-      message:
-        result.delivery === "published"
-          ? "Authoritative change saved and broadcast."
-          : "Authoritative change saved; realtime delivery is recovering.",
+      message,
     };
   }
 
@@ -508,18 +525,7 @@ export class StudioSessionApplication {
     inputState: AuthoritativeSessionState,
     twitchVerified: boolean,
   ): Promise<StudioSurfaceState> {
-    let state = inputState;
-    try {
-      const gameplay = await this.persistence.gameplaySnapshots.readCurrent({
-        sessionId: state.session.sessionId,
-        questCycleId: state.questCycle.envelope.questCycleId,
-        revision: state.session.revision,
-        evidenceClass: state.questCycle.envelope.evidenceClass,
-      });
-      if (gameplay !== null) state = { ...state, gameplay };
-    } catch {
-      // The stored state remains safe to render while Capture Health reports the missing input.
-    }
+    const state = await this.hydrateGameplay(inputState);
     const at = this.now();
     const envelope = {
       contractVersion: CONTRACT_VERSION,
@@ -542,6 +548,7 @@ export class StudioSessionApplication {
       audience: state.audience,
       questCycle: state.questCycle,
       emergencyPaused: state.emergencyPaused,
+      ...(state.sessionOverride === undefined ? {} : { sessionOverride: state.sessionOverride }),
       ...(state.liveDirector === undefined ? {} : { liveDirector: state.liveDirector }),
     });
     return {
@@ -552,6 +559,24 @@ export class StudioSessionApplication {
           state.session.sessionId,
         ))?.roomCode ?? null,
     };
+  }
+
+  private async hydrateGameplay(
+    inputState: AuthoritativeSessionState,
+  ): Promise<AuthoritativeSessionState> {
+    let state = inputState;
+    try {
+      const gameplay = await this.persistence.gameplaySnapshots.readCurrent({
+        sessionId: state.session.sessionId,
+        questCycleId: state.questCycle.envelope.questCycleId,
+        revision: state.session.revision,
+        evidenceClass: state.questCycle.envelope.evidenceClass,
+      });
+      if (gameplay !== null) state = { ...state, gameplay };
+    } catch {
+      // The stored state remains safe to render while Capture Health reports the missing input.
+    }
+    return state;
   }
 
   private async readiness(
@@ -590,11 +615,23 @@ export class StudioSessionApplication {
         : `${state.gameplay.signals.length} Detected Game Facts are available with explicit confidence`,
       retryable: state.gameplay === null,
     });
+    const integrationBlockers = [
+      ...(!twitch.ok ? ["twitch-configuration"] : []),
+      ...(state.gameplay === null ? ["gameplay-capture"] : []),
+    ];
+    const canStartSession = state.session.status === "preparing" && integrationBlockers.length === 0;
+    const sessionReady = state.session.status === "live" || canStartSession;
     const sessionHealth = serviceHealthSchema.parse({
       service: "session",
-      status: state.session.status === "live" ? "ready" : "unavailable",
+      status: sessionReady ? "ready" : "unavailable",
       checkedAt,
-      message: state.session.status === "live" ? "Broadcaster session is live" : `Broadcaster session is ${state.session.status}`,
+      message: state.session.status === "live"
+        ? "ChatXPT session is live"
+        : canStartSession
+          ? "ChatXPT can start after broadcaster confirmation"
+          : state.session.status === "preparing"
+            ? "Resolve blocking setup before starting ChatXPT"
+            : `ChatXPT session is ${state.session.status}`,
       retryable: state.session.status !== "ended",
     });
     const intelligenceHealth = serviceHealthSchema.parse({
@@ -615,33 +652,57 @@ export class StudioSessionApplication {
         : `Missing ${twitch.missing.join(", ")}`,
       retryable: !twitch.ok,
     });
+    const realtimeBlocksStart =
+      realtimeHealth.status === "unavailable" &&
+      !state.session.capabilities.hostedViewerBoard &&
+      !state.session.capabilities.twitchChatVoting;
+    const sessionBlocksStart = state.session.status === "ended" || state.session.status === "offline";
     const ready =
-      twitch.ok &&
-      state.gameplay !== null &&
-      state.session.status === "live" &&
-      realtimeHealth.status === "ready";
+      integrationBlockers.length === 0 &&
+      !realtimeBlocksStart &&
+      !sessionBlocksStart &&
+      (state.session.status === "preparing" || state.session.status === "live");
     const blockers = [
-      ...(!twitch.ok ? ["twitch-configuration"] : []),
-      ...(state.gameplay === null ? ["gameplay-capture"] : []),
-      ...(state.session.status !== "live" ? ["session-not-live"] : []),
-      ...(realtimeHealth.status !== "ready" ? ["realtime-authority"] : []),
+      ...integrationBlockers,
+      ...(realtimeBlocksStart ? ["viewer-voting-unavailable"] : []),
+      ...(sessionBlocksStart ? ["session-ended"] : []),
     ];
     const liveInputsUsed = twitchVerified || gameplayLive;
+    const sessionActions =
+      state.session.status === "live"
+        ? ["end-session", "open-diagnostics"]
+        : canStartSession && !realtimeBlocksStart
+          ? ["start-session", "open-diagnostics"]
+          : ["open-diagnostics"];
+    const recommendedAction =
+      canStartSession && !realtimeBlocksStart
+        ? "start-session"
+        : state.gameplay === null
+          ? "request-capture-permission"
+          : !twitch.ok
+            ? "connect-twitch"
+            : realtimeBlocksStart
+              ? "retry-service"
+              : null;
     return streamerReadinessViewSchema.parse({
       evidenceClass: liveInputsUsed ? "live" : "diagnostic",
       liveInputsUsed,
       ready,
       status: ready ? "ready" : "blocked",
       services: [
-        { service: "twitch", configured: twitch.ok, health: twitchHealth, allowedActions: twitch.ok ? ["retry-service", "open-diagnostics"] : ["open-diagnostics"] },
-        { service: "obs-capture", configured: state.gameplay !== null, health: captureHealth, allowedActions: ["open-diagnostics"] },
+        { service: "twitch", configured: twitch.ok, health: twitchHealth, allowedActions: twitch.ok ? ["retry-service", "open-diagnostics"] : ["connect-twitch", "install-extension", "open-diagnostics"] },
+        { service: "obs-capture", configured: state.gameplay !== null, health: captureHealth, allowedActions: state.gameplay === null ? ["request-capture-permission", "select-capture-source", "open-diagnostics"] : ["open-diagnostics"] },
         { service: "realtime", configured: this.persistence.mode === "supabase", health: realtimeHealth, allowedActions: ["retry-service", "open-diagnostics"] },
         { service: "intelligence", configured: true, health: intelligenceHealth, allowedActions: ["retry-service", "open-diagnostics"] },
-        { service: "session", configured: true, health: sessionHealth, allowedActions: state.session.status === "live" ? ["end-session", "open-diagnostics"] : ["open-diagnostics"] },
+        { service: "session", configured: true, health: sessionHealth, allowedActions: sessionActions },
       ],
       blockerCodes: blockers,
-      recommendedAction: state.gameplay === null ? "open-diagnostics" : !twitch.ok ? "open-diagnostics" : realtimeHealth.status !== "ready" ? "retry-service" : null,
-      label: ready ? "Ready for the Twitch workflow" : `${blockers.length} readiness ${blockers.length === 1 ? "blocker" : "blockers"}`,
+      recommendedAction,
+      label: ready
+        ? state.session.status === "live"
+          ? "Ready for the Twitch workflow"
+          : "Ready to start ChatXPT"
+        : `${blockers.length} readiness ${blockers.length === 1 ? "blocker" : "blockers"}`,
     });
   }
 }

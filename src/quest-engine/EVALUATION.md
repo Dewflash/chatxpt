@@ -20,7 +20,7 @@ orchestrator and record any real runtime evidence.
 | Cooldown/repetition | resolved cue cooldown, recent cue attention budget, recent quest similarity, terminal quest cooldown | The accepted resolution time starts cue cooldown; recent equivalent work is suppressed; quest cooldown remains 120 seconds | `intervention.test.ts`; `engine.test.ts` |
 | Quest cancellation/results | ordinary cancel, emergency cancel, skip, success, failure, expiry | Terminal reasons/events remain distinct and reward policy remains server-authoritative | `evaluation.test.ts`; `engine.test.ts`; `outcomes.test.ts` |
 | Deterministic replay | candidate assembly, cue action, cue conversion, reconstructed vote, tie resolution | Identical canonical input, authoritative time, and seed produce identical output | `evaluation.test.ts` replay assertions and focused component suites |
-| Game neutrality | tactical shooter, racing, strategy, platformer, unknown game | Three distinct game-neutral fallbacks are available without invented gameplay evidence | `evaluation.test.ts` genre matrix |
+| Game-aware fallback tiering | tactical shooter, racing, strategy, platformer, unknown game, Minecraft | Non-Minecraft contexts keep three distinct game-neutral fallbacks; Minecraft contexts receive safe Minecraft-aware fallbacks without invented exact gameplay evidence | `evaluation.test.ts` genre and Minecraft matrices |
 
 ## Stable Role 1 handoff
 

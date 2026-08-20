@@ -45,3 +45,8 @@ export type {
   IntelligenceSnapshot,
   QuestCandidate,
 } from "../core";
+export { createConfiguredCandidateProvider } from "./server";
+export type {
+  ConfiguredCandidateProvider,
+  ConfiguredCandidateProviderOptions,
+} from "./server";

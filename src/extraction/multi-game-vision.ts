@@ -13,7 +13,17 @@ import {
   type GameProfileSelection,
   type ResolvedGameProfile,
 } from "./game-profiles";
-import { fingerprintMinecraftHud, type MinecraftHudFingerprint } from "./minecraft-hud";
+import {
+  fingerprintMinecraftHud,
+  type MinecraftHudFact,
+  type MinecraftHudFingerprint,
+} from "./minecraft-hud";
+import { detectMinecraftMenuState } from "./minecraft-menu";
+import {
+  deriveMinecraftRuntimeFacts,
+  type MinecraftRuntimeFacts,
+} from "./minecraft-runtime";
+import { detectMinecraftSceneFacts } from "./minecraft-scene";
 import {
   defaultMotionInterpretationPolicy,
   interpretMotionWindow,
@@ -45,6 +55,7 @@ export interface MultiGameVisionAssessment {
   readonly interpretation: MotionInterpretation;
   readonly brawlHud: BrawlHudFingerprint | null;
   readonly minecraftHud: MinecraftHudFingerprint | null;
+  readonly minecraftRuntimeFacts: MinecraftRuntimeFacts | null;
   readonly sampling: AdaptiveSamplingDecision;
   readonly explanations: readonly GameVisionExplanation[];
 }
@@ -78,6 +89,7 @@ export interface MultiGameVisionStreamOptions {
 }
 
 const MAX_RETAINED_SAMPLE_PIXELS = 16_384;
+const MINECRAFT_TEMPORAL_CONFIRMATION_WINDOW_MS = 3_000;
 
 function copyFrame(frame: SampledPixelFrame): SampledPixelFrame {
   if (!Number.isInteger(frame.width) || frame.width <= 0 || !Number.isInteger(frame.height) || frame.height <= 0) {
@@ -154,6 +166,119 @@ function explanationsFor(input: {
   return explanations;
 }
 
+function isMinecraftConfirmedStatus(status: MinecraftHudFingerprint["status"]): boolean {
+  return status === "vanilla-like" || status === "minecraft-like";
+}
+
+function unknownHudFact<T extends string | number | boolean>(
+  reason: string,
+): MinecraftHudFact<T> {
+  return { status: "unknown", value: null, confidence: 0, reason, sourceRegionIds: [] };
+}
+
+function unconfirmedMinecraftHud(raw: MinecraftHudFingerprint): MinecraftHudFingerprint {
+  return {
+    ...raw,
+    status: "candidate-unconfirmed",
+    supportedSignals: raw.supportedSignals.filter((signal) => signal !== "minecraft-hud-layout"),
+    facts: {
+      healthHearts: unknownHudFact("A Minecraft-like health band requires temporal confirmation."),
+      hungerShanks: unknownHudFact("A Minecraft-like hunger band requires temporal confirmation."),
+      armorPoints: unknownHudFact("Armor is not parsed by the current Minecraft HUD detector."),
+      hotbarVisible: unknownHudFact("A Minecraft-like hotbar requires temporal confirmation."),
+      selectedHotbarCategory: unknownHudFact("Selected hotbar item category is not parsed by the current detector."),
+    },
+    reasons: [
+      "A Minecraft-like HUD candidate was observed but requires temporal confirmation.",
+      "Minecraft-specific facts remain unknown until another recent fingerprint agrees.",
+    ],
+  };
+}
+
+function temporallyConfirmedHudFact<T extends string | number | boolean>(
+  current: MinecraftHudFact<T>,
+  previous: MinecraftHudFact<T> | undefined,
+  label: string,
+): MinecraftHudFact<T> {
+  if (current.status !== "known") return current;
+  if (
+    previous?.status === "known" &&
+    previous.value === current.value
+  ) {
+    return {
+      ...current,
+      confidence: Math.min(current.confidence, previous.confidence),
+      reason: `${label} was confirmed by two matching recent Minecraft HUD observations.`,
+      sourceRegionIds: [...new Set([...previous.sourceRegionIds, ...current.sourceRegionIds])],
+    };
+  }
+  return unknownHudFact(
+    `${label} requires two matching recent Minecraft HUD observations.`,
+  );
+}
+
+function temporallyConfirmedMinecraftHud(
+  current: MinecraftHudFingerprint,
+  previous: MinecraftHudFingerprint | null,
+): MinecraftHudFingerprint {
+  return {
+    ...current,
+    facts: {
+      healthHearts: temporallyConfirmedHudFact(
+        current.facts.healthHearts,
+        previous?.facts.healthHearts,
+        "Minecraft health",
+      ),
+      hungerShanks: temporallyConfirmedHudFact(
+        current.facts.hungerShanks,
+        previous?.facts.hungerShanks,
+        "Minecraft hunger",
+      ),
+      armorPoints: temporallyConfirmedHudFact(
+        current.facts.armorPoints,
+        previous?.facts.armorPoints,
+        "Minecraft armor",
+      ),
+      hotbarVisible: temporallyConfirmedHudFact(
+        current.facts.hotbarVisible,
+        previous?.facts.hotbarVisible,
+        "Minecraft hotbar visibility",
+      ),
+      selectedHotbarCategory: temporallyConfirmedHudFact(
+        current.facts.selectedHotbarCategory,
+        previous?.facts.selectedHotbarCategory,
+        "Minecraft selected hotbar category",
+      ),
+    },
+  };
+}
+
+function supportedMinecraftSignals(hud: MinecraftHudFingerprint | null): readonly string[] {
+  if (hud === null || !isMinecraftConfirmedStatus(hud.status)) return [];
+  const signals = ["minecraft-hud-layout"];
+  if (hud.facts.healthHearts.status === "known") signals.push("minecraft-health-hearts");
+  if (hud.facts.hungerShanks.status === "known") signals.push("minecraft-hunger-shanks");
+  if (hud.facts.armorPoints.status === "known") signals.push("minecraft-armor-points");
+  if (hud.facts.hotbarVisible.status === "known") signals.push("minecraft-hotbar-visible");
+  if (hud.facts.selectedHotbarCategory.status === "known") {
+    signals.push("minecraft-selected-hotbar-category");
+  }
+  return signals;
+}
+
+function supportedMinecraftRuntimeSignals(facts: MinecraftRuntimeFacts | null): readonly string[] {
+  if (facts === null) return [];
+  const signals: string[] = [];
+  if (facts.menuState.status === "known") signals.push("minecraft-menu-state");
+  if (facts.activity.status === "known") signals.push("minecraft-activity");
+  if (facts.danger.status === "known") signals.push("minecraft-danger");
+  if (facts.recentDamage.status === "known") signals.push("minecraft-recent-damage");
+  if (facts.likelyDamageCause.status === "known") signals.push("minecraft-likely-damage-cause");
+  if (facts.visibleHostile.status === "known") signals.push("minecraft-visible-hostile");
+  if (facts.biomeOrEnvironment.status === "known") signals.push("minecraft-biome-environment");
+  return signals;
+}
+
 /**
  * Stateful, bounded analyser over downsampled pixels. It retains only the
  * previous bounded sample and a privacy-safe numeric motion window; raw OBS
@@ -169,7 +294,10 @@ export class MultiGameVisionAnalyzer {
   private previousProfileId: string | null = null;
   private previousCalibrationConfirmed: boolean | null = null;
   private brawlHudHistory: BrawlHudFingerprint["status"][] = [];
-  private minecraftHudHistory: MinecraftHudFingerprint["status"][] = [];
+  private previousRawMinecraftHud: MinecraftHudFingerprint | null = null;
+  private previousRawMinecraftHudAt: number | null = null;
+  private previousMinecraftHud: MinecraftHudFingerprint | null = null;
+  private previousMinecraftHudAt: number | null = null;
   private history: TimedSpatialMotion[] = [];
   private samplingState: AdaptiveSamplingState = initialAdaptiveSamplingState;
   private lastObservedAt: number | null = null;
@@ -190,7 +318,10 @@ export class MultiGameVisionAnalyzer {
     this.previousProfileId = null;
     this.previousCalibrationConfirmed = null;
     this.brawlHudHistory = [];
-    this.minecraftHudHistory = [];
+    this.previousRawMinecraftHud = null;
+    this.previousRawMinecraftHudAt = null;
+    this.previousMinecraftHud = null;
+    this.previousMinecraftHudAt = null;
     this.history = [];
     this.samplingState = initialAdaptiveSamplingState;
     this.lastObservedAt = null;
@@ -220,7 +351,10 @@ export class MultiGameVisionAnalyzer {
       this.samplingState = initialAdaptiveSamplingState;
       this.previousCalibrationConfirmed = null;
       this.brawlHudHistory = [];
-      this.minecraftHudHistory = [];
+      this.previousRawMinecraftHud = null;
+      this.previousRawMinecraftHudAt = null;
+      this.previousMinecraftHud = null;
+      this.previousMinecraftHudAt = null;
     }
 
     const rawBrawlHud =
@@ -252,27 +386,21 @@ export class MultiGameVisionAnalyzer {
       resolved.profile.gameId === "minecraft"
         ? fingerprintMinecraftHud(frame, resolved.profile)
         : null;
-    if (rawMinecraftHud !== null) {
-      this.minecraftHudHistory.push(rawMinecraftHud.status);
-      this.minecraftHudHistory = this.minecraftHudHistory.slice(-3);
-    } else {
-      this.minecraftHudHistory = [];
-    }
     const minecraftCalibrationConfirmed =
-      rawMinecraftHud?.status === "vanilla-like" &&
-      this.minecraftHudHistory.filter((status) => status === "vanilla-like").length >= 2;
+      rawMinecraftHud !== null &&
+      isMinecraftConfirmedStatus(rawMinecraftHud.status) &&
+      this.previousRawMinecraftHud !== null &&
+      isMinecraftConfirmedStatus(this.previousRawMinecraftHud.status) &&
+      this.previousRawMinecraftHudAt !== null &&
+      input.observedAt - this.previousRawMinecraftHudAt <= MINECRAFT_TEMPORAL_CONFIRMATION_WINDOW_MS;
     const minecraftHud =
-      rawMinecraftHud?.status === "vanilla-like" && !minecraftCalibrationConfirmed
-        ? {
-            ...rawMinecraftHud,
-            status: "candidate-unconfirmed" as const,
-            supportedSignals: resolved.profile.universalSignals,
-            reasons: [
-              "A vanilla-like HUD candidate was observed but requires temporal confirmation.",
-              "Universal motion analysis remains active until a second recent fingerprint agrees.",
-            ],
-          }
-        : rawMinecraftHud;
+      rawMinecraftHud !== null &&
+      isMinecraftConfirmedStatus(rawMinecraftHud.status) &&
+      !minecraftCalibrationConfirmed
+        ? unconfirmedMinecraftHud(rawMinecraftHud)
+        : rawMinecraftHud !== null && minecraftCalibrationConfirmed
+          ? temporallyConfirmedMinecraftHud(rawMinecraftHud, this.previousRawMinecraftHud)
+          : rawMinecraftHud;
     const calibrationConfirmed = brawlCalibrationConfirmed || minecraftCalibrationConfirmed;
     if (
       this.previousCalibrationConfirmed !== null &&
@@ -302,7 +430,25 @@ export class MultiGameVisionAnalyzer {
       motion === null
         ? bootstrapInterpretation(input.observedAt)
         : interpretMotionWindow(this.history, this.interpretationPolicy);
-    const supportedSignals = [
+    const minecraftMenuState =
+      resolved.profile.gameId === "minecraft"
+        ? detectMinecraftMenuState(frame)
+        : null;
+    const minecraftSceneFacts =
+      resolved.profile.gameId === "minecraft" && minecraftCalibrationConfirmed
+        ? detectMinecraftSceneFacts(frame)
+        : null;
+    const minecraftRuntimeFacts =
+      resolved.profile.gameId === "minecraft"
+        ? deriveMinecraftRuntimeFacts({
+            hud: minecraftHud,
+            previousHud: this.previousMinecraftHud,
+            menuState: minecraftMenuState ?? unknownHudFact("Minecraft menu state is unavailable."),
+            interpretation,
+            sceneFacts: minecraftSceneFacts,
+          })
+        : null;
+    const supportedSignals = [...new Set([
       ...resolved.profile.universalSignals,
       ...(brawlHud?.supportedSignals ?? []).filter(
         (signal) => !resolved.profile.universalSignals.includes(signal),
@@ -310,7 +456,13 @@ export class MultiGameVisionAnalyzer {
       ...(minecraftHud?.supportedSignals ?? []).filter(
         (signal) => !resolved.profile.universalSignals.includes(signal),
       ),
-    ];
+      ...supportedMinecraftSignals(minecraftHud).filter(
+        (signal) => !resolved.profile.universalSignals.includes(signal),
+      ),
+      ...supportedMinecraftRuntimeSignals(minecraftRuntimeFacts).filter(
+        (signal) => !resolved.profile.universalSignals.includes(signal),
+      ),
+    ])];
     const supportTier = supportedSignals.some(
       (signal) => !resolved.profile.universalSignals.includes(signal),
     )
@@ -328,6 +480,27 @@ export class MultiGameVisionAnalyzer {
     this.previous = frame;
     this.previousProfileId = resolved.profile.profileId;
     this.previousCalibrationConfirmed = calibrationConfirmed;
+    this.previousRawMinecraftHud =
+      rawMinecraftHud !== null && isMinecraftConfirmedStatus(rawMinecraftHud.status)
+        ? rawMinecraftHud
+        : null;
+    this.previousRawMinecraftHudAt = this.previousRawMinecraftHud === null ? null : input.observedAt;
+    if (
+      minecraftHud !== null &&
+      isMinecraftConfirmedStatus(minecraftHud.status) &&
+      minecraftHud.facts.healthHearts.status === "known"
+    ) {
+      this.previousMinecraftHud = minecraftHud;
+      this.previousMinecraftHudAt = input.observedAt;
+    } else if (
+      this.previousMinecraftHudAt === null ||
+      input.observedAt - this.previousMinecraftHudAt > MINECRAFT_TEMPORAL_CONFIRMATION_WINDOW_MS ||
+      rawMinecraftHud === null ||
+      !isMinecraftConfirmedStatus(rawMinecraftHud.status)
+    ) {
+      this.previousMinecraftHud = null;
+      this.previousMinecraftHudAt = null;
+    }
     this.samplingState = sampling;
     this.lastObservedAt = input.observedAt;
     return {
@@ -340,6 +513,7 @@ export class MultiGameVisionAnalyzer {
       interpretation,
       brawlHud,
       minecraftHud,
+      minecraftRuntimeFacts,
       sampling,
       explanations: explanationsFor({ resolved, interpretation, brawlHud, hud: minecraftHud }),
     };

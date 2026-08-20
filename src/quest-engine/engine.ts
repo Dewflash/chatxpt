@@ -781,6 +781,8 @@ export class DefaultQuestEngine implements QuestEngine {
           "unavailable-capability",
           "Director Cue actions require the Role 3 cue lifecycle",
         );
+      default:
+        return error("validation", "Command type is not supported by the quest engine");
     }
   }
 }

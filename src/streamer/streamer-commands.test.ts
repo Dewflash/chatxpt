@@ -32,7 +32,13 @@ describe("Role 4 streamer command builders", () => {
     const draft = editableDefaultsFromView(contractFixtureStreamerView);
     const changed = {
       ...draft,
+      gameId: "minecraft",
+      gameName: "Minecraft Java Edition",
       experience: { ...draft.experience, intensity: 0.8 },
+      restrictions: [...draft.restrictions, "No elytra challenges"],
+      preferredQuestTypes: ["exploration", "chat-choice"],
+      forbiddenQuestTypes: [...draft.forbiddenQuestTypes, "inventory-trash"],
+      accessibilityNeeds: ["high-contrast", "reduced-motion"],
       voting: { ...draft.voting, voteVisibility: "hidden-until-close" as const },
       rewards: { ...draft.rewards, rewardDisplay: "session-points" as const },
     };
@@ -47,7 +53,12 @@ describe("Role 4 streamer command builders", () => {
       expectedRevision: contractFixtureStreamerView.envelope.revision,
       actor: { kind: "broadcaster", actorId: contractFixtureStreamerView.profile.streamerId },
       questCycleId: null,
+      game: { gameId: "minecraft", gameName: "Minecraft Java Edition" },
       experiencePatch: { intensity: 0.8 },
+      restrictions: expect.arrayContaining(["No elytra challenges"]),
+      preferredQuestTypes: ["exploration", "chat-choice"],
+      forbiddenQuestTypes: expect.arrayContaining(["inventory-trash"]),
+      accessibilityNeeds: ["high-contrast", "reduced-motion"],
       voting: { voteVisibility: "hidden-until-close" },
       rewards: { rewardDisplay: "session-points" },
     });

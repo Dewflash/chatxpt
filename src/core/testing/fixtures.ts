@@ -728,6 +728,42 @@ function uiX06Views(questCycle: QuestCycleState): RoleViewModels {
       session,
       readOnly: true,
       communityHype,
+      upNext:
+        questCycle.status === "voting"
+          ? {
+              label: "Up next",
+              title: "Winning quest goes live",
+              detail: "The official winner appears here after the audience vote closes.",
+              expiresAt: questCycle.endsAt,
+            }
+          : questCycle.status === "active"
+            ? {
+                label: "Quest payoff",
+                title:
+                  uiX06Options.find(
+                    (option) => option.candidateId === questCycle.activeCandidateId,
+                  )?.title ?? "Sidequest active",
+                detail:
+                  uiX06Options.find(
+                    (option) => option.candidateId === questCycle.activeCandidateId,
+                  )?.instruction ?? "The active quest is visible on the broadcast.",
+                expiresAt: questCycle.endsAt,
+              }
+            : questCycle.status === "cooldown"
+              ? {
+                  label: "Up next",
+                  title: "Next vote soon",
+                  detail: "ChatXPT is waiting for another safe sidequest moment.",
+                  expiresAt: questCycle.endsAt,
+                }
+              : questCycle.result !== null
+                ? {
+                    label: "Result",
+                    title: `Sidequest ${questCycle.result.outcome}`,
+                    detail: questCycle.result.reason,
+                    expiresAt: questCycle.endsAt,
+                  }
+                : null,
       questCycle,
       connection,
     }),
@@ -1019,6 +1055,7 @@ export const contractFixtureOverlayView = overlayViewModelSchema.parse({
   session: contractFixtureSession,
   readOnly: true,
   communityHype: 0,
+  upNext: null,
   questCycle: contractFixtureQuestCycle,
   connection: contractFixtureConnection,
 });

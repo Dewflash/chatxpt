@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   Role1InterventionCoordinator,
   intelligenceSnapshotSchema,
+  questCycleStateSchema,
   systemIntelligenceCommandSchema,
   type CandidateBatch,
   type CandidateInput,
@@ -19,6 +20,7 @@ import {
   contractFixtureQuestCycle,
   contractFixtureSession,
 } from "../../src/core/testing";
+import { DefaultCandidateAssembler } from "../../src/quest-engine";
 import { persistenceState } from "./persistence-fixtures";
 
 const NOW = contractFixtureEnvelope.occurredAt + 1_000;
@@ -66,6 +68,7 @@ describe("Role 1 intervention coordinator", () => {
     const coordinator = new Role1InterventionCoordinator(
       policy,
       provider,
+      new DefaultCandidateAssembler(),
       { store: async (batch) => void stored.push(batch) },
       {
         execute: async (command) => {
@@ -102,7 +105,7 @@ describe("Role 1 intervention coordinator", () => {
     expect(executed).toHaveLength(0);
   });
 
-  it("generates, stores, and submits an intelligence-ready command only after intervention is allowed", async () => {
+  it("generates, Role 3-validates, stores, and submits only after intervention is allowed", async () => {
     const state = persistenceState();
     const policy = new StaticPolicy({
       shouldPropose: true,
@@ -116,6 +119,7 @@ describe("Role 1 intervention coordinator", () => {
     const coordinator = new Role1InterventionCoordinator(
       policy,
       provider,
+      new DefaultCandidateAssembler(),
       { store: async (batch) => void stored.push(batch) },
       {
         execute: async (command) => {
@@ -164,13 +168,76 @@ describe("Role 1 intervention coordinator", () => {
       profile: { profileId: state.profile.profileId },
       recentQuestTitles: ["Old quest"],
     });
-    expect(stored).toEqual([contractFixtureCandidateBatch]);
+    expect(stored).toHaveLength(1);
+    expect(stored[0].candidates).toHaveLength(3);
+    expect(stored[0].candidates.every(({ generation }) => generation.method === "deterministic-fallback"))
+      .toBe(true);
+    expect(result).toMatchObject({
+      candidateBatch: { candidates: stored[0].candidates },
+    });
     const command = systemIntelligenceCommandSchema.parse(executed[0]);
     expect(command).toMatchObject({
       commandId: "fixture-intelligence-command",
       expectedRevision: 0,
-      candidateBatchId: contractFixtureCandidateBatch.envelope.messageId,
+      candidateBatchId: stored[0].envelope.messageId,
       actor: { kind: "system", actorId: "fixture-orchestrator" },
     });
+  });
+
+  it("passes active ChatXPT quest context separately into candidate generation", async () => {
+    const base = persistenceState();
+    const active = contractFixtureCandidateBatch.candidates[0];
+    const state = {
+      ...base,
+      questCycle: questCycleStateSchema.parse({
+        ...base.questCycle,
+        status: "active",
+        options: contractFixtureCandidateBatch.candidates,
+        activeCandidateId: active.candidateId,
+        availableStreamerActions: ["cancel", "succeed", "fail"],
+        startsAt: NOW - 5_000,
+        endsAt: NOW + 55_000,
+        progress: {
+          value: 0,
+          updatedAt: NOW - 5_000,
+          method: "manual",
+          evidenceSignalIds: [],
+        },
+      }),
+    };
+    const policy = new StaticPolicy({
+      shouldPropose: true,
+      score: 0.8,
+      reasons: ["fixture-active-context"],
+      evidenceSignalIds: [],
+    });
+    const provider = new RecordingCandidateProvider();
+    const coordinator = new Role1InterventionCoordinator(
+      policy,
+      provider,
+      new DefaultCandidateAssembler(),
+      { store: async () => undefined },
+      {
+        execute: async () => ({
+          ok: false,
+          error: { code: "validation", message: "fixture stops after generation", retryable: false },
+        }),
+      },
+      () => NOW,
+    );
+
+    await coordinator.run({
+      state,
+      intelligence: intelligence(),
+      recentQuests: [],
+      candidateInputEnvelope: contractFixtureEnvelope,
+      commandId: "fixture-intelligence-command",
+      correlationId: "fixture-intelligence-correlation",
+      systemActorId: "fixture-orchestrator",
+      issuedAt: NOW,
+    });
+
+    expect(provider.calls).toHaveLength(1);
+    expect(provider.calls[0].activeChatXptQuest).toBe(`${active.title}: ${active.instruction}`);
   });
 });

@@ -10,6 +10,9 @@ import {
   type AcceptedVoteTallySnapshot,
   type AudiencePointerAggregate,
   type CommandEnvelope,
+  type DirectorCueConverter,
+  type DirectorCueConversionInput,
+  type DirectorCueConversionResult,
   type GameplaySnapshot,
   type QuestEngine,
   type QuestEngineInput,
@@ -274,6 +277,7 @@ export class CanonicalFixtureViewProjector implements ViewModelProjector {
         audience: input.audience,
         questCycle: input.questCycle,
         emergencyPaused: input.emergencyPaused,
+        ...(input.sessionOverride === undefined ? {} : { sessionOverride: input.sessionOverride }),
         ...(input.liveDirector === undefined ? {} : { liveDirector: input.liveDirector }),
       }),
       viewer: viewerViewModelSchema.parse({
@@ -303,6 +307,7 @@ export class CanonicalFixtureViewProjector implements ViewModelProjector {
         session: input.session,
         readOnly: true,
         communityHype: input.communityHype,
+        upNext: null,
         questCycle: input.questCycle,
         connection: input.connection,
       }),
@@ -331,6 +336,21 @@ export class ScriptedFixtureDirectorCueLifecycle implements DirectorCueLifecycle
   ) {}
 
   applyAction(input: DirectorCueLifecycleActionInput): DirectorCueLifecycleResult {
+    this.calls += 1;
+    return this.script(input);
+  }
+}
+
+export class ScriptedFixtureDirectorCueConverter implements DirectorCueConverter {
+  calls = 0;
+
+  constructor(
+    private readonly script: (
+      input: DirectorCueConversionInput,
+    ) => DirectorCueConversionResult,
+  ) {}
+
+  convert(input: DirectorCueConversionInput): DirectorCueConversionResult {
     this.calls += 1;
     return this.script(input);
   }

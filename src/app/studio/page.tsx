@@ -4,5 +4,5 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default function StudioPage() {
-  return <StreamerAuthorizedClient surface="studio" />;
+  return <StreamerAuthorizedClient surface="studio-home" />;
 }
