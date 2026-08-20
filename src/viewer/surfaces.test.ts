@@ -391,10 +391,17 @@ describe("Role 5 OBS overlay surface", () => {
           evidenceSignalIds: [],
         },
       },
+      upNext: {
+        label: "Quest payoff",
+        title: options[2].title,
+        detail: options[2].instruction,
+        expiresAt: NOW + 45_000,
+      },
     });
     const html = renderToStaticMarkup(h(ObsQuestOverlaySurface, { view, now: NOW }));
 
     expect(html).toContain(options[2].title);
+    expect(html).toContain("Quest payoff");
     expect(html).toContain("45s left");
     expect(html).toContain("Progress");
     expect(html).toContain("Live game progress");
@@ -411,11 +418,26 @@ describe("Role 5 OBS overlay surface", () => {
     );
 
     expect(html).toContain("Audience vote");
+    expect(html).toContain("Winning quest goes live");
     expect(html).toContain("Vote now");
     expect(html).toContain(options[0].title);
     expect(html).toContain(options[1].title);
     expect(html).toContain(options[2].title);
     expect(html).toContain("2 votes");
+    expect(html).not.toContain("<button");
+  });
+
+  it("hides expired public up-next copy while awaiting server result authority", () => {
+    const source = contractFixtureUiX06RoleViewCatalog["r5.vote.tie.v1"].overlay;
+    const html = renderToStaticMarkup(
+      h(ObsQuestOverlaySurface, {
+        view: source,
+        now: source.questCycle.endsAt ?? NOW,
+      }),
+    );
+
+    expect(html).toContain("Awaiting the official result");
+    expect(html).not.toContain("Winning quest goes live");
     expect(html).not.toContain("<button");
   });
 
@@ -456,6 +478,7 @@ describe("Role 5 OBS overlay surface", () => {
     );
 
     expect(html).toContain("Next vote soon");
+    expect(html).toContain("ChatXPT is waiting for another safe sidequest moment.");
     expect(html).toContain("120s left");
     expect(html).not.toContain("<button");
   });

@@ -79,7 +79,7 @@ const setupActionLabels: Readonly<Record<StreamerSetupAction, string>> = {
   "retry-service": "Retry check",
   "start-session": "Start session",
   "end-session": "End session",
-  "open-diagnostics": "Open diagnostics",
+  "open-diagnostics": "Review setup details",
 };
 
 const destructiveActions = new Set<StreamerQuestAction>(["cancel", "skip", "fail"]);
@@ -242,7 +242,7 @@ function SavedDefaultsEditor({
               <dd>{view.profile.restrictions.join(", ") || "Core safety policy only"}</dd>
             </div>
           </dl>
-          <p className={styles.contractNote}>Editing waits for the canonical profile-list patch from Role 1.</p>
+          <p className={styles.contractNote}>List persistence uses the canonical profile settings command; full list editing remains unavailable in this pass.</p>
         </SettingGroup>
 
         <SettingGroup title="Game & accessibility" badge="Saved · view only">
@@ -256,7 +256,7 @@ function SavedDefaultsEditor({
               <dd>{view.profile.accessibilityNeeds.join(", ") || "No saved preferences"}</dd>
             </div>
           </dl>
-          <p className={styles.contractNote}>These values are persistent, but their update command is not public yet.</p>
+          <p className={styles.contractNote}>These saved values are visible here; their update command is not public yet.</p>
         </SettingGroup>
 
         <SettingGroup title="Voting" badge="Saved default">
@@ -284,7 +284,7 @@ function SavedDefaultsEditor({
                 voting: { ...current.voting, showCountdown: event.currentTarget.checked },
               }))}
             />
-            <span>Show the authoritative 30-second countdown</span>
+            <span>Show the official 30-second countdown</span>
           </label>
           <p className={styles.contractNote}>One accepted vote per viewer; vote changes stay off for this MVP.</p>
         </SettingGroup>
@@ -343,7 +343,7 @@ function SavedDefaultsEditor({
 
       {!editable ? (
         <Notice tone="warning" title="Profile actions are not mounted">
-          Values remain read only until the authorised host supplies the canonical command dispatcher.
+          Values remain read only until the secure Studio action handler is available.
         </Notice>
       ) : null}
     </section>
@@ -364,7 +364,7 @@ function SessionOverridePanel({ view }: { readonly view: StreamerViewModel }) {
       <Panel className={styles.overridePanel}>
         <div>
           <strong>{`Sidequest intensity · ${savedIntensity}%`}</strong>
-          <p>Effective source: saved default. No session-only value is present in the current authoritative view.</p>
+          <p>Effective source: saved default. No session-only value is present for this stream.</p>
         </div>
         <div className={styles.buttonRow}>
           <Button variant="secondary" disabled>Change for this session</Button>
@@ -372,7 +372,7 @@ function SessionOverridePanel({ view }: { readonly view: StreamerViewModel }) {
         </div>
       </Panel>
       <Notice tone="warning" title="Session override contract required">
-        The control stays unavailable until Role 1 publishes an effective-value source, session patch, and clear action. Studio will not imitate persistence in browser storage.
+        This control stays unavailable until current-stream changes and reset actions are connected. Studio will not imitate persistence in browser storage.
       </Notice>
     </section>
   );
@@ -480,7 +480,7 @@ function HealthAndRecovery({
           badge={gameplayHealth.label}
           tone={gameplayHealth.tone}
           detail={view.gameplay === null
-            ? "No authorised gameplay snapshot is available. Manual sidequest controls remain usable."
+            ? "No current gameplay snapshot is available. Manual sidequest controls remain usable."
             : `${titleCase(view.gameplay.capabilities.tier)} · ${gameplayHealth.knownCount} observed, ${gameplayHealth.unknownCount} unknown, ${gameplayHealth.staleCount} stale, ${gameplayHealth.unavailableCount} unavailable of ${gameplayHealth.totalCount} Detected Game Facts.`}
           meta={gameplayMeta}
         />
@@ -490,11 +490,11 @@ function HealthAndRecovery({
           tone={generation?.tone ?? (intelligence ? healthTone(intelligence.health.status) : "neutral")}
           detail={generation === null
             ? intelligence?.health.message ?? "No candidate-generation route is visible yet."
-            : `${generation.detail} Raw model and provider controls stay server-side.`}
+            : `${generation.detail} Generation details stay server-side.`}
         />
         <HealthCard {...serviceCard("Realtime", realtime, "Realtime snapshot and recovery state are unknown.")} />
       </CardGrid>
-      <p className={styles.sectionNote}>There is no combined readiness percentage. Each layer keeps its own evidence and recovery action.</p>
+      <p className={styles.sectionNote}>There is no combined readiness percentage. Each layer keeps its own status and recovery action.</p>
     </section>
   );
 }
@@ -568,17 +568,17 @@ function QuestManagement({
       <div className={styles.sectionHeading}>
         <div>
           <p className={styles.eyebrow}>Live sidequests</p>
-          <h2 id="live-quests-heading">Review and recover without hidden authority</h2>
+          <h2 id="live-quests-heading">Review and recover from the latest stream state</h2>
         </div>
         <div className={styles.badgeRow}>
           <StatusBadge tone="info">{titleCase(cycle.status)}</StatusBadge>
-          <StatusBadge tone="diagnostic">{`Revision ${cycle.envelope.revision}`}</StatusBadge>
+          <StatusBadge tone="neutral">Synced state</StatusBadge>
         </div>
       </div>
 
       {view.emergencyPaused ? (
         <Notice tone="danger" title="Emergency pause is latched" politeness="assertive">
-          New intervention stays blocked until the authorised runtime clears the latch.
+          New sidequests stay blocked until emergency pause is cleared.
           <div className={styles.noticeAction}>
             <Button
               variant="secondary"
@@ -604,14 +604,14 @@ function QuestManagement({
           ))}
         </CardGrid>
       ) : (
-        <Notice title="No authorised three-option sidequest proposal">
-          Studio will wait for the runtime instead of creating local sidequest choices.
+        <Notice title="No three-option sidequest proposal">
+          Studio will wait for ChatXPT instead of creating local sidequest choices.
         </Notice>
       )}
 
       {cycle.progress ? (
         <Progress
-          label={`Authoritative progress · ${titleCase(cycle.progress.method)}`}
+          label={`Sidequest progress · ${titleCase(cycle.progress.method)}`}
           value={cycle.progress.value}
           max={1}
           valueLabel={`${Math.round(cycle.progress.value * 100)}%`}
@@ -662,7 +662,7 @@ function QuestManagement({
 
       {confirmAction ? (
         <Notice tone="danger" title={`Confirm ${actionLabels[confirmAction].toLocaleLowerCase()}`} politeness="assertive">
-          This changes the authoritative sidequest outcome. The current sidequest stays unchanged until you confirm.
+          This changes the current sidequest outcome. The sidequest stays unchanged until you confirm.
           <div className={styles.noticeAction}>
             <Button variant="danger" disabled={pending} onClick={() => emitAction(confirmAction)}>
               Confirm {actionLabels[confirmAction].toLocaleLowerCase()}
@@ -722,11 +722,10 @@ export function StudioManagementSurface({
         <header className={styles.hero}>
           <div>
             <div className={styles.badgeRow}>
-              <StatusBadge tone={view.envelope.evidenceClass === "live" ? "success" : "diagnostic"}>
-                {view.envelope.evidenceClass === "live" ? "Live session mode" : `${titleCase(view.envelope.evidenceClass)} data`}
+              <StatusBadge tone={view.envelope.evidenceClass === "live" ? "success" : "warning"}>
+                {view.envelope.evidenceClass === "live" ? "Live session mode" : "Live connection not confirmed"}
               </StatusBadge>
               <StatusBadge tone={view.session.status === "live" ? "success" : "neutral"}>{titleCase(view.session.status)}</StatusBadge>
-              <StatusBadge tone="diagnostic">{`Revision ${view.envelope.revision}`}</StatusBadge>
             </div>
             <p className={styles.eyebrow}>Returning streamer workspace</p>
             <h1>{`Welcome back, ${view.profile.displayName}`}</h1>
@@ -740,8 +739,8 @@ export function StudioManagementSurface({
         </header>
 
         {view.envelope.evidenceClass !== "live" ? (
-          <Notice tone="warning" title="Not live workflow evidence">
-            This management surface is rendering {view.envelope.evidenceClass} data. It does not prove real Twitch, Gameplay Capture, intelligence, persistence, or realtime behaviour.
+          <Notice tone="warning" title="Live connection not confirmed">
+            This view is not connected to the full live Twitch, Game Capture, intelligence, persistence, and realtime workflow yet.
           </Notice>
         ) : null}
 
@@ -761,7 +760,7 @@ export function StudioManagementSurface({
           <div className={styles.sectionHeading}>
             <div>
               <p className={styles.eyebrow}>Private Live Director</p>
-              <h2 id="live-director-heading">Direct the moment without blending sources</h2>
+              <h2 id="live-director-heading">Direct the moment from the latest stream context</h2>
             </div>
             <StatusBadge tone="diagnostic">Broadcaster only</StatusBadge>
           </div>

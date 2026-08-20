@@ -52,6 +52,7 @@ interface GameplayIngressPayload {
   };
   readonly authority?: GameplayIngressAuthority;
   readonly result?: { readonly status: string; readonly reason?: string };
+  readonly liveDirector?: { readonly status: string; readonly reason?: string };
   readonly error?: { readonly message?: string; readonly retryable?: boolean };
 }
 
@@ -60,6 +61,17 @@ function diagnosticError(caught: unknown): string {
     return "Camera access is blocked by macOS. Allow camera access for the browser running this diagnostic, then retry.";
   }
   return caught instanceof Error ? caught.message : "OBS extraction diagnostic failed.";
+}
+
+function liveDirectorStatusCopy(payload: GameplayIngressPayload): string {
+  if (payload.liveDirector === undefined) return "Not reported";
+  if (payload.liveDirector.status === "submitted") return "Context refreshed";
+  if (payload.liveDirector.status === "duplicate") return "Context already current";
+  if (payload.liveDirector.status === "failed") return "Context refresh failed";
+  if (payload.liveDirector.reason === "proposal-submitted") return "Skipped; proposal used snapshot";
+  if (payload.liveDirector.reason === "runtime-unavailable") return "Runtime unavailable";
+  if (payload.liveDirector.reason === "duplicate-snapshot") return "Duplicate snapshot";
+  return "Not refreshed";
 }
 
 function selectionFor(game: DiagnosticGame): GameProfileSelection {
@@ -87,6 +99,7 @@ export function GameplayExtractionDiagnostic({ initialSessionId = "" }: { readon
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState(initialSessionId);
   const [ingressStatus, setIngressStatus] = useState("Diagnostic only");
+  const [liveDirectorStatus, setLiveDirectorStatus] = useState("Not connected");
   const [acceptedSnapshots, setAcceptedSnapshots] = useState(0);
   const controllerRef = useRef<AbortController | null>(null);
   const selectedProfile = useMemo(() => selectionFor(game), [game]);
@@ -112,6 +125,7 @@ export function GameplayExtractionDiagnostic({ initialSessionId = "" }: { readon
     setError(null);
     setLatest(null);
     setAcceptedSnapshots(0);
+    setLiveDirectorStatus(requestedSessionId.length > 0 ? "Waiting for accepted facts" : "Diagnostic only");
     setRunning(true);
     let mediaStream: MediaStream | null = null;
     let ingressGrant: { token: string; expiresAt: number } | null = null;
@@ -205,6 +219,7 @@ export function GameplayExtractionDiagnostic({ initialSessionId = "" }: { readon
           if (!response.ok || !payload.ok) {
             if (payload.result?.reason === "state-mismatch") {
               setIngressStatus("Session changed; capture authority refreshed");
+              setLiveDirectorStatus("Waiting for current session state");
             } else if (response.status === 429) {
               setIngressStatus("Capture cadence throttled; retrying safely");
             } else {
@@ -212,6 +227,7 @@ export function GameplayExtractionDiagnostic({ initialSessionId = "" }: { readon
             }
           } else {
             setAcceptedSnapshots((count) => count + (payload.result?.status === "duplicate" ? 0 : 1));
+            setLiveDirectorStatus(liveDirectorStatusCopy(payload));
             setIngressStatus(
               payload.result?.status === "duplicate"
                 ? "Connected; duplicate safely ignored"
@@ -314,6 +330,7 @@ export function GameplayExtractionDiagnostic({ initialSessionId = "" }: { readon
       <section className={styles.grid} aria-live="polite" aria-label="Extraction status">
         <article className={styles.metric}><span>Capture Health</span><strong>{running ? (latest === null ? "Starting" : "Observed") : error === null ? "Unavailable" : "Permission denied"}</strong></article>
         <article className={styles.metric}><span>Core ingress</span><strong>{ingressStatus}</strong></article>
+        <article className={styles.metric}><span>Live Director</span><strong>{liveDirectorStatus}</strong></article>
         <article className={styles.metric}><span>Snapshots accepted</span><strong>{acceptedSnapshots}</strong></article>
         <article className={styles.metric}><span>Frames analyzed</span><strong>{latest?.frameCount ?? 0}</strong></article>
         <article className={styles.metric}><span>Game Profile</span><strong>{latest?.gameProfile ?? "Waiting"}</strong></article>

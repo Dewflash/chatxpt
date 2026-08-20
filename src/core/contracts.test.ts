@@ -780,6 +780,7 @@ describe("role view-model boundaries", () => {
     expect(contractFixtureViewerView.liveDirector).not.toHaveProperty("cue");
     expect(contractFixtureViewerView.liveDirector).not.toHaveProperty("audiencePointer");
     expect(contractFixtureOverlayView).not.toHaveProperty("liveDirector");
+    expect(contractFixtureOverlayView.upNext).toBeNull();
 
     expect(
       viewerViewModelSchema.safeParse({
@@ -794,6 +795,18 @@ describe("role view-model boundaries", () => {
       overlayViewModelSchema.safeParse({
         ...structuredClone(contractFixtureOverlayView),
         liveDirector: contractFixtureLiveDirectorState,
+      }).success,
+    ).toBe(false);
+    expect(
+      overlayViewModelSchema.safeParse({
+        ...structuredClone(contractFixtureOverlayView),
+        upNext: {
+          label: "Up next",
+          title: "Leaked cue",
+          detail: "Private cue reason should never become an overlay field.",
+          expiresAt: null,
+          cue: contractFixtureLiveDirectorState.cue,
+        },
       }).success,
     ).toBe(false);
   });

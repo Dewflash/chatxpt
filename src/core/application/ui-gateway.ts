@@ -482,6 +482,12 @@ function gatewayViews(): RoleViewModels {
     session,
     readOnly: true,
     communityHype: 42,
+    upNext: {
+      label: "Up next",
+      title: "Winning quest goes live",
+      detail: "The official winner appears here after the audience vote closes.",
+      expiresAt: questCycle.endsAt,
+    },
     questCycle,
     connection: serviceHealth("overlay-realtime", "ready", "Fixture overlay is read-only."),
   });

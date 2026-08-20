@@ -95,6 +95,49 @@ const algorithmicTemplates: readonly AlgorithmicTemplate[] = [
   },
 ] as const;
 
+const minecraftAlgorithmicTemplates: readonly AlgorithmicTemplate[] = [
+  {
+    key: "minecraft-next-goal",
+    title: "Next Goal Check",
+    instruction: "Name one Minecraft goal, then make your next choice support it.",
+    durationSeconds: 60,
+    difficulty: "easy",
+    rewardPoints: 100,
+    rationale: "Credential-free fallback is Minecraft-aware without claiming unsupported exact game state.",
+    preferredSignals: ["audience-intent", "audience-repeated-requests"],
+  },
+  {
+    key: "minecraft-chat-vibe",
+    title: "Chat Chooses the Vibe",
+    instruction: "Ask chat for a cautious or bold Minecraft approach, then follow the winning vibe.",
+    durationSeconds: 60,
+    difficulty: "medium",
+    rewardPoints: 200,
+    rationale: "Credential-free fallback uses the selected game and audience input without unsupported gameplay facts.",
+    preferredSignals: ["audience-energy", "audience-intent"],
+  },
+  {
+    key: "minecraft-choice-explain",
+    title: "Explain the Choice",
+    instruction: "Before your next Minecraft action, explain what you are trying to achieve.",
+    durationSeconds: 45,
+    difficulty: "easy",
+    rewardPoints: 100,
+    rationale: "Credential-free fallback gives Minecraft-specific structure while exact state remains unknown.",
+    preferredSignals: ["activity-intensity", "audience-intent"],
+  },
+  {
+    key: "minecraft-teach-moment",
+    title: "Teach the Moment",
+    instruction: "Share one Minecraft tip that fits your current plan before continuing.",
+    durationSeconds: 45,
+    difficulty: "easy",
+    rewardPoints: 100,
+    rationale: "Credential-free fallback keeps a Minecraft teaching prompt measurable and safe.",
+    preferredSignals: ["audience-energy", "audience-repeated-requests"],
+  },
+] as const;
+
 const ROLE3_COMPATIBLE_MINIMUM_SIGNAL_CONFIDENCE = 0.5;
 const ROLE3_COMPATIBLE_MAXIMUM_GAMEPLAY_SIGNAL_AGE_MS = 15_000;
 const ROLE3_COMPATIBLE_MAXIMUM_AUDIENCE_SIGNAL_AGE_MS = 30_000;
@@ -157,15 +200,26 @@ function confidenceFor(template: AlgorithmicTemplate, signalIds: readonly string
   return Math.min(0.82, base + signalIds.length * 0.05);
 }
 
+function isMinecraftInput(input: CandidateInput): boolean {
+  const profileGame = `${input.profile.gameId ?? ""} ${input.profile.gameName ?? ""}`.toLowerCase();
+  const gameplayGame = `${input.intelligence.gameplay.capabilities.gameId ?? ""}`.toLowerCase();
+  return profileGame.includes("minecraft") || gameplayGame.includes("minecraft");
+}
+
+function orderedTemplates(input: CandidateInput): readonly AlgorithmicTemplate[] {
+  const seed = `${input.envelope.sessionId}:${input.envelope.questCycleId ?? "session"}:${input.envelope.revision}`;
+  if (!isMinecraftInput(input)) {
+    return rotate(algorithmicTemplates, hash(seed));
+  }
+  return rotate(minecraftAlgorithmicTemplates, hash(`${seed}:minecraft`));
+}
+
 export function createAlgorithmicCandidateStrategy(): CandidateGenerationStrategy {
   return {
     generate(input) {
       const recentTitles = new Set(input.recentQuestTitles.map(normaliseTitle));
       const availableSignals = knownSignalIds(input);
-      const rotated = rotate(
-        algorithmicTemplates,
-        hash(`${input.envelope.sessionId}:${input.envelope.questCycleId ?? "session"}:${input.envelope.revision}`),
-      );
+      const rotated = orderedTemplates(input);
       const preferred = rotated.filter((template) => !recentTitles.has(normaliseTitle(template.title)));
       const selected = [...preferred, ...rotated].filter(
         (template, index, candidates) =>

@@ -342,30 +342,30 @@ Connect Twitch
 | Capability currently unavailable or incomplete | Current reality | Planned slice |
 | --- | --- | --- |
 | Self-service Twitch connection and recovery | Secure manual mapping exists; full OAuth/EventSub product setup is incomplete. | ICP-02 |
-| Correct readiness-gated start | Current start marks the session live before reporting blockers. | ICP-02 |
+| Correct readiness-gated start | Source now keeps setup sessions in `preparing`, gates explicit Start on Twitch/Game Capture readiness, and transitions to `live` only through the lifecycle command. Final test execution and real capture/Twitch evidence remain open. | ICP-02 |
 | Twitch game pre-fill with correction | Start currently relies on manually entered game data. | ICP-02 |
-| Production Game Capture | Real capture loop is mounted in diagnostics and requires manual setup keys. | ICP-02 |
-| Automatic Game Capture reconnect | No normal product capture controller owns reconnect. | ICP-02 |
-| Complete profile editing | Game, safety lists, quest preferences, and accessibility are view-only. | ICP-03 |
+| Production Game Capture | `/studio/gameplay/capture` now mounts a product capture screen that reuses the OBS Virtual Camera analyzer and gameplay ingress grant/snapshot boundary; it still requires manual setup keys and real OBS proof. | ICP-02 |
+| Automatic Game Capture reconnect | The product capture screen refreshes short-lived ingress grants while running and remembers the selected game profile plus last successful capture time in browser-local storage; full permission/device-loss recovery is still incomplete. | ICP-02 |
+| Complete profile editing | Profile & Defaults now emits the existing authoritative profile-settings command for game, intensity, creativity, safety lists, quest preferences, and accessibility. Presets, richer validation, and final UI/testing remain incomplete. | ICP-03 |
 | Named stream presets | No preset schema, persistence, or UI exists. | ICP-03 |
-| Current-stream overrides | Controls are disabled and no patch/clear authority exists. | ICP-03 |
-| Canonical runtime intelligence composition | Role 2 provider/coordinator ports exist but are not mounted in the production runtime. | ICP-04/ICP-06 |
-| Automatic Live Director refresh | Context composition exists but no production producer/scheduler emits it. | ICP-04 |
-| Gameplay Engine page | Gameplay understanding is embedded in a long Studio page or diagnostics. | ICP-04 |
-| Public `Up next` | Overlay projection has no accepted activity-context field. | ICP-04/ICP-07 |
+| Current-stream overrides | A broadcaster-only `streamer.session-override` command, optional authoritative override state, streamer projection, and Stream Settings apply/reset controls now exist for current-stream intensity/creativity. Preset-aware effective settings and final tests remain incomplete. | ICP-03 |
+| Canonical runtime intelligence composition | Source now mounts the configured candidate provider and intervention coordinator in the server runtime for cue conversion and eligible-cycle proposal requests. Final test execution and real-input proof remain open. | ICP-04/ICP-06 |
+| Automatic Live Director refresh | Accepted gameplay ingress now asks the shared runtime to emit a canonical Live Director context refresh when the same snapshot did not already submit a quest proposal; final tests and real-input evidence remain open. | ICP-04 |
+| Gameplay Engine page | ICP-01 route shell exists with Overview, Game Capture, Understanding, and Health & Recovery sections and links to `/studio/gameplay/capture`; full understanding workflow remains incomplete. | ICP-04 |
+| Public `Up next` | Overlay projection now has a sanitized nullable `upNext` field derived from authoritative quest-cycle state or a known typed Current Objective with selected-game-compatible fresh gameplay evidence; final tests remain open. | ICP-04/ICP-07 |
 | Ordinary-chat audience intelligence | Non-vote Twitch messages are ignored by the app ingress. | ICP-05 |
-| Live Analytics page | No canonical route or connected audience producer exists. | ICP-05 |
+| Live Analytics page | ICP-01 route shell exists with Overview, Activity, Topics, and Session History sections; connected ordinary-chat producer, topics, watchlist counts, and history remain incomplete. | ICP-05 |
 | Automatic topics plus watchlist counts | Aggregate contract/UI/persistence are incomplete. | ICP-05 |
-| Game-aware algorithmic candidates | Current templates explicitly describe themselves as game-neutral. | ICP-06 |
-| Game-aware deterministic fallback | Current Role 3 fallback library is game-neutral. | ICP-06 |
-| Correct weak-evidence OpenAI prompt | Current instruction requests game-neutral fallback. | ICP-06 |
-| Automatic eligible-cycle candidate call | Candidate provider and intervention coordinator are test-only composition. | ICP-06 |
-| Dedicated Live Quests page | Quest management remains embedded in the long Studio page. | ICP-06 |
+| Game-aware algorithmic candidates | Credential-free algorithmic generation now prefers Minecraft-aware templates when Minecraft is selected or evidenced, and remains game-neutral for other games. Final evaluation/testing remains open. | ICP-06 |
+| Game-aware deterministic fallback | Role 3 deterministic fallback now prefers Minecraft-aware safe definitions when Minecraft is selected or evidenced, and remains game-neutral for other games. Final evaluation/testing remains open. | ICP-06 |
+| Correct weak-evidence OpenAI prompt | Source now keeps weak exact evidence strict while allowing safe Minecraft-aware, non-state-claiming provider instructions for selected/evidenced Minecraft sessions. Final provider/evaluation execution remains open. | ICP-06 |
+| Automatic eligible-cycle candidate call | Accepted live gameplay ingress now asks the server runtime for one policy-gated proposal per session/cycle/revision; denied moments do not call candidate generation. Final tests and real-input evidence remain open. | ICP-06 |
+| Dedicated Live Quests page | ICP-01 route shell exists with Now, Recommendations, Why, Voting, and Results sections; full recommendation/review/voting/result workspace remains incomplete. | ICP-06 |
 | Realtime client subscriptions | Studio/viewer/hosted/OBS normally poll every 1.5–2 seconds. | ICP-07 |
 | Persistent private viewer points | Recovery returns `sessionPoints: 0`. | ICP-07 |
-| OBS `Up next` rendering | Overlay supports quest/hype/connection only. | ICP-07 |
-| Authoritative Home surface previews | Diagnostic preview exists; Home has no current-state tabbed previews. | ICP-07 |
-| Streamer-facing Test Lab route | An old navigation label and developer diagnostic exist, not the accepted product page. | ICP-08 |
+| OBS `Up next` rendering | OBS overlay source now renders the public `upNext` field while staying read-only; final tests and real OBS Browser Source proof remain open. | ICP-07 |
+| Authoritative Home surface previews | Home now has concise current-state compositions and gated Start/End controls; deeper tabbed previews remain incomplete. | ICP-07 |
+| Streamer-facing Test Lab route | ICP-01 route shell exists with Sample/Live Source, Capture Controls, Observed/Unknown, and Recovery sections; sample/live controls and policy-backed recovery remain incomplete. | ICP-08 |
 | Complete history/recovery experience | Read models exist in parts; dedicated product flow is incomplete. | ICP-08 |
 | Canonical `/` routing | `/` still mounts the legacy Control Room. | ICP-08 after parity |
 | Real Twitch/OBS/Supabase/provider proof | Source and fixture tests do not prove the external workflow. | ICP-09 |

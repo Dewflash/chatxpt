@@ -11,6 +11,7 @@ import type {
   ServiceHealth,
   StreamSession,
   StreamerProfile,
+  StreamerSessionOverride,
 } from "../contracts";
 
 export interface AuthoritativeSessionState {
@@ -23,6 +24,7 @@ export interface AuthoritativeSessionState {
   readonly emergencyPaused: boolean;
   readonly communityHype: number;
   readonly recentQuests?: readonly RecentQuestSummary[];
+  readonly sessionOverride?: StreamerSessionOverride | null;
   readonly liveDirector?: LiveDirectorState | null;
 }
 

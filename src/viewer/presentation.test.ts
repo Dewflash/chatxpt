@@ -43,6 +43,7 @@ describe("Role 5 presentation boundary", () => {
     expect(presentOverlay(null)).toMatchObject({
       readOnly: true,
       phase: "loading",
+      upNext: null,
       options: [],
       activeQuest: null,
     });
@@ -159,6 +160,7 @@ describe("Role 5 presentation boundary", () => {
 
     expect(presentation.readOnly).toBe(true);
     expect(presentation.phase).toBe("active");
+    expect(presentation.upNext).toBeNull();
     expect(presentation.options).toHaveLength(3);
     expect(presentation.activeQuest?.candidateId).toBe(fixtureOptions[2].candidateId);
     expect(presentation.progress).toEqual({
@@ -192,8 +194,24 @@ describe("Role 5 presentation boundary", () => {
     const presentation = presentOverlay(view);
 
     expect(presentation.phase).toBe("voting");
+    expect(presentation.upNext).toBeNull();
     expect(presentation.activeQuest).toBeNull();
     expect(presentation.options).toHaveLength(3);
     expect(presentation.options.map((option) => option.votes)).toEqual([4, 2, 0]);
+  });
+
+  it("passes only the public overlay up-next field through presentation", () => {
+    const view = overlayViewModelSchema.parse({
+      ...contractFixtureOverlayView,
+      upNext: {
+        label: "Up next",
+        title: "Winning quest goes live",
+        detail: "The official winner appears here after the audience vote closes.",
+        expiresAt: contractFixtureOverlayView.envelope.occurredAt + 30_000,
+      },
+    });
+
+    expect(presentOverlay(view).upNext).toEqual(view.upNext);
+    expect(presentOverlay(view)).not.toHaveProperty("liveDirector");
   });
 });

@@ -212,6 +212,7 @@ export class ObsOverlayApplication {
         message: "Authoritative overlay state is current",
         retryable: false,
       }),
+      sessionOverride: state.sessionOverride,
     });
     return overlayViewModelSchema.parse(projected.overlay);
   }

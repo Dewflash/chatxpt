@@ -2,7 +2,7 @@ import type { CommandEnvelope } from "./commands";
 import type { AcceptedVoteTallySnapshot } from "./participation";
 import type { ContractEnvelope, DomainError, ServiceHealth } from "./common";
 import type { ParticipationCapabilities, StreamSession } from "./session";
-import type { StreamerProfile } from "./profile";
+import type { StreamerProfile, StreamerSessionOverride } from "./profile";
 import type {
   CandidateBatch,
   QuestCompletionRule,
@@ -53,6 +53,7 @@ export interface CandidateInput {
   readonly intelligence: IntelligenceSnapshot;
   readonly profile: StreamerProfile;
   readonly recentQuestTitles: readonly string[];
+  readonly activeChatXptQuest: string | null;
 }
 
 export interface CandidateProvider {
@@ -114,6 +115,42 @@ export interface QuestEngine {
   decide(input: QuestEngineInput): Promise<QuestEngineResult> | QuestEngineResult;
 }
 
+export interface DirectorCueConversionInput {
+  readonly envelope: ContractEnvelope;
+  readonly candidates: readonly unknown[] | null;
+  readonly intelligence: IntelligenceSnapshot;
+  readonly profile: StreamerProfile;
+  readonly currentState: QuestCycleState;
+  readonly recentQuests: readonly RecentQuestSummary[];
+  readonly now: number;
+  readonly seed: string;
+  readonly liveDirector: LiveDirectorState;
+  readonly command: Extract<CommandEnvelope, { readonly type: "system.intelligence-ready" }>;
+  readonly emergencyPaused: boolean;
+  readonly sessionEnded: boolean;
+  readonly questImpossible: boolean;
+}
+
+export type DirectorCueConversionResult =
+  | {
+      readonly ok: true;
+      readonly cueId: string;
+      readonly batch: CandidateBatch;
+      readonly decision: QuestEngineDecision;
+      readonly readyForStreamerApproval: true;
+    }
+  | {
+      readonly ok: false;
+      readonly disposition: "no-publication";
+      readonly code: string;
+      readonly reason: string;
+      readonly error?: DomainError;
+    };
+
+export interface DirectorCueConverter {
+  convert(input: DirectorCueConversionInput): DirectorCueConversionResult;
+}
+
 export interface RoleViewModels {
   readonly streamer: StreamerViewModel;
   readonly viewer: ViewerViewModel;
@@ -136,6 +173,7 @@ export interface ViewModelProjectionInput {
   readonly communityHype: number;
   readonly acceptedCandidateId: string | null;
   readonly connection: ServiceHealth;
+  readonly sessionOverride?: StreamerSessionOverride | null;
   readonly liveDirector?: LiveDirectorState | null;
 }
 

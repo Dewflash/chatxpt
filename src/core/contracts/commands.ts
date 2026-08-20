@@ -118,22 +118,59 @@ const streamerRewardPreferencesPatchSchema = z
   })
   .strict();
 
+const streamerGameProfilePatchSchema = z
+  .object({
+    gameId: identifierSchema.nullable(),
+    gameName: z.string().trim().min(1).max(120).nullable(),
+  })
+  .strict()
+  .superRefine((patch, context) => {
+    if ((patch.gameId === null) !== (patch.gameName === null)) {
+      context.addIssue({
+        code: "custom",
+        message: "gameId and gameName must either both be present or both be null",
+        path: ["gameId"],
+      });
+    }
+  });
+
+const profileRestrictionListPatchSchema = z.array(z.string().trim().min(1).max(160)).max(64);
+const profileQuestTypeListPatchSchema = z.array(z.string().trim().min(1).max(80)).max(32);
+const profileAccessibilityListPatchSchema = z.array(z.string().trim().min(1).max(160)).max(32);
+
 export const streamerProfileSettingsCommandSchema = z
   .object({
     ...commandEnvelopeFields,
     questCycleId: z.null(),
     type: z.literal("streamer.profile-settings"),
     experiencePatch: z.record(z.string().trim().min(1).max(80), z.number().min(0).max(1)).default({}),
+    game: streamerGameProfilePatchSchema.optional(),
+    restrictions: profileRestrictionListPatchSchema.optional(),
+    preferredQuestTypes: profileQuestTypeListPatchSchema.optional(),
+    forbiddenQuestTypes: profileQuestTypeListPatchSchema.optional(),
+    accessibilityNeeds: profileAccessibilityListPatchSchema.optional(),
     voting: streamerVotingPreferencesPatchSchema.optional(),
     rewards: streamerRewardPreferencesPatchSchema.optional(),
   })
   .strict()
   .superRefine((command, context) => {
     const experienceChangeCount = Object.keys(command.experiencePatch).length;
+    const profileListChangeCount = [
+      command.game,
+      command.restrictions,
+      command.preferredQuestTypes,
+      command.forbiddenQuestTypes,
+      command.accessibilityNeeds,
+    ].filter((value) => value !== undefined).length;
     const votingChangeCount = Object.keys(command.voting ?? {}).length;
     const rewardChangeCount = Object.keys(command.rewards ?? {}).length;
 
-    if (experienceChangeCount === 0 && votingChangeCount === 0 && rewardChangeCount === 0) {
+    if (
+      experienceChangeCount === 0 &&
+      profileListChangeCount === 0 &&
+      votingChangeCount === 0 &&
+      rewardChangeCount === 0
+    ) {
       context.addIssue({
         code: "custom",
         message: "Profile settings commands must include at least one setting change",
@@ -144,6 +181,32 @@ export const streamerProfileSettingsCommandSchema = z
       context.addIssue({
         code: "custom",
         message: "Profile settings commands may patch at most 16 experience settings",
+        path: ["experiencePatch"],
+      });
+    }
+  });
+
+export const streamerSessionOverrideCommandSchema = z
+  .object({
+    ...commandEnvelopeFields,
+    questCycleId: z.null(),
+    type: z.literal("streamer.session-override"),
+    action: z.enum(["apply", "clear"]),
+    experiencePatch: z.record(z.string().trim().min(1).max(80), z.number().min(0).max(1)).default({}),
+  })
+  .strict()
+  .superRefine((command, context) => {
+    if (command.action === "apply" && Object.keys(command.experiencePatch).length === 0) {
+      context.addIssue({
+        code: "custom",
+        message: "Applying a session override requires at least one setting",
+        path: ["experiencePatch"],
+      });
+    }
+    if (command.action === "clear" && Object.keys(command.experiencePatch).length > 0) {
+      context.addIssue({
+        code: "custom",
+        message: "Clearing a session override must not include setting values",
         path: ["experiencePatch"],
       });
     }
@@ -228,6 +291,7 @@ export const commandEnvelopeSchema = z
     systemQuestProgressCommandSchema,
     streamerEmergencyClearCommandSchema,
     streamerProfileSettingsCommandSchema,
+    streamerSessionOverrideCommandSchema,
     streamerLiveDirectorIntentCommandSchema,
     systemLiveDirectorContextCommandSchema,
     systemLiveDirectorCueCommandSchema,
@@ -245,6 +309,7 @@ export const commandEnvelopeSchema = z
       "system.quest-progress": ["system"],
       "streamer.emergency-clear": ["broadcaster", "moderator"],
       "streamer.profile-settings": ["broadcaster"],
+      "streamer.session-override": ["broadcaster"],
       "streamer.live-director-intent": ["broadcaster"],
       "system.live-director-context-ready": ["system"],
       "system.live-director-cue-ready": ["system"],
@@ -270,6 +335,7 @@ export type StreamerQuestProgressCommand = z.infer<typeof streamerQuestProgressC
 export type SystemQuestProgressCommand = z.infer<typeof systemQuestProgressCommandSchema>;
 export type StreamerEmergencyClearCommand = z.infer<typeof streamerEmergencyClearCommandSchema>;
 export type StreamerProfileSettingsCommand = z.infer<typeof streamerProfileSettingsCommandSchema>;
+export type StreamerSessionOverrideCommand = z.infer<typeof streamerSessionOverrideCommandSchema>;
 export type StreamerLiveDirectorIntentCommand = z.infer<
   typeof streamerLiveDirectorIntentCommandSchema
 >;

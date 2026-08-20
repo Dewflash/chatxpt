@@ -57,7 +57,7 @@ const setupSteps: ReadonlyArray<{
     id: "twitch",
     eyebrow: "2",
     title: "Connect Twitch",
-    description: "Connection and installation actions will use the authorised Role 1 setup gateway.",
+    description: "Connection and installation actions stay inside the secure Studio setup flow.",
   },
   {
     id: "capture",
@@ -75,7 +75,7 @@ const setupSteps: ReadonlyArray<{
     id: "review",
     eyebrow: "5",
     title: "Review readiness",
-    description: "Follow the authoritative service checklist and resolve its next action before starting.",
+    description: "Follow the service checklist and resolve its next action before starting.",
   },
 ];
 
@@ -124,13 +124,13 @@ function evidenceBadge(view: StreamerViewModel | null): {
 } {
   switch (view?.envelope.evidenceClass) {
     case "live":
-      return { label: "Live authorised data", tone: "success" };
+      return { label: "Live connected", tone: "success" };
     case "diagnostic":
-      return { label: "Diagnostic data", tone: "diagnostic" };
+      return { label: "Live connection not confirmed", tone: "warning" };
     case "fixture":
-      return { label: "Fixture preview", tone: "diagnostic" };
+      return { label: "Fixture preview", tone: "warning" };
     default:
-      return { label: "No authorised snapshot", tone: "neutral" };
+      return { label: "No Studio snapshot", tone: "neutral" };
   }
 }
 
@@ -172,7 +172,7 @@ function Navigation({
         ))}
       </ul>
       <p className={styles.navigationHint}>
-        Setup is the current Phase 2 surface. Live controls remain in the next phase.
+        Setup comes first. Live controls appear when the stream is ready.
       </p>
     </nav>
   );
@@ -232,14 +232,14 @@ function ServiceChecklist({ services }: { readonly services: readonly ServiceHea
     <section aria-labelledby="service-checklist-title">
       <div className={styles.sectionHeading}>
         <div>
-          <p className={styles.eyebrow}>Authoritative service health</p>
+          <p className={styles.eyebrow}>Service health</p>
           <h2 id="service-checklist-title">Readiness checklist</h2>
         </div>
         <StatusBadge tone="warning">Overall readiness unconfirmed</StatusBadge>
       </div>
       {services.length === 0 ? (
         <Notice tone="warning" title="No service checks supplied">
-          Studio will not infer readiness. Wait for an authorised service snapshot and its recommended action.
+          Studio will not infer readiness. Wait for the next service snapshot and its recommended action.
         </Notice>
       ) : (
         <CardGrid>
@@ -262,7 +262,7 @@ function ServiceChecklist({ services }: { readonly services: readonly ServiceHea
         </CardGrid>
       )}
       <Notice tone="info" title="Actions are intentionally unavailable in this slice">
-        Connect, permission, profile-save, and session commands stay disabled until the browser gateway returns fully validated typed results.
+        Connect, permission, profile-save, and session controls stay disabled until those setup actions are connected.
       </Notice>
     </section>
   );
@@ -334,7 +334,7 @@ function IntelligenceSummary({ view }: { readonly view: StreamerViewModel }) {
       </div>
       {gameplay === null ? (
         <Notice tone="warning" title="No gameplay snapshot">
-          ChatXPT reports gameplay understanding as unavailable until an authorised capture supplies evidence.
+          ChatXPT reports gameplay understanding as unavailable until Game Capture supplies a trusted snapshot.
         </Notice>
       ) : (
         <Card className={styles.intelligenceCard}>
@@ -373,7 +373,7 @@ function IntelligenceSummary({ view }: { readonly view: StreamerViewModel }) {
         </Card>
       )}
       <Notice tone="info" title="Quest generation status is not reported yet">
-        Provider, algorithmic, or deterministic-fallback detail will appear only when an authorised session supplies that state.
+        Quest generation details will appear only when the current session supplies that state.
       </Notice>
     </section>
   );
@@ -385,13 +385,13 @@ function EmptySnapshot({ loading }: { readonly loading: boolean }) {
       <Card className={styles.emptyState} aria-busy="true">
         <StatusBadge tone="info">Loading authorised status</StatusBadge>
         <h2>Checking your Studio snapshot</h2>
-        <p>ChatXPT is waiting for Role 1 to return a validated streamer view.</p>
+        <p>ChatXPT is waiting for the latest streamer view.</p>
       </Card>
     );
   }
 
   return (
-    <Notice tone="warning" title="No authorised Studio snapshot">
+    <Notice tone="warning" title="No Studio snapshot">
       Setup remains read only. Refresh or reconnect through the approved host instead of creating local readiness state.
     </Notice>
   );
@@ -421,7 +421,6 @@ export function StudioSetupShell({
           <div>
             <div className={styles.heroBadges}>
               <StatusBadge tone={evidence.tone}>{evidence.label}</StatusBadge>
-              {view !== null ? <StatusBadge tone="neutral">{`Revision ${view.envelope.revision}`}</StatusBadge> : null}
             </div>
             <p className={styles.eyebrow}>{experience === "first-time" ? "First-time setup" : "Returning streamer"}</p>
             <h1>{title}</h1>
@@ -431,18 +430,18 @@ export function StudioSetupShell({
           </div>
           <div className={styles.heroAction}>
             <Button disabled>Start session</Button>
-            <small>Enabled only by authoritative readiness.</small>
+            <small>Enabled only when readiness passes.</small>
           </div>
         </header>
 
         {view?.envelope.evidenceClass !== "live" ? (
           <Notice tone="warning" title="Not live workflow evidence">
-            This shell is currently rendered from {view?.envelope.evidenceClass ?? "unverified"} data. It must not be presented as proof of Twitch, OBS, AI, or realtime readiness.
+            This setup view is not connected to the full live Twitch, Game Capture, AI, persistence, and realtime workflow yet.
           </Notice>
         ) : null}
         {reconnecting ? (
           <Notice tone="warning" title="Reconnecting" politeness="polite">
-            The last authorised revision remains visible while Studio requests a fresh snapshot. Actions stay unavailable.
+            The last authorised revision remains visible while Studio requests a fresh snapshot. Actions stay unavailable. Revision {view?.session.revision ?? "unknown"}.
           </Notice>
         ) : null}
 

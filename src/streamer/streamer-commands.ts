@@ -4,6 +4,7 @@ import {
   streamerLiveDirectorCueCommandSchema,
   streamerLiveDirectorIntentCommandSchema,
   streamerProfileSettingsCommandSchema,
+  streamerSessionOverrideCommandSchema,
   streamerQuestCommandSchema,
   streamerQuestProgressCommandSchema,
   streamerServiceCommandSchema,
@@ -12,6 +13,7 @@ import {
   type StreamerLiveDirectorCueCommand,
   type StreamerLiveDirectorIntentCommand,
   type StreamerProfileSettingsCommand,
+  type StreamerSessionOverrideCommand,
   type StreamerQuestAction,
   type StreamerQuestCommand,
   type StreamerQuestProgressCommand,
@@ -25,6 +27,7 @@ import {
 
 export type StreamerUiCommand =
   | StreamerProfileSettingsCommand
+  | StreamerSessionOverrideCommand
   | StreamerLiveDirectorIntentCommand
   | StreamerLiveDirectorCueCommand
   | StreamerQuestCommand
@@ -38,7 +41,13 @@ export interface StreamerCommandFactory {
 }
 
 export interface EditableProfileDefaults {
+  readonly gameId: string | null;
+  readonly gameName: string | null;
   readonly experience: Readonly<Record<string, number>>;
+  readonly restrictions: readonly string[];
+  readonly preferredQuestTypes: readonly string[];
+  readonly forbiddenQuestTypes: readonly string[];
+  readonly accessibilityNeeds: readonly string[];
   readonly voting: StreamerVotingPreferences;
   readonly rewards: StreamerRewardPreferences;
 }
@@ -87,7 +96,13 @@ function metadata(
 
 export function editableDefaultsFromView(view: StreamerViewModel): EditableProfileDefaults {
   return {
+    gameId: view.profile.gameId,
+    gameName: view.profile.gameName,
     experience: { ...view.profile.experience },
+    restrictions: [...view.profile.restrictions],
+    preferredQuestTypes: [...view.profile.preferredQuestTypes],
+    forbiddenQuestTypes: [...view.profile.forbiddenQuestTypes],
+    accessibilityNeeds: [...view.profile.accessibilityNeeds],
     voting: { ...view.profile.voting },
     rewards: { ...view.profile.rewards },
   };
@@ -109,9 +124,31 @@ export function buildProfileSettingsCommand(
     ...metadata(view, factory, "profile-settings"),
     questCycleId: null,
     type: "streamer.profile-settings",
+    game: {
+      gameId: draft.gameId,
+      gameName: draft.gameName,
+    },
     experiencePatch: draft.experience,
+    restrictions: [...draft.restrictions],
+    preferredQuestTypes: [...draft.preferredQuestTypes],
+    forbiddenQuestTypes: [...draft.forbiddenQuestTypes],
+    accessibilityNeeds: [...draft.accessibilityNeeds],
     voting: draft.voting,
     rewards: draft.rewards,
+  });
+}
+
+export function buildSessionOverrideCommand(
+  view: StreamerViewModel,
+  experiencePatch: Readonly<Record<string, number>> | null,
+  factory: StreamerCommandFactory = defaultStreamerCommandFactory,
+): StreamerSessionOverrideCommand {
+  return streamerSessionOverrideCommandSchema.parse({
+    ...metadata(view, factory, experiencePatch === null ? "session-override-clear" : "session-override-apply"),
+    questCycleId: null,
+    type: "streamer.session-override",
+    action: experiencePatch === null ? "clear" : "apply",
+    experiencePatch: experiencePatch ?? {},
   });
 }
 

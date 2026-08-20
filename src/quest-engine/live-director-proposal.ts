@@ -116,6 +116,7 @@ export class DefaultLiveDirectorProposalCoordinator
           intelligence: intelligence.data,
           profile: input.current.profile,
           recentQuestTitles: (input.current.recentQuests ?? []).map(({ title }) => title),
+          activeChatXptQuest: null,
         }),
       );
       if (

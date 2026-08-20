@@ -137,7 +137,7 @@ describe("StudioManagementSurface", () => {
     const view = createFixtureUiGatewaySnapshot().views.streamer;
     const html = renderToStaticMarkup(h(StudioManagementSurface, { view }));
 
-    expect(html).toContain("Editing waits for the canonical profile-list patch from Role 1");
+    expect(html).toContain("List persistence uses the canonical profile settings command");
     expect(html).toContain("their update command is not public yet");
     expect(html).toContain("Studio will not imitate persistence in browser storage");
     expect(html).toContain("Profile actions are not mounted");

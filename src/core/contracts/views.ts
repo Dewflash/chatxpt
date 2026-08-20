@@ -1,7 +1,12 @@
 import { z } from "zod";
 
-import { contractEnvelopeSchema, identifierSchema, serviceHealthSchema } from "./common";
-import { streamerProfileSchema } from "./profile";
+import {
+  contractEnvelopeSchema,
+  identifierSchema,
+  serviceHealthSchema,
+  timestampSchema,
+} from "./common";
+import { streamerProfileSchema, streamerSessionOverrideSchema } from "./profile";
 import { publicQuestCycleStateSchema, questCycleStateSchema } from "./quests";
 import { participationCapabilitiesSchema, streamSessionSchema } from "./session";
 import {
@@ -36,6 +41,7 @@ export const streamerViewModelSchema = z
     audience: audienceSnapshotSchema.nullable(),
     questCycle: questCycleStateSchema,
     emergencyPaused: z.boolean(),
+    sessionOverride: streamerSessionOverrideSchema.nullable().optional(),
     liveDirector: streamerLiveDirectorProjectionSchema.nullable().optional(),
   })
   .strict()
@@ -154,12 +160,22 @@ export const viewerViewModelSchema = z
     }
   });
 
+export const overlayUpNextSchema = z
+  .object({
+    label: z.string().trim().min(1).max(40),
+    title: z.string().trim().min(1).max(90),
+    detail: z.string().trim().min(1).max(180),
+    expiresAt: timestampSchema.nullable(),
+  })
+  .strict();
+
 export const overlayViewModelSchema = z
   .object({
     envelope: contractEnvelopeSchema,
     session: streamSessionSchema,
     readOnly: z.literal(true),
     communityHype: z.number().int().nonnegative(),
+    upNext: overlayUpNextSchema.nullable(),
     questCycle: publicQuestCycleStateSchema,
     connection: serviceHealthSchema,
   })
@@ -196,6 +212,7 @@ export const overlayViewModelSchema = z
 
 export type StreamerViewModel = z.infer<typeof streamerViewModelSchema>;
 export type ViewerViewModel = z.infer<typeof viewerViewModelSchema>;
+export type OverlayUpNext = z.infer<typeof overlayUpNextSchema>;
 export type OverlayViewModel = z.infer<typeof overlayViewModelSchema>;
 export type StreamerLiveDirectorProjection = z.infer<
   typeof streamerLiveDirectorProjectionSchema

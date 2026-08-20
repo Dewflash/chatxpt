@@ -653,6 +653,12 @@ export function ObsQuestOverlaySurface({ view, now }: ObsQuestOverlaySurfaceProp
   const resultDetails = presentation.result ? resultCopy(presentation.result) : null;
   const recovering =
     presentation.connection !== null && presentation.connection.status !== "ready";
+  const upNextFresh =
+    (now === undefined ||
+      presentation.upNext === null ||
+      presentation.upNext.expiresAt === null ||
+      now < presentation.upNext.expiresAt);
+  const visibleUpNext = presentation.upNext !== null && upNextFresh ? presentation.upNext : null;
 
   if (
     (presentation.phase === "inactive" || presentation.phase === "loading") &&
@@ -698,6 +704,13 @@ export function ObsQuestOverlaySurface({ view, now }: ObsQuestOverlaySurfaceProp
             <p className={styles.statusLine} aria-live="polite">
               {overlayRecoveryCopy(presentation.connection?.status)}
             </p>
+          ) : null}
+          {visibleUpNext ? (
+            <div className={styles.overlayUpNext} aria-label="Public up next">
+              <span>{visibleUpNext.label}</span>
+              <strong>{visibleUpNext.title}</strong>
+              <small>{visibleUpNext.detail}</small>
+            </div>
           ) : null}
           {presentation.phase === "voting" ? (
             <ol className={styles.overlayVotingList} aria-label="Authoritative vote tally">

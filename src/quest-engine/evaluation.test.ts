@@ -253,7 +253,7 @@ describe("Role 3 engine evaluation fixtures", () => {
   });
 
   it.each(["Tactical Shooter", "Racing", "Strategy", "Platformer", null])(
-    "keeps fallback output game-neutral for %s",
+    "keeps non-Minecraft fallback output game-neutral for %s",
     (gameName) => {
       const result = assemble([], gameName, `genre-${gameName ?? "unknown"}`);
 
@@ -269,6 +269,24 @@ describe("Role 3 engine evaluation fixtures", () => {
       ).toBe(true);
     },
   );
+
+  it("uses Minecraft-aware deterministic fallbacks when Minecraft is selected", () => {
+    const result = assemble([], "Minecraft", "genre-minecraft");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.batch.candidates).toHaveLength(3);
+    expect(new Set(result.batch.candidates.map(({ title }) => title)).size).toBe(3);
+    expect(result.batch.candidates.every(({ instruction }) => instruction.includes("Minecraft")))
+      .toBe(true);
+    expect(
+      result.batch.candidates.every(
+        ({ generation, sourceSignalIds }) =>
+          generation.method === "deterministic-fallback" && sourceSignalIds.length === 0,
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(result.batch)).not.toMatch(/\b(?:health|hunger|hotbar|sleep|biome|monster|damage cause)\b/iu);
+  });
 
   it("is replay-stable from a reconstructed voting snapshot and rejects a stale reconnect command", () => {
     const engine = new DefaultQuestEngine();

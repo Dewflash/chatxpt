@@ -50,6 +50,7 @@ All retained surfaces consume the same authoritative session and quest-cycle rev
 | Surface | Audience | Question it answers | Permitted content |
 | --- | --- | --- | --- |
 | ChatXPT Studio / Twitch Live Config | Broadcaster and authorised moderators | What should I privately decide, and why? | Source-labelled Live Context, Chat Pointers, confidence/freshness/`unknown`, Director Cues, exactly-three proposal review, safety and lifecycle controls, health, and later aggregate history |
+| Private Stream Context pop-out / OBS Custom Dock | Broadcaster and authorised moderators | What is ChatXPT seeing right now? | Read-only health, known/unknown signal counts, source-separated context, Director Cue state/reason, and quest status without approve/reject/skip controls |
 | OBS Browser Source | Everyone receiving the broadcast | What must everyone understand within about three seconds? | Vote-open callout, compact choices/countdown, winner, active sidequest, progress, community hype, result, and reconnect state |
 | Twitch Extension | Each viewer individually | What can I understand or do? | P1 Catch-up experiment, full quest details, exactly-three select-then-confirm voting, private vote receipt, reactions, personal session points, expanded progress, result, and late-join/reconnect recovery |
 
@@ -60,7 +61,7 @@ Rules:
 - The Extension is a persistent viewer companion, not only a voting modal.
 - Studio and Live Config may expose why an intervention fits. The OBS overlay never exposes internal reasoning, raw chat, usernames, viewer identity, provider details, or personal receipts.
 - The Extension may show concise audience-facing context, but not the streamer's private cue evidence or hidden restrictions.
-- OBS Custom Docks and OBS Browser Sources are separate: a dock is private control UI; a browser source placed in the scene is public broadcast output.
+- OBS Custom Docks and OBS Browser Sources are separate: a dock is private streamer UI; a browser source placed in the scene is public broadcast output. The persistent dock/pop-out is read-only context, while Studio and Twitch Live Config keep controls.
 
 ## Accepted keep, experiment, defer, and reject scope
 
@@ -75,7 +76,7 @@ Rules:
 | Exactly-three conversion | Reuses the existing Role 2 candidate and Role 3 validation/lifecycle route | No direct cue-to-viewer activation and no bypass of streamer permissions or deterministic authority |
 | Extension live companion | Preserves Vote, Active, and Result states with personal interaction/recovery | Does not calculate winners, timers, rewards, fallback selection, or lifecycle locally |
 | OBS public projection | Preserves and tightens the existing universally important, broadcast-safe vote/winner/active/progress/result states | No extra public gameplay narration, private cue, detailed rationale, raw chat, personal fields, or commands |
-| Private cue delivery | Reuses Live Config as a pop-out or OBS Custom Dock so the cue remains private | No game-process injection, audio/hotkey dependency, capture leak, or native desktop runtime |
+| Private cue delivery | Reuses the authenticated Studio session as a read-only pop-out or OBS Custom Dock so stream context remains private and persistent | No approve/reject/skip controls in the persistent dock, no game-process injection, audio/hotkey dependency, capture leak, or native desktop runtime |
 
 ### P1: bounded experiments
 
@@ -158,10 +159,10 @@ Each pass uses a short-lived `role-1/` or `role-3/` branch and one pull request 
 #### LD-R1-03 — Streamer controls and private delivery
 
 - **Branch:** `role-1/live-director-03-streamer-delivery`
-- **User-visible outcome:** Studio and Twitch Live Config show the accepted goal/context/pointer/cue controls while preserving the existing recommended exactly-three quest review. The same private Live Config can open as a browser pop-out or OBS Custom Dock.
-- **Primary files:** `src/streamer/studio-management.tsx`, `twitch-config.tsx`, related CSS/tests, Role 1 thin mounts/auth, and OBS-dock setup documentation.
+- **User-visible outcome:** Studio and Twitch Live Config show the accepted goal/context/pointer/cue controls while preserving the existing recommended exactly-three quest review. The private pop-out/OBS Custom Dock shows persistent read-only stream context so streamers can monitor without duplicating controls.
+- **Primary files:** `src/streamer/studio-management.tsx`, `twitch-config.tsx`, `persistent-stream-overlay.tsx`, related CSS/tests, Role 1 thin mounts/auth, and OBS-dock setup documentation.
 - **Inputs:** LD-R1-01 projections and commands plus LD-R3-02 server-authorised cue actions.
-- **Outputs:** Session Goal/Current Objective controls; compact private Live Context; one cue with `Acknowledge`, `Turn into vote`, `Later`, and `Dismiss`; health/unknown/reconnect states; safe pop-out/dock guidance.
+- **Outputs:** Session Goal/Current Objective controls; compact private Live Context; one cue with `Acknowledge`, `Turn into vote`, `Later`, and `Dismiss` in control surfaces; read-only persistent context in the pop-out/dock; health/unknown/reconnect states; safe pop-out/dock guidance.
 - **Acceptance:** Keyboard, focus, compact-width, long-text, stale-action, permission, loading, offline, and reconnect states pass. The private route cannot be embedded as a public OBS Browser Source without broadcaster authority.
 - **Exclusions:** No public private-cue overlay, native desktop companion, audio/earcon/hotkey dependency, gameplay advice, or provider/model picker.
 
@@ -362,11 +363,11 @@ The older `LD-Pxx` labels below remain as outcome groupings for traceability to 
 
 **Exit:** Aggregate/history tests prove privacy and source classification. Studio labels correlation and insufficient evidence explicitly.
 
-### LD-P07 — Private Live Config pop-out / OBS Dock delivery
+### LD-P07 — Private Stream Context pop-out / OBS Dock delivery
 
-**Outcome:** A streamer can keep the authorised private Live Config visible as a browser pop-out or OBS Custom Dock without leaking it into the broadcast.
+**Outcome:** A streamer can keep the authorised private stream context visible as a browser pop-out or OBS Custom Dock without leaking it into the broadcast or duplicating the Live Config controls.
 
-**Order:** Reuse the authenticated Live Config route and document pop-out/dock setup. Private audio/hotkeys remain deferred, and an always-on-top desktop companion is rejected from this plan.
+**Order:** Reuse the authenticated Studio session and document pop-out/dock setup. Private audio/hotkeys remain deferred, and an always-on-top desktop companion is rejected from this plan.
 
 **Exit:** Accessibility, authentication, capture-recursion, permission, and privacy evidence passes for the web/dock route. Failure leaves ordinary Live Config usable.
 
