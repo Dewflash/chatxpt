@@ -45,7 +45,7 @@ import {
   contractFixtureQuestCycle,
   contractFixtureSession,
 } from "../../src/core/testing";
-import { DefaultDirectorCueLifecycle } from "../../src/quest-engine";
+import { DefaultDirectorCueConverter, DefaultDirectorCueLifecycle } from "../../src/quest-engine";
 
 const ACCEPTED_AT = contractFixtureQuestCycle.envelope.occurredAt + 1_000;
 
@@ -196,6 +196,7 @@ function dependencies(
     repository,
     engine,
     directorCues: new DefaultDirectorCueLifecycle(),
+    directorCueConverter: new DefaultDirectorCueConverter(),
     projectionContext: new FixtureProjectionContextResolver({
       participationMode: "hosted-board",
       viewerId: null,

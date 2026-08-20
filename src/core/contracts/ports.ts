@@ -115,6 +115,42 @@ export interface QuestEngine {
   decide(input: QuestEngineInput): Promise<QuestEngineResult> | QuestEngineResult;
 }
 
+export interface DirectorCueConversionInput {
+  readonly envelope: ContractEnvelope;
+  readonly candidates: readonly unknown[] | null;
+  readonly intelligence: IntelligenceSnapshot;
+  readonly profile: StreamerProfile;
+  readonly currentState: QuestCycleState;
+  readonly recentQuests: readonly RecentQuestSummary[];
+  readonly now: number;
+  readonly seed: string;
+  readonly liveDirector: LiveDirectorState;
+  readonly command: Extract<CommandEnvelope, { readonly type: "system.intelligence-ready" }>;
+  readonly emergencyPaused: boolean;
+  readonly sessionEnded: boolean;
+  readonly questImpossible: boolean;
+}
+
+export type DirectorCueConversionResult =
+  | {
+      readonly ok: true;
+      readonly cueId: string;
+      readonly batch: CandidateBatch;
+      readonly decision: QuestEngineDecision;
+      readonly readyForStreamerApproval: true;
+    }
+  | {
+      readonly ok: false;
+      readonly disposition: "no-publication";
+      readonly code: string;
+      readonly reason: string;
+      readonly error?: DomainError;
+    };
+
+export interface DirectorCueConverter {
+  convert(input: DirectorCueConversionInput): DirectorCueConversionResult;
+}
+
 export interface RoleViewModels {
   readonly streamer: StreamerViewModel;
   readonly viewer: ViewerViewModel;

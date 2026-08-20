@@ -3,6 +3,7 @@ import type {
   AudiencePointerAggregate,
   CandidateBatch,
   CommandEnvelope,
+  DirectorCueConverter,
   DirectorCue,
   DomainError,
   GameplaySnapshot,
@@ -163,6 +164,7 @@ export interface OrchestratorDependencies {
   readonly repository: SessionStateRepository;
   readonly engine: QuestEngine;
   readonly directorCues: DirectorCueLifecycle;
+  readonly directorCueConverter: DirectorCueConverter;
   readonly projectionContext: ProjectionContextResolver;
   readonly projector: ViewModelProjector;
   readonly publisher: StatePublisher;

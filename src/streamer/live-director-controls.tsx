@@ -166,7 +166,7 @@ function DirectorCueCard({
             ))}
           </div>
           <small>
-            Turn into vote requests an exactly-three candidate conversion. This cue action does not publish candidates by itself.
+            Turn into vote prepares exactly three private quest options for approval before viewers can see them.
           </small>
         </>
       ) : (
