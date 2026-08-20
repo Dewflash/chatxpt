@@ -17,6 +17,16 @@ const pages: readonly StudioProductPage[] = [
   "test-lab",
 ];
 
+const requiredPageSections: Readonly<Record<StudioProductPage, readonly string[]>> = {
+  home: ["Ready to start ChatXPT", "Twitch", "Game Capture", "Viewer Voting", "Broadcast Overlay"],
+  gameplay: ["Overview", "Game Capture", "Understanding", "Health &amp; Recovery"],
+  "live-analytics": ["Overview", "Activity", "Topics", "Session History"],
+  "live-quests": ["Now", "Recommendations", "Why", "Voting", "Results"],
+  profile: ["Personality", "Stream Presets", "Safety", "Accessibility"],
+  "stream-settings": ["Saved Source", "Session Override", "Reset to Saved"],
+  "test-lab": ["Sample / Live Source", "Capture Controls", "Observed / Unknown", "Recovery"],
+};
+
 describe("StudioProductPageSurface", () => {
   it("renders the ICP-01 Studio route map with product-facing navigation", () => {
     const view = createFixtureUiGatewaySnapshot().views.streamer;
@@ -69,8 +79,20 @@ describe("StudioProductPageSurface", () => {
       view: createFixtureUiGatewaySnapshot().views.streamer,
     }));
 
-    expect(home).not.toContain("Sample and live source controls");
-    expect(lab).toContain("Sample and live source controls are not connected yet");
+    expect(home).not.toContain("Sample checks and live source checks");
+    expect(lab).toContain("Sample checks and live source checks are not connected yet");
+  });
+
+  it.each(pages)("renders the required ICP-01 sections for %s", (page) => {
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page,
+      view: createFixtureUiGatewaySnapshot().views.streamer,
+      readiness: contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"],
+    }));
+
+    for (const section of requiredPageSections[page]) {
+      expect(html).toContain(section);
+    }
   });
 
   it("renders the blocked Home composition without dispatchable start controls", () => {

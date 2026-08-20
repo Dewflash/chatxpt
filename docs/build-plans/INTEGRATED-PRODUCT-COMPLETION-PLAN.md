@@ -351,21 +351,21 @@ Connect Twitch
 | Current-stream overrides | Controls are disabled and no patch/clear authority exists. | ICP-03 |
 | Canonical runtime intelligence composition | Role 2 provider/coordinator ports exist but are not mounted in the production runtime. | ICP-04/ICP-06 |
 | Automatic Live Director refresh | Context composition exists but no production producer/scheduler emits it. | ICP-04 |
-| Gameplay Engine page | ICP-01 route shell exists with customer-safe unavailable states; production capture controls and full understanding workflow remain incomplete. | ICP-04 |
+| Gameplay Engine page | ICP-01 route shell exists with Overview, Game Capture, Understanding, and Health & Recovery sections; production capture controls and full understanding workflow remain incomplete. | ICP-04 |
 | Public `Up next` | Overlay projection has no accepted activity-context field. | ICP-04/ICP-07 |
 | Ordinary-chat audience intelligence | Non-vote Twitch messages are ignored by the app ingress. | ICP-05 |
-| Live Analytics page | ICP-01 route shell exists with customer-safe unavailable states; connected ordinary-chat producer, topics, watchlist counts, and history remain incomplete. | ICP-05 |
+| Live Analytics page | ICP-01 route shell exists with Overview, Activity, Topics, and Session History sections; connected ordinary-chat producer, topics, watchlist counts, and history remain incomplete. | ICP-05 |
 | Automatic topics plus watchlist counts | Aggregate contract/UI/persistence are incomplete. | ICP-05 |
 | Game-aware algorithmic candidates | Current templates explicitly describe themselves as game-neutral. | ICP-06 |
 | Game-aware deterministic fallback | Current Role 3 fallback library is game-neutral. | ICP-06 |
 | Correct weak-evidence OpenAI prompt | Current instruction requests game-neutral fallback. | ICP-06 |
 | Automatic eligible-cycle candidate call | Candidate provider and intervention coordinator are test-only composition. | ICP-06 |
-| Dedicated Live Quests page | ICP-01 route shell exists with customer-safe unavailable states; full recommendation/review/voting/result workspace remains incomplete. | ICP-06 |
+| Dedicated Live Quests page | ICP-01 route shell exists with Now, Recommendations, Why, Voting, and Results sections; full recommendation/review/voting/result workspace remains incomplete. | ICP-06 |
 | Realtime client subscriptions | Studio/viewer/hosted/OBS normally poll every 1.5–2 seconds. | ICP-07 |
 | Persistent private viewer points | Recovery returns `sessionPoints: 0`. | ICP-07 |
 | OBS `Up next` rendering | Overlay supports quest/hype/connection only. | ICP-07 |
 | Authoritative Home surface previews | Home now has concise current-state compositions and gated Start/End controls; deeper tabbed previews remain incomplete. | ICP-07 |
-| Streamer-facing Test Lab route | ICP-01 route shell exists with customer-safe unavailable states; sample/live controls and policy-backed recovery remain incomplete. | ICP-08 |
+| Streamer-facing Test Lab route | ICP-01 route shell exists with Sample/Live Source, Capture Controls, Observed/Unknown, and Recovery sections; sample/live controls and policy-backed recovery remain incomplete. | ICP-08 |
 | Complete history/recovery experience | Read models exist in parts; dedicated product flow is incomplete. | ICP-08 |
 | Canonical `/` routing | `/` still mounts the legacy Control Room. | ICP-08 after parity |
 | Real Twitch/OBS/Supabase/provider proof | Source and fixture tests do not prove the external workflow. | ICP-09 |

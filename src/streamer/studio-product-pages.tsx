@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import { Card, CardGrid, DesignSystemRoot, Notice, StatusBadge } from "../design-system";
 import type {
   StreamerReadinessView,
@@ -96,6 +98,13 @@ function titleCase(value: string): string {
     .filter(Boolean)
     .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
     .join(" ");
+}
+
+function customerSafeLabel(label: string | null | undefined, fallback: string): string {
+  if (label === null || label === undefined || /\bfixture\b/iu.test(label)) {
+    return fallback;
+  }
+  return label;
 }
 
 function AvailabilityAction({ availability }: { readonly availability: ProductAvailability }) {
@@ -233,7 +242,7 @@ function homeCopy(mode: HomeMode, readiness: StreamerReadinessView | null | unde
   }
   return {
     badge: "Needs setup",
-    title: readiness?.label ?? "Connect Studio to continue",
+    title: customerSafeLabel(readiness?.label, "Connect Studio to continue"),
     detail: readiness?.blockerCodes.length
       ? "Resolve the highlighted setup blocker before starting ChatXPT."
       : "Start or reconnect a broadcaster session before ChatXPT can read stream state.",
@@ -388,24 +397,72 @@ function WorkspaceCard({ title, href, detail }: {
   );
 }
 
-function GameplayPage({ view }: { readonly view: StreamerViewModel | null }) {
+function PageSectionCard({
+  title,
+  badge,
+  badgeTone = "neutral",
+  detail,
+  children,
+}: {
+  readonly title: string;
+  readonly badge?: string;
+  readonly badgeTone?: ProductAvailability["tone"];
+  readonly detail: string;
+  readonly children?: ReactNode;
+}) {
+  return (
+    <Card className={styles.card}>
+      {badge ? <StatusBadge tone={badgeTone}>{badge}</StatusBadge> : null}
+      <h3>{title}</h3>
+      <p>{detail}</p>
+      {children}
+    </Card>
+  );
+}
+
+function GameplayPage({
+  view,
+  readiness,
+}: {
+  readonly view: StreamerViewModel | null;
+  readonly readiness?: StreamerReadinessView | null;
+}) {
   const gameplay = view === null ? null : summarizeGameplayHealth(view.gameplay);
+  const capture = readinessAvailability(readiness, "obs-capture", "Connect Game Capture before ChatXPT can inspect supported gameplay facts.");
   return (
     <CardGrid className={styles.grid}>
-      <Card className={styles.card}>
-        <StatusBadge tone={gameplay?.tone ?? "neutral"}>{gameplay?.label ?? "No signal yet"}</StatusBadge>
-        <h3>Overview</h3>
-        <p>{view?.gameplay === null || view === null ? "Connect Game Capture to let ChatXPT read supported gameplay facts." : `${titleCase(view.gameplay.capabilities.tier)} is active for ${view.gameplay.capabilities.gameId ?? "the selected game"}.`}</p>
-      </Card>
-      <Card className={styles.card}>
-        <h3>Understanding</h3>
+      <PageSectionCard
+        title="Overview"
+        badge={gameplay?.label ?? "No signal yet"}
+        badgeTone={gameplay?.tone ?? "neutral"}
+        detail={view?.gameplay === null || view === null ? "Connect Game Capture to let ChatXPT read supported gameplay facts." : `${titleCase(view.gameplay.capabilities.tier)} is active for ${view.gameplay.capabilities.gameId ?? "the selected game"}.`}
+      />
+      <PageSectionCard
+        title="Game Capture"
+        badge={capture.badge}
+        badgeTone={capture.tone}
+        detail={capture.detail}
+      >
+        <AvailabilityAction availability={capture} />
+      </PageSectionCard>
+      <PageSectionCard
+        title="Understanding"
+        detail="ChatXPT separates known, unknown, and stale facts instead of guessing missing gameplay state."
+      >
         <dl className={styles.list}>
           <div><dt>Known facts</dt><dd>{gameplay?.knownCount ?? 0}</dd></div>
           <div><dt>Unknown facts</dt><dd>{gameplay?.unknownCount ?? 0}</dd></div>
           <div><dt>Stale facts</dt><dd>{gameplay?.staleCount ?? 0}</dd></div>
         </dl>
-      </Card>
-      {unavailableCard("Capture controls", "Game Capture controls are not connected to the live session yet.", "Available in the next setup pass")}
+      </PageSectionCard>
+      <PageSectionCard
+        title="Health & Recovery"
+        badge={capture.state === "available" ? "Ready" : "Needs setup"}
+        badgeTone={capture.tone}
+        detail={capture.state === "available" ? "Capture is currently healthy enough for the selected stream state." : "Recovery actions stay unavailable until the production capture controller is connected here."}
+      >
+        <AvailabilityAction availability={capture.state === "available" ? capture : unavailableAvailability("Recovery actions stay unavailable until the production capture controller is connected here.", "Use setup recovery")} />
+      </PageSectionCard>
     </CardGrid>
   );
 }
@@ -414,31 +471,49 @@ function LiveAnalyticsPage({ view }: { readonly view: StreamerViewModel | null }
   const audience = view?.audience ?? null;
   return (
     <CardGrid className={styles.grid}>
-      <Card className={styles.card}>
-        <StatusBadge tone={audience === null ? "neutral" : "info"}>{audience === null ? "Waiting" : "Active"}</StatusBadge>
-        <h3>Activity</h3>
-        <p>{audience === null ? "Connect Twitch chat to show privacy-safe audience activity." : `${audience.signals.length} aggregate audience signals are available.`}</p>
-      </Card>
-      {unavailableCard("Automatic topics", "Topic detection and watchlist counts are not connected yet. Raw chat and usernames will not be shown.", "Available after audience setup")}
-      {unavailableCard("Session timeline", "Aggregate audience history is not connected to this page yet.", "Available after history setup")}
+      <PageSectionCard
+        title="Overview"
+        badge={audience === null ? "Waiting" : "Active"}
+        badgeTone={audience === null ? "neutral" : "info"}
+        detail="Live Analytics keeps only aggregate audience health, not raw messages or viewer usernames."
+      />
+      <PageSectionCard
+        title="Activity"
+        badge={audience === null ? "Waiting" : "Active"}
+        badgeTone={audience === null ? "neutral" : "info"}
+        detail={audience === null ? "Connect Twitch chat to show privacy-safe audience activity." : `${audience.signals.length} aggregate audience signals are available.`}
+      />
+      {unavailableCard("Topics", "Topic detection and watchlist counts are not connected yet. Raw chat and usernames will not be shown.", "Available after audience setup")}
+      {unavailableCard("Session History", "Aggregate audience history is not connected to this page yet.", "Available after history setup")}
     </CardGrid>
   );
 }
 
 function LiveQuestsPage({ view }: { readonly view: StreamerViewModel | null }) {
   const cycle = view?.questCycle ?? null;
+  const active = cycle?.options.find((option) => option.candidateId === cycle.activeCandidateId) ?? null;
   return (
     <CardGrid className={styles.grid}>
-      <Card className={styles.card}>
-        <StatusBadge tone={cycle === null ? "neutral" : "info"}>{cycle === null ? "Waiting" : titleCase(cycle.status)}</StatusBadge>
-        <h3>Now</h3>
-        <p>{cycle?.activeCandidateId === null || cycle === null ? "No sidequest is active." : "An approved sidequest is active."}</p>
-      </Card>
-      <Card className={styles.card}>
-        <h3>Recommendations</h3>
-        <p>{cycle === null || cycle.options.length !== 3 ? "ChatXPT will not open voting until exactly three validated options are ready." : "Three validated options are available for streamer review."}</p>
-      </Card>
-      {unavailableCard("Approval controls", "Full Live Quests controls are not connected here yet. Compact controls remain available in Live Config.", "Use Live Config for now")}
+      <PageSectionCard
+        title="Now"
+        badge={cycle === null ? "Waiting" : titleCase(cycle.status)}
+        badgeTone={cycle === null ? "neutral" : "info"}
+        detail={active === null ? "No sidequest is active." : `${active.title} is active.`}
+      />
+      <PageSectionCard
+        title="Recommendations"
+        badge={cycle?.options.length === 3 ? "Three options" : "Waiting"}
+        badgeTone={cycle?.options.length === 3 ? "success" : "neutral"}
+        detail={cycle === null || cycle.options.length !== 3 ? "ChatXPT will not open voting until exactly three validated options are ready." : "Three validated options are available for streamer review."}
+      />
+      <PageSectionCard
+        title="Why"
+        badge={cycle?.options.length === 3 ? "Available" : "Waiting"}
+        badgeTone={cycle?.options.length === 3 ? "info" : "neutral"}
+        detail={cycle?.options[0]?.rationale ?? "Reasoning appears after ChatXPT has a validated three-option proposal."}
+      />
+      {unavailableCard("Voting", "Full voting controls are not connected here yet. Compact controls remain available in Live Config.", "Use Live Config for now")}
+      {unavailableCard("Results", "Result controls and history summaries are not connected to this page yet.", "Available after quest workflow setup")}
     </CardGrid>
   );
 }
@@ -447,16 +522,25 @@ function ProfilePage({ view }: { readonly view: StreamerViewModel | null }) {
   const profile = view?.profile ?? null;
   return (
     <CardGrid className={styles.grid}>
-      <Card className={styles.card}>
-        <StatusBadge tone={profile === null ? "neutral" : "success"}>{profile === null ? "No profile" : "Saved profile"}</StatusBadge>
-        <h3>Personality</h3>
-        <p>{profile === null ? "Start a broadcaster session to load saved defaults." : `Intensity ${Math.round((profile.experience.intensity ?? 0.5) * 100)}%, creativity ${Math.round((profile.experience.creativity ?? 0.5) * 100)}%.`}</p>
-      </Card>
-      <Card className={styles.card}>
-        <h3>Safety and accessibility</h3>
-        <p>{profile === null ? "No saved profile loaded." : `${profile.restrictions.length + profile.forbiddenQuestTypes.length} saved limits, ${profile.accessibilityNeeds.length} accessibility preferences.`}</p>
-      </Card>
-      {unavailableCard("Named presets", "Competitive, Chill, Educational, Community, and custom presets are not connected yet.", "Use saved defaults for now")}
+      <PageSectionCard
+        title="Personality"
+        badge={profile === null ? "No profile" : "Saved profile"}
+        badgeTone={profile === null ? "neutral" : "success"}
+        detail={profile === null ? "Start a broadcaster session to load saved defaults." : `Intensity ${Math.round((profile.experience.intensity ?? 0.5) * 100)}%, creativity ${Math.round((profile.experience.creativity ?? 0.5) * 100)}%.`}
+      />
+      {unavailableCard("Stream Presets", "Competitive, Chill, Educational, Community, and custom presets are not connected yet.", "Use saved defaults for now")}
+      <PageSectionCard
+        title="Safety"
+        badge={profile === null ? "Waiting" : "Saved"}
+        badgeTone={profile === null ? "neutral" : "success"}
+        detail={profile === null ? "No saved profile loaded." : `${profile.restrictions.length + profile.forbiddenQuestTypes.length} saved limits are active.`}
+      />
+      <PageSectionCard
+        title="Accessibility"
+        badge={profile === null ? "Waiting" : "Saved"}
+        badgeTone={profile === null ? "neutral" : "success"}
+        detail={profile === null ? "No saved accessibility preferences loaded." : profile.accessibilityNeeds.length === 0 ? "No extra accessibility preferences saved." : profile.accessibilityNeeds.join(", ")}
+      />
     </CardGrid>
   );
 }
@@ -464,12 +548,14 @@ function ProfilePage({ view }: { readonly view: StreamerViewModel | null }) {
 function StreamSettingsPage({ view }: { readonly view: StreamerViewModel | null }) {
   return (
     <CardGrid className={styles.grid}>
-      <Card className={styles.card}>
-        <StatusBadge tone={view === null ? "neutral" : "info"}>{view === null ? "Waiting" : "Saved source"}</StatusBadge>
-        <h3>Effective values</h3>
-        <p>{view === null ? "Start a session to see current-stream settings." : "This stream currently follows saved profile defaults."}</p>
-      </Card>
-      {unavailableCard("Temporary override", "Session-only changes and reset controls are not connected yet.", "Use saved defaults for now")}
+      <PageSectionCard
+        title="Saved Source"
+        badge={view === null ? "Waiting" : "Saved defaults"}
+        badgeTone={view === null ? "neutral" : "info"}
+        detail={view === null ? "Start a session to see current-stream settings." : "This stream currently follows saved profile defaults."}
+      />
+      {unavailableCard("Session Override", "Session-only changes are not connected yet.", "Use saved defaults for now")}
+      {unavailableCard("Reset to Saved", "Reset controls are unavailable until session override state is connected.", "No override to reset")}
     </CardGrid>
   );
 }
@@ -477,17 +563,15 @@ function StreamSettingsPage({ view }: { readonly view: StreamerViewModel | null 
 function TestLabPage() {
   return (
     <CardGrid className={styles.grid}>
-      <Card className={styles.card}>
-        <StatusBadge tone="warning">Unavailable</StatusBadge>
-        <h3>Trusted source check</h3>
-        <p>Sample and live source controls are not connected yet. They will stay separate from the active stream.</p>
-      </Card>
-      <Card className={styles.card}>
-        <StatusBadge tone="warning">Unavailable</StatusBadge>
-        <h3>Gameplay source check</h3>
-        <p>Live capture checks remain separated from the active stream until Test Lab is connected.</p>
-        <AvailabilityAction availability={unavailableAvailability("Live capture checks remain separated from the active stream until Test Lab is connected.", "Available after Test Lab setup")} />
-      </Card>
+      {unavailableCard("Sample / Live Source", "Sample checks and live source checks are not connected yet. They will stay separate from the active stream.", "Available after Test Lab setup")}
+      {unavailableCard("Capture Controls", "Capture controls are not connected to Test Lab yet.", "Available after capture setup")}
+      <PageSectionCard
+        title="Observed / Unknown"
+        badge="Waiting"
+        badgeTone="neutral"
+        detail="Observed facts and unknown facts will appear here without upgrading samples into live stream state."
+      />
+      {unavailableCard("Recovery", "Permission, source, and reconnect recovery controls are not connected to Test Lab yet.", "Available after recovery setup")}
     </CardGrid>
   );
 }
@@ -511,7 +595,7 @@ function PageBody({ page, view, readiness }: {
       />
     );
   }
-  if (page === "gameplay") return <GameplayPage view={view} />;
+  if (page === "gameplay") return <GameplayPage view={view} readiness={readiness} />;
   if (page === "live-analytics") return <LiveAnalyticsPage view={view} />;
   if (page === "live-quests") return <LiveQuestsPage view={view} />;
   if (page === "profile") return <ProfilePage view={view} />;
@@ -555,7 +639,7 @@ export function StudioProductPageSurface({
           </div>
           <div className={styles.heroMeta}>
             <StatusBadge tone={readiness?.ready ? "success" : readiness ? "warning" : "neutral"}>
-              {readiness?.label ?? "Connect Studio"}
+              {customerSafeLabel(readiness?.label, readiness?.ready ? "Ready to start" : "Connect Studio")}
             </StatusBadge>
             <small>{view?.profile.gameName ?? "No game selected"}</small>
           </div>
