@@ -7,4 +7,4 @@
 
 ## Verification
 
-- Pending in this pass: focused persistence/Supabase tests and `npm run check`.
+- `npm run test -- src/core/contracts.test.ts tests/integration/persistence.test.ts tests/integration/supabase-adapters.test.ts` was covered by the 20 August repository consistency rerun; the encompassing seven-file run passed 94 tests, and full `npm run check` passed 82 Vitest files / 666 tests plus the production build.

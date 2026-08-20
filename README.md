@@ -57,9 +57,11 @@ All values in `.env.example` are empty placeholders. Real credentials must remai
 | `TWITCH_CLIENT_SECRET` | No | Server-only Twitch application secret. |
 | `TWITCH_EXTENSION_CLIENT_ID` | No | Identifier for the registered Twitch Extension. |
 | `TWITCH_EXTENSION_SECRET` | For Twitch tests | Base64 Extension signing secret used only by the server to verify Twitch JWTs and derive pseudonymous, session-scoped participation identity. |
+| `TWITCH_EVENTSUB_SECRET` | For Twitch chat tests | Independent server-only HMAC secret used to verify EventSub webhook delivery. |
 | `CHATXPT_OBS_OVERLAY_SETUP_KEY` | No | Server-only key for the streamer-controlled OBS overlay setup boundary. |
 | `CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY` | For authenticated capture | Server-only key that bootstraps short-lived, session-scoped normalised gameplay ingress grants. It is never a client bundle value. |
 | `CHATXPT_STUDIO_SETUP_KEY` | For canonical Studio | Server-only key of at least 32 characters used for the manual broadcaster-session bootstrap. It is exchanged for an HttpOnly, expiring session grant and is never bundled. |
+| `CHATXPT_HOSTED_BOARD_SECRET` | For hosted fallback | Server-only HMAC secret for anonymous, session-scoped hosted Quest Board viewer grants. |
 | `NEXT_PUBLIC_APP_ENV` | No | Environment label; the example uses `local`. |
 
 Legacy Supabase projects may use the aliases documented in [.env.example](.env.example), but each environment should configure only one key pair.
@@ -127,13 +129,30 @@ Source inspection and static migration tests do not prove a real Supabase cloud 
 
 ### Verify the repository
 
+For a memory-backed production-server smoke, configure the Twitch and local setup secrets in `.env.local`, then start the built app on the smoke runner's default port:
+
+```bash
+npm run build
+PORT=3210 npm start
+```
+
+In a second terminal, run:
+
+```bash
+npm run smoke
+```
+
+The smoke command loads `.env.local`, exercises the canonical Studio, Twitch readiness, hosted-board, Gameplay Capture, EventSub verification, OBS overlay, and page-mount boundaries, and reports its memory-backed limitations. It is not real Twitch, OBS camera, Supabase Cloud, or deployment evidence.
+
+Set `CHATXPT_SMOKE_BASE_URL` in the invoking terminal only when the server is not at `http://localhost:3210`.
+
 Run the complete repository gate:
 
 ```bash
 npm run check
 ```
 
-This runs linting, TypeScript checks, role-boundary enforcement, evidence and demo-runbook validation, secret-exposure tests, the Vitest suite, a production build, and a built-client secret scan. Focused commands such as `npm run test:integration`, `npm run test:persistence`, and `npm run test:contracts` are also available in [package.json](package.json).
+This runs linting, TypeScript checks, role-boundary and repository-hygiene enforcement, evidence and demo-runbook validation, secret-exposure tests, the Vitest suite, a production build, and a built-client secret scan. Focused commands such as `npm run test:integration`, `npm run test:persistence`, and `npm run test:contracts` are also available in [package.json](package.json).
 
 ## 2. Architecture Overview
 
