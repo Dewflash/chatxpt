@@ -55,6 +55,20 @@ export const questCandidateSchema = z
     }
   });
 
+/**
+ * Viewer/OBS-safe quest option. Streamer-only rationale, evidence citations,
+ * confidence, and provider provenance are deliberately omitted and stripped
+ * when a full authoritative candidate is projected through this schema.
+ */
+export const publicQuestCandidateSchema = z.object({
+  candidateId: identifierSchema,
+  title: z.string().trim().min(3).max(80),
+  instruction: z.string().trim().min(8).max(240),
+  durationSeconds: z.number().int().min(10).max(900),
+  difficulty: z.enum(["easy", "medium", "hard"]),
+  rewardPoints: z.number().int().nonnegative().max(100_000),
+});
+
 export const candidateBatchSchema = z
   .object({
     envelope: contractEnvelopeSchema,
@@ -239,6 +253,72 @@ export const questCycleStateSchema = z
     }
   });
 
+export const publicQuestCycleStateSchema = z
+  .object({
+    envelope: contractEnvelopeSchema,
+    status: questCycleStatusSchema,
+    options: z.array(publicQuestCandidateSchema).max(3),
+    activeCandidateId: identifierSchema.nullable(),
+    availableStreamerActions: z.array(streamerQuestActionSchema),
+    voteTallies: z.array(voteTallySchema).max(3),
+    startsAt: timestampSchema.nullable(),
+    endsAt: timestampSchema.nullable(),
+    progress: questProgressSchema.nullable(),
+    completionRule: questCompletionRuleSchema.nullable().default(null),
+    result: questResultSchema.nullable(),
+  })
+  .strict()
+  .superRefine((state, context) => {
+    if (state.endsAt !== null && state.startsAt !== null && state.endsAt < state.startsAt) {
+      context.addIssue({ code: "custom", message: "endsAt cannot precede startsAt", path: ["endsAt"] });
+    }
+    if (state.status === "active" && state.activeCandidateId === null) {
+      context.addIssue({
+        code: "custom",
+        message: "Active quest cycles require activeCandidateId",
+        path: ["activeCandidateId"],
+      });
+    }
+    if (["proposed", "voting", "active"].includes(state.status) && state.options.length !== 3) {
+      context.addIssue({
+        code: "custom",
+        message: `${state.status} quest cycles require exactly three options`,
+        path: ["options"],
+      });
+    }
+    const optionIds = state.options.map((candidate) => candidate.candidateId);
+    if (
+      state.activeCandidateId !== null &&
+      !optionIds.includes(state.activeCandidateId)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "activeCandidateId must reference one of the cycle options",
+        path: ["activeCandidateId"],
+      });
+    }
+    if (new Set(optionIds).size !== optionIds.length) {
+      context.addIssue({ code: "custom", message: "Quest-cycle option IDs must be distinct", path: ["options"] });
+    }
+    const tallyIds = state.voteTallies.map((tally) => tally.candidateId);
+    if (new Set(tallyIds).size !== tallyIds.length) {
+      context.addIssue({
+        code: "custom",
+        message: "Vote-tally candidate IDs must be distinct",
+        path: ["voteTallies"],
+      });
+    }
+    for (const [index, tally] of state.voteTallies.entries()) {
+      if (!optionIds.includes(tally.candidateId)) {
+        context.addIssue({
+          code: "custom",
+          message: "Vote tallies must reference a cycle option",
+          path: ["voteTallies", index, "candidateId"],
+        });
+      }
+    }
+  });
+
 export const rewardEventSchema = z
   .object({
     envelope: contractEnvelopeSchema,
@@ -250,8 +330,10 @@ export const rewardEventSchema = z
   .strict();
 
 export type QuestCandidate = z.infer<typeof questCandidateSchema>;
+export type PublicQuestCandidate = z.infer<typeof publicQuestCandidateSchema>;
 export type CandidateBatch = z.infer<typeof candidateBatchSchema>;
 export type QuestCycleState = z.infer<typeof questCycleStateSchema>;
+export type PublicQuestCycleState = z.infer<typeof publicQuestCycleStateSchema>;
 export type StreamerQuestAction = z.infer<typeof streamerQuestActionSchema>;
 export type QuestProgress = z.infer<typeof questProgressSchema>;
 export type QuestCompletionRule = z.infer<typeof questCompletionRuleSchema>;

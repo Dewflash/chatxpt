@@ -34,7 +34,6 @@ import {
 } from "@/integrations";
 import {
   createDefaultQuestEngine,
-  DefaultDirectorCueConverter,
   DefaultDirectorCueLifecycle,
 } from "@/quest-engine";
 import {
@@ -411,7 +410,6 @@ export class TwitchExtensionViewerApplication {
             ),
             engine: createDefaultQuestEngine(),
             directorCues: new DefaultDirectorCueLifecycle(),
-            directorCueConverter: new DefaultDirectorCueConverter(),
             projectionContext,
             projector: new CanonicalViewProjector(),
             clock: { now: this.now },
@@ -852,7 +850,6 @@ export class TwitchExtensionViewerApplication {
           ),
           engine: createDefaultQuestEngine(),
           directorCues: new DefaultDirectorCueLifecycle(),
-          directorCueConverter: new DefaultDirectorCueConverter(),
           projectionContext: new TwitchViewerProjectionContext(
             this.persistence,
             actor,

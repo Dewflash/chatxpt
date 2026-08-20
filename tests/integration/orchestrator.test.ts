@@ -20,6 +20,7 @@ import {
   type QuestEngineResult,
   type StatePublisher,
   type GameplaySnapshot,
+  type CandidateProvider,
 } from "../../src/core";
 import {
   CanonicalFixtureViewProjector,
@@ -45,7 +46,10 @@ import {
   contractFixtureQuestCycle,
   contractFixtureSession,
 } from "../../src/core/testing";
-import { DefaultDirectorCueConverter, DefaultDirectorCueLifecycle } from "../../src/quest-engine";
+import {
+  DefaultDirectorCueLifecycle,
+  DefaultLiveDirectorProposalCoordinator,
+} from "../../src/quest-engine";
 
 const ACCEPTED_AT = contractFixtureQuestCycle.envelope.occurredAt + 1_000;
 
@@ -103,6 +107,7 @@ function reactionCommand(commandId = "fixture-viewer-reaction", expectedRevision
 function liveDirectorCueCommand(
   commandId = "fixture-live-director-cue-command",
   expectedRevision = 0,
+  action: "later" | "turn-into-vote" = "later",
 ) {
   return streamerLiveDirectorCueCommandSchema.parse({
     contractVersion: "1.0.0",
@@ -115,7 +120,7 @@ function liveDirectorCueCommand(
     actor: { kind: "moderator", actorId: "fixture-moderator" },
     type: "streamer.live-director-cue",
     cueId: contractFixtureLiveDirectorState.cue?.cueId,
-    action: "later",
+    action,
   });
 }
 
@@ -196,7 +201,6 @@ function dependencies(
     repository,
     engine,
     directorCues: new DefaultDirectorCueLifecycle(),
-    directorCueConverter: new DefaultDirectorCueConverter(),
     projectionContext: new FixtureProjectionContextResolver({
       participationMode: "hosted-board",
       viewerId: null,
@@ -749,6 +753,121 @@ describe("Role 1 application orchestrator", () => {
     expect(stale.error.code).toBe("stale-revision");
     expect(engine.calls).toBe(0);
     expect(publisher.published).toHaveLength(1);
+  });
+
+  it("atomically converts a cue into exactly three private proposals with provider-unavailable fallback", async () => {
+    const state = {
+      ...initialState(),
+      liveDirector: structuredClone(contractFixtureLiveDirectorState),
+    };
+    const repository = new FixtureSessionStateRepository([state]);
+    const publisher = new RecordingFixturePublisher();
+    let providerCalls = 0;
+    const unavailableProvider: CandidateProvider = {
+      async generate() {
+        providerCalls += 1;
+        throw new Error("Fixture provider unavailable");
+      },
+    };
+    const engine = successfulEngine();
+    const orchestrator = new ChatXptOrchestrator({
+      ...dependencies(repository, publisher, engine),
+      directorCueProposals: new DefaultLiveDirectorProposalCoordinator(unavailableProvider),
+    });
+    const input = liveDirectorCueCommand(
+      "fixture-turn-into-vote",
+      0,
+      "turn-into-vote",
+    );
+
+    const first = await orchestrator.execute(input);
+    const duplicate = await orchestrator.execute(input);
+    const stale = await orchestrator.execute(
+      liveDirectorCueCommand("fixture-stale-turn-into-vote", 0, "turn-into-vote"),
+    );
+
+    expect(first.ok).toBe(true);
+    if (!first.ok || first.views === null) return;
+    expect(first.receipt.state.session.revision).toBe(1);
+    expect(first.receipt.state.liveDirector?.cue?.state).toBe("converted");
+    expect(first.receipt.state.questCycle).toMatchObject({
+      status: "proposed",
+      availableStreamerActions: expect.arrayContaining(["approve", "reject"]),
+    });
+    expect(first.receipt.state.questCycle.options).toHaveLength(3);
+    expect(
+      first.receipt.state.questCycle.options.every(
+        ({ generation }) => generation.method === "deterministic-fallback",
+      ),
+    ).toBe(true);
+    expect(first.receipt.events.map(({ event }) => event.eventType)).toEqual(
+      expect.arrayContaining([
+        "live-director.cue-converted",
+        "quest-cycle.proposed",
+        "live-director.cue-conversion-ready",
+      ]),
+    );
+    expect(first.views.streamer.questCycle.options).toHaveLength(3);
+    expect(first.views.streamer.questCycle.options[0]).toHaveProperty("generation");
+    expect(first.views.viewer.questCycle.options).toHaveLength(3);
+    expect(first.views.viewer.questCycle.options[0]).not.toHaveProperty("generation");
+    expect(first.views.viewer.questCycle.options[0]).not.toHaveProperty("rationale");
+    expect(first.views.overlay.questCycle.options[0]).not.toHaveProperty("sourceSignalIds");
+    expect(JSON.stringify(first.views.overlay)).not.toContain("provider");
+    expect(first.views.viewer.canVote).toBe(false);
+    expect(
+      [first.views.streamer, first.views.viewer, first.views.overlay].map(
+        (view) => view.envelope.revision,
+      ),
+    ).toEqual([1, 1, 1]);
+
+    expect(duplicate.ok).toBe(true);
+    if (!duplicate.ok) return;
+    expect(duplicate.outcome).toBe("duplicate");
+    expect(duplicate.delivery).toBe("not-republished");
+    expect(stale.ok).toBe(false);
+    if (stale.ok) return;
+    expect(stale.error.code).toBe("stale-revision");
+    expect(providerCalls).toBe(1);
+    expect(engine.calls).toBe(0);
+    expect(publisher.published).toHaveLength(1);
+    expect((await repository.load(state.session.sessionId))?.questCycle.options).toHaveLength(3);
+  });
+
+  it("publishes nothing when current gameplay evidence is unavailable", async () => {
+    const state: AuthoritativeSessionState = {
+      ...initialState(),
+      gameplay: null,
+      liveDirector: structuredClone(contractFixtureLiveDirectorState),
+    };
+    const repository = new FixtureSessionStateRepository([state]);
+    const publisher = new RecordingFixturePublisher();
+    let providerCalls = 0;
+    const provider: CandidateProvider = {
+      async generate(input) {
+        providerCalls += 1;
+        return { envelope: input.envelope, candidates: contractFixtureCandidateBatch.candidates };
+      },
+    };
+    const orchestrator = new ChatXptOrchestrator({
+      ...dependencies(repository, publisher),
+      directorCueProposals: new DefaultLiveDirectorProposalCoordinator(provider),
+    });
+
+    const result = await orchestrator.execute(
+      liveDirectorCueCommand("fixture-no-gameplay-proposal", 0, "turn-into-vote"),
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("dependency-unavailable");
+    expect(result.error.message).toContain("no quest proposal was published");
+    expect(providerCalls).toBe(0);
+    expect(publisher.published).toHaveLength(0);
+    const unchanged = await repository.load(state.session.sessionId);
+    expect(unchanged?.session.revision).toBe(0);
+    expect(unchanged?.liveDirector?.cue?.state).toBe("proposed");
+    expect(unchanged?.questCycle.status).toBe("idle");
   });
 
   it("commits declared intent and composed private context without invoking the quest engine", async () => {

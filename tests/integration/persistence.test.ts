@@ -20,7 +20,6 @@ import {
   FixtureProjectionContextResolver,
   ScriptedFixtureQuestEngine,
   ScriptedFixtureDirectorCueLifecycle,
-  ScriptedFixtureDirectorCueConverter,
   SequenceFixtureMessageIds,
   contractFixtureCandidateBatch,
   contractFixtureAudiencePointerAggregate,
@@ -103,12 +102,6 @@ function logicDependencies(): Omit<
         message: "Fixture persistence test did not script a Director Cue transition",
         retryable: false,
       },
-    })),
-    directorCueConverter: new ScriptedFixtureDirectorCueConverter(() => ({
-      ok: false,
-      disposition: "no-publication",
-      code: "fixture-conversion-not-scripted",
-      reason: "Fixture persistence test did not script a Director Cue conversion",
     })),
     projectionContext: new FixtureProjectionContextResolver({
       participationMode: "hosted-board",

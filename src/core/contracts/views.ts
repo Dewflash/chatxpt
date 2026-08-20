@@ -7,7 +7,7 @@ import {
   timestampSchema,
 } from "./common";
 import { streamerProfileSchema, streamerSessionOverrideSchema } from "./profile";
-import { questCycleStateSchema } from "./quests";
+import { publicQuestCycleStateSchema, questCycleStateSchema } from "./quests";
 import { participationCapabilitiesSchema, streamSessionSchema } from "./session";
 import {
   audienceSnapshotSchema,
@@ -106,7 +106,7 @@ export const viewerViewModelSchema = z
     sessionPoints: z.number().int().nonnegative(),
     communityHype: z.number().int().nonnegative(),
     acceptedCandidateId: identifierSchema.nullable(),
-    questCycle: questCycleStateSchema,
+    questCycle: publicQuestCycleStateSchema,
     connection: serviceHealthSchema,
     liveDirector: viewerLiveDirectorProjectionSchema.nullable().optional(),
   })
@@ -176,7 +176,7 @@ export const overlayViewModelSchema = z
     readOnly: z.literal(true),
     communityHype: z.number().int().nonnegative(),
     upNext: overlayUpNextSchema.nullable(),
-    questCycle: questCycleStateSchema,
+    questCycle: publicQuestCycleStateSchema,
     connection: serviceHealthSchema,
   })
   .strict()

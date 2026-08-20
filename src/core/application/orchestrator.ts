@@ -7,6 +7,7 @@ import {
   directorCueSchema,
   domainErrorSchema,
   overlayViewModelSchema,
+  publicQuestCycleStateSchema,
   questCycleStateSchema,
   questEngineEventDraftSchema,
   questEngineEventSchema,
@@ -17,7 +18,6 @@ import {
   streamerViewModelSchema,
   audienceSnapshotSchema,
   gameplaySnapshotSchema,
-  intelligenceSnapshotSchema,
   liveDirectorStateSchema,
   timestampSchema,
   viewerViewModelSchema,
@@ -145,6 +145,7 @@ function authoritativeDecision(
   current: AuthoritativeSessionState,
   decision: QuestEngineDecision,
   acceptedAt: number,
+  liveDirectorOverride?: NonNullable<AuthoritativeSessionState["liveDirector"]>,
 ): { state: AuthoritativeSessionState; events: AcceptedCommandReceipt["events"] } | DomainError {
   const parsedDecision = questCycleStateSchema.safeParse(decision.nextState);
   if (!parsedDecision.success) {
@@ -183,6 +184,7 @@ function authoritativeDecision(
           ? false
           : current.emergencyPaused,
     recentQuests: updatedRecentQuestSummaries(current, parsedEvents.data, acceptedAt),
+    ...(liveDirectorOverride === undefined ? {} : { liveDirector: liveDirectorOverride }),
   };
   const events = [];
   for (const event of parsedEvents.data) {
@@ -452,14 +454,18 @@ function validateViews(views: RoleViewModels, envelope: ContractEnvelope): RoleV
       return error("internal", "Projected view envelope does not match authoritative state", true);
     }
   }
+  const publicQuestCycle = publicQuestCycleStateSchema.safeParse(parsed.streamer.data.questCycle);
+  if (!publicQuestCycle.success) {
+    return error("internal", "Streamer quest state cannot be projected publicly", true);
+  }
   if (
     canonicalJsonStringify(parsed.streamer.data.session) !==
       canonicalJsonStringify(parsed.viewer.data.session) ||
     canonicalJsonStringify(parsed.streamer.data.session) !==
       canonicalJsonStringify(parsed.overlay.data.session) ||
-    canonicalJsonStringify(parsed.streamer.data.questCycle) !==
+    canonicalJsonStringify(publicQuestCycle.data) !==
       canonicalJsonStringify(parsed.viewer.data.questCycle) ||
-    canonicalJsonStringify(parsed.streamer.data.questCycle) !==
+    canonicalJsonStringify(publicQuestCycle.data) !==
       canonicalJsonStringify(parsed.overlay.data.questCycle)
   ) {
     return error("internal", "Projected role views disagree on authoritative state", true);
@@ -470,46 +476,6 @@ function validateViews(views: RoleViewModels, envelope: ContractEnvelope): RoleV
     viewer: parsed.viewer.data,
     overlay: parsed.overlay.data,
   };
-}
-
-function conversionIntelligence(
-  dependencies: OrchestratorDependencies,
-  command: Extract<CommandEnvelope, { type: "system.intelligence-ready" }>,
-  state: AuthoritativeSessionState,
-  acceptedAt: number,
-) {
-  if (state.gameplay === null) {
-    return error("dependency-unavailable", "Director Cue conversion requires current gameplay context", true);
-  }
-  const envelope = authoritativeEnvelope(
-    dependencies,
-    command,
-    state,
-    state.questCycle.envelope.questCycleId,
-    state.session.revision,
-    acceptedAt,
-    "quest-event",
-  );
-  const audience =
-    state.audience !== null &&
-    state.audience.envelope.sessionId === envelope.sessionId &&
-    state.audience.envelope.questCycleId === envelope.questCycleId &&
-    state.audience.envelope.revision === envelope.revision &&
-    state.audience.envelope.evidenceClass === envelope.evidenceClass
-      ? state.audience
-      : {
-          envelope,
-          sampleSize: 0,
-          signals: [],
-        };
-  const parsed = intelligenceSnapshotSchema.safeParse({
-    envelope,
-    gameplay: state.gameplay,
-    audience,
-  });
-  return parsed.success
-    ? parsed.data
-    : error("validation", "Director Cue conversion context is not canonical");
 }
 
 export class ChatXptOrchestrator {
@@ -889,14 +855,76 @@ export class ChatXptOrchestrator {
       if (!liveDirector.success) {
         return { ok: false, error: error("internal", "Director Cue transition violated Live Director state") };
       }
-      authoritative = authoritativeLiveDirectorUpdate(
-        this.dependencies,
-        command,
-        current,
-        acceptedAt,
-        liveDirector.data,
-        parsedEvents.data[0],
-      );
+      if (command.action === "turn-into-vote") {
+        if (this.dependencies.directorCueProposals === undefined) {
+          return {
+            ok: false,
+            error: error(
+              "dependency-unavailable",
+              "Director Cue proposal composition is unavailable; no quest proposal was published",
+              true,
+            ),
+          };
+        }
+        let untrustedProposal: unknown;
+        try {
+          untrustedProposal = await this.dependencies.directorCueProposals.propose({
+            current,
+            liveDirector: liveDirector.data,
+            command,
+            now: acceptedAt,
+          });
+        } catch {
+          return {
+            ok: false,
+            error: error("internal", "Director Cue proposal composition failed unexpectedly", true),
+          };
+        }
+        if (
+          typeof untrustedProposal !== "object" ||
+          untrustedProposal === null ||
+          !("ok" in untrustedProposal) ||
+          typeof untrustedProposal.ok !== "boolean"
+        ) {
+          return { ok: false, error: error("internal", "Director Cue proposal returned an invalid result") };
+        }
+        if (!untrustedProposal.ok) {
+          const parsedError = domainErrorSchema.safeParse(
+            (untrustedProposal as { readonly error?: unknown }).error,
+          );
+          return {
+            ok: false,
+            error: parsedError.success
+              ? parsedError.data
+              : error("internal", "Director Cue proposal returned an invalid error"),
+          };
+        }
+        const proposalDecision = (untrustedProposal as { readonly decision?: QuestEngineDecision })
+          .decision;
+        if (proposalDecision === undefined) {
+          return { ok: false, error: error("internal", "Director Cue proposal omitted its decision") };
+        }
+        authoritative = authoritativeDecision(
+          this.dependencies,
+          command,
+          current,
+          {
+            nextState: proposalDecision.nextState,
+            events: [...parsedEvents.data, ...proposalDecision.events],
+          },
+          acceptedAt,
+          liveDirector.data,
+        );
+      } else {
+        authoritative = authoritativeLiveDirectorUpdate(
+          this.dependencies,
+          command,
+          current,
+          acceptedAt,
+          liveDirector.data,
+          parsedEvents.data[0],
+        );
+      }
     } else {
       let untrustedEngineResult: unknown;
       if (command.type === "streamer.emergency-clear") {
@@ -919,46 +947,6 @@ export class ChatXptOrchestrator {
               },
             ],
           },
-        } satisfies QuestEngineResult;
-      } else if (command.type === "system.intelligence-ready" && current.liveDirector?.cue?.state === "converted") {
-        if (candidateBatch === null) {
-          return { ok: false, error: error("dependency-unavailable", "Director Cue conversion has no candidate batch", true) };
-        }
-        const intelligence = conversionIntelligence(
-          this.dependencies,
-          command,
-          current,
-          acceptedAt,
-        );
-        if ("code" in intelligence) {
-          return { ok: false, error: intelligence };
-        }
-        const conversion = this.dependencies.directorCueConverter.convert({
-          envelope: candidateBatch.envelope,
-          candidates: candidateBatch.candidates,
-          intelligence,
-          profile: current.profile,
-          currentState: current.questCycle,
-          recentQuests: current.recentQuests ?? [],
-          now: acceptedAt,
-          seed: `${current.session.sessionId}:${current.questCycle.envelope.questCycleId ?? "cycle"}:${current.session.revision}:director-cue-conversion`,
-          liveDirector: current.liveDirector,
-          command,
-          emergencyPaused: current.emergencyPaused,
-          sessionEnded: current.session.status === "ended" || current.session.status === "offline",
-          questImpossible: false,
-        });
-        if (!conversion.ok) {
-          return {
-            ok: false,
-            error:
-              conversion.error ??
-              error("validation", conversion.reason),
-          };
-        }
-        untrustedEngineResult = {
-          ok: true,
-          decision: conversion.decision,
         } satisfies QuestEngineResult;
       } else {
         try {
