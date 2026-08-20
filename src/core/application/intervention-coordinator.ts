@@ -41,6 +41,21 @@ export interface CandidateBatchWriter {
   store(batch: CandidateBatch): Promise<void>;
 }
 
+export interface CandidateBatchAssemblerPort {
+  assemble(input: {
+    readonly envelope: ContractEnvelope;
+    readonly candidates: readonly unknown[];
+    readonly intelligence: IntelligenceSnapshot;
+    readonly profile: AuthoritativeSessionState["profile"];
+    readonly currentState: AuthoritativeSessionState["questCycle"];
+    readonly recentQuests: readonly RecentQuestSummary[];
+    readonly now: number;
+    readonly seed: string;
+  }):
+    | { readonly ok: true; readonly batch: CandidateBatch }
+    | { readonly ok: false; readonly reason: string };
+}
+
 export interface IntelligenceReadyExecutor {
   execute(input: unknown): Promise<OrchestratorResult>;
 }
@@ -90,6 +105,7 @@ export class Role1InterventionCoordinator {
   constructor(
     private readonly policy: InterventionPolicy,
     private readonly candidates: CandidateProvider,
+    private readonly assembler: CandidateBatchAssemblerPort,
     private readonly candidateBatches: CandidateBatchWriter,
     private readonly executor: IntelligenceReadyExecutor,
     private readonly now: () => number = Date.now,
@@ -131,7 +147,7 @@ export class Role1InterventionCoordinator {
       };
     }
 
-    let batch: CandidateBatch;
+    let generated: CandidateBatch;
     try {
       const candidateInput: CandidateInput = {
         envelope: envelope.data,
@@ -140,18 +156,50 @@ export class Role1InterventionCoordinator {
         recentQuestTitles: input.recentQuests.map((quest) => quest.title),
         activeChatXptQuest: activeQuestSummary(input.state.questCycle),
       };
-      batch = candidateBatchSchema.parse(await this.candidates.generate(candidateInput, input.signal));
-      if (
-        batch.envelope.sessionId !== input.state.session.sessionId ||
-        batch.envelope.questCycleId !== input.state.questCycle.envelope.questCycleId ||
-        batch.envelope.revision !== input.state.session.revision ||
-        batch.envelope.evidenceClass !== input.state.questCycle.envelope.evidenceClass
-      ) {
-        return failure("validation", "Generated candidate batch does not match authoritative state");
-      }
-      await this.candidateBatches.store(batch);
+      generated = candidateBatchSchema.parse(await this.candidates.generate(candidateInput, input.signal));
     } catch {
-      return failure("dependency-unavailable", "Candidate generation or storage failed", true);
+      return failure("dependency-unavailable", "Candidate generation failed", true);
+    }
+    if (
+      generated.envelope.sessionId !== input.state.session.sessionId ||
+      generated.envelope.questCycleId !== input.state.questCycle.envelope.questCycleId ||
+      generated.envelope.revision !== input.state.session.revision ||
+      generated.envelope.evidenceClass !== input.state.questCycle.envelope.evidenceClass
+    ) {
+      return failure("validation", "Generated candidate batch does not match authoritative state");
+    }
+    const assembled = this.assembler.assemble({
+      envelope: generated.envelope,
+      candidates: generated.candidates,
+      intelligence: intelligence.data,
+      profile: input.state.profile,
+      currentState: input.state.questCycle,
+      recentQuests: input.recentQuests,
+      now,
+      seed: input.commandId,
+    });
+    if (!assembled.ok) {
+      return failure(
+        "unavailable-capability",
+        `Role 3 rejected the candidate batch: ${assembled.reason}`,
+      );
+    }
+    const batch = candidateBatchSchema.safeParse(assembled.batch);
+    if (!batch.success) {
+      return failure("validation", "Role 3 returned a non-canonical candidate batch");
+    }
+    if (
+      batch.data.envelope.sessionId !== input.state.session.sessionId ||
+      batch.data.envelope.questCycleId !== input.state.questCycle.envelope.questCycleId ||
+      batch.data.envelope.revision !== input.state.session.revision ||
+      batch.data.envelope.evidenceClass !== input.state.questCycle.envelope.evidenceClass
+    ) {
+      return failure("validation", "Role 3 candidate batch does not match authoritative state");
+    }
+    try {
+      await this.candidateBatches.store(batch.data);
+    } catch {
+      return failure("dependency-unavailable", "Candidate storage failed", true);
     }
 
     const command = systemIntelligenceCommandSchema.parse({
@@ -164,14 +212,14 @@ export class Role1InterventionCoordinator {
       issuedAt: input.issuedAt,
       actor: { kind: "system", actorId: input.systemActorId },
       type: "system.intelligence-ready",
-      candidateBatchId: batch.envelope.messageId,
+      candidateBatchId: batch.data.envelope.messageId,
     });
 
     return {
       ok: true,
       outcome: "submitted",
       decision,
-      candidateBatch: batch,
+      candidateBatch: batch.data,
       orchestrator: await this.executor.execute(command),
     };
   }

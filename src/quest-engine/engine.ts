@@ -143,15 +143,8 @@ function completionRulesMatch(
   activeRule: QuestCycleState["completionRule"],
   suppliedRule: QuestCycleState["completionRule"],
 ): boolean {
-  return (
-    activeRule !== null &&
-    suppliedRule !== null &&
-    activeRule.mode === suppliedRule.mode &&
-    activeRule.allowedSignalKinds.length === suppliedRule.allowedSignalKinds.length &&
-    activeRule.allowedSignalKinds.every(
-      (kind, index) => suppliedRule.allowedSignalKinds[index] === kind,
-    )
-  );
+  if (activeRule === null || suppliedRule === null) return false;
+  return JSON.stringify(activeRule) === JSON.stringify(suppliedRule);
 }
 
 function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
@@ -234,7 +227,7 @@ function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
             currentProgress: input.currentState.progress,
             requestedValue: input.command.requestedValue,
             evidenceSignalIds: input.command.evidenceSignalIds,
-            allowedSignalKinds: activeCompletionRule.allowedSignalKinds,
+            completionRule: activeCompletionRule,
             expectedGameId: profile.data.gameId,
             intelligence: intelligence.data,
             now: input.now,
@@ -246,13 +239,18 @@ function transitionQuestProgress(input: QuestEngineInput): QuestEngineResult {
       reason: progressDecision.reason,
     });
   }
-  // The current canonical rule names only allowed signal kinds. D-060 requires an
-  // explicit predicate (target plus comparison) before validated automatic evidence may reach 1.
-  // Until Core publishes that predicate-bearing contract, system progress stays partial.
-  if (input.command.type === "system.quest-progress" && input.command.requestedValue === 1) {
-    return error("validation", "Quest progress update was rejected", {
-      reason: "completion-predicate-unavailable",
-    });
+  if (input.command.type === "system.quest-progress" && progressDecision.progress.value === 1) {
+    return terminalTransition(
+      input,
+      "succeeded",
+      "Fresh gameplay evidence matched the active quest completion predicate.",
+      "quest-cycle.automatically-succeeded",
+      {
+        evidenceSignalCount: progressDecision.progress.evidenceSignalIds.length,
+      },
+      {},
+      progressDecision.progress,
+    );
   }
 
   return accept(
@@ -645,6 +643,7 @@ function transitionVoteClose(input: QuestEngineInput): QuestEngineResult {
         method: "unknown",
         evidenceSignalIds: [],
       },
+      completionRule: winner.completionRule ?? null,
       result: null,
     },
     [
@@ -786,6 +785,8 @@ export class DefaultQuestEngine implements QuestEngine {
           "unavailable-capability",
           "Director Cue actions require the Role 3 cue lifecycle",
         );
+      default:
+        return error("validation", "Command type is not supported by the quest engine");
     }
   }
 }

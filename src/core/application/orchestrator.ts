@@ -18,7 +18,6 @@ import {
   streamerViewModelSchema,
   audienceSnapshotSchema,
   gameplaySnapshotSchema,
-  intelligenceSnapshotSchema,
   liveDirectorStateSchema,
   timestampSchema,
   viewerViewModelSchema,
@@ -174,10 +173,23 @@ function authoritativeDecision(
     ...parsedDecision.data,
     envelope: questEnvelope,
   });
+  const terminalHypeDelta = parsedEvents.data.reduce((total, event) => {
+    const hypeDelta = event.attributes.hypeDelta;
+    return typeof event.attributes.outcome === "string" &&
+      typeof hypeDelta === "number" &&
+      Number.isSafeInteger(hypeDelta)
+      ? total + hypeDelta
+      : total;
+  }, 0);
+  const communityHype = current.communityHype + terminalHypeDelta;
+  if (!Number.isSafeInteger(communityHype) || communityHype < 0) {
+    return error("validation", "Quest reward update exceeds supported community hype bounds");
+  }
   const state: AuthoritativeSessionState = {
     ...current,
     session: { ...current.session, revision },
     questCycle,
+    communityHype,
     emergencyPaused:
       command.type === "streamer.quest" && command.action === "emergency-pause"
         ? true
@@ -657,46 +669,6 @@ function validateViews(views: RoleViewModels, envelope: ContractEnvelope): RoleV
     viewer: parsed.viewer.data,
     overlay: parsed.overlay.data,
   };
-}
-
-function conversionIntelligence(
-  dependencies: OrchestratorDependencies,
-  command: Extract<CommandEnvelope, { type: "system.intelligence-ready" }>,
-  state: AuthoritativeSessionState,
-  acceptedAt: number,
-) {
-  if (state.gameplay === null) {
-    return error("dependency-unavailable", "Director Cue conversion requires current gameplay context", true);
-  }
-  const envelope = authoritativeEnvelope(
-    dependencies,
-    command,
-    state,
-    state.questCycle.envelope.questCycleId,
-    state.session.revision,
-    acceptedAt,
-    "quest-event",
-  );
-  const audience =
-    state.audience !== null &&
-    state.audience.envelope.sessionId === envelope.sessionId &&
-    state.audience.envelope.questCycleId === envelope.questCycleId &&
-    state.audience.envelope.revision === envelope.revision &&
-    state.audience.envelope.evidenceClass === envelope.evidenceClass
-      ? state.audience
-      : {
-          envelope,
-          sampleSize: 0,
-          signals: [],
-        };
-  const parsed = intelligenceSnapshotSchema.safeParse({
-    envelope,
-    gameplay: state.gameplay,
-    audience,
-  });
-  return parsed.success
-    ? parsed.data
-    : error("validation", "Director Cue conversion context is not canonical");
 }
 
 export class ChatXptOrchestrator {
@@ -1191,46 +1163,6 @@ export class ChatXptOrchestrator {
             ],
           },
         } satisfies QuestEngineResult;
-      } else if (command.type === "system.intelligence-ready" && current.liveDirector?.cue?.state === "converted") {
-        if (candidateBatch === null) {
-          return { ok: false, error: error("dependency-unavailable", "Director Cue conversion has no candidate batch", true) };
-        }
-        const intelligence = conversionIntelligence(
-          this.dependencies,
-          command,
-          current,
-          acceptedAt,
-        );
-        if ("code" in intelligence) {
-          return { ok: false, error: intelligence };
-        }
-        const conversion = this.dependencies.directorCueConverter.convert({
-          envelope: candidateBatch.envelope,
-          candidates: candidateBatch.candidates,
-          intelligence,
-          profile: current.profile,
-          currentState: current.questCycle,
-          recentQuests: current.recentQuests ?? [],
-          now: acceptedAt,
-          seed: `${current.session.sessionId}:${current.questCycle.envelope.questCycleId ?? "cycle"}:${current.session.revision}:director-cue-conversion`,
-          liveDirector: current.liveDirector,
-          command,
-          emergencyPaused: current.emergencyPaused,
-          sessionEnded: current.session.status === "ended" || current.session.status === "offline",
-          questImpossible: false,
-        });
-        if (!conversion.ok) {
-          return {
-            ok: false,
-            error:
-              conversion.error ??
-              error("validation", conversion.reason),
-          };
-        }
-        untrustedEngineResult = {
-          ok: true,
-          decision: conversion.decision,
-        } satisfies QuestEngineResult;
       } else {
         try {
           untrustedEngineResult = await this.dependencies.engine.decide({
@@ -1280,14 +1212,17 @@ export class ChatXptOrchestrator {
     if ("code" in authoritative) {
       return { ok: false, error: authoritative };
     }
-    const hypeDelta = authoritative.events.reduce((total, event) => {
+    const nonTerminalHypeDelta = authoritative.events.reduce((total, event) => {
       const value = event.event.attributes.hypeDelta;
-      return typeof value === "number" && Number.isSafeInteger(value) && value > 0
+      return typeof event.event.attributes.outcome !== "string" &&
+        typeof value === "number" &&
+        Number.isSafeInteger(value) &&
+        value > 0
         ? total + value
         : total;
     }, 0);
-    if (hypeDelta > 0) {
-      const communityHype = authoritative.state.communityHype + hypeDelta;
+    if (nonTerminalHypeDelta > 0) {
+      const communityHype = authoritative.state.communityHype + nonTerminalHypeDelta;
       if (!Number.isSafeInteger(communityHype)) {
         return { ok: false, error: error("validation", "Community hype limit has been reached") };
       }

@@ -112,10 +112,9 @@ export function detectMinecraftMenuState(frame: SampledPixelFrame): MinecraftHud
   }
 
   if (centerPanelScore >= 0.82) {
-    return knownMenuState(
-      "inventory",
+    return unknownMenuState(
+      "A centered Minecraft-like inventory or crafting panel was detected, but the current visual rule cannot distinguish the exact screen.",
       centerPanelScore,
-      "A centered Minecraft-like inventory or crafting panel was detected.",
       [center.regionId],
     );
   }

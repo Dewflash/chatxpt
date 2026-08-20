@@ -7,6 +7,7 @@ import {
 } from "../core";
 
 export const GENERIC_GAME_STATE_CONTEXT_FRESHNESS_MS = 3_000;
+export const GENERIC_GAME_STATE_CONTEXT_MINIMUM_CONFIDENCE = 0.75;
 
 export const genericGameFactStatusSchema = z.enum(["known", "unknown", "stale", "unsupported"]);
 
@@ -115,7 +116,16 @@ function genericFactFromSignal(
   }
   const confidence = signal.observation.provenance.confidence;
   if (signal.observation.status === "known") {
-    const ageMs = Math.max(0, now - signal.observation.provenance.observedAt);
+    const ageMs = now - signal.observation.provenance.observedAt;
+    if (ageMs < 0) {
+      return genericGameFactSchema.parse({
+        status: "unknown",
+        value: null,
+        confidence,
+        sourceSignalIds: [signal.signalId],
+        reason: "The fact is timestamped in the future and cannot support the current AI request.",
+      });
+    }
     if (ageMs > GENERIC_GAME_STATE_CONTEXT_FRESHNESS_MS) {
       return genericGameFactSchema.parse({
         status: "stale",
@@ -123,6 +133,15 @@ function genericFactFromSignal(
         confidence,
         sourceSignalIds: [signal.signalId],
         reason: "The fact is stale for the current AI request.",
+      });
+    }
+    if (confidence < GENERIC_GAME_STATE_CONTEXT_MINIMUM_CONFIDENCE) {
+      return genericGameFactSchema.parse({
+        status: "unknown",
+        value: null,
+        confidence,
+        sourceSignalIds: [signal.signalId],
+        reason: "The fact is below the minimum confidence for the current AI request.",
       });
     }
     return genericGameFactSchema.parse({

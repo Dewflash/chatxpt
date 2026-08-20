@@ -31,6 +31,103 @@ export const candidateGenerationSchema = z
     }
   });
 
+export const questCompletionPredicateSchema = z
+  .object({
+    signalKind: z.string().trim().min(1).max(80),
+    comparison: z.enum(["equals", "at-least", "at-most"]),
+    target: z.union([
+      z.number().finite(),
+      z.string().trim().min(1).max(120),
+      z.boolean(),
+    ]),
+    gameId: identifierSchema,
+    corroboratingSignalKinds: z
+      .array(z.string().trim().min(1).max(80))
+      .max(8)
+      .default([]),
+  })
+  .strict()
+  .superRefine((predicate, context) => {
+    if (
+      predicate.comparison !== "equals" &&
+      typeof predicate.target !== "number"
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Ordered completion comparisons require a numeric target",
+        path: ["target"],
+      });
+    }
+    if (
+      new Set(predicate.corroboratingSignalKinds).size !==
+      predicate.corroboratingSignalKinds.length
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Completion corroboration signal kinds must be distinct",
+        path: ["corroboratingSignalKinds"],
+      });
+    }
+    if (predicate.corroboratingSignalKinds.includes(predicate.signalKind)) {
+      context.addIssue({
+        code: "custom",
+        message: "The predicate signal cannot corroborate itself",
+        path: ["corroboratingSignalKinds"],
+      });
+    }
+  });
+
+export const questCompletionRuleSchema = z
+  .object({
+    mode: z.enum(["manual", "signal"]),
+    allowedSignalKinds: z.array(z.string().trim().min(1).max(80)).max(24),
+    predicate: questCompletionPredicateSchema.nullable().optional(),
+  })
+  .strict()
+  .superRefine((rule, context) => {
+    if (rule.mode === "manual" && rule.allowedSignalKinds.length > 0) {
+      context.addIssue({
+        code: "custom",
+        message: "Manual completion cannot allow automatic signal kinds",
+        path: ["allowedSignalKinds"],
+      });
+    }
+    if (rule.mode === "manual" && rule.predicate != null) {
+      context.addIssue({
+        code: "custom",
+        message: "Manual completion cannot carry an automatic predicate",
+        path: ["predicate"],
+      });
+    }
+    if (new Set(rule.allowedSignalKinds).size !== rule.allowedSignalKinds.length) {
+      context.addIssue({
+        code: "custom",
+        message: "Completion signal kinds must be distinct",
+        path: ["allowedSignalKinds"],
+      });
+    }
+    if (
+      rule.predicate != null &&
+      !rule.allowedSignalKinds.includes(rule.predicate.signalKind)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Completion predicate signal must be allowed by the rule",
+        path: ["predicate", "signalKind"],
+      });
+    }
+    for (const [index, signalKind] of
+      rule.predicate?.corroboratingSignalKinds.entries() ?? []) {
+      if (!rule.allowedSignalKinds.includes(signalKind)) {
+        context.addIssue({
+          code: "custom",
+          message: "Completion corroboration signals must be allowed by the rule",
+          path: ["predicate", "corroboratingSignalKinds", index],
+        });
+      }
+    }
+  });
+
 export const questCandidateSchema = z
   .object({
     candidateId: identifierSchema,
@@ -43,6 +140,7 @@ export const questCandidateSchema = z
     sourceSignalIds: z.array(identifierSchema).max(32),
     confidence: confidenceSchema,
     generation: candidateGenerationSchema,
+    completionRule: questCompletionRuleSchema.nullable().optional(),
   })
   .strict()
   .superRefine((candidate, context) => {
@@ -138,29 +236,6 @@ export const questProgressSchema = z
     evidenceSignalIds: z.array(identifierSchema).max(32),
   })
   .strict();
-
-export const questCompletionRuleSchema = z
-  .object({
-    mode: z.enum(["manual", "signal"]),
-    allowedSignalKinds: z.array(z.string().trim().min(1).max(80)).max(24),
-  })
-  .strict()
-  .superRefine((rule, context) => {
-    if (rule.mode === "manual" && rule.allowedSignalKinds.length > 0) {
-      context.addIssue({
-        code: "custom",
-        message: "Manual completion cannot allow automatic signal kinds",
-        path: ["allowedSignalKinds"],
-      });
-    }
-    if (new Set(rule.allowedSignalKinds).size !== rule.allowedSignalKinds.length) {
-      context.addIssue({
-        code: "custom",
-        message: "Completion signal kinds must be distinct",
-        path: ["allowedSignalKinds"],
-      });
-    }
-  });
 
 export const questResultSchema = z
   .object({
@@ -337,6 +412,7 @@ export type PublicQuestCycleState = z.infer<typeof publicQuestCycleStateSchema>;
 export type StreamerQuestAction = z.infer<typeof streamerQuestActionSchema>;
 export type QuestProgress = z.infer<typeof questProgressSchema>;
 export type QuestCompletionRule = z.infer<typeof questCompletionRuleSchema>;
+export type QuestCompletionPredicate = z.infer<typeof questCompletionPredicateSchema>;
 export type QuestResult = z.infer<typeof questResultSchema>;
 export type QuestEngineEventDraft = z.infer<typeof questEngineEventDraftSchema>;
 export type QuestEngineEvent = z.infer<typeof questEngineEventSchema>;

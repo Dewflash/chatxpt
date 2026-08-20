@@ -31,6 +31,7 @@ export type CandidateValidationCode =
   | "streamer-restricted"
   | "accessibility-conflict"
   | "unsupported-evidence"
+  | "unsupported-completion-rule"
   | "unknown-dependent"
   | "low-confidence"
   | "duration-out-of-range"
@@ -604,6 +605,32 @@ export class DefaultCandidateValidator {
     if (unsupportedIds.length > 0) {
       issues.push(issue("unsupported-evidence", "reject", "Candidate cites stale, unknown, low-confidence, or unsupported evidence.", unsupportedIds));
     }
+    const completionRule = candidate.completionRule;
+    if (completionRule?.mode === "signal") {
+      const predicate = completionRule.predicate;
+      const supportedSignals = new Set(
+        context.intelligence.gameplay.capabilities.supportedSignals,
+      );
+      const unsupportedRuleSignals = completionRule.allowedSignalKinds.filter(
+        (signalKind) => !supportedSignals.has(signalKind),
+      );
+      if (
+        predicate == null ||
+        context.profile.gameId == null ||
+        predicate.gameId !== context.profile.gameId ||
+        context.intelligence.gameplay.capabilities.gameId !== predicate.gameId ||
+        unsupportedRuleSignals.length > 0
+      ) {
+        issues.push(
+          issue(
+            "unsupported-completion-rule",
+            "reject",
+            "Automatic completion requires an explicit predicate for the selected game and supported gameplay capabilities.",
+            unsupportedRuleSignals,
+          ),
+        );
+      }
+    }
     for (const dependency of factDependencies) {
       if (!dependency.pattern.test(text)) continue;
       const supportingIds = dependency.kinds.flatMap((kind) => [
@@ -693,10 +720,7 @@ function sortedFallbacks(
 
 function selectedFallbackLibrary(input: CandidateAssemblyInput): readonly FallbackDefinition[] {
   if (!isMinecraftAssembly(input)) return sortedFallbacks(fallbackLibrary, input.seed);
-  return [
-    ...sortedFallbacks(minecraftFallbackLibrary, `${input.seed}:minecraft`),
-    ...sortedFallbacks(fallbackLibrary, `${input.seed}:generic`),
-  ];
+  return sortedFallbacks(minecraftFallbackLibrary, `${input.seed}:minecraft`);
 }
 
 function fallbackCandidate(definition: FallbackDefinition, input: CandidateAssemblyInput): QuestCandidate {

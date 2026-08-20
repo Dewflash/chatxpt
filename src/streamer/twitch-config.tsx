@@ -293,7 +293,7 @@ export function TwitchLiveConfigSurface({
         <main className={styles.shell}>
           <CompactHeader eyebrow="Twitch Live Config" title="Live control" view={null} />
           <Notice title="Loading live controls" politeness="polite">Waiting for the latest live-control snapshot.</Notice>
-          {commandMessage ? <Notice tone="warning" title="Private access required">{commandMessage}</Notice> : null}
+          {commandMessage ? <Notice tone="warning" title="Private authority required">{commandMessage}</Notice> : null}
           <a className={styles.studioLink} href={popoutHref} target="_blank" rel="noreferrer">Open private pop-out</a>
           <OpenStudioLink href={studioHref} />
         </main>

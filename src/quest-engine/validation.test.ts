@@ -236,6 +236,91 @@ describe("DefaultCandidateValidator", () => {
     expect(withEvidence.accepted).toBe(true);
   });
 
+  it("accepts only predicate rules compatible with the selected game and capabilities", () => {
+    const objectiveSignal = {
+      signalId: "known-objective-count",
+      kind: "objective-count",
+      observation: {
+        status: "known" as const,
+        value: 2,
+        provenance: {
+          source: "test-fixture" as const,
+          method: "role-3-predicate-fixture",
+          confidence: 0.9,
+          observedAt: ROLE_3_FIXTURE_TIME,
+          receivedAt: ROLE_3_FIXTURE_TIME,
+          evidenceClass: "fixture" as const,
+        },
+      },
+    };
+    const baseIntelligence = intelligence([objectiveSignal]);
+    const calibratedIntelligence = intelligenceSnapshotSchema.parse({
+      ...baseIntelligence,
+      gameplay: {
+        ...baseIntelligence.gameplay,
+        capabilities: {
+          tier: "calibrated-hud",
+          gameId: "fixture-game",
+          adapterId: "fixture-adapter",
+          supportedSignals: ["objective-count"],
+        },
+      },
+    });
+    const gameProfile = streamerProfileSchema.parse({
+      ...profile,
+      gameId: "fixture-game",
+      gameName: "Fixture Game",
+    });
+    const candidate = changedCandidate(role3FixtureCandidateBatch.candidates[0], {
+      completionRule: {
+        mode: "signal",
+        allowedSignalKinds: ["objective-count"],
+        predicate: {
+          signalKind: "objective-count",
+          comparison: "at-least",
+          target: 3,
+          gameId: "fixture-game",
+          corroboratingSignalKinds: [],
+        },
+      },
+    });
+    const accepted = new DefaultCandidateValidator().validate(candidate, {
+      intelligence: calibratedIntelligence,
+      profile: gameProfile,
+      currentState: role3FixtureIdleState,
+      recentQuests: [],
+      acceptedCandidates: [],
+      now: ROLE_3_FIXTURE_TIME,
+    });
+    const wrongGame = new DefaultCandidateValidator().validate(
+      changedCandidate(candidate, {
+        completionRule: {
+          ...candidate.completionRule!,
+          predicate: {
+            ...candidate.completionRule!.predicate!,
+            gameId: "another-game",
+          },
+        },
+      }),
+      {
+        intelligence: calibratedIntelligence,
+        profile: gameProfile,
+        currentState: role3FixtureIdleState,
+        recentQuests: [],
+        acceptedCandidates: [],
+        now: ROLE_3_FIXTURE_TIME,
+      },
+    );
+
+    expect(accepted.accepted).toBe(true);
+    expect(wrongGame).toMatchObject({
+      accepted: false,
+      issues: expect.arrayContaining([
+        expect.objectContaining({ code: "unsupported-completion-rule" }),
+      ]),
+    });
+  });
+
   it("rejects Minecraft-specific claims when the matching game fact is unknown", () => {
     const sleepCandidate = changedCandidate(role3FixtureCandidateBatch.candidates[0], {
       candidateId: "minecraft-sleep-specific-candidate",
@@ -246,7 +331,11 @@ describe("DefaultCandidateValidator", () => {
     });
     const result = new DefaultCandidateValidator().validate(sleepCandidate, {
       intelligence: intelligence(),
-      profile: streamerProfileSchema.parse({ ...profile, gameId: "minecraft", gameName: "Minecraft" }),
+      profile: streamerProfileSchema.parse({
+        ...profile,
+        gameId: "minecraft",
+        gameName: "Minecraft",
+      }),
       currentState: role3FixtureIdleState,
       recentQuests: [],
       acceptedCandidates: [],
@@ -290,7 +379,11 @@ describe("DefaultCandidateValidator", () => {
     });
     const result = new DefaultCandidateValidator().validate(candidate, {
       intelligence: intelligence([hostileSignal]),
-      profile: streamerProfileSchema.parse({ ...profile, gameId: "minecraft", gameName: "Minecraft" }),
+      profile: streamerProfileSchema.parse({
+        ...profile,
+        gameId: "minecraft",
+        gameName: "Minecraft",
+      }),
       currentState: role3FixtureIdleState,
       recentQuests: [],
       acceptedCandidates: [],
@@ -326,7 +419,11 @@ describe("DefaultCandidateValidator", () => {
     });
     const result = new DefaultCandidateValidator().validate(candidate, {
       intelligence: intelligence([recentDamageSignal]),
-      profile: streamerProfileSchema.parse({ ...profile, gameId: "minecraft", gameName: "Minecraft" }),
+      profile: streamerProfileSchema.parse({
+        ...profile,
+        gameId: "minecraft",
+        gameName: "Minecraft",
+      }),
       currentState: role3FixtureIdleState,
       recentQuests: [],
       acceptedCandidates: [],

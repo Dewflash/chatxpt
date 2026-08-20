@@ -37,7 +37,7 @@ describe("Minecraft scene facts", () => {
     const facts = detectMinecraftSceneFacts(sample);
 
     expect(facts.biomeOrEnvironment).toMatchObject({ status: "known", value: "water-or-rain" });
-    expect(facts.damageCauseHint).toMatchObject({ status: "known", value: "drowning" });
+    expect(facts.damageCauseHint).toMatchObject({ status: "unknown", value: null });
     expect(facts.visibleHostile).toMatchObject({ status: "unknown", value: null });
   });
 
@@ -48,7 +48,7 @@ describe("Minecraft scene facts", () => {
     const facts = detectMinecraftSceneFacts(sample);
 
     expect(facts.biomeOrEnvironment).toMatchObject({ status: "known", value: "lava-or-fire-nearby" });
-    expect(facts.damageCauseHint).toMatchObject({ status: "known", value: "lava" });
+    expect(facts.damageCauseHint).toMatchObject({ status: "unknown", value: null });
   });
 
   it("requires a central high-contrast hostile-like shape before naming hostiles", () => {
@@ -60,8 +60,7 @@ describe("Minecraft scene facts", () => {
 
     const facts = detectMinecraftSceneFacts(sample);
 
-    expect(facts.visibleHostile.status).toBe("known");
-    expect(["creeper", "zombie", "unknown-hostile"]).toContain(facts.visibleHostile.value);
+    expect(facts.visibleHostile).toMatchObject({ status: "known", value: "unknown-hostile" });
     expect(facts.damageCauseHint).toMatchObject({ status: "known", value: "mob" });
   });
 });

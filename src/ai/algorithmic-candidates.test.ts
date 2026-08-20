@@ -114,6 +114,33 @@ describe("algorithmic candidate strategy", () => {
     expect(JSON.stringify(batch)).not.toMatch(/\b(?:health|hunger|hotbar|sleep|biome|monster|damage cause)\b/iu);
   });
 
+  it("never fills a Minecraft batch with generic templates when Minecraft titles are recent", async () => {
+    const provider = createValidatingCandidateProvider(createAlgorithmicCandidateStrategy());
+    const batch = await provider.generate({
+      envelope: contractFixtureCandidateBatch.envelope,
+      intelligence: await fixtureIntelligence(),
+      profile: {
+        ...contractFixtureProfile,
+        gameId: "minecraft",
+        gameName: "Minecraft",
+      },
+      recentQuestTitles: [
+        "Next Goal Check",
+        "Chat Chooses the Vibe",
+        "Explain the Choice",
+        "Teach the Moment",
+      ],
+      activeChatXptQuest: null,
+    });
+
+    expect(batch.candidates).toHaveLength(3);
+    expect(batch.candidates.every((candidate) => candidate.instruction.includes("Minecraft")))
+      .toBe(true);
+    expect(batch.candidates.map(({ title }) => title)).not.toEqual(
+      expect.arrayContaining(["Plan Out Loud", "Caster Mode", "Calm Focus"]),
+    );
+  });
+
   it("cites only known canonical signal IDs and never raw chat text", async () => {
     const audience = intelligenceSnapshotSchema.parse({
       envelope: {

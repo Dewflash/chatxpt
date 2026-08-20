@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   ChatXptOrchestrator,
   audiencePointerAggregateSchema,
+  gameplaySnapshotSchema,
+  questCycleStateSchema,
+  streamerProfileSchema,
   streamerEmergencyClearCommandSchema,
   streamerLiveDirectorIntentCommandSchema,
   streamerLiveDirectorCueCommandSchema,
@@ -47,8 +50,8 @@ import {
   contractFixtureSession,
 } from "../../src/core/testing";
 import {
-  DefaultDirectorCueConverter,
   DefaultDirectorCueLifecycle,
+  DefaultQuestEngine,
   DefaultLiveDirectorProposalCoordinator,
 } from "../../src/quest-engine";
 
@@ -187,7 +190,7 @@ function successfulEngine() {
 function dependencies(
   repository: FixtureSessionStateRepository,
   publisher: StatePublisher,
-  engine = successfulEngine(),
+  engine: OrchestratorDependencies["engine"] = successfulEngine(),
   authorizer: OrchestratorDependencies["authorizer"] = new FixtureOnlyAllowAuthorizer(),
   acceptedVotes: AcceptedVoteTallyReader = new ScriptedFixtureAcceptedVoteTallyReader(),
 ): OrchestratorDependencies {
@@ -202,7 +205,6 @@ function dependencies(
     repository,
     engine,
     directorCues: new DefaultDirectorCueLifecycle(),
-    directorCueConverter: new DefaultDirectorCueConverter(),
     projectionContext: new FixtureProjectionContextResolver({
       participationMode: "hosted-board",
       viewerId: null,
@@ -632,6 +634,151 @@ describe("Role 1 application orchestrator", () => {
       completionRule: { mode: "signal", allowedSignalKinds: ["activity-intensity"] },
       gameplay: { envelope: { messageId: activeState.gameplay?.envelope.messageId } },
     });
+  });
+
+  it("atomically persists predicate-matched success, rewards, views, and duplicate safety", async () => {
+    const base = initialState();
+    const completionRule = {
+      mode: "signal" as const,
+      allowedSignalKinds: ["objective-count"],
+      predicate: {
+        signalKind: "objective-count",
+        comparison: "at-least" as const,
+        target: 3,
+        gameId: "fixture-progress-game",
+        corroboratingSignalKinds: [],
+      },
+    };
+    const profile = streamerProfileSchema.parse({
+      ...base.profile,
+      gameId: "fixture-progress-game",
+      gameName: "Fixture Progress Game",
+    });
+    const gameplay = gameplaySnapshotSchema.parse({
+      envelope: {
+        ...base.questCycle.envelope,
+        messageId: "fixture-predicate-gameplay",
+        occurredAt: ACCEPTED_AT,
+        receivedAt: ACCEPTED_AT,
+      },
+      capabilities: {
+        tier: "calibrated-hud",
+        gameId: "fixture-progress-game",
+        adapterId: "fixture-progress-adapter",
+        supportedSignals: ["objective-count"],
+      },
+      signals: [
+        {
+          signalId: "fixture-objective-count",
+          kind: "objective-count",
+          observation: {
+            status: "known",
+            value: 3,
+            provenance: {
+              source: "test-fixture",
+              method: "fixture-predicate",
+              confidence: 0.9,
+              observedAt: ACCEPTED_AT,
+              receivedAt: ACCEPTED_AT,
+              evidenceClass: "fixture",
+            },
+          },
+        },
+      ],
+    });
+    const options = contractFixtureCandidateBatch.candidates.map((candidate, index) => ({
+      ...candidate,
+      completionRule: index === 0 ? completionRule : null,
+    }));
+    const state: AuthoritativeSessionState = {
+      ...base,
+      session: {
+        ...base.session,
+        status: "live",
+        startedAt: ACCEPTED_AT - 60_000,
+      },
+      profile,
+      gameplay,
+      questCycle: questCycleStateSchema.parse({
+        ...base.questCycle,
+        status: "active",
+        options,
+        activeCandidateId: options[0]?.candidateId,
+        availableStreamerActions: ["cancel", "skip", "succeed", "fail", "emergency-pause"],
+        startsAt: ACCEPTED_AT - 10_000,
+        endsAt: ACCEPTED_AT + 30_000,
+        progress: {
+          value: 0,
+          updatedAt: ACCEPTED_AT - 10_000,
+          method: "unknown",
+          evidenceSignalIds: [],
+        },
+        completionRule,
+      }),
+    };
+    const repository = new FixtureSessionStateRepository([state]);
+    const publisher = new RecordingFixturePublisher();
+    const orchestrator = new ChatXptOrchestrator(
+      dependencies(repository, publisher, new DefaultQuestEngine()),
+    );
+    const progress = systemQuestProgressCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: state.session.sessionId,
+      questCycleId: state.questCycle.envelope.questCycleId,
+      commandId: "fixture-predicate-progress",
+      correlationId: "fixture-predicate-progress-correlation",
+      expectedRevision: 0,
+      issuedAt: ACCEPTED_AT,
+      actor: { kind: "system", actorId: "fixture-orchestrator" },
+      type: "system.quest-progress",
+      requestedValue: 1,
+      evidenceSignalIds: ["fixture-objective-count"],
+    });
+
+    const committed = await orchestrator.execute(progress);
+    const duplicate = await orchestrator.execute(progress);
+    const reconnected = await repository.load(state.session.sessionId);
+
+    expect(committed.ok).toBe(true);
+    if (!committed.ok) return;
+    expect(committed.outcome).toBe("committed");
+    expect(committed.receipt.state).toMatchObject({
+      communityHype: 10,
+      session: { revision: 1 },
+      questCycle: {
+        status: "succeeded",
+        envelope: { revision: 1 },
+        progress: { value: 1, method: "automatic" },
+        result: { outcome: "succeeded", rewardPointsAwarded: 100 },
+      },
+    });
+    expect(committed.receipt.events[0]?.event.eventType).toBe(
+      "quest-cycle.automatically-succeeded",
+    );
+    expect(committed.views?.viewer).toMatchObject({
+      communityHype: 10,
+      questCycle: { status: "succeeded", result: { rewardPointsAwarded: 100 } },
+    });
+    expect(committed.views?.overlay).toMatchObject({
+      communityHype: 10,
+      questCycle: { status: "succeeded", result: { rewardPointsAwarded: 100 } },
+    });
+    expect(duplicate).toMatchObject({
+      ok: true,
+      outcome: "duplicate",
+      receipt: { state: { communityHype: 10, session: { revision: 1 } } },
+      views: null,
+      delivery: "not-republished",
+    });
+    expect(reconnected).toMatchObject({
+      communityHype: 10,
+      questCycle: {
+        status: "succeeded",
+        progress: { value: 1, method: "automatic" },
+        result: { rewardPointsAwarded: 100 },
+      },
+    });
+    expect(publisher.published).toHaveLength(1);
   });
 
   it("stores terminal quest history summaries for later vote-close validation", async () => {

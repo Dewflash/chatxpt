@@ -227,4 +227,31 @@ describe("generic game-state context", () => {
       sourceSignalIds: ["match-timer"],
     });
   });
+
+  it.each([
+    { label: "future", confidence: 0.9, observedAt: NOW + 1, expectedReason: "future" },
+    { label: "low-confidence", confidence: 0.74, observedAt: NOW, expectedReason: "minimum confidence" },
+  ])("keeps $label known observations out of generic known facts", ({ confidence, observedAt, expectedReason }) => {
+    const gameplay = gameplaySnapshotSchema.parse({
+      ...contractFixtureGameplaySnapshot,
+      signals: [{
+        signalId: "game-vision-state",
+        kind: "game-vision-state",
+        observation: {
+          status: "known",
+          value: "active",
+          provenance: provenance(confidence, observedAt),
+        },
+      }],
+    });
+
+    const context = buildGenericGameStateContext(input(gameplay, null, null));
+
+    expect(context.facts.activity).toMatchObject({
+      status: "unknown",
+      value: null,
+      reason: expect.stringContaining(expectedReason),
+    });
+    expect(context.supportedGenericFacts).not.toContain("activity");
+  });
 });

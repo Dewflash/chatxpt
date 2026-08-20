@@ -26,10 +26,10 @@ function mixedGenerationView() {
 }
 
 describe("StudioManagementSurface", () => {
-  it("keeps persistent and live controls unavailable before the Studio view loads", () => {
+  it("keeps persistent and live controls unavailable before an authorised view loads", () => {
     const html = renderToStaticMarkup(h(StudioManagementSurface, { view: null }));
 
-    expect(html).toContain("Loading Studio state");
+    expect(html).toContain("Loading authorised Studio state");
     expect(html).toContain("Saved defaults, health, session overrides, and controls remain unavailable");
     expect(html).not.toContain("Save supported defaults");
   });
@@ -44,8 +44,7 @@ describe("StudioManagementSurface", () => {
     const html = renderToStaticMarkup(h(StudioManagementSurface, { view, readiness }));
 
     expect(html).toContain("Profile &amp; defaults");
-    expect(html).toContain("Saved profile");
-    expect(html).not.toContain("revision");
+    expect(html).toContain("Saved profile · revision");
     expect(html).toContain("Streamer personality");
     expect(html).toContain("Sidequest preferences");
     expect(html).toContain("Game &amp; accessibility");
@@ -53,7 +52,7 @@ describe("StudioManagementSurface", () => {
     expect(html).toContain("Rewards");
     expect(html).toContain("Temporary overrides never rewrite defaults");
     expect(html).toContain("Effective source: saved default");
-    expect(html).toContain("Session overrides unavailable");
+    expect(html).toContain("Session override contract required");
   });
 
   it("shows Capture Health, Signal Confidence, generation, and realtime independently", () => {
@@ -138,9 +137,9 @@ describe("StudioManagementSurface", () => {
     const view = createFixtureUiGatewaySnapshot().views.streamer;
     const html = renderToStaticMarkup(h(StudioManagementSurface, { view }));
 
-    expect(html).toContain("Preference lists are saved; full list editing remains unavailable");
-    expect(html).toContain("These saved values are visible here; full editing remains unavailable");
-    expect(html).toContain("Studio will not pretend browser-only changes are saved");
+    expect(html).toContain("List persistence uses the canonical profile settings command");
+    expect(html).toContain("their update command is not public yet");
+    expect(html).toContain("Studio will not imitate persistence in browser storage");
     expect(html).toContain("Profile actions are not mounted");
   });
 

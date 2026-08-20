@@ -113,25 +113,25 @@ function hostileFact(center: RegionVisualFeatures): MinecraftSceneFacts["visible
 
   if (greenHostileScore >= 0.24 && center.edgeDensity >= 0.06) {
     return knownSceneFact(
-      center.greenPixelRatio >= 0.28 ? "creeper" : "zombie",
+      "unknown-hostile",
       Math.min(0.78, 0.56 + greenHostileScore * 0.45),
-      "A central green high-contrast shape resembles a Minecraft hostile mob; exact mob identity remains low-confidence.",
+      "A central green high-contrast shape is hostile-like, but exact Minecraft mob identity is not calibrated.",
       [center.regionId],
     );
   }
   if (skeletonScore >= 0.42 && center.brightPixelRatio >= 0.24 && center.edgeDensity >= 0.09) {
     return knownSceneFact(
-      "skeleton",
+      "unknown-hostile",
       Math.min(0.76, 0.52 + skeletonScore * 0.42),
-      "A central bright high-contrast shape resembles a skeleton-like hostile.",
+      "A central bright high-contrast shape is hostile-like, but exact Minecraft mob identity is not calibrated.",
       [center.regionId],
     );
   }
   if (spiderScore >= 0.45 && center.redPixelRatio >= 0.04 && center.edgeDensity >= 0.1) {
     return knownSceneFact(
-      "spider",
+      "unknown-hostile",
       Math.min(0.74, 0.5 + spiderScore * 0.4),
-      "A dark central high-contrast shape with red accents resembles a spider-like hostile.",
+      "A dark central high-contrast shape with red accents is hostile-like, but exact Minecraft mob identity is not calibrated.",
       [center.regionId],
     );
   }
@@ -166,18 +166,16 @@ function damageCauseHint(input: {
     return unknownSceneFact("No supported environment or hostile evidence can suggest a Minecraft damage cause.");
   }
   if (input.environment.value === "lava-or-fire-nearby") {
-    return knownSceneFact(
-      "lava",
-      Math.min(0.76, input.environment.confidence),
-      "Nearby lava/fire-like scene evidence can support environmental damage only when health recently dropped.",
+    return unknownSceneFact(
+      "Nearby warm/red scene evidence cannot distinguish lava from fire or prove the damage source.",
+      input.environment.confidence,
       input.environment.sourceRegionIds,
     );
   }
   if (input.environment.value === "water-or-rain") {
-    return knownSceneFact(
-      "drowning",
-      Math.min(0.68, input.environment.confidence * 0.82),
-      "Water-like scene evidence weakly supports drowning only when health recently dropped; rain and surface water remain ambiguous.",
+    return unknownSceneFact(
+      "Blue scene coverage cannot distinguish rain, surface water, or drowning.",
+      input.environment.confidence,
       input.environment.sourceRegionIds,
     );
   }

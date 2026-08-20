@@ -186,7 +186,7 @@ describe("TwitchLiveConfigSurface", () => {
     expect(offlineHtml).toContain("Live Director is not live");
     expect(offlineHtml).toContain("Permission Denied");
     expect(offlineHtml).not.toContain("Turn into vote");
-    expect(loadingHtml).toContain("Private access required");
+    expect(loadingHtml).toContain("Private authority required");
     expect(loadingHtml).toContain("Reconnecting to the authoritative streamer session");
   });
 });

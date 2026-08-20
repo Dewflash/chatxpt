@@ -14,6 +14,7 @@ import {
   liveDirectorInterventionRecordSchema,
   liveDirectorStateSchema,
   overlayViewModelSchema,
+  questCompletionRuleSchema,
   questCycleStateSchema,
   sessionHistorySnapshotSchema,
   signalObservationSchema,
@@ -244,6 +245,41 @@ describe("candidate and lifecycle boundaries", () => {
         ...contractFixtureQuestCycle,
         status: "active",
         activeCandidateId: null,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("validates explicit completion predicates and their capability semantics", () => {
+    const rule = {
+      mode: "signal",
+      allowedSignalKinds: ["objective-count", "match-active"],
+      predicate: {
+        signalKind: "objective-count",
+        comparison: "at-least",
+        target: 3,
+        gameId: "fixture-game",
+        corroboratingSignalKinds: ["match-active"],
+      },
+    };
+
+    expect(questCompletionRuleSchema.safeParse(rule).success).toBe(true);
+    expect(
+      questCompletionRuleSchema.safeParse({
+        ...rule,
+        allowedSignalKinds: ["objective-count"],
+      }).success,
+    ).toBe(false);
+    expect(
+      questCompletionRuleSchema.safeParse({
+        ...rule,
+        predicate: { ...rule.predicate, comparison: "at-least", target: "three" },
+      }).success,
+    ).toBe(false);
+    expect(
+      questCompletionRuleSchema.safeParse({
+        mode: "manual",
+        allowedSignalKinds: [],
+        predicate: rule.predicate,
       }).success,
     ).toBe(false);
   });

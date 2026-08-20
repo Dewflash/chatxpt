@@ -47,7 +47,6 @@ function activeQuestSummary(input: DirectorCueProposalInput): string | null {
   );
   return active === undefined ? null : `${active.title}: ${active.instruction}`.trim().slice(0, 240);
 }
-
 /**
  * Work-conserving R3-014 adapter. It invokes Role 2 generation when canonical
  * gameplay is available, treats provider failure as normal fallback input,

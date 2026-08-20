@@ -1,6 +1,6 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import {
   CanonicalViewProjector,
@@ -10,13 +10,13 @@ import {
   domainErrorSchema,
   intelligenceSnapshotSchema,
   resolveEffectiveStreamerProfile,
+  systemLiveDirectorContextCommandSchema,
   type CandidateProvider,
-  type MessageIdFactory,
-  type DirectorCueConverter,
-  type DirectorCueLifecycle,
   type AuthoritativeSessionState,
-  type OrchestratorResult,
+  type DirectorCueLifecycle,
   type DirectorCueProposalCoordinator,
+  type MessageIdFactory,
+  type OrchestratorResult,
   type ProjectionContextResolver,
   type QuestEngine,
   type ServerClock,
@@ -25,7 +25,7 @@ import {
 import { createConfiguredCandidateProvider } from "@/ai/server";
 import {
   createDefaultQuestEngine,
-  DefaultDirectorCueConverter,
+  DefaultCandidateAssembler,
   DefaultDirectorCueLifecycle,
   DefaultInterventionPolicy,
   DefaultLiveDirectorProposalCoordinator,
@@ -56,17 +56,28 @@ class RequestActorResolver implements VerifiedCommandActorResolver {
   }
 }
 
+function stableRuntimeCommandId(prefix: string, parts: readonly unknown[]): string {
+  const digest = createHash("sha256")
+    .update(parts.map((part) => String(part)).join("|"))
+    .digest("hex")
+    .slice(0, 32);
+  return `${prefix}-${digest}`;
+}
+
 export interface ChatXptServerRuntimeDependencies {
   readonly persistence: ConfiguredPersistenceRuntime;
   readonly engine?: QuestEngine;
   readonly candidateProvider?: CandidateProvider;
   readonly directorCues?: DirectorCueLifecycle;
-  readonly directorCueConverter?: DirectorCueConverter;
   readonly directorCueProposals?: DirectorCueProposalCoordinator;
   readonly projector?: ViewModelProjector;
   readonly clock?: ServerClock;
   readonly ids?: MessageIdFactory;
 }
+
+type EligibleCycleProposalResult =
+  | OrchestratorResult
+  | { readonly ok: true; readonly outcome: "not-eligible" };
 
 /** Shared production composition root for persistence and the sole command orchestrator. */
 export class ChatXptServerRuntime {
@@ -74,11 +85,11 @@ export class ChatXptServerRuntime {
   private readonly engine: QuestEngine;
   private readonly candidateProvider: CandidateProvider;
   private readonly directorCues: DirectorCueLifecycle;
-  private readonly directorCueConverter: DirectorCueConverter;
   private readonly directorCueProposals: DirectorCueProposalCoordinator;
   private readonly projector: ViewModelProjector;
   private readonly clock: ServerClock;
   private readonly ids: MessageIdFactory;
+  private readonly eligibleProposalRequests = new Map<string, Promise<EligibleCycleProposalResult>>();
 
   constructor(dependencies: ChatXptServerRuntimeDependencies) {
     this.persistence = dependencies.persistence;
@@ -86,7 +97,6 @@ export class ChatXptServerRuntime {
     this.candidateProvider =
       dependencies.candidateProvider ?? createConfiguredCandidateProvider().provider;
     this.directorCues = dependencies.directorCues ?? new DefaultDirectorCueLifecycle();
-    this.directorCueConverter = dependencies.directorCueConverter ?? new DefaultDirectorCueConverter();
     this.directorCueProposals =
       dependencies.directorCueProposals ??
       new DefaultLiveDirectorProposalCoordinator(this.candidateProvider);
@@ -110,7 +120,6 @@ export class ChatXptServerRuntime {
           authorizer,
           engine: this.engine,
           directorCues: this.directorCues,
-          directorCueConverter: this.directorCueConverter,
           directorCueProposals: this.directorCueProposals,
           projectionContext,
           projector: this.projector,
@@ -122,10 +131,82 @@ export class ChatXptServerRuntime {
     ).execute(command);
   }
 
+  async requestLiveDirectorContextRefresh(
+    state: AuthoritativeSessionState,
+    projectionContext: ProjectionContextResolver,
+  ): Promise<OrchestratorResult> {
+    const gameplayId = state.gameplay?.envelope.messageId ?? "no-gameplay";
+    const questCycleId = state.questCycle.envelope.questCycleId;
+    const commandId = stableRuntimeCommandId("live-director-refresh", [
+      state.session.sessionId,
+      state.session.revision,
+      questCycleId ?? "none",
+      gameplayId,
+    ]);
+    const existing = await this.persistence.sessions.findReceipt(commandId);
+    if (existing !== null) {
+      return {
+        ok: true,
+        outcome: "duplicate",
+        receipt: existing,
+        views: null,
+        delivery: "not-republished",
+      };
+    }
+    const now = this.clock.now();
+    const command = systemLiveDirectorContextCommandSchema.parse({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: state.session.sessionId,
+      questCycleId,
+      commandId,
+      correlationId: `live-director-context-refresh-${randomUUID()}`,
+      expectedRevision: state.session.revision,
+      issuedAt: now,
+      actor: { kind: "system", actorId: "role1-live-director-refresh" },
+      type: "system.live-director-context-ready",
+      liveContextId: `live-context-${randomUUID()}`,
+      audiencePointerId: null,
+    });
+    return this.execute(
+      command,
+      {
+        kind: "system",
+        actorId: "role1-live-director-refresh",
+        expiresAt: null,
+        moderatorForBroadcasterIds: [],
+        voterKey: null,
+        participationModes: [],
+      },
+      projectionContext,
+    );
+  }
+
   async requestEligibleCycleProposal(
     state: AuthoritativeSessionState,
     projectionContext: ProjectionContextResolver,
-  ): Promise<OrchestratorResult | { readonly ok: true; readonly outcome: "not-eligible" }> {
+  ): Promise<EligibleCycleProposalResult> {
+    if (state.session.status !== "live" || state.gameplay === null) {
+      return { ok: true, outcome: "not-eligible" };
+    }
+    const questCycleId = state.questCycle.envelope.questCycleId;
+    const commandId = `eligible-cycle-proposal-${state.session.sessionId}-${state.session.revision}-${questCycleId ?? "none"}`;
+    const inFlight = this.eligibleProposalRequests.get(commandId);
+    if (inFlight !== undefined) return inFlight;
+    const request = this.executeEligibleCycleProposal(state, projectionContext);
+    this.eligibleProposalRequests.set(commandId, request);
+    try {
+      return await request;
+    } finally {
+      if (this.eligibleProposalRequests.get(commandId) === request) {
+        this.eligibleProposalRequests.delete(commandId);
+      }
+    }
+  }
+
+  private async executeEligibleCycleProposal(
+    state: AuthoritativeSessionState,
+    projectionContext: ProjectionContextResolver,
+  ): Promise<EligibleCycleProposalResult> {
     if (state.session.status !== "live" || state.gameplay === null) {
       return { ok: true, outcome: "not-eligible" };
     }
@@ -192,6 +273,7 @@ export class ChatXptServerRuntime {
     const coordinator = new Role1InterventionCoordinator(
       new DefaultInterventionPolicy(),
       this.candidateProvider,
+      new DefaultCandidateAssembler(),
       this.persistence.candidates,
       {
         execute: (command) => this.execute(command, actor, projectionContext),
