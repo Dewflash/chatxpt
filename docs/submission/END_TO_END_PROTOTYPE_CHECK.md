@@ -1,128 +1,64 @@
-# End-to-End Prototype Check
+# End-to-End Product Check
 
-**Checked:** 2026-08-09
-**Post-merge update:** PRs #124-#131 are merged into `main`; `npm run check` passed on the merged branch before handoff.
+**Updated:** 2026-08-21
+**Source reviewed:** `codex/studio-final-integration` at `b5453d2382d0dc80e1b2500e375da3621c1be69a`
 
-## Current Verdict
+## Current verdict
 
-The repository contains a runnable local prototype that demonstrates the core idea with fixture inputs and a local live-demo bridge:
+ChatXPT now has one integrated Studio source path and a complete automated release gate. The final integration commit passed lint, TypeScript, role boundaries, repository/evidence/runbook checks, 95 Vitest files with 753 tests, a production build, and the built-client secret scan.
 
-1. streamer-facing signal controls;
-2. exactly three generated sidequests;
-3. local screen/window activity sampling when the browser is granted capture permission, with visible motion, visual-change, tempo, confidence, rolling sample history, preview, and checksum signals;
-4. authenticated Twitch Extension viewer voting through `/viewer.html` in Local/Hosted Test, with a signed EBS, canonical vote ledger, private acknowledgement/recovery, and Twitch-chat `1`/`2`/`3` retained as a fallback when real chat is reachable;
-5. a top Studio recording cockpit with quick capture/chat/generate/overlay actions, visible automation settings for automatic quest generation versus manual producer review, automatic overlay publishing versus streamer-approved activation, readiness state, recent flow events, and an embedded OBS output mirror;
-6. manual viewer-vote simulation as a diagnostic fallback;
-7. streamer activation and result controls;
-8. OBS-style overlay output through `http://localhost:3000/overlay`.
+That is strong implementation evidence. It is not the real golden-workflow evidence required by D-028 and D-083. The owner-run Twitch, OBS Virtual Camera, Minecraft, two-viewer, Supabase/realtime, and real OBS Browser Source test in `MANUAL_TEST_RECORDING_RUNBOOK.md` remains required before the product is described as fully working end to end.
 
-That path is useful for a demo walkthrough and deterministic diagnostics. If the recording visibly exercises screen capture and Twitch chat, those individual inputs may be described as real local inputs. It is still not full golden end-to-end evidence. The accepted MVP evidence still needs the same authoritative session/cycle revision across Studio, two viewer clients, persistence, and OBS overlay, with every unavailable signal labelled honestly.
+## Implemented product segment
 
-For immediate recording, use `docs/submission/MANUAL_TEST_RECORDING_RUNBOOK.md`.
+The current source composes this one product loop:
 
-## Runnable Today
-
-Fast local commands:
-
-```bash
-npm run dev
-npm run check
-npm run check:evidence
-npm run check:demo-runbook
-npm run test:integration
+```text
+Twitch OAuth/EventSub + OBS Virtual Camera gameplay
+-> privacy-safe audience aggregates + evidence-gated gameplay snapshot
+-> private Live Director context/cue
+-> exactly three Role 3-validated quests
+-> streamer review
+-> Twitch Extension / hosted board / chat vote
+-> deterministic winner and active quest
+-> OBS overlay, progress, result, session points, and community hype
+-> reconnect and credential-free recovery
 ```
 
-Local demo routes:
+## Feature truth table
 
-| Route | Current use | Evidence class |
-| --- | --- | --- |
-| `/` | Legacy control room with Brawl Stars-safe defaults, live screen/window activity sampler, local Extension voter bridge, anonymous Twitch-chat comment/fallback connector, sidequest generation, simulated vote fallback, activation, complete/fail/clear controls | local prototype / diagnostic |
-| `/overlay` | Legacy browser overlay reading active quest state through the local overlay route/state bridge | local prototype / diagnostic |
-| `/diagnostics/ui-harness` | Fixture session showing shared Studio, Viewer, and OBS overlay view-model shape, revision, and command envelopes | fixture-only |
-| `/api/ui-gateway/fixture` | JSON fixture for the UI gateway view models | fixture-only |
-| `/api/ui-gateway/commands` | Validates fixture command envelopes and stale revisions without mutating authoritative runtime | fixture-only |
-| `/viewer.html` | Role 5 viewer surface backed by Twitch `onAuthorized`, server-side JWT verification, channel/session mapping, and the canonical participation ledger | implemented; real Twitch delivery still unverified |
-| `/config.html`, `/live-config.html` | Twitch Extension path/readiness shells | setup diagnostic only |
-| `/quest-board/[roomCode]` | Hosted-board access shell backed by configured persistence runtime when available | diagnostic until real session evidence exists |
-| `/api/twitch/setup/readiness` | Server-safe Twitch setup readiness report | diagnostic |
-| `/api/health/deployment` | Deployment/persistence environment health report | diagnostic |
+| Feature | Implemented source behaviour | Automated evidence | External proof still required |
+| --- | --- | --- | --- |
+| One Studio | `/studio` contains Home, Gameplay Engine, Live Analytics, Live Quests, Profile & Defaults, Stream Settings, and Test Lab | Route, component, interaction, responsiveness, readiness, and build coverage | Clean owner setup and navigation with real Twitch/capture readiness |
+| Twitch setup | OAuth start/callback, token validation, channel game import, chat EventSub creation, signed callback handling, and compact Config/Live Config assets | OAuth, setup, EventSub, CORS, secret, and package tests | Twitch developer console plus Local or Hosted Test on the team channel |
+| Gameplay Engine | Persistent browser capture publishes session-scoped snapshots with processing metrics, supported facts, confidence/freshness, and unknowns | Extraction, ingress, gameplay contract, page, and recovery tests | Real vanilla Minecraft through OBS Virtual Camera, including honest unknown cases |
+| Live Analytics | Current-session mood/rate/previous state, topics, keywords, participant lifecycle, quest participation, and privacy-safe aggregates | Audience-pipeline and Studio rendering tests | Planned multi-participant real Twitch-chat sequence and accuracy review |
+| Live Director and quests | Suitability, private cue actions, exactly-three generation/fallback, deterministic safety/evidence validation, proposal review, and lifecycle | Role 2/3 producer-consumer, orchestrator, failure, and UI tests | Real cue timing and quest-quality review against current Minecraft/chat state |
+| Profiles and presets | Game, personality, restrictions, preferred/forbidden types, accessibility, watchlist, presets, vote/reward presentation, and persistence ports | Contract, command, memory, Supabase-adapter, and UI tests | Reload/new-session proof against the configured shared persistence runtime |
+| Stream settings | Current-stream intensity/creativity/preset override and reset without weakening hard boundaries | Authoritative command, stale/duplicate, remount, and Config/Live Config tests | Real embedded Twitch Live Config apply/reset and lifecycle-control run |
+| Viewer participation | Twitch Extension, hosted board, and chat-vote paths share authoritative votes, tally, winner, private receipt, points, reactions, and reconnect | Extension JWT/EBS, participation, persistence, reward, viewer, and fallback tests | Two isolated real viewers plus at least one real fallback on the same cycle |
+| OBS overlay | Session-scoped read grant and sanitised voting/winner/active/progress/result/reconnect projection | Overlay grant/state, privacy, route, browser, and package tests | Generated URL visibly loaded as an OBS Browser Source during the same session |
+| Recovery | Credential-free algorithms, deterministic quest fallback, stale-session recovery, camera/viewer/token/realtime errors, and honest unavailable states | Failure-matrix and focused recovery tests | One recorded provider/capture/viewer interruption and successful recovery |
 
-## Exact Current Demo Path
+## Targeted product evidence
 
-1. Run `npm run dev`.
-2. Open `http://localhost:3000/`.
-3. Click **Capture game window** and choose the game/phone/OBS preview window. Confirm the preview thumbnail and checksum are changing before claiming live screen sampling.
-4. Confirm the **Stream automation settings** are set to **Auto generate** and **Auto overlay**, or switch to **Manual review** / **Streamer approves** if the recording should show manual control.
-5. Connect Twitch chat to the broadcaster channel, for example `dewflash`, if a test stream is available.
-6. Wait for auto-generation or click **Generate sidequests** if the recording needs to move faster. If clicked manually, label that as prototype/demo control.
-7. Confirm exactly three vanilla-Minecraft-appropriate quest cards appear. With no eligible `OPENAI_API_KEY`/credit, this uses the credential-free algorithmic/demo engine. When the D-072 server configuration is enabled, the OpenAI `gpt-5.6-terra` adapter gets one bounded 8-second attempt and falls back algorithmically on any failure; every candidate still goes through Role 3 validation.
-8. Run `npm run dev:twitch`, install the Local Test version using `https://localhost:3000/`, and ask Joel or another allowlisted viewer to open the installed panel. Select one of the three quests and submit the vote. Confirm private acknowledgement and the Studio tally. Use Twitch chat `1`/`2`/`3` only as the fallback/comment-ingestion proof; if Twitch is unavailable, click `+ vote` and label it as simulated diagnostic voting.
-9. In Studio, generate the session-scoped **OBS Browser Source** URL, add the complete `/obs-overlay` URL to OBS, and show the authoritative vote, active sidequest, timer, progress, result, and reconnect states. Do not expose its fragment token in the recording. The old `/overlay` route is legacy diagnostic output and is not canonical proof.
-10. Return to the control room and click **Complete**, **Fail**, or **Clear** to demonstrate terminal overlay updates.
-11. Open `http://localhost:3000/diagnostics/ui-harness` separately to show the newer canonical fixture shape: one session ID, one quest-cycle ID, one revision, exactly three options, streamer/viewer/overlay views, and example command envelopes.
+`docs/research/PRODUCT-VALIDATION.md` now maps every final feature through the required three-part chain:
 
-## AI Contribution Path
+1. targeted user pain;
+2. the strongest directly relevant research or platform-capability evidence, including limitations;
+3. the built response and the exact working test required.
 
-Current runnable UI path:
+The matrix intentionally rejects these invalid substitutions:
 
-- `/api/sidequests` validates the legacy `GenerationRequest`.
-- D-072 approves the server-side OpenAI `gpt-5.6-terra` path under its credential, existing-credit, privacy, timeout, and validation constraints while preserving credential-free algorithmic candidates plus Role 3 deterministic validation/replacement.
-- The legacy `/api/sidequests` path still contains an optional OpenAI adapter, but source presence or a configured key is not provider evidence; only a recorded run of the canonical approved boundary may support that claim.
-- If the key is absent or the legacy provider call fails, it returns exactly three credential-free algorithmic/demo quests and, on provider failure, a warning.
+- generic creator attrition as evidence for a specific ChatXPT feature;
+- Twitch vendor engagement percentages as ChatXPT impact;
+- PUBG telemetry research as Minecraft detector accuracy;
+- audience-influence studies as proof that exactly three is optimal;
+- official Twitch/OBS documentation as proof of customer value;
+- fixture or source tests as real live-integration evidence.
 
-Accepted MVP path present as component code/tests:
+## Release decision
 
-- Role 2 has credential-free audience and candidate-generation logic behind public ports.
-- Role 2's algorithmic strategy emits exactly three `algorithmic` candidates from canonical intelligence/profile/recent-history input.
-- Role 2's provider fallback wrapper classifies provider failures and falls back to credential-free candidates without retaining raw provider payloads.
-- Role 3 validates every provider, algorithmic, or fallback candidate through the same deterministic safety/feasibility rules before it can reach viewers.
+The source is ready for the owner-run external test. Product acceptance remains open until the per-feature evidence rows in `MANUAL_TEST_RECORDING_RUNBOOK.md` are marked `PASS`, recorded against the exact commit, privacy-reviewed, and entered into `docs/evidence/manifest.json` with limitations.
 
-The accepted Role 2/Role 3 path is not yet wired into the visible `/` route as live product evidence.
-
-## Human Review Points
-
-- Streamer/producer reviews the three proposed quests before activation.
-- Producer-facing rationale is available in the legacy quest cards; overlay output omits rationale.
-- Streamer manually activates a quest in the legacy demo.
-- Streamer can complete, fail, or clear the active quest in the legacy demo.
-- The authored MVP runbook also requires review of unsafe quests, emergency pause, skip/cancel/succeed/fail/expiry, privacy of artifacts, and fixture-vs-live labelling before evidence is recorded.
-
-## Exception Handling Visible Today
-
-- Invalid `/api/sidequests` JSON or signal shape returns a 400 response.
-- Missing `OPENAI_API_KEY` uses the credential-free algorithmic/demo engine.
-- Legacy OpenAI failure falls back to the credential-free algorithmic/demo engine and returns a warning.
-- Extension viewer or Twitch chat connection failure leaves the local demo able to continue through labelled diagnostic votes.
-- Screen capture that is frozen, black, or incorrectly selected can be identified through the preview thumbnail and checksum before any live-analysis claim is made.
-- The algorithmic/demo engine filters boundary-matching quest text and fills with safe fallback quests to keep exactly three options.
-- `/api/ui-gateway/commands` rejects stale fixture revisions and malformed command envelopes.
-- Hosted board access has explicit invalid, not-found, expired, inactive, and unavailable states.
-- The documented real runbook requires unknown gameplay facts to remain `unknown`, provider failure to continue through algorithmic/deterministic fallback, and fixture/live claims to be split.
-
-## Final Output Demonstrated Today
-
-The local demo can produce an OBS-style overlay card with:
-
-- active quest title;
-- instruction;
-- countdown;
-- status;
-- reward points;
-- completed/failed visual status after producer action.
-
-For the five-minute video, Role 2 should prepare the exact script and act as the viewer who opens the Extension-style viewer route and votes within the short vote window. The intended story is: one-time OBS setup, future streams reuse the scene, the streamer plays, ChatXPT samples the selected screen/window and viewer activity, three quests appear, the viewer votes, the winning quest reaches the OBS overlay, and the video closes with analytics plus quest-generator explanation under five minutes.
-
-The newer Role 5 fixture evidence also shows Twitch, hosted-board, and OBS overlay render states, but the evidence manifest labels that as fixture-only.
-
-## Remaining Live Evidence Blockers
-
-- Twitch broadcaster account/developer app/Extension test setup is still `owner-action-required`.
-- Two isolated viewer sessions are still `owner-action-required`.
-- OBS gameplay machine and real OBS Virtual Camera sampling are still `owner-action-required`.
-- Twitch Extension JWT validation, pseudonymous identity, channel/session mapping, and private acknowledgement are implemented and signed-fixture tested. Real Twitch JWT issuance, Local/Hosted Test delivery, Asset Hosting upload, and public approval are not yet evidenced.
-- Real hosted-board two-client voting against an authoritative session is not evidenced.
-- Real Supabase cloud realtime/persistence and Vercel deployment evidence are still outstanding.
-- Role 2 real-frame extraction/OCR and real gameplay asset evaluation are still blocked or incomplete until the owner records a real OBS/gameplay run.
-- External model-provider adoption is closed by D-072: OpenAI `gpt-5.6-terra` is approved, and missing credentials, existing credit, quota, or availability cannot block the credential-free MVP route.
-- The accepted Role 2 algorithmic/provider path and Role 3 deterministic engine are component-tested but not fully wired into the visible end-to-end UI route.
-- The integration completion rule is not met until the same authoritative session and quest-cycle revision is observable across orchestrator, Studio, two viewers, persistence, and OBS overlay.
+If any row fails, narrow the corresponding claim or fix the integrated product before recording the final five-minute edit. Do not hide a failed feature behind fixture footage or a broader research statistic.
