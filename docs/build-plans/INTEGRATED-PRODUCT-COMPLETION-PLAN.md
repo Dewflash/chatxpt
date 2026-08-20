@@ -342,7 +342,7 @@ Connect Twitch
 | Capability currently unavailable or incomplete | Current reality | Planned slice |
 | --- | --- | --- |
 | Self-service Twitch connection and recovery | Secure manual mapping exists; full OAuth/EventSub product setup is incomplete. | ICP-02 |
-| Correct readiness-gated start | Current start marks the session live before reporting blockers. | ICP-02 |
+| Correct readiness-gated start | Source now keeps setup sessions in `preparing`, gates explicit Start on Twitch/Game Capture readiness, and transitions to `live` only through the lifecycle command. Final test execution and real capture/Twitch evidence remain open. | ICP-02 |
 | Twitch game pre-fill with correction | Start currently relies on manually entered game data. | ICP-02 |
 | Production Game Capture | `/studio/gameplay/capture` now mounts a product capture screen that reuses the OBS Virtual Camera analyzer and gameplay ingress grant/snapshot boundary; it still requires manual setup keys and real OBS proof. | ICP-02 |
 | Automatic Game Capture reconnect | The product capture screen refreshes short-lived ingress grants while running, but no normal controller owns browser/device reconnect metadata yet. | ICP-02 |

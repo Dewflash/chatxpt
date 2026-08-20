@@ -4,16 +4,21 @@ import { describe, expect, it } from "vitest";
 
 import {
   CONTRACT_VERSION,
+  gameplaySnapshotSchema,
+  streamerServiceCommandSchema,
   streamerLiveDirectorIntentCommandSchema,
   streamerProfileSettingsCommandSchema,
 } from "@/core";
+import { contractFixtureGameplaySnapshot } from "@/core/testing";
 import { createMemoryPersistenceRuntime } from "@/realtime";
 
+import { GameplayIngressApplication } from "./gameplay-ingress";
 import { ChatXptServerRuntime } from "./runtime";
 import { StudioSessionApplication, StudioSessionApplicationError } from "./studio-session";
 
 const NOW = 1_780_000_000_000;
 const SETUP_KEY = "studio-test-key-that-is-at-least-32-characters";
+const GAMEPLAY_KEY = "gameplay-test-key-that-is-at-least-32-characters";
 const EXTENSION_SECRET_BYTES = Buffer.from("extension-secret-for-studio-tests-1234", "utf8");
 const EXTENSION_SECRET = EXTENSION_SECRET_BYTES.toString("base64");
 
@@ -52,8 +57,53 @@ function application() {
   };
 }
 
+async function ingestGameplaySnapshot(context: ReturnType<typeof application>, started: Awaited<ReturnType<StudioSessionApplication["start"]>>) {
+  const ingress = new GameplayIngressApplication({
+    persistence: context.persistence,
+    setupKey: GAMEPLAY_KEY,
+    now: () => NOW,
+    nextId: () => "studio-gameplay-grant",
+  });
+  const grant = await ingress.issueGrant(GAMEPLAY_KEY, {
+    sessionId: started.view.session.sessionId,
+  });
+  const base = structuredClone(contractFixtureGameplaySnapshot);
+  const snapshot = gameplaySnapshotSchema.parse({
+    ...base,
+    envelope: {
+      ...base.envelope,
+      sessionId: started.view.session.sessionId,
+      questCycleId: started.view.questCycle.envelope.questCycleId,
+      messageId: "studio-live-gameplay-1",
+      correlationId: "studio-live-gameplay",
+      revision: started.view.session.revision,
+      occurredAt: NOW,
+      receivedAt: NOW,
+      source: "obs-virtual-camera",
+      evidenceClass: "live",
+    },
+    signals: base.signals.map((signal) => ({
+      ...signal,
+      observation: {
+        ...signal.observation,
+        provenance: {
+          ...signal.observation.provenance,
+          source: "obs-virtual-camera",
+          method: "studio-session-start-readiness-test",
+          observedAt: NOW,
+          receivedAt: NOW,
+          evidenceClass: "live",
+        },
+      },
+    })),
+  });
+  await expect(ingress.ingest(`Bearer ${grant.token}`, snapshot)).resolves.toMatchObject({
+    result: { status: "accepted" },
+  });
+}
+
 describe("StudioSessionApplication", () => {
-  it("creates one mapped live session and returns only a scoped server grant", async () => {
+  it("creates one mapped preparing session and returns only a scoped server grant", async () => {
     const context = application();
     const started = await context.application.start(SETUP_KEY, {
       channelId: "channel-1",
@@ -62,14 +112,16 @@ describe("StudioSessionApplication", () => {
       gameName: "Minecraft",
     });
 
-    expect(started.view.session.status).toBe("live");
+    expect(started.view.session.status).toBe("preparing");
     expect(started.view.session.broadcasterId).toBe("channel-1");
     expect(started.view.profile.gameName).toBe("Minecraft");
     expect(started.roomCode).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
     expect(started.readiness.ready).toBe(false);
     expect(started.readiness.blockerCodes).toContain("gameplay-capture");
+    expect(started.readiness.services.find((service) => service.service === "session")?.allowedActions)
+      .not.toContain("start-session");
     expect(await context.persistence.twitchChannelSessions.findTwitchChannelSession("channel-1"))
-      .toMatchObject({ sessionId: started.view.session.sessionId, status: "live" });
+      .toMatchObject({ sessionId: started.view.session.sessionId, status: "preparing" });
 
     const reopened = await context.application.start(SETUP_KEY, {
       channelId: "channel-1",
@@ -78,7 +130,49 @@ describe("StudioSessionApplication", () => {
       gameName: null,
     });
     expect(reopened.view.session.sessionId).toBe(started.view.session.sessionId);
+    expect(reopened.view.session.status).toBe("preparing");
     expect(reopened.roomCode).toBe(started.roomCode);
+  });
+
+  it("starts only after readiness has a current Gameplay Capture snapshot", async () => {
+    const context = application();
+    const started = await context.application.start(SETUP_KEY, {
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    });
+    const blockedCommand = streamerServiceCommandSchema.parse({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: started.view.session.sessionId,
+      commandId: "start-before-capture",
+      correlationId: "start-before-capture",
+      expectedRevision: started.view.session.revision,
+      issuedAt: NOW,
+      actor: { kind: "broadcaster", actorId: "channel-1" },
+      type: "streamer.session",
+      action: "start",
+    });
+    await expect(context.application.execute(started.grant, null, blockedCommand))
+      .rejects.toMatchObject({
+        code: "dependency-unavailable",
+      } satisfies Partial<StudioSessionApplicationError>);
+
+    await ingestGameplaySnapshot(context, started);
+    const ready = await context.application.read(started.grant, null);
+    expect(ready.readiness.ready).toBe(true);
+    expect(ready.readiness.recommendedAction).toBe("start-session");
+
+    const startCommand = streamerServiceCommandSchema.parse({
+      ...blockedCommand,
+      commandId: "start-after-capture",
+      correlationId: "start-after-capture",
+    });
+    const result = await context.application.execute(started.grant, null, startCommand);
+    expect(result.outcome).toBe("committed");
+    expect(result.view.session.status).toBe("live");
+    expect(result.readiness.services.find((service) => service.service === "session")?.allowedActions)
+      .toContain("end-session");
   });
 
   it("accepts authoritative profile commands through the HttpOnly grant identity", async () => {
