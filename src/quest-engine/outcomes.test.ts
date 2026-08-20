@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   intelligenceSnapshotSchema,
+  questCompletionRuleSchema,
   questProgressSchema,
   type NamedSignal,
+  type QuestCompletionRule,
 } from "../core";
 import { DEFAULT_COOLDOWN_MILLISECONDS } from "./intervention";
 import {
@@ -19,6 +21,17 @@ import {
 } from "./testing";
 
 const activeCandidate = role3FixtureCandidateBatch.candidates[0];
+
+function signalRule(
+  allowedSignalKinds: readonly string[] = ["objective-progress"],
+  predicate: QuestCompletionRule["predicate"] = null,
+): QuestCompletionRule {
+  return questCompletionRuleSchema.parse({
+    mode: "signal",
+    allowedSignalKinds,
+    predicate,
+  });
+}
 
 function intelligence(
   patch: {
@@ -128,7 +141,7 @@ describe("progress policy", () => {
       currentProgress: null,
       requestedValue: 0.5,
       evidenceSignalIds: ["fixture-progress-signal"],
-      allowedSignalKinds: ["objective-progress"],
+      completionRule: signalRule(),
       expectedGameId: null,
       intelligence: intelligence(),
       now: ROLE_3_FIXTURE_TIME,
@@ -145,7 +158,7 @@ describe("progress policy", () => {
     ["unknown-evidence", { intelligence: intelligence({ status: "unknown" }) }],
     ["unavailable-evidence", { intelligence: intelligence({ status: "unavailable" }) }],
     ["unsupported-evidence", { intelligence: intelligence({ supportedSignals: [] }) }],
-    ["disallowed-evidence", { allowedSignalKinds: ["another-signal"] }],
+    ["disallowed-evidence", { completionRule: signalRule(["another-signal"]) }],
     [
       "low-confidence-evidence",
       { intelligence: intelligence({ confidence: AUTOMATIC_PROGRESS_MINIMUM_CONFIDENCE - 0.01 }) },
@@ -159,7 +172,7 @@ describe("progress policy", () => {
       currentProgress: null,
       requestedValue: 0.5,
       evidenceSignalIds: ["fixture-progress-signal"],
-      allowedSignalKinds: ["objective-progress"],
+      completionRule: signalRule(),
       expectedGameId: null,
       intelligence: intelligence(),
       now: ROLE_3_FIXTURE_TIME,
@@ -174,7 +187,7 @@ describe("progress policy", () => {
       currentProgress: null,
       requestedValue: 0.5,
       evidenceSignalIds: ["fixture-progress-signal"],
-      allowedSignalKinds: ["objective-progress"],
+      completionRule: signalRule(),
       expectedGameId: null,
       intelligence: intelligence({ status: "unknown", unknownReason: "conflicting" }),
       now: ROLE_3_FIXTURE_TIME,
@@ -195,7 +208,7 @@ describe("progress policy", () => {
       currentProgress: null,
       requestedValue: 0.5,
       evidenceSignalIds: ["fixture-progress-signal"],
-      allowedSignalKinds: ["objective-progress"],
+      completionRule: signalRule(),
       expectedGameId: null,
       intelligence: intelligence({
         supportedSignals: ["objective-progress", kind],
@@ -223,7 +236,7 @@ describe("progress policy", () => {
       currentProgress: null,
       requestedValue: 0.5,
       evidenceSignalIds: ["fixture-progress-signal"],
-      allowedSignalKinds: ["objective-progress"],
+      completionRule: signalRule(),
       expectedGameId: "expected-game",
       intelligence: intelligence({ gameId: "another-game" }),
       now: ROLE_3_FIXTURE_TIME,
@@ -237,7 +250,13 @@ describe("progress policy", () => {
       currentProgress: null,
       requestedValue: 1,
       evidenceSignalIds: ["fixture-progress-signal"],
-      allowedSignalKinds: ["activity-intensity"],
+      completionRule: signalRule(["activity-intensity"], {
+        signalKind: "activity-intensity",
+        comparison: "at-least",
+        target: 1,
+        gameId: "fixture-game",
+        corroboratingSignalKinds: [],
+      }),
       expectedGameId: null,
       intelligence: intelligence({
         kind: "activity-intensity",
@@ -250,12 +269,56 @@ describe("progress policy", () => {
     expect(result).toEqual({ accepted: false, reason: "ambiguous-completion-evidence" });
   });
 
+  it("accepts completion only when the target and required corroboration are both cited", () => {
+    const baseSignal = intelligence().gameplay.signals[0];
+    const result = decideAutomaticProgress({
+      currentProgress: null,
+      requestedValue: 1,
+      evidenceSignalIds: ["fixture-progress-signal", "fixture-match-active"],
+      completionRule: signalRule(["objective-count", "match-active"], {
+        signalKind: "objective-count",
+        comparison: "at-least",
+        target: 3,
+        gameId: "fixture-game",
+        corroboratingSignalKinds: ["match-active"],
+      }),
+      expectedGameId: "fixture-game",
+      intelligence: intelligence({
+        kind: "objective-count",
+        value: 3,
+        supportedSignals: ["objective-count", "match-active"],
+        additionalSignals: [
+          {
+            ...baseSignal,
+            signalId: "fixture-match-active",
+            kind: "match-active",
+            observation: {
+              status: "known",
+              value: true,
+              provenance: baseSignal.observation.provenance,
+            },
+          },
+        ],
+      }),
+      now: ROLE_3_FIXTURE_TIME,
+    });
+
+    expect(result).toMatchObject({
+      accepted: true,
+      progress: {
+        value: 1,
+        method: "automatic",
+        evidenceSignalIds: ["fixture-progress-signal", "fixture-match-active"],
+      },
+    });
+  });
+
   it("does not let a system-requested value exceed the cited numeric evidence", () => {
     const result = decideAutomaticProgress({
       currentProgress: null,
       requestedValue: 0.75,
       evidenceSignalIds: ["fixture-progress-signal"],
-      allowedSignalKinds: ["objective-progress"],
+      completionRule: signalRule(),
       expectedGameId: null,
       intelligence: intelligence({ value: 0.5 }),
       now: ROLE_3_FIXTURE_TIME,

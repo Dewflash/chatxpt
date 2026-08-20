@@ -48,7 +48,9 @@ and vote lifecycle accepts it.
   moderation; streamer approval remains the final human boundary.
 - R3-004 still awaits Role 2's real provider latency, reliability, privacy, and structured-output
   trials for the D-072 OpenAI path.
-- Issue #50 still tracks the predicate-bearing automatic-completion rule. Until it lands, automatic
-  terminal success and rewards remain disabled and manual completion remains authoritative.
+- R3-015 implements the predicate-bearing automatic-completion rule in the fixture-tested canonical
+  and orchestrator seams. Candidates without an explicit trusted predicate remain manual-only, and
+  no automatic-success claim is made for a real gameplay signal until an authorised captured input
+  traverses the authenticated runtime and is recorded as evidence.
 - Role 1 must provide golden-workflow evidence for authenticated ingress, persistence/reconnect,
   realtime projection, Twitch participation, OBS output, and every terminal result.
