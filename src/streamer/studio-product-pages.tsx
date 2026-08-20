@@ -152,13 +152,21 @@ function HealthStrip({ view, readiness }: {
   const obs = readinessAvailability(readiness, "obs-capture", "Allow OBS Virtual Camera from Studio when capture is ready.");
   const voting = readinessAvailability(readiness, "realtime", "Viewer Voting connects after realtime session state is available.");
   const overlay = view === null
-    ? unavailableAvailability("Broadcast Overlay connects after a broadcaster session exists.", "Start broadcaster session")
+    ? unavailableAvailability("Broadcast Overlay connects after a broadcaster session exists.", "Open Studio")
+    : view.session.status === "live"
+      ? {
+          state: "available" as const,
+          badge: "Ready",
+          tone: "success" as const,
+          detail: "Broadcast Overlay can read this live session after OBS Browser Source setup.",
+          nextStep: "Ready",
+        }
     : {
-        state: "available" as const,
-        badge: "Ready",
-        tone: "success" as const,
-        detail: "Broadcast Overlay can read this session after OBS Browser Source setup.",
-        nextStep: "Ready",
+        state: "waiting" as const,
+        badge: "Waiting",
+        tone: "neutral" as const,
+        detail: "Broadcast Overlay can be prepared now and will show the stream output after ChatXPT starts.",
+        nextStep: "Set up overlay",
       };
   return (
     <CardGrid className={styles.grid}>

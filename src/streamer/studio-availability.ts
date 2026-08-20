@@ -1,4 +1,4 @@
-import type { StreamerReadinessView, StreamerSetupServiceId } from "../core";
+import type { StreamerReadinessView, StreamerSetupAction, StreamerSetupServiceId } from "../core";
 import type { StatusTone } from "../design-system";
 
 export type ProductAvailabilityState = "available" | "waiting" | "unavailable";
@@ -24,6 +24,22 @@ function customerSafeDetail(detail: string | null | undefined, fallback: string)
     return fallback;
   }
   return detail;
+}
+
+const ACTION_LABELS: Readonly<Record<StreamerSetupAction, string>> = {
+  "connect-twitch": "Connect Twitch",
+  "install-extension": "Install Extension",
+  "select-capture-source": "Choose source",
+  "request-capture-permission": "Allow camera",
+  "retry-service": "Retry connection",
+  "start-session": "Start ChatXPT",
+  "end-session": "End ChatXPT",
+  "open-diagnostics": "Review setup",
+};
+
+function nextSetupAction(actions: readonly StreamerSetupAction[]): string {
+  const preferred = actions.find((action) => action !== "open-diagnostics") ?? actions[0] ?? null;
+  return preferred === null ? "Waiting for setup" : ACTION_LABELS[preferred];
 }
 
 export function unavailableAvailability(detail: string, nextStep = "Waiting for setup"): ProductAvailability {
@@ -59,6 +75,6 @@ export function readinessAvailability(
     badge: copy.badge,
     tone: copy.tone,
     detail: customerSafeDetail(service.health.message, fallbackDetail),
-    nextStep: service.allowedActions.length > 0 ? "Use the recovery action in Studio" : "Waiting for setup",
+    nextStep: nextSetupAction(service.allowedActions),
   };
 }
