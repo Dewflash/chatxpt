@@ -2,6 +2,7 @@ import {
   questProgressSchema,
   type IntelligenceSnapshot,
   type QuestCandidate,
+  type QuestCompletionRule,
   type QuestProgress,
   type QuestResult,
 } from "../core";
@@ -42,6 +43,9 @@ export type ProgressUpdateRejection =
   | "blocked-gameplay-context"
   | "completion-rule-unavailable"
   | "completion-rule-mismatch"
+  | "completion-predicate-unavailable"
+  | "completion-predicate-mismatch"
+  | "missing-corroboration"
   | "unproven-progress-value"
   | "ambiguous-completion-evidence";
 
@@ -53,8 +57,8 @@ export interface AutomaticProgressInput {
   readonly currentProgress: QuestProgress | null;
   readonly requestedValue: number;
   readonly evidenceSignalIds: readonly string[];
-  /** Signal kinds explicitly permitted by the quest's deterministic completion rule. */
-  readonly allowedSignalKinds: readonly string[];
+  /** Persisted deterministic rule; system-requested values never replace its predicate. */
+  readonly completionRule: QuestCompletionRule;
   /** Saved game identity, when known, used to isolate calibrated evidence across games. */
   readonly expectedGameId?: string | null;
   readonly intelligence: IntelligenceSnapshot;
@@ -133,7 +137,7 @@ export function decideAutomaticProgress(input: AutomaticProgressInput): Progress
     return { accepted: false, reason: "cross-game-evidence" };
   }
 
-  const allowedKinds = new Set(input.allowedSignalKinds);
+  const allowedKinds = new Set(input.completionRule.allowedSignalKinds);
   if (
     gameplay.signals.some(
       (signal) =>
@@ -177,7 +181,7 @@ export function decideAutomaticProgress(input: AutomaticProgressInput): Progress
     if (!gameplay.capabilities.supportedSignals.includes(signal.kind)) {
       return { accepted: false, reason: "unsupported-evidence" };
     }
-    if (!input.allowedSignalKinds.includes(signal.kind)) {
+    if (!input.completionRule.allowedSignalKinds.includes(signal.kind)) {
       return { accepted: false, reason: "disallowed-evidence" };
     }
     if (signal.observation.provenance.confidence < AUTOMATIC_PROGRESS_MINIMUM_CONFIDENCE) {
@@ -194,15 +198,47 @@ export function decideAutomaticProgress(input: AutomaticProgressInput): Progress
     );
   }
 
-  if (!requestedValueProven) {
+  if (input.requestedValue < 1 && !requestedValueProven) {
     return { accepted: false, reason: "unproven-progress-value" };
   }
 
-  if (
-    input.requestedValue === 1 &&
-    citedSignalKinds.every((kind) => AMBIGUOUS_VISUAL_COMPLETION_SIGNAL_KINDS.has(kind))
-  ) {
-    return { accepted: false, reason: "ambiguous-completion-evidence" };
+  if (input.requestedValue === 1) {
+    const predicate = input.completionRule.predicate;
+    if (predicate == null) {
+      return { accepted: false, reason: "completion-predicate-unavailable" };
+    }
+    if (gameplay.capabilities.gameId !== predicate.gameId) {
+      return { accepted: false, reason: "cross-game-evidence" };
+    }
+    const predicateSignals = input.evidenceSignalIds
+      .map((signalId) => gameplay.signals.find((signal) => signal.signalId === signalId))
+      .filter((signal) => signal?.kind === predicate.signalKind);
+    if (
+      predicateSignals.length !== 1 ||
+      predicateSignals[0]?.observation.status !== "known" ||
+      !valueMatchesPredicate(
+        predicateSignals[0].observation.value,
+        predicate.comparison,
+        predicate.target,
+      )
+    ) {
+      return { accepted: false, reason: "completion-predicate-mismatch" };
+    }
+    const citedKinds = new Set(citedSignalKinds);
+    if (
+      predicate.corroboratingSignalKinds.some(
+        (signalKind) => !citedKinds.has(signalKind),
+      )
+    ) {
+      return { accepted: false, reason: "missing-corroboration" };
+    }
+    if (
+      citedSignalKinds.every((kind) =>
+        AMBIGUOUS_VISUAL_COMPLETION_SIGNAL_KINDS.has(kind),
+      )
+    ) {
+      return { accepted: false, reason: "ambiguous-completion-evidence" };
+    }
   }
 
   return {
@@ -214,6 +250,22 @@ export function decideAutomaticProgress(input: AutomaticProgressInput): Progress
       evidenceSignalIds: [...input.evidenceSignalIds],
     }),
   };
+}
+
+function valueMatchesPredicate(
+  actual: string | number | boolean,
+  comparison: "equals" | "at-least" | "at-most",
+  target: string | number | boolean,
+): boolean {
+  if (comparison === "equals") {
+    if (typeof actual !== typeof target) return false;
+    if (typeof actual === "string" && typeof target === "string") {
+      return normalisedSignalString(actual) === normalisedSignalString(target);
+    }
+    return actual === target;
+  }
+  if (typeof actual !== "number" || typeof target !== "number") return false;
+  return comparison === "at-least" ? actual >= target : actual <= target;
 }
 
 function normalisedSignalString(value: string | number | boolean): string | null {

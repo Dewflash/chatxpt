@@ -5,6 +5,7 @@ import {
   audienceSnapshotSchema,
   candidateBatchSchema,
   gameplaySnapshotSchema,
+  questCompletionRuleSchema,
   questCycleStateSchema,
   streamSessionSchema,
   streamerProfileSchema,
@@ -45,8 +46,8 @@ const progressProfile = streamerProfileSchema.parse({
   streamerId: "role-3-progress-broadcaster",
   revision: 0,
   displayName: "Role 3 Progress Fixture",
-  gameId: null,
-  gameName: null,
+  gameId: "role-3-progress-game",
+  gameName: "Role 3 Progress Game",
   experience: {},
   restrictions: [],
   preferredQuestTypes: [],
@@ -86,6 +87,26 @@ const progressSession = streamSessionSchema.parse({
     reactions: true,
   },
 });
+
+function predicateCompletionRule(
+  patch: Partial<NonNullable<QuestCompletionRule["predicate"]>> = {},
+): QuestCompletionRule {
+  return questCompletionRuleSchema.parse({
+    mode: "signal",
+    allowedSignalKinds: [
+      "objective-progress",
+      ...(patch.corroboratingSignalKinds ?? []),
+    ],
+    predicate: {
+      signalKind: "objective-progress",
+      comparison: "at-least",
+      target: 3,
+      gameId: "role-3-progress-game",
+      corroboratingSignalKinds: [],
+      ...patch,
+    },
+  });
+}
 
 const voteCloseSession = streamSessionSchema.parse({
   sessionId: role3FixtureIdleState.envelope.sessionId,
@@ -723,6 +744,37 @@ describe("DefaultQuestEngine", () => {
     expect(result.nextState.activeCandidateId).toBe("role-3-candidate-1");
   });
 
+  it("persists the winning candidate predicate into active quest authority", () => {
+    const completionRule = predicateCompletionRule();
+    const options = role3FixtureCandidateBatch.candidates.map((candidate, index) => ({
+      ...candidate,
+      completionRule: index === 0 ? completionRule : null,
+    }));
+    const currentState = votingFixture(options);
+    const baseInput = voteCloseInput([2, 1, 0], { currentState });
+    const input: QuestEngineInput = {
+      ...baseInput,
+      voteCloseValidationContext: {
+        ...baseInput.voteCloseValidationContext!,
+        profile: streamerProfileSchema.parse({
+          ...voteCloseProfile,
+          gameId: "role-3-progress-game",
+          gameName: "Role 3 Progress Game",
+        }),
+        gameplay: progressGameplay(),
+      },
+    };
+
+    const result = decision(new DefaultQuestEngine().decide(input));
+
+    expect(result.nextState).toMatchObject({
+      status: "active",
+      activeCandidateId: options[0]?.candidateId,
+      completionRule,
+      availableStreamerActions: ["cancel", "skip", "succeed", "fail", "emergency-pause"],
+    });
+  });
+
   it("does not activate after the session ends, while a missing audience remains non-blocking", () => {
     const endedInput = voteCloseInput([2, 1, 0]);
     const ended = decision(
@@ -947,6 +999,99 @@ describe("DefaultQuestEngine", () => {
     ]);
   });
 
+  it("terminalises success only when fresh evidence matches the persisted predicate", () => {
+    const completionRule = predicateCompletionRule();
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        currentState: activeProgressState(null, completionRule),
+        command: progressCommand({ requestedValue: 1 }),
+        candidateBatch: null,
+        questProgressValidationContext: {
+          profile: progressProfile,
+          session: progressSession,
+          gameplay: progressGameplay({ value: 3 }),
+          audience: null,
+          completionRule,
+        },
+        now: ROLE_3_FIXTURE_TIME + 1_000,
+      }),
+    );
+
+    expect(result.nextState).toMatchObject({
+      status: "succeeded",
+      availableStreamerActions: [],
+      progress: {
+        value: 1,
+        method: "automatic",
+        evidenceSignalIds: ["role-3-progress-signal"],
+      },
+      completionRule: null,
+      result: {
+        outcome: "succeeded",
+        rewardPointsAwarded: 100,
+        reason: "Fresh gameplay evidence matched the active quest completion predicate.",
+      },
+    });
+    expect(result.events).toEqual([
+      {
+        eventType: "quest-cycle.automatically-succeeded",
+        attributes: {
+          outcome: "succeeded",
+          rewardPointsAwarded: 100,
+          hypeDelta: 10,
+          historyCandidateId: "role-3-candidate-1",
+          cooldownEndsAt: ROLE_3_FIXTURE_TIME + 121_000,
+          evidenceSignalCount: 1,
+        },
+      },
+    ]);
+  });
+
+  it("rejects a predicate miss and missing required corroboration", () => {
+    const predicateRule = predicateCompletionRule();
+    const predicateMiss = new DefaultQuestEngine().decide({
+      currentState: activeProgressState(null, predicateRule),
+      command: progressCommand({ requestedValue: 1 }),
+      candidateBatch: null,
+      questProgressValidationContext: {
+        profile: progressProfile,
+        session: progressSession,
+        gameplay: progressGameplay({ value: 2 }),
+        audience: null,
+        completionRule: predicateRule,
+      },
+      now: ROLE_3_FIXTURE_TIME + 1_000,
+    });
+    const corroboratedRule = predicateCompletionRule({
+      corroboratingSignalKinds: ["match-active"],
+    });
+    const missingCorroboration = new DefaultQuestEngine().decide({
+      currentState: activeProgressState(null, corroboratedRule),
+      command: progressCommand({ requestedValue: 1 }),
+      candidateBatch: null,
+      questProgressValidationContext: {
+        profile: progressProfile,
+        session: progressSession,
+        gameplay: progressGameplay({
+          value: 3,
+          supportedSignals: ["objective-progress", "match-active"],
+        }),
+        audience: null,
+        completionRule: corroboratedRule,
+      },
+      now: ROLE_3_FIXTURE_TIME + 1_000,
+    });
+
+    expect(predicateMiss).toMatchObject({
+      ok: false,
+      error: { details: { reason: "completion-predicate-mismatch" } },
+    });
+    expect(missingCorroboration).toMatchObject({
+      ok: false,
+      error: { details: { reason: "missing-corroboration" } },
+    });
+  });
+
   it.each([
     [
       "null active rule",
@@ -997,6 +1142,29 @@ describe("DefaultQuestEngine", () => {
       });
     },
   );
+
+  it("rejects validation context whose predicate differs from persisted authority", () => {
+    const activeRule = predicateCompletionRule({ target: 3 });
+    const contextRule = predicateCompletionRule({ target: 4 });
+    const result = new DefaultQuestEngine().decide({
+      currentState: activeProgressState(null, activeRule),
+      command: progressCommand({ requestedValue: 1 }),
+      candidateBatch: null,
+      questProgressValidationContext: {
+        profile: progressProfile,
+        session: progressSession,
+        gameplay: progressGameplay({ value: 4 }),
+        audience: null,
+        completionRule: contextRule,
+      },
+      now: ROLE_3_FIXTURE_TIME + 1_000,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { details: { reason: "completion-rule-mismatch" } },
+    });
+  });
 
   it.each([
     ["missing-evidence", { gameplay: null }],
@@ -1063,11 +1231,19 @@ describe("DefaultQuestEngine", () => {
   });
 
   it("keeps broad visual completion evidence on the manual fallback path", () => {
+    const broadVisualRule = questCompletionRuleSchema.parse({
+      mode: "signal",
+      allowedSignalKinds: ["activity-intensity"],
+      predicate: {
+        signalKind: "activity-intensity",
+        comparison: "at-least",
+        target: 1,
+        gameId: "role-3-progress-game",
+        corroboratingSignalKinds: [],
+      },
+    });
     const result = new DefaultQuestEngine().decide({
-      currentState: activeProgressState(null, {
-        mode: "signal",
-        allowedSignalKinds: ["activity-intensity"],
-      }),
+      currentState: activeProgressState(null, broadVisualRule),
       command: progressCommand({ requestedValue: 1 }),
       candidateBatch: null,
       questProgressValidationContext: {
@@ -1079,7 +1255,7 @@ describe("DefaultQuestEngine", () => {
           supportedSignals: ["activity-intensity"],
         }),
         audience: null,
-        completionRule: { mode: "signal", allowedSignalKinds: ["activity-intensity"] },
+        completionRule: broadVisualRule,
       },
       now: ROLE_3_FIXTURE_TIME + 1_000,
     });

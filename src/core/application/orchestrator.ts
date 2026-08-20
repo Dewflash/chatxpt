@@ -173,10 +173,23 @@ function authoritativeDecision(
     ...parsedDecision.data,
     envelope: questEnvelope,
   });
+  const terminalHypeDelta = parsedEvents.data.reduce((total, event) => {
+    const hypeDelta = event.attributes.hypeDelta;
+    return typeof event.attributes.outcome === "string" &&
+      typeof hypeDelta === "number" &&
+      Number.isSafeInteger(hypeDelta)
+      ? total + hypeDelta
+      : total;
+  }, 0);
+  const communityHype = current.communityHype + terminalHypeDelta;
+  if (!Number.isSafeInteger(communityHype) || communityHype < 0) {
+    return error("validation", "Quest reward update exceeds supported community hype bounds");
+  }
   const state: AuthoritativeSessionState = {
     ...current,
     session: { ...current.session, revision },
     questCycle,
+    communityHype,
     emergencyPaused:
       command.type === "streamer.quest" && command.action === "emergency-pause"
         ? true
