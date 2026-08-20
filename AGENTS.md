@@ -331,6 +331,7 @@ Keep provider payloads, Twitch payloads, component-local UI state, and persisten
 - Pull requests are the normal coordination record. Direct pushes to `main` are allowed only as deliberate, deconflicted integration actions by contributors with repository permission under D-076.
 - Keep branches short-lived, sync current `main` before review, and integrate the smallest vertical slice after every wave and at least daily.
 - Any contributor with repository write or merge permission may merge or directly land deconflicted work. Role 1 coordinates integration and overlapping landing order by default but is not the mandatory approver or exclusive merger.
+- Keep execution work-conserving. No contributor or agent waits solely for another role, owner, review, reply, or responsibility handoff. When a repository dependency is missing, inspect overlap, notify the relevant leads and Role 1, then implement the smallest coherent cross-role seam in its proper module or immediately select another ready P0 task. Notification and advisory review do not pause implementation. Genuine blockers are limited to missing external credentials/platform access, unresolved material safety/security/privacy/data-loss/external-cost risk, a semantic conflict that cannot be settled from repository authority, or a failing required integration boundary; record that blocker honestly and continue another safe task when one exists.
 - `CODEOWNERS`, branch protection, and required reviews are not repository-policy gates. Responsibility routing lives in this guide, role guides, TODOs, build plans, issues, and pull request notes.
 - Contributors may edit any role's implementation. Preserve the destination module's accepted responsibilities, document significant judgement, and invite its lead to review.
 - Notify relevant leads and Role 1 of substantial cross-role work; use issues for durable coordination, not permission.
@@ -351,7 +352,7 @@ Keep provider payloads, Twitch payloads, component-local UI state, and persisten
 - Role 4 supplies a working streamer-facing site connected to agreed contracts, plus responsive screenshots or recordings.
 - Role 5 supplies working viewer, fallback, and overlay sites connected to agreed contracts, plus responsive screenshots or recordings.
 - Role 1 owns shared checks, end-to-end integration evidence, README and architecture assembly, and third-party disclosures. Slide-deck assembly, demo-video assembly, and final narrative work begin only after the project owner explicitly declares the product ready for that phase.
-- There is no automatic contract cutoff or feature-freeze date. Dated plan milestones are delivery targets, not a freeze command; only the project owner may declare the freeze. The submission deadline remains 9 August 2026, so integration and evidence work continue with deadline risk reported honestly until that call.
+- There is no automatic contract cutoff or feature-freeze date. Dated plan milestones are delivery targets, not a freeze command; only the project owner may declare the freeze. The finalist submission deadline is 21 August 2026 at 3 PM SGT under `docs/submission/FINALS-2026.md`, which supersedes the earlier 9 August proposal schedule.
 - The submission repository must remain private and add `garena-ai-build-challenge` as a collaborator before submission.
 
 ## Current open decisions
