@@ -22,7 +22,9 @@ export { StudioManagementSurface } from "./studio-management";
 export type { StudioManagementSurfaceProps } from "./studio-management";
 export { TwitchConfigSurface, TwitchLiveConfigSurface } from "./twitch-config";
 export { LiveDirectorControls } from "./live-director-controls";
+export { PersistentStreamOverlaySurface } from "./persistent-stream-overlay";
 export type { LiveDirectorControlsProps } from "./live-director-controls";
+export type { PersistentStreamOverlaySurfaceProps } from "./persistent-stream-overlay";
 export type {
   TwitchConfigSurfaceProps,
   TwitchLiveConfigSurfaceProps,

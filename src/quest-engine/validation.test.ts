@@ -236,6 +236,114 @@ describe("DefaultCandidateValidator", () => {
     expect(withEvidence.accepted).toBe(true);
   });
 
+  it("rejects Minecraft-specific claims when the matching game fact is unknown", () => {
+    const sleepCandidate = changedCandidate(role3FixtureCandidateBatch.candidates[0], {
+      candidateId: "minecraft-sleep-specific-candidate",
+      title: "Sleep Check",
+      instruction: "Sleep in a bed during the next safe moment.",
+      rationale: "Uses a Minecraft sleep fact that is not currently detected.",
+      sourceSignalIds: [],
+    });
+    const result = new DefaultCandidateValidator().validate(sleepCandidate, {
+      intelligence: intelligence(),
+      profile: streamerProfileSchema.parse({ ...profile, gameId: "minecraft", gameName: "Minecraft" }),
+      currentState: role3FixtureIdleState,
+      recentQuests: [],
+      acceptedCandidates: [],
+      now: ROLE_3_FIXTURE_TIME,
+    });
+
+    expect(result).toMatchObject({
+      accepted: false,
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: "unknown-dependent",
+          evidence: expect.arrayContaining(["minecraft-menu-state"]),
+        }),
+      ]),
+    });
+  });
+
+  it("accepts a Minecraft hostile-mob claim only when that fact is fresh and cited", () => {
+    const hostileSignal = {
+      signalId: "known-visible-hostile",
+      kind: "minecraft-visible-hostile",
+      observation: {
+        status: "known" as const,
+        value: "skeleton",
+        provenance: {
+          source: "test-fixture" as const,
+          method: "role-3-validation-fixture",
+          confidence: 0.9,
+          observedAt: ROLE_3_FIXTURE_TIME,
+          receivedAt: ROLE_3_FIXTURE_TIME,
+          evidenceClass: "fixture" as const,
+        },
+      },
+    };
+    const candidate = changedCandidate(role3FixtureCandidateBatch.candidates[0], {
+      candidateId: "minecraft-skeleton-specific-candidate",
+      title: "Skeleton Watch",
+      instruction: "Avoid the visible skeleton for the next 30 seconds.",
+      rationale: "Uses a known visible hostile Minecraft fact.",
+      sourceSignalIds: [hostileSignal.signalId],
+    });
+    const result = new DefaultCandidateValidator().validate(candidate, {
+      intelligence: intelligence([hostileSignal]),
+      profile: streamerProfileSchema.parse({ ...profile, gameId: "minecraft", gameName: "Minecraft" }),
+      currentState: role3FixtureIdleState,
+      recentQuests: [],
+      acceptedCandidates: [],
+      now: ROLE_3_FIXTURE_TIME,
+    });
+
+    expect(result.accepted).toBe(true);
+  });
+
+  it("does not let generic recent damage evidence justify a specific Minecraft damage cause", () => {
+    const recentDamageSignal = {
+      signalId: "known-recent-damage",
+      kind: "minecraft-recent-damage",
+      observation: {
+        status: "known" as const,
+        value: true,
+        provenance: {
+          source: "test-fixture" as const,
+          method: "role-3-validation-fixture",
+          confidence: 0.9,
+          observedAt: ROLE_3_FIXTURE_TIME,
+          receivedAt: ROLE_3_FIXTURE_TIME,
+          evidenceClass: "fixture" as const,
+        },
+      },
+    };
+    const candidate = changedCandidate(role3FixtureCandidateBatch.candidates[0], {
+      candidateId: "minecraft-fall-damage-cause-candidate",
+      title: "Fall Damage Proof",
+      instruction: "Recover after taking fall damage during the next 30 seconds.",
+      rationale: "This claims a specific Minecraft damage cause from generic damage evidence.",
+      sourceSignalIds: [recentDamageSignal.signalId],
+    });
+    const result = new DefaultCandidateValidator().validate(candidate, {
+      intelligence: intelligence([recentDamageSignal]),
+      profile: streamerProfileSchema.parse({ ...profile, gameId: "minecraft", gameName: "Minecraft" }),
+      currentState: role3FixtureIdleState,
+      recentQuests: [],
+      acceptedCandidates: [],
+      now: ROLE_3_FIXTURE_TIME,
+    });
+
+    expect(result).toMatchObject({
+      accepted: false,
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: "unknown-dependent",
+          evidence: expect.arrayContaining(["minecraft-likely-damage-cause"]),
+        }),
+      ]),
+    });
+  });
+
   it("accepts a fresh known audience signal as candidate citation evidence", () => {
     const audienceSignal = {
       signalId: "known-audience-hype",

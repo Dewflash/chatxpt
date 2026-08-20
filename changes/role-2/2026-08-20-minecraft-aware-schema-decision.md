@@ -1,0 +1,15 @@
+# Minecraft-aware schema and fixture implementation
+
+- Recorded D-086: Vanilla Minecraft Java Survival with default HUD remains the primary demo target, while Minecraft-like modded HUDs are best-effort and must degrade to `unknown` when visual evidence is unsupported.
+- Added a Role 2 P0 queue item for a richer Minecraft game-state schema, pixel-aware HUD/activity detection, typed AI context, and deterministic Role 3 validation of supported facts.
+- Added project TODO P-018 so the Minecraft-aware value-add work is tracked as an evidence-gated cross-project outcome rather than a vague demo claim.
+- Added `docs/build-plans/MINECRAFT-AWARE-IMPLEMENTATION-PLAN.md` as the implementation sequence for schema, detector, AI context, Role 3 validation, UI disclosure, evidence, and demo updates.
+- Implemented the first fixture-backed slice: Minecraft fact schemas, dynamic lower-HUD search for Minecraft-like health/hunger/hotbar patterns, canonical flat Minecraft fact signals, typed Minecraft model context, and Role 3 rejection for unsupported Minecraft-specific claims.
+- Added a conservative runtime-fact slice: recent health drops become `minecraft-recent-damage`, low health can become `minecraft-danger=low-health`, stable low-health windows can become `minecraft-activity=recovering`, safe coherent traversal can become `minecraft-activity=exploring`, and generic damage does not justify fall/lava/mob cause claims.
+- Wired active ChatXPT quest context through the candidate-provider seam so the typed Minecraft model context can distinguish game facts, streamer intent, and the current ChatXPT quest instead of leaving `activeChatXptQuest` as a placeholder.
+- Added a conservative visual menu/sleep slice: centered panel structures can surface `minecraft-menu-state=inventory`, dark sleep overlays with lower controls can surface `minecraft-menu-state=sleeping`, and arbitrary high-detail/noisy frames remain `unknown`.
+- Added a conservative armor and selected-hotbar slice: armor can surface as `minecraft-armor-points` when a repeated armor band is visually distinct above health, and selected hotbar category can surface when one slot is clearly highlighted and the inner item pixels fit a known coarse class such as `block`.
+- Added a reusable cross-game state layer in `src/extraction/game-state-context.ts`: every provider request now includes `gameState.schemaVersion=generic-game-state-v1` with shared facts such as player health, resource, defense, loadout, menu, activity, combat risk, objective, timer, score, and environment; Minecraft requests still include the deeper `minecraft.gameFacts` specialization on top, while Brawl-shaped calibrated inputs map into generic objective/timer/score facts without a fake Minecraft block.
+- Added `src/extraction/minecraft-scene.ts` and runtime wiring for broad, fixture-tested Minecraft scene hints: water/rain, lava/fire, dark cave/night, grassy overworld, hostile-like central shapes, and damage-cause hints that are only promoted after a confirmed health drop.
+
+Evidence: focused fixture/component tests only. No real vanilla or modded Minecraft OBS/video accuracy claim is made by this fragment.

@@ -69,6 +69,7 @@ describe("algorithmic candidate strategy", () => {
       intelligence: await fixtureIntelligence(),
       profile: contractFixtureProfile,
       recentQuestTitles: [],
+      activeChatXptQuest: null,
     });
 
     expect(batch.candidates).toHaveLength(3);
@@ -85,6 +86,7 @@ describe("algorithmic candidate strategy", () => {
       intelligence: await fixtureIntelligence(),
       profile: contractFixtureProfile,
       recentQuestTitles: ["Plan Out Loud", "Caster Mode", "Calm Focus"],
+      activeChatXptQuest: null,
     });
 
     expect(batch.candidates.map((candidate) => candidate.title)).not.toEqual(
@@ -143,6 +145,7 @@ describe("algorithmic candidate strategy", () => {
       intelligence: await fixtureIntelligence(audience),
       profile: contractFixtureProfile,
       recentQuestTitles: [],
+      activeChatXptQuest: null,
     });
 
     const citedIds = batch.candidates.flatMap((candidate) => candidate.sourceSignalIds);
@@ -165,6 +168,7 @@ describe("algorithmic candidate strategy", () => {
       ),
       profile: contractFixtureProfile,
       recentQuestTitles: [],
+      activeChatXptQuest: null,
     });
 
     expect(batch.candidates.flatMap((candidate) => candidate.sourceSignalIds)).not.toContain(
@@ -185,6 +189,7 @@ describe("algorithmic candidate strategy", () => {
       ),
       profile: contractFixtureProfile,
       recentQuestTitles: [],
+      activeChatXptQuest: null,
     });
 
     expect(batch.candidates.flatMap((candidate) => candidate.sourceSignalIds)).not.toContain(
@@ -199,6 +204,7 @@ describe("algorithmic candidate strategy", () => {
       intelligence: await fixtureIntelligence(),
       profile: contractFixtureProfile,
       recentQuestTitles: ["Audience Coach"],
+      activeChatXptQuest: null,
     };
 
     expect(await strategy.generate(input)).toEqual(await strategy.generate(input));

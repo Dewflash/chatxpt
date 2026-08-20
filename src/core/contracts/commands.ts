@@ -118,22 +118,59 @@ const streamerRewardPreferencesPatchSchema = z
   })
   .strict();
 
+const streamerGameProfilePatchSchema = z
+  .object({
+    gameId: identifierSchema.nullable(),
+    gameName: z.string().trim().min(1).max(120).nullable(),
+  })
+  .strict()
+  .superRefine((patch, context) => {
+    if ((patch.gameId === null) !== (patch.gameName === null)) {
+      context.addIssue({
+        code: "custom",
+        message: "gameId and gameName must either both be present or both be null",
+        path: ["gameId"],
+      });
+    }
+  });
+
+const profileRestrictionListPatchSchema = z.array(z.string().trim().min(1).max(160)).max(64);
+const profileQuestTypeListPatchSchema = z.array(z.string().trim().min(1).max(80)).max(32);
+const profileAccessibilityListPatchSchema = z.array(z.string().trim().min(1).max(160)).max(32);
+
 export const streamerProfileSettingsCommandSchema = z
   .object({
     ...commandEnvelopeFields,
     questCycleId: z.null(),
     type: z.literal("streamer.profile-settings"),
     experiencePatch: z.record(z.string().trim().min(1).max(80), z.number().min(0).max(1)).default({}),
+    game: streamerGameProfilePatchSchema.optional(),
+    restrictions: profileRestrictionListPatchSchema.optional(),
+    preferredQuestTypes: profileQuestTypeListPatchSchema.optional(),
+    forbiddenQuestTypes: profileQuestTypeListPatchSchema.optional(),
+    accessibilityNeeds: profileAccessibilityListPatchSchema.optional(),
     voting: streamerVotingPreferencesPatchSchema.optional(),
     rewards: streamerRewardPreferencesPatchSchema.optional(),
   })
   .strict()
   .superRefine((command, context) => {
     const experienceChangeCount = Object.keys(command.experiencePatch).length;
+    const profileListChangeCount = [
+      command.game,
+      command.restrictions,
+      command.preferredQuestTypes,
+      command.forbiddenQuestTypes,
+      command.accessibilityNeeds,
+    ].filter((value) => value !== undefined).length;
     const votingChangeCount = Object.keys(command.voting ?? {}).length;
     const rewardChangeCount = Object.keys(command.rewards ?? {}).length;
 
-    if (experienceChangeCount === 0 && votingChangeCount === 0 && rewardChangeCount === 0) {
+    if (
+      experienceChangeCount === 0 &&
+      profileListChangeCount === 0 &&
+      votingChangeCount === 0 &&
+      rewardChangeCount === 0
+    ) {
       context.addIssue({
         code: "custom",
         message: "Profile settings commands must include at least one setting change",

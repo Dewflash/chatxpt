@@ -236,10 +236,16 @@ function authoritativeProfileSettingsUpdate(
   const profile = streamerProfileSchema.safeParse({
     ...current.profile,
     revision: current.profile.revision + 1,
+    gameId: command.game?.gameId ?? current.profile.gameId,
+    gameName: command.game?.gameName ?? current.profile.gameName,
     experience: {
       ...current.profile.experience,
       ...command.experiencePatch,
     },
+    restrictions: command.restrictions ?? current.profile.restrictions,
+    preferredQuestTypes: command.preferredQuestTypes ?? current.profile.preferredQuestTypes,
+    forbiddenQuestTypes: command.forbiddenQuestTypes ?? current.profile.forbiddenQuestTypes,
+    accessibilityNeeds: command.accessibilityNeeds ?? current.profile.accessibilityNeeds,
     voting: {
       ...current.profile.voting,
       ...command.voting,

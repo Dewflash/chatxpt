@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   Role1InterventionCoordinator,
   intelligenceSnapshotSchema,
+  questCycleStateSchema,
   systemIntelligenceCommandSchema,
   type CandidateBatch,
   type CandidateInput,
@@ -172,5 +173,61 @@ describe("Role 1 intervention coordinator", () => {
       candidateBatchId: contractFixtureCandidateBatch.envelope.messageId,
       actor: { kind: "system", actorId: "fixture-orchestrator" },
     });
+  });
+
+  it("passes active ChatXPT quest context separately into candidate generation", async () => {
+    const base = persistenceState();
+    const active = contractFixtureCandidateBatch.candidates[0];
+    const state = {
+      ...base,
+      questCycle: questCycleStateSchema.parse({
+        ...base.questCycle,
+        status: "active",
+        options: contractFixtureCandidateBatch.candidates,
+        activeCandidateId: active.candidateId,
+        availableStreamerActions: ["cancel", "succeed", "fail"],
+        startsAt: NOW - 5_000,
+        endsAt: NOW + 55_000,
+        progress: {
+          value: 0,
+          updatedAt: NOW - 5_000,
+          method: "manual",
+          evidenceSignalIds: [],
+        },
+      }),
+    };
+    const policy = new StaticPolicy({
+      shouldPropose: true,
+      score: 0.8,
+      reasons: ["fixture-active-context"],
+      evidenceSignalIds: [],
+    });
+    const provider = new RecordingCandidateProvider();
+    const coordinator = new Role1InterventionCoordinator(
+      policy,
+      provider,
+      { store: async () => undefined },
+      {
+        execute: async () => ({
+          ok: false,
+          error: { code: "validation", message: "fixture stops after generation", retryable: false },
+        }),
+      },
+      () => NOW,
+    );
+
+    await coordinator.run({
+      state,
+      intelligence: intelligence(),
+      recentQuests: [],
+      candidateInputEnvelope: contractFixtureEnvelope,
+      commandId: "fixture-intelligence-command",
+      correlationId: "fixture-intelligence-correlation",
+      systemActorId: "fixture-orchestrator",
+      issuedAt: NOW,
+    });
+
+    expect(provider.calls).toHaveLength(1);
+    expect(provider.calls[0].activeChatXptQuest).toBe(`${active.title}: ${active.instruction}`);
   });
 });

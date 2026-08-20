@@ -253,11 +253,21 @@ const safetyRules = [
 ] as const;
 
 const factDependencies = [
-  { pattern: /\bhealth\b/i, kinds: ["health"] },
+  { pattern: /\b(?:health|hearts?)\b/i, kinds: ["health", "minecraft-health-hearts"] },
   { pattern: /\b(kill|elimination)s?\b/i, kinds: ["kill"] },
   { pattern: /\bknock(?:ed|down)?\b/i, kinds: ["knockdown"] },
   { pattern: /\bloot(?:ing)?\b/i, kinds: ["looting"] },
   { pattern: /\b(final circle|match phase)\b/i, kinds: ["match-phase"] },
+  { pattern: /\b(?:hunger|shanks?|food bar)\b/i, kinds: ["minecraft-hunger-shanks"] },
+  { pattern: /\b(?:armor|armour)\b/i, kinds: ["minecraft-armor-points"] },
+  { pattern: /\b(?:hotbar|selected slot|selected item|held item)\b/i, kinds: ["minecraft-hotbar-visible", "minecraft-selected-hotbar-category"] },
+  { pattern: /\b(?:sleep|bed|inventory|crafting table|menu|death screen)\b/i, kinds: ["minecraft-menu-state"] },
+  { pattern: /\b(?:mining|mine|building|build|crafting|smelting|farming|fishing|exploring|caving)\b/i, kinds: ["minecraft-activity"] },
+  { pattern: /\b(?:danger|safe area|peaceful moment|panic)\b/i, kinds: ["minecraft-danger"] },
+  { pattern: /\b(?:recent damage|took damage|take damage|damaged)\b/i, kinds: ["minecraft-recent-damage"] },
+  { pattern: /\b(?:fall damage|lava|fire damage|drowning|suffocat|starv|damage cause|mob damage)\b/i, kinds: ["minecraft-likely-damage-cause"] },
+  { pattern: /\b(?:skeleton|zombie|creeper|spider|enderman|hostile mob|monster)\b/i, kinds: ["minecraft-visible-hostile"] },
+  { pattern: /\b(?:biome|nether|overworld|end dimension|desert|forest|village|cave|ocean)\b/i, kinds: ["minecraft-biome-environment"] },
 ] as const;
 
 const durationRangeByDifficulty = {

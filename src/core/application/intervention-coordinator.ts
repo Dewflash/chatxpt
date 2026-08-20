@@ -4,6 +4,7 @@ import {
   contractEnvelopeSchema,
   domainErrorSchema,
   intelligenceSnapshotSchema,
+  questCycleStateSchema,
   systemIntelligenceCommandSchema,
   type CandidateBatch,
   type CandidateInput,
@@ -11,6 +12,7 @@ import {
   type ContractEnvelope,
   type DomainError,
   type IntelligenceSnapshot,
+  type QuestCycleState,
   type RecentQuestSummary,
 } from "../contracts";
 import type { AuthoritativeSessionState, OrchestratorResult } from "./types";
@@ -76,6 +78,14 @@ function failure(code: DomainError["code"], message: string, retryable = false):
   return { ok: false, error: domainErrorSchema.parse({ code, message, retryable }) };
 }
 
+function activeQuestSummary(state: QuestCycleState): string | null {
+  const parsed = questCycleStateSchema.safeParse(state);
+  if (!parsed.success || parsed.data.activeCandidateId === null) return null;
+  const active = parsed.data.options.find(({ candidateId }) => candidateId === parsed.data.activeCandidateId);
+  if (active === undefined) return null;
+  return `${active.title}: ${active.instruction}`.trim().slice(0, 240);
+}
+
 export class Role1InterventionCoordinator {
   constructor(
     private readonly policy: InterventionPolicy,
@@ -128,6 +138,7 @@ export class Role1InterventionCoordinator {
         intelligence: intelligence.data,
         profile: input.state.profile,
         recentQuestTitles: input.recentQuests.map((quest) => quest.title),
+        activeChatXptQuest: activeQuestSummary(input.state.questCycle),
       };
       batch = candidateBatchSchema.parse(await this.candidates.generate(candidateInput, input.signal));
       if (

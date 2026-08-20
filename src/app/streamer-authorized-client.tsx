@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 
 import type { StreamerReadinessView, StreamerViewModel } from "@/core";
 import {
+  PersistentStreamOverlaySurface,
   StudioManagementSurface,
   TwitchConfigSurface,
   TwitchLiveConfigSurface,
@@ -12,7 +13,7 @@ import {
 
 import styles from "./streamer-authorized-client.module.css";
 
-type Surface = "studio" | "config" | "live-config" | "studio-live-config";
+type Surface = "studio" | "config" | "live-config" | "studio-live-config" | "studio-live-director";
 
 interface TwitchAuthorization {
   readonly token: string;
@@ -169,7 +170,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
   }, [token]);
 
   useEffect(() => {
-    if (surface === "studio" || surface === "studio-live-config") return;
+    if (surface === "studio" || surface === "studio-live-config" || surface === "studio-live-director") return;
     let stopped = false;
     let attempts = 0;
     const register = () => {
@@ -199,7 +200,12 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
   }, []);
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
-    if (surface !== "studio" && surface !== "studio-live-config" && latestToken.current === null) return;
+    if (
+      surface !== "studio" &&
+      surface !== "studio-live-config" &&
+      surface !== "studio-live-director" &&
+      latestToken.current === null
+    ) return;
     try {
       const response = await fetch("/api/studio/session", {
         headers: requestHeaders(),
@@ -225,7 +231,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
   }, [requestHeaders, surface]);
 
   useEffect(() => {
-    const active = surface === "studio" || surface === "studio-live-config" || token !== null;
+    const active = surface === "studio" || surface === "studio-live-config" || surface === "studio-live-director" || token !== null;
     if (!active) return;
     const controller = new AbortController();
     const initial = window.setTimeout(() => void refresh(controller.signal), 0);
@@ -373,6 +379,14 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
         pendingCommandId={pendingCommandId}
         commandMessage={commandMessage}
         onCommand={(command) => void dispatchCommand(command)}
+      />
+    );
+  }
+  if (surface === "studio-live-director") {
+    return (
+      <PersistentStreamOverlaySurface
+        view={view}
+        readiness={readiness}
       />
     );
   }

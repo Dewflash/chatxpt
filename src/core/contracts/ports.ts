@@ -53,6 +53,7 @@ export interface CandidateInput {
   readonly intelligence: IntelligenceSnapshot;
   readonly profile: StreamerProfile;
   readonly recentQuestTitles: readonly string[];
+  readonly activeChatXptQuest: string | null;
 }
 
 export interface CandidateProvider {

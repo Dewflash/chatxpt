@@ -33,6 +33,14 @@ function validateRecentQuestTitles(titles: readonly string[]) {
   return [...titles];
 }
 
+function validateActiveChatXptQuest(value: string | null): string | null {
+  if (value === null) return null;
+  if (typeof value !== "string" || value.trim().length === 0 || value.length > 240) {
+    throw new TypeError("activeChatXptQuest must be null or a non-empty summary of at most 240 characters");
+  }
+  return value.trim();
+}
+
 /** Creates the canonical Role 2 intelligence composition boundary. */
 export function createValidatingIntelligenceProvider(): IntelligenceProvider {
   return {
@@ -65,6 +73,7 @@ export function createValidatingCandidateProvider(
         intelligence: intelligenceSnapshotSchema.parse(input.intelligence),
         profile: streamerProfileSchema.parse(input.profile),
         recentQuestTitles: validateRecentQuestTitles(input.recentQuestTitles),
+        activeChatXptQuest: validateActiveChatXptQuest(input.activeChatXptQuest),
       };
       const candidates = await strategy.generate(safeInput, signal);
       throwIfAborted(signal);

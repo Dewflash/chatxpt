@@ -460,7 +460,7 @@ export function TwitchLiveConfigSurface({
         <aside className={styles.dockSetup} aria-label="Private pop-out and OBS Custom Dock setup">
           <strong>Private pop-out or OBS Custom Dock</strong>
           <p>
-            Open the Studio-authorised compact surface in a browser tab, or use that same URL as an OBS Custom Browser Dock after authorising its browser session. It is not the public OBS overlay.
+            Open the Studio-authorised read-only stream context in a browser tab, or use that same URL as an OBS Custom Browser Dock after authorising its browser session. It is not the public OBS overlay.
           </p>
           <a className={styles.studioLink} href={popoutHref} target="_blank" rel="noreferrer">Open private Live Director</a>
         </aside>

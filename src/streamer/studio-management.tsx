@@ -242,7 +242,7 @@ function SavedDefaultsEditor({
               <dd>{view.profile.restrictions.join(", ") || "Core safety policy only"}</dd>
             </div>
           </dl>
-          <p className={styles.contractNote}>Editing waits for the canonical profile-list patch from Role 1.</p>
+          <p className={styles.contractNote}>List persistence uses the canonical profile settings command; full list-editing controls remain the next Studio pass.</p>
         </SettingGroup>
 
         <SettingGroup title="Game & accessibility" badge="Saved · view only">

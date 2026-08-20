@@ -321,7 +321,12 @@ describe("Role 1 application orchestrator", () => {
       issuedAt: ACCEPTED_AT,
       actor: { kind: "broadcaster", actorId: contractFixtureSession.broadcasterId },
       type: "streamer.profile-settings",
+      game: { gameId: "minecraft", gameName: "Minecraft Java Edition" },
       experiencePatch: { intensity: 0.8 },
+      restrictions: ["No wagering", "No elytra challenges"],
+      preferredQuestTypes: ["exploration", "chat-choice"],
+      forbiddenQuestTypes: ["humiliation", "inventory-trash"],
+      accessibilityNeeds: ["high-contrast", "reduced-motion"],
       voting: { voteVisibility: "hidden-until-close" },
       rewards: { rewardDisplay: "session-points" },
     });
@@ -333,6 +338,12 @@ describe("Role 1 application orchestrator", () => {
     expect(engine.calls).toBe(0);
     expect(result.receipt.state.session.revision).toBe(1);
     expect(result.receipt.state.profile.revision).toBe(1);
+    expect(result.receipt.state.profile.gameId).toBe("minecraft");
+    expect(result.receipt.state.profile.gameName).toBe("Minecraft Java Edition");
+    expect(result.receipt.state.profile.restrictions).toEqual(["No wagering", "No elytra challenges"]);
+    expect(result.receipt.state.profile.preferredQuestTypes).toEqual(["exploration", "chat-choice"]);
+    expect(result.receipt.state.profile.forbiddenQuestTypes).toEqual(["humiliation", "inventory-trash"]);
+    expect(result.receipt.state.profile.accessibilityNeeds).toEqual(["high-contrast", "reduced-motion"]);
     expect(result.receipt.state.profile.experience.intensity).toBe(0.8);
     expect(result.receipt.state.profile.voting).toMatchObject({
       voteVisibility: "hidden-until-close",
@@ -350,6 +361,7 @@ describe("Role 1 application orchestrator", () => {
     expect(publisher.published[0]?.streamer.profile.voting.voteVisibility).toBe(
       "hidden-until-close",
     );
+    expect(publisher.published[0]?.streamer.profile.gameName).toBe("Minecraft Java Edition");
   });
 
   it("passes a canonical candidate batch through the engine before persistence and broadcast", async () => {
