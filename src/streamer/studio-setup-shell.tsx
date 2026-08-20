@@ -128,7 +128,7 @@ function evidenceBadge(view: StreamerViewModel | null): {
     case "diagnostic":
       return { label: "Live connection not confirmed", tone: "warning" };
     case "fixture":
-      return { label: "Preview only", tone: "warning" };
+      return { label: "Fixture preview", tone: "warning" };
     default:
       return { label: "No Studio snapshot", tone: "neutral" };
   }
@@ -261,7 +261,7 @@ function ServiceChecklist({ services }: { readonly services: readonly ServiceHea
           })}
         </CardGrid>
       )}
-      <Notice tone="info" title="Actions are unavailable for now">
+      <Notice tone="info" title="Actions are intentionally unavailable in this slice">
         Connect, permission, profile-save, and session controls stay disabled until those setup actions are connected.
       </Notice>
     </section>
@@ -372,8 +372,8 @@ function IntelligenceSummary({ view }: { readonly view: StreamerViewModel }) {
           </div>
         </Card>
       )}
-      <Notice tone="info" title="Sidequest generation status is not reported yet">
-        Sidequest generation details will appear only when the current session supplies that state.
+      <Notice tone="info" title="Quest generation status is not reported yet">
+        Quest generation details will appear only when the current session supplies that state.
       </Notice>
     </section>
   );
@@ -383,7 +383,7 @@ function EmptySnapshot({ loading }: { readonly loading: boolean }) {
   if (loading) {
     return (
       <Card className={styles.emptyState} aria-busy="true">
-        <StatusBadge tone="info">Loading Studio status</StatusBadge>
+        <StatusBadge tone="info">Loading authorised status</StatusBadge>
         <h2>Checking your Studio snapshot</h2>
         <p>ChatXPT is waiting for the latest streamer view.</p>
       </Card>
@@ -435,13 +435,13 @@ export function StudioSetupShell({
         </header>
 
         {view?.envelope.evidenceClass !== "live" ? (
-          <Notice tone="warning" title="Live connection not confirmed">
+          <Notice tone="warning" title="Not live workflow evidence">
             This setup view is not connected to the full live Twitch, Game Capture, AI, persistence, and realtime workflow yet.
           </Notice>
         ) : null}
         {reconnecting ? (
           <Notice tone="warning" title="Reconnecting" politeness="polite">
-            The last Studio state remains visible while Studio requests a fresh snapshot. Actions stay unavailable.
+            The last authorised revision remains visible while Studio requests a fresh snapshot. Actions stay unavailable. Revision {view?.session.revision ?? "unknown"}.
           </Notice>
         ) : null}
 

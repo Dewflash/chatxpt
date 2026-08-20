@@ -209,7 +209,7 @@ function SavedDefaultsEditor({
           <p className={styles.eyebrow}>Profile &amp; defaults</p>
           <h2 id="profile-defaults-heading">Set once, reuse next stream</h2>
         </div>
-        <StatusBadge tone="success">Saved profile</StatusBadge>
+        <StatusBadge tone="success">{`Saved profile · revision ${view.profile.revision}`}</StatusBadge>
       </div>
 
       <CardGrid className={styles.settingsGrid}>
@@ -242,7 +242,7 @@ function SavedDefaultsEditor({
               <dd>{view.profile.restrictions.join(", ") || "Core safety policy only"}</dd>
             </div>
           </dl>
-          <p className={styles.contractNote}>Preference lists are saved; full list editing remains unavailable in this pass.</p>
+          <p className={styles.contractNote}>List persistence uses the canonical profile settings command; full list editing remains unavailable in this pass.</p>
         </SettingGroup>
 
         <SettingGroup title="Game & accessibility" badge="Saved · view only">
@@ -256,7 +256,7 @@ function SavedDefaultsEditor({
               <dd>{view.profile.accessibilityNeeds.join(", ") || "No saved preferences"}</dd>
             </div>
           </dl>
-          <p className={styles.contractNote}>These saved values are visible here; full editing remains unavailable in this pass.</p>
+          <p className={styles.contractNote}>These saved values are visible here; their update command is not public yet.</p>
         </SettingGroup>
 
         <SettingGroup title="Voting" badge="Saved default">
@@ -371,8 +371,8 @@ function SessionOverridePanel({ view }: { readonly view: StreamerViewModel }) {
           <Button variant="ghost" disabled>Reset to saved</Button>
         </div>
       </Panel>
-      <Notice tone="warning" title="Session overrides unavailable">
-        This control stays unavailable until current-stream changes and reset actions are connected. Studio will not pretend browser-only changes are saved.
+      <Notice tone="warning" title="Session override contract required">
+        This control stays unavailable until current-stream changes and reset actions are connected. Studio will not imitate persistence in browser storage.
       </Notice>
     </section>
   );
@@ -688,7 +688,7 @@ export function StudioManagementSurface({
     return (
       <DesignSystemRoot theme={theme} className={styles.surface}>
         <main className={styles.emptyShell}>
-          <Notice title="Loading Studio state" politeness="polite">
+          <Notice title="Loading authorised Studio state" politeness="polite">
             Saved defaults, health, session overrides, and controls remain unavailable until the streamer view loads.
           </Notice>
         </main>

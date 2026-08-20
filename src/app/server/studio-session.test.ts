@@ -50,6 +50,7 @@ function application() {
         TWITCH_CLIENT_SECRET: "client-secret",
         TWITCH_EXTENSION_CLIENT_ID: "extension-client-id",
         TWITCH_EXTENSION_SECRET: EXTENSION_SECRET,
+        TWITCH_EVENTSUB_SECRET: "eventsub-secret",
       },
       now: () => NOW,
       nextId: () => `id-${++id}`,

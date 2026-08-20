@@ -211,6 +211,84 @@ describe("OpenAI-compatible candidate strategy", () => {
     });
   });
 
+  it.each([
+    {
+      label: "stale",
+      confidence: 0.9,
+      observedAtOffset: -3_001,
+      expectedSignalStatus: "stale",
+      expectedFactStatus: "stale",
+    },
+    {
+      label: "low-confidence",
+      confidence: 0.74,
+      observedAtOffset: 0,
+      expectedSignalStatus: "unknown",
+      expectedFactStatus: "unknown",
+    },
+    {
+      label: "future-timestamped",
+      confidence: 0.9,
+      observedAtOffset: 1,
+      expectedSignalStatus: "unknown",
+      expectedFactStatus: "conflicting",
+    },
+  ])("rejects $label provider citations and downgrades their model context", async ({
+    confidence,
+    observedAtOffset,
+    expectedSignalStatus,
+    expectedFactStatus,
+  }) => {
+    const base = await minecraftCandidateInput();
+    const now = base.envelope.occurredAt;
+    const gameplay = gameplaySnapshotSchema.parse({
+      ...base.intelligence.gameplay,
+      signals: base.intelligence.gameplay.signals.map((signal) =>
+        signal.signalId === "minecraft-health-hearts" && signal.observation.status === "known"
+          ? {
+              ...signal,
+              observation: {
+                ...signal.observation,
+                provenance: {
+                  ...signal.observation.provenance,
+                  confidence,
+                  observedAt: now + observedAtOffset,
+                  receivedAt: now + observedAtOffset,
+                },
+              },
+            }
+          : signal),
+    });
+    const input: CandidateInput = {
+      ...base,
+      intelligence: { ...base.intelligence, gameplay },
+    };
+    const requests: Parameters<StructuredCandidateTransport["generate"]>[0][] = [];
+    const strategy = createOpenAICandidateStrategy({
+      providerId: "openai/fixture-model",
+      model: "fixture-model",
+      transport: {
+        async generate(request) {
+          requests.push(request);
+          return { outputText: validOutput("minecraft-health-hearts") };
+        },
+      },
+    });
+
+    await expect(strategy.generate(input)).rejects.toMatchObject({ reason: "malformed" });
+    const context = JSON.parse(requests[0].input) as {
+      gameplaySignals: Array<{ signalId: string; status: string; value?: unknown }>;
+      gameState: { facts: { playerHealth: { status: string; value: unknown } } };
+      minecraft: { gameFacts: { healthHearts: { status: string; value: unknown } } };
+    };
+    expect(context.gameplaySignals.find(({ signalId }) => signalId === "minecraft-health-hearts"))
+      .toMatchObject({ status: expectedSignalStatus });
+    expect(context.gameplaySignals.find(({ signalId }) => signalId === "minecraft-health-hearts"))
+      .not.toHaveProperty("value");
+    expect(context.gameState.facts.playerHealth).toMatchObject({ status: expectedSignalStatus, value: null });
+    expect(context.minecraft.gameFacts.healthHearts).toMatchObject({ status: expectedFactStatus, value: null });
+  });
+
   it("sends a typed Minecraft fact block with known and unknown facts separated", async () => {
     const input = await minecraftCandidateInput();
     const requests: Parameters<StructuredCandidateTransport["generate"]>[0][] = [];

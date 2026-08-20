@@ -23,9 +23,10 @@ import {
   type ServerClock,
   type ViewModelProjector,
 } from "@/core";
-import { createConfiguredCandidateProvider } from "@/ai/server";
+import { createConfiguredCandidateProvider } from "@/ai";
 import {
   createDefaultQuestEngine,
+  DefaultCandidateAssembler,
   DefaultDirectorCueConverter,
   DefaultDirectorCueLifecycle,
   DefaultInterventionPolicy,
@@ -75,6 +76,10 @@ export interface ChatXptServerRuntimeDependencies {
   readonly ids?: MessageIdFactory;
 }
 
+type EligibleCycleProposalResult =
+  | OrchestratorResult
+  | { readonly ok: true; readonly outcome: "not-eligible" };
+
 /** Shared production composition root for persistence and the sole command orchestrator. */
 export class ChatXptServerRuntime {
   readonly persistence: ConfiguredPersistenceRuntime;
@@ -85,6 +90,7 @@ export class ChatXptServerRuntime {
   private readonly projector: ViewModelProjector;
   private readonly clock: ServerClock;
   private readonly ids: MessageIdFactory;
+  private readonly eligibleProposalRequests = new Map<string, Promise<EligibleCycleProposalResult>>();
 
   constructor(dependencies: ChatXptServerRuntimeDependencies) {
     this.persistence = dependencies.persistence;
@@ -289,7 +295,29 @@ export class ChatXptServerRuntime {
   async requestEligibleCycleProposal(
     state: AuthoritativeSessionState,
     projectionContext: ProjectionContextResolver,
-  ): Promise<OrchestratorResult | { readonly ok: true; readonly outcome: "not-eligible" }> {
+  ): Promise<EligibleCycleProposalResult> {
+    if (state.session.status !== "live" || state.gameplay === null) {
+      return { ok: true, outcome: "not-eligible" };
+    }
+    const questCycleId = state.questCycle.envelope.questCycleId;
+    const commandId = `eligible-cycle-proposal-${state.session.sessionId}-${state.session.revision}-${questCycleId ?? "none"}`;
+    const inFlight = this.eligibleProposalRequests.get(commandId);
+    if (inFlight !== undefined) return inFlight;
+    const request = this.executeEligibleCycleProposal(state, projectionContext);
+    this.eligibleProposalRequests.set(commandId, request);
+    try {
+      return await request;
+    } finally {
+      if (this.eligibleProposalRequests.get(commandId) === request) {
+        this.eligibleProposalRequests.delete(commandId);
+      }
+    }
+  }
+
+  private async executeEligibleCycleProposal(
+    state: AuthoritativeSessionState,
+    projectionContext: ProjectionContextResolver,
+  ): Promise<EligibleCycleProposalResult> {
     if (state.session.status !== "live" || state.gameplay === null) {
       return { ok: true, outcome: "not-eligible" };
     }
@@ -356,6 +384,7 @@ export class ChatXptServerRuntime {
     const coordinator = new Role1InterventionCoordinator(
       new DefaultInterventionPolicy(),
       this.candidateProvider,
+      new DefaultCandidateAssembler(),
       this.persistence.candidates,
       {
         execute: (command) => this.execute(command, actor, projectionContext),

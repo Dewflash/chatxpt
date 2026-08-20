@@ -125,6 +125,9 @@ const MINECRAFT_CONTEXT_SIGNAL_MAP = {
 } as const;
 
 const MINECRAFT_CONTEXT_FRESHNESS_MS = 3_000;
+const PROVIDER_MINIMUM_SIGNAL_CONFIDENCE = 0.75;
+const PROVIDER_GAMEPLAY_SIGNAL_FRESHNESS_MS = 3_000;
+const PROVIDER_AUDIENCE_SIGNAL_FRESHNESS_MS = 30_000;
 
 const providerInstructions = `You propose livestream sidequests for ChatXPT.
 Return exactly three meaningfully different options: one lower-risk stabilising option, one skill or tactical option, and one audience/personality option.
@@ -146,14 +149,34 @@ function normalizedSignalValue(signal: NamedSignal): string | number | boolean |
   return value.trim().slice(0, 80);
 }
 
-function signalContext(signal: NamedSignal, now: number): ProviderSignalContext {
+function signalIsEligible(signal: NamedSignal, now: number, maximumAgeMs: number): boolean {
+  const ageMs = now - signal.observation.provenance.observedAt;
+  return signal.observation.status === "known" &&
+    ageMs >= 0 &&
+    ageMs <= maximumAgeMs &&
+    signal.observation.provenance.confidence >= PROVIDER_MINIMUM_SIGNAL_CONFIDENCE;
+}
+
+function signalContext(
+  signal: NamedSignal,
+  now: number,
+  maximumAgeMs: number,
+): ProviderSignalContext {
+  const ageMs = now - signal.observation.provenance.observedAt;
+  const eligible = signalIsEligible(signal, now, maximumAgeMs);
   return {
     signalId: signal.signalId,
     kind: signal.kind,
-    status: signal.observation.status,
-    value: normalizedSignalValue(signal),
+    status: eligible
+      ? "known"
+      : signal.observation.status === "known" && ageMs > maximumAgeMs
+        ? "stale"
+        : signal.observation.status === "known"
+          ? "unknown"
+          : signal.observation.status,
+    value: eligible ? normalizedSignalValue(signal) : undefined,
     confidence: signal.observation.provenance.confidence,
-    ageMs: Math.max(0, now - signal.observation.provenance.observedAt),
+    ageMs,
   };
 }
 
@@ -178,7 +201,7 @@ function minecraftFactFromSignal(input: {
     });
   }
   const observedAt = signal.observation.provenance.observedAt;
-  const ageMs = Math.max(0, now - observedAt);
+  const ageMs = now - observedAt;
   const base = {
     observedAt,
     expiresAt: observedAt + MINECRAFT_CONTEXT_FRESHNESS_MS,
@@ -188,9 +211,25 @@ function minecraftFactFromSignal(input: {
   };
   if (
     signal.observation.status === "known" &&
-    ageMs <= MINECRAFT_CONTEXT_FRESHNESS_MS
+    signalIsEligible(signal, now, MINECRAFT_CONTEXT_FRESHNESS_MS)
   ) {
     return knownMinecraftFact(signal.observation.value, base);
+  }
+  if (signal.observation.status === "known" && ageMs < 0) {
+    return unknownMinecraftFact(
+      "The Minecraft fact is timestamped in the future and cannot support the current AI request.",
+      base,
+      "conflicting",
+    );
+  }
+  if (
+    signal.observation.status === "known" &&
+    signal.observation.provenance.confidence < PROVIDER_MINIMUM_SIGNAL_CONFIDENCE
+  ) {
+    return unknownMinecraftFact(
+      "The Minecraft fact is below the minimum confidence for the current AI request.",
+      base,
+    );
   }
   return unknownMinecraftFact(
     signal.observation.status === "known"
@@ -329,10 +368,12 @@ function providerContext(input: CandidateInput): string {
       supportedSignals: input.intelligence.gameplay.capabilities.supportedSignals,
     },
     gameState,
-    gameplaySignals: input.intelligence.gameplay.signals.map((signal) => signalContext(signal, now)),
+    gameplaySignals: input.intelligence.gameplay.signals.map((signal) =>
+      signalContext(signal, now, PROVIDER_GAMEPLAY_SIGNAL_FRESHNESS_MS)),
     audience: {
       sampleSize: input.intelligence.audience.sampleSize,
-      signals: input.intelligence.audience.signals.map((signal) => signalContext(signal, now)),
+      signals: input.intelligence.audience.signals.map((signal) =>
+        signalContext(signal, now, PROVIDER_AUDIENCE_SIGNAL_FRESHNESS_MS)),
     },
     streamer: {
       experience: input.profile.experience,
@@ -347,11 +388,17 @@ function providerContext(input: CandidateInput): string {
 }
 
 function knownSignalIds(input: CandidateInput): ReadonlySet<string> {
-  return new Set(
-    [...input.intelligence.gameplay.signals, ...input.intelligence.audience.signals]
-      .filter(({ observation }) => observation.status === "known")
-      .map(({ signalId }) => signalId),
-  );
+  const now = input.envelope.occurredAt;
+  const known = new Set<string>();
+  for (const [signals, maximumAgeMs] of [
+    [input.intelligence.gameplay.signals, PROVIDER_GAMEPLAY_SIGNAL_FRESHNESS_MS],
+    [input.intelligence.audience.signals, PROVIDER_AUDIENCE_SIGNAL_FRESHNESS_MS],
+  ] as const) {
+    for (const signal of signals) {
+      if (signalIsEligible(signal, now, maximumAgeMs)) known.add(signal.signalId);
+    }
+  }
+  return known;
 }
 
 function candidateConfidence(sourceSignalIds: readonly string[]): number {

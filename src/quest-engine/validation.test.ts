@@ -482,4 +482,45 @@ describe("DefaultCandidateAssembler", () => {
     expect(result.audit).toHaveLength(fallbackTitles.length);
     expect(result.audit.every((entry) => entry.issues.some(({ code }) => code === "recently-repeated"))).toBe(true);
   });
+
+  it("reports Minecraft fallback exhaustion instead of appending generic filler", () => {
+    const minecraftFallbackTitles = [
+      "Next Goal Check",
+      "Chat Chooses the Vibe",
+      "Explain the Choice",
+      "Teach the Moment",
+      "Blocky Recap",
+    ];
+    const result = new DefaultCandidateAssembler().assemble(
+      assemblyInput({
+        candidates: [],
+        profile: streamerProfileSchema.parse({
+          ...profile,
+          gameId: "minecraft",
+          gameName: "Minecraft Java Edition",
+        }),
+        recentQuests: minecraftFallbackTitles.map((title, index) => ({
+          title,
+          occurredAt: ROLE_3_FIXTURE_TIME - index * 1_000,
+        })),
+      }),
+    );
+
+    expect(result).toMatchObject({ ok: false, code: "fallback-exhausted" });
+    if (result.ok) return;
+    expect(result.audit).toHaveLength(minecraftFallbackTitles.length);
+    expect(result.audit.every(({ source }) => source === "fallback")).toBe(true);
+    expect(result.audit.map(({ candidateId }) => candidateId)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("minecraft-next-goal"),
+        expect.stringContaining("minecraft-audience-route"),
+        expect.stringContaining("minecraft-choice-explain"),
+        expect.stringContaining("minecraft-teach-moment"),
+        expect.stringContaining("minecraft-recap"),
+      ]),
+    );
+    expect(result.audit.map(({ candidateId }) => candidateId).join(" ")).not.toMatch(
+      /fallback-(?:plan-out-loud|caster-mode|calm-focus)-/u,
+    );
+  });
 });

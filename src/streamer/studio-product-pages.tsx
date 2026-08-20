@@ -767,7 +767,7 @@ function TestLabPage() {
   );
 }
 
-function PageBody({ page, view, readiness }: {
+function PageBody({ page, view, readiness, pending, onCommand, commandFactory }: {
   readonly page: StudioProductPage;
   readonly view: StreamerViewModel | null;
   readonly readiness?: StreamerReadinessView | null;

@@ -17,6 +17,7 @@ import {
   streamerViewModelSchema,
   audienceSnapshotSchema,
   gameplaySnapshotSchema,
+  intelligenceSnapshotSchema,
   liveDirectorStateSchema,
   timestampSchema,
   viewerViewModelSchema,

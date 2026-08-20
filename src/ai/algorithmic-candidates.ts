@@ -211,10 +211,7 @@ function orderedTemplates(input: CandidateInput): readonly AlgorithmicTemplate[]
   if (!isMinecraftInput(input)) {
     return rotate(algorithmicTemplates, hash(seed));
   }
-  return [
-    ...rotate(minecraftAlgorithmicTemplates, hash(`${seed}:minecraft`)),
-    ...rotate(algorithmicTemplates, hash(`${seed}:generic`)),
-  ];
+  return rotate(minecraftAlgorithmicTemplates, hash(`${seed}:minecraft`));
 }
 
 export function createAlgorithmicCandidateStrategy(): CandidateGenerationStrategy {

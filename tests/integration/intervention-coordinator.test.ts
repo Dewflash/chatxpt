@@ -20,6 +20,7 @@ import {
   contractFixtureQuestCycle,
   contractFixtureSession,
 } from "../../src/core/testing";
+import { DefaultCandidateAssembler } from "../../src/quest-engine";
 import { persistenceState } from "./persistence-fixtures";
 
 const NOW = contractFixtureEnvelope.occurredAt + 1_000;
@@ -67,6 +68,7 @@ describe("Role 1 intervention coordinator", () => {
     const coordinator = new Role1InterventionCoordinator(
       policy,
       provider,
+      new DefaultCandidateAssembler(),
       { store: async (batch) => void stored.push(batch) },
       {
         execute: async (command) => {
@@ -103,7 +105,7 @@ describe("Role 1 intervention coordinator", () => {
     expect(executed).toHaveLength(0);
   });
 
-  it("generates, stores, and submits an intelligence-ready command only after intervention is allowed", async () => {
+  it("generates, Role 3-validates, stores, and submits only after intervention is allowed", async () => {
     const state = persistenceState();
     const policy = new StaticPolicy({
       shouldPropose: true,
@@ -117,6 +119,7 @@ describe("Role 1 intervention coordinator", () => {
     const coordinator = new Role1InterventionCoordinator(
       policy,
       provider,
+      new DefaultCandidateAssembler(),
       { store: async (batch) => void stored.push(batch) },
       {
         execute: async (command) => {
@@ -165,12 +168,18 @@ describe("Role 1 intervention coordinator", () => {
       profile: { profileId: state.profile.profileId },
       recentQuestTitles: ["Old quest"],
     });
-    expect(stored).toEqual([contractFixtureCandidateBatch]);
+    expect(stored).toHaveLength(1);
+    expect(stored[0].candidates).toHaveLength(3);
+    expect(stored[0].candidates.every(({ generation }) => generation.method === "deterministic-fallback"))
+      .toBe(true);
+    expect(result).toMatchObject({
+      candidateBatch: { candidates: stored[0].candidates },
+    });
     const command = systemIntelligenceCommandSchema.parse(executed[0]);
     expect(command).toMatchObject({
       commandId: "fixture-intelligence-command",
       expectedRevision: 0,
-      candidateBatchId: contractFixtureCandidateBatch.envelope.messageId,
+      candidateBatchId: stored[0].envelope.messageId,
       actor: { kind: "system", actorId: "fixture-orchestrator" },
     });
   });
@@ -206,6 +215,7 @@ describe("Role 1 intervention coordinator", () => {
     const coordinator = new Role1InterventionCoordinator(
       policy,
       provider,
+      new DefaultCandidateAssembler(),
       { store: async () => undefined },
       {
         execute: async () => ({

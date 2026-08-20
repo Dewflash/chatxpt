@@ -217,6 +217,7 @@ export function StudioGameplayCaptureClient() {
   async function start(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (running || view === null) return;
+    const sessionId = view.session.sessionId;
     const data = new FormData(event.currentTarget);
     const setupKey = String(data.get("gameplaySetupKey") ?? "");
     const controller = new AbortController();
@@ -241,7 +242,7 @@ export function StudioGameplayCaptureClient() {
         },
         cache: "no-store",
         signal: controller.signal,
-        body: JSON.stringify({ sessionId: view.session.sessionId }),
+        body: JSON.stringify({ sessionId }),
       });
       const payload = (await response.json()) as GameplayIngressPayload;
       if (!response.ok || !payload.ok || payload.grant === undefined) {

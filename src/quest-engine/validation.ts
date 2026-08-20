@@ -693,10 +693,7 @@ function sortedFallbacks(
 
 function selectedFallbackLibrary(input: CandidateAssemblyInput): readonly FallbackDefinition[] {
   if (!isMinecraftAssembly(input)) return sortedFallbacks(fallbackLibrary, input.seed);
-  return [
-    ...sortedFallbacks(minecraftFallbackLibrary, `${input.seed}:minecraft`),
-    ...sortedFallbacks(fallbackLibrary, `${input.seed}:generic`),
-  ];
+  return sortedFallbacks(minecraftFallbackLibrary, `${input.seed}:minecraft`);
 }
 
 function fallbackCandidate(definition: FallbackDefinition, input: CandidateAssemblyInput): QuestCandidate {

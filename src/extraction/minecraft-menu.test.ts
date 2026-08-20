@@ -65,10 +65,11 @@ function sleepingFrame(): SampledPixelFrame {
 }
 
 describe("Minecraft menu-state detector", () => {
-  it("detects a centered inventory-like panel", () => {
+  it("detects a centered inventory-or-crafting panel without inventing the exact screen", () => {
     expect(detectMinecraftMenuState(inventoryFrame())).toMatchObject({
-      status: "known",
-      value: "inventory",
+      status: "unknown",
+      value: null,
+      reason: expect.stringContaining("cannot distinguish"),
     });
   });
 

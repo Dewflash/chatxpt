@@ -788,7 +788,7 @@ describe("canonical multi-game snapshot projection", () => {
       .toMatchObject({ status: "known", value: "block" });
   });
 
-  it("detects recent Minecraft health drops without inventing danger cause", () => {
+  it("requires a repeated lower-health observation before detecting damage", () => {
     const analyzer = new MultiGameVisionAnalyzer();
     analyzer.analyse({
       frame: vanillaLikeMinecraftFrame(),
@@ -800,13 +800,27 @@ describe("canonical multi-game snapshot projection", () => {
       observedAt: 1_200,
       selection: selection("minecraft"),
     });
-    const assessment = analyzer.analyse({
+    const oneFrameChange = analyzer.analyse({
       frame: lowerHealthMinecraftFrame(),
       observedAt: 1_400,
       selection: selection("minecraft"),
     });
-    const snapshot = buildMultiGameGameplaySnapshot({
+    const oneFrameSnapshot = buildMultiGameGameplaySnapshot({
       frame: observation(5, 1_400),
+      assessment: oneFrameChange,
+    });
+    expect(oneFrameSnapshot.capabilities.supportedSignals).not.toContain("minecraft-health-hearts");
+    expect(oneFrameSnapshot.capabilities.supportedSignals).not.toContain("minecraft-recent-damage");
+    expect(oneFrameSnapshot.signals.find(({ signalId }) => signalId === "minecraft-health-hearts")?.observation)
+      .toMatchObject({ status: "unknown" });
+
+    const assessment = analyzer.analyse({
+      frame: lowerHealthMinecraftFrame(),
+      observedAt: 1_600,
+      selection: selection("minecraft"),
+    });
+    const snapshot = buildMultiGameGameplaySnapshot({
+      frame: observation(6, 1_600),
       assessment,
     });
 

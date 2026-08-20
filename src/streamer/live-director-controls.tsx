@@ -166,7 +166,7 @@ function DirectorCueCard({
             ))}
           </div>
           <small>
-            Turn into vote prepares exactly three private quest options for approval before viewers can see them.
+            Turn into vote prepares exactly three private quest options for approval before viewers can see them; it does not publish candidates by itself.
           </small>
         </>
       ) : (
