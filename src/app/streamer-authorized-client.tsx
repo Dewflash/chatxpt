@@ -6,14 +6,28 @@ import type { StreamerReadinessView, StreamerViewModel } from "@/core";
 import {
   PersistentStreamOverlaySurface,
   StudioManagementSurface,
+  StudioProductPageSurface,
   TwitchConfigSurface,
   TwitchLiveConfigSurface,
+  type StudioProductPage,
   type StreamerUiCommand,
 } from "@/streamer";
 
 import styles from "./streamer-authorized-client.module.css";
 
-type Surface = "studio" | "config" | "live-config" | "studio-live-config" | "studio-live-director";
+type Surface =
+  | "studio"
+  | "studio-home"
+  | "studio-gameplay"
+  | "studio-live-analytics"
+  | "studio-live-quests"
+  | "studio-profile"
+  | "studio-stream-settings"
+  | "studio-test-lab"
+  | "config"
+  | "live-config"
+  | "studio-live-config"
+  | "studio-live-director";
 
 interface TwitchAuthorization {
   readonly token: string;
@@ -49,6 +63,23 @@ interface ObsDescriptorPayload {
   };
   readonly expiresAt?: number;
   readonly error?: { readonly message?: string };
+}
+
+const studioProductPages: Readonly<Record<string, StudioProductPage>> = {
+  "studio-home": "home",
+  "studio-gameplay": "gameplay",
+  "studio-live-analytics": "live-analytics",
+  "studio-live-quests": "live-quests",
+  "studio-profile": "profile",
+  "studio-stream-settings": "stream-settings",
+  "studio-test-lab": "test-lab",
+};
+
+function isStudioAuthenticatedSurface(surface: Surface): boolean {
+  return surface === "studio" ||
+    surface === "studio-live-config" ||
+    surface === "studio-live-director" ||
+    surface in studioProductPages;
 }
 
 function StudioCaptureAndOverlaySetup({ sessionId }: { readonly sessionId: string }) {
@@ -170,7 +201,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
   }, [token]);
 
   useEffect(() => {
-    if (surface === "studio" || surface === "studio-live-config" || surface === "studio-live-director") return;
+    if (isStudioAuthenticatedSurface(surface)) return;
     let stopped = false;
     let attempts = 0;
     const register = () => {
@@ -200,12 +231,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
   }, []);
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
-    if (
-      surface !== "studio" &&
-      surface !== "studio-live-config" &&
-      surface !== "studio-live-director" &&
-      latestToken.current === null
-    ) return;
+    if (!isStudioAuthenticatedSurface(surface) && latestToken.current === null) return;
     try {
       const response = await fetch("/api/studio/session", {
         headers: requestHeaders(),
@@ -215,7 +241,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       });
       const payload = (await response.json()) as SurfacePayload;
       if (!response.ok || !payload.ok || payload.view === undefined || payload.readiness === undefined) {
-        if (surface === "studio" && response.status === 401) setRequiresBootstrap(true);
+        if ((surface === "studio" || surface === "studio-home") && response.status === 401) setRequiresBootstrap(true);
         setError(payload.error?.message ?? "Authoritative streamer state is unavailable.");
         return;
       }
@@ -231,7 +257,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
   }, [requestHeaders, surface]);
 
   useEffect(() => {
-    const active = surface === "studio" || surface === "studio-live-config" || surface === "studio-live-director" || token !== null;
+    const active = isStudioAuthenticatedSurface(surface) || token !== null;
     if (!active) return;
     const controller = new AbortController();
     const initial = window.setTimeout(() => void refresh(controller.signal), 0);
@@ -311,7 +337,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
     }
   }, [refresh, requestHeaders]);
 
-  if (surface === "studio" && requiresBootstrap && view === null) {
+  if ((surface === "studio" || surface === "studio-home") && requiresBootstrap && view === null) {
     return (
       <main className={styles.bootstrap}>
         <section className={styles.bootstrapCard}>
@@ -357,6 +383,17 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
   }
 
   const commandMessage = error ?? message;
+  const productPage = studioProductPages[surface];
+  if (productPage !== undefined) {
+    return (
+      <StudioProductPageSurface
+        page={productPage}
+        view={view}
+        readiness={readiness}
+        commandMessage={commandMessage}
+      />
+    );
+  }
   if (surface === "config") {
     return (
       <TwitchConfigSurface

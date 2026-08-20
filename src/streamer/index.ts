@@ -20,6 +20,8 @@ export { StudioStatusSurface } from "./studio-status";
 export type { StudioStatusSurfaceProps } from "./studio-status";
 export { StudioManagementSurface } from "./studio-management";
 export type { StudioManagementSurfaceProps } from "./studio-management";
+export { StudioProductPageSurface } from "./studio-product-pages";
+export type { StudioProductPage, StudioProductPageSurfaceProps } from "./studio-product-pages";
 export { TwitchConfigSurface, TwitchLiveConfigSurface } from "./twitch-config";
 export { LiveDirectorControls } from "./live-director-controls";
 export { PersistentStreamOverlaySurface } from "./persistent-stream-overlay";
