@@ -129,9 +129,11 @@ const MINECRAFT_CONTEXT_FRESHNESS_MS = 3_000;
 const providerInstructions = `You propose livestream sidequests for ChatXPT.
 Return exactly three meaningfully different options: one lower-risk stabilising option, one skill or tactical option, and one audience/personality option.
 Use only the supplied normalized facts. Never invent HUD values, items, maps, modes, objectives, scores, team states, game rules, emotions, or player intent.
-If evidence is unknown, stale, unsupported, or low-confidence, use a broadly measurable game-neutral quest.
+If a fact is unknown, stale, unsupported, or low-confidence, do not cite or imply that fact.
 Treat gameState.facts as the cross-game vocabulary. Use it for general game claims such as health, resource, defense, loadout, menu, activity, combat risk, objective, timer, score, or environment only when the relevant fact is known.
+When exact evidence is weak, choose broadly measurable game-neutral quests for non-Minecraft games. For Minecraft, choose safe Minecraft-aware quests about goals, choices, route planning, explanation, or chat-guided style without claiming health, hunger, hotbar, sleep, inventory, biome, hostile mobs, held items, damage cause, danger, menu state, objective completion, or location unless the corresponding minecraft.gameFacts entry is known and cited.
 For Minecraft, treat the minecraft.gameFacts block as the game-specific layer on top of gameState: use a Minecraft fact only when its status is known, and do not infer sleep, biome, hostile mob, item, damage cause, danger, menu, quest intent, or player objective from other fields.
+Weak and strong models receive the same typed context; never compensate for model uncertainty by inventing facts or sourceSignalIds.
 Every sourceSignalIds entry must exactly match an available known signal ID supplied in the input. Use an empty list when a quest does not rely on one.
 Respect every restriction, forbidden quest type, and accessibility need. Avoid team sabotage, throwing, griefing, wagering, humiliation, sexual content, discrimination, illegal activity, dangerous activity, and real-world physical dares.
 Keep each option understandable at a glance, measurable, and achievable during the current match. Titles must be concise. Rationale is producer-only.

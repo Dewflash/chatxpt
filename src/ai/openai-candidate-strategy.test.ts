@@ -245,6 +245,15 @@ describe("OpenAI-compatible candidate strategy", () => {
     };
     expect(requests[0].instructions).toContain("minecraft.gameFacts");
     expect(requests[0].instructions).toContain("gameState.facts");
+    expect(requests[0].instructions).toContain(
+      "For Minecraft, choose safe Minecraft-aware quests about goals, choices, route planning, explanation, or chat-guided style",
+    );
+    expect(requests[0].instructions).toContain(
+      "Weak and strong models receive the same typed context",
+    );
+    expect(requests[0].instructions).not.toContain(
+      "If evidence is unknown, stale, unsupported, or low-confidence, use a broadly measurable game-neutral quest.",
+    );
     expect(context.gameState).toMatchObject({
       schemaVersion: "generic-game-state-v1",
       gameSpecificContext: "minecraft",
