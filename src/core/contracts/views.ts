@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { contractEnvelopeSchema, identifierSchema, serviceHealthSchema } from "./common";
 import { streamerProfileSchema } from "./profile";
-import { questCycleStateSchema } from "./quests";
+import { publicQuestCycleStateSchema, questCycleStateSchema } from "./quests";
 import { participationCapabilitiesSchema, streamSessionSchema } from "./session";
 import {
   audienceSnapshotSchema,
@@ -100,7 +100,7 @@ export const viewerViewModelSchema = z
     sessionPoints: z.number().int().nonnegative(),
     communityHype: z.number().int().nonnegative(),
     acceptedCandidateId: identifierSchema.nullable(),
-    questCycle: questCycleStateSchema,
+    questCycle: publicQuestCycleStateSchema,
     connection: serviceHealthSchema,
     liveDirector: viewerLiveDirectorProjectionSchema.nullable().optional(),
   })
@@ -160,7 +160,7 @@ export const overlayViewModelSchema = z
     session: streamSessionSchema,
     readOnly: z.literal(true),
     communityHype: z.number().int().nonnegative(),
-    questCycle: questCycleStateSchema,
+    questCycle: publicQuestCycleStateSchema,
     connection: serviceHealthSchema,
   })
   .strict()

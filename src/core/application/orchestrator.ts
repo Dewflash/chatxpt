@@ -7,6 +7,7 @@ import {
   directorCueSchema,
   domainErrorSchema,
   overlayViewModelSchema,
+  publicQuestCycleStateSchema,
   questCycleStateSchema,
   questEngineEventDraftSchema,
   questEngineEventSchema,
@@ -142,6 +143,7 @@ function authoritativeDecision(
   current: AuthoritativeSessionState,
   decision: QuestEngineDecision,
   acceptedAt: number,
+  liveDirectorOverride?: NonNullable<AuthoritativeSessionState["liveDirector"]>,
 ): { state: AuthoritativeSessionState; events: AcceptedCommandReceipt["events"] } | DomainError {
   const parsedDecision = questCycleStateSchema.safeParse(decision.nextState);
   if (!parsedDecision.success) {
@@ -180,6 +182,7 @@ function authoritativeDecision(
           ? false
           : current.emergencyPaused,
     recentQuests: updatedRecentQuestSummaries(current, parsedEvents.data, acceptedAt),
+    ...(liveDirectorOverride === undefined ? {} : { liveDirector: liveDirectorOverride }),
   };
   const events = [];
   for (const event of parsedEvents.data) {
@@ -394,14 +397,18 @@ function validateViews(views: RoleViewModels, envelope: ContractEnvelope): RoleV
       return error("internal", "Projected view envelope does not match authoritative state", true);
     }
   }
+  const publicQuestCycle = publicQuestCycleStateSchema.safeParse(parsed.streamer.data.questCycle);
+  if (!publicQuestCycle.success) {
+    return error("internal", "Streamer quest state cannot be projected publicly", true);
+  }
   if (
     canonicalJsonStringify(parsed.streamer.data.session) !==
       canonicalJsonStringify(parsed.viewer.data.session) ||
     canonicalJsonStringify(parsed.streamer.data.session) !==
       canonicalJsonStringify(parsed.overlay.data.session) ||
-    canonicalJsonStringify(parsed.streamer.data.questCycle) !==
+    canonicalJsonStringify(publicQuestCycle.data) !==
       canonicalJsonStringify(parsed.viewer.data.questCycle) ||
-    canonicalJsonStringify(parsed.streamer.data.questCycle) !==
+    canonicalJsonStringify(publicQuestCycle.data) !==
       canonicalJsonStringify(parsed.overlay.data.questCycle)
   ) {
     return error("internal", "Projected role views disagree on authoritative state", true);
@@ -785,14 +792,76 @@ export class ChatXptOrchestrator {
       if (!liveDirector.success) {
         return { ok: false, error: error("internal", "Director Cue transition violated Live Director state") };
       }
-      authoritative = authoritativeLiveDirectorUpdate(
-        this.dependencies,
-        command,
-        current,
-        acceptedAt,
-        liveDirector.data,
-        parsedEvents.data[0],
-      );
+      if (command.action === "turn-into-vote") {
+        if (this.dependencies.directorCueProposals === undefined) {
+          return {
+            ok: false,
+            error: error(
+              "dependency-unavailable",
+              "Director Cue proposal composition is unavailable; no quest proposal was published",
+              true,
+            ),
+          };
+        }
+        let untrustedProposal: unknown;
+        try {
+          untrustedProposal = await this.dependencies.directorCueProposals.propose({
+            current,
+            liveDirector: liveDirector.data,
+            command,
+            now: acceptedAt,
+          });
+        } catch {
+          return {
+            ok: false,
+            error: error("internal", "Director Cue proposal composition failed unexpectedly", true),
+          };
+        }
+        if (
+          typeof untrustedProposal !== "object" ||
+          untrustedProposal === null ||
+          !("ok" in untrustedProposal) ||
+          typeof untrustedProposal.ok !== "boolean"
+        ) {
+          return { ok: false, error: error("internal", "Director Cue proposal returned an invalid result") };
+        }
+        if (!untrustedProposal.ok) {
+          const parsedError = domainErrorSchema.safeParse(
+            (untrustedProposal as { readonly error?: unknown }).error,
+          );
+          return {
+            ok: false,
+            error: parsedError.success
+              ? parsedError.data
+              : error("internal", "Director Cue proposal returned an invalid error"),
+          };
+        }
+        const proposalDecision = (untrustedProposal as { readonly decision?: QuestEngineDecision })
+          .decision;
+        if (proposalDecision === undefined) {
+          return { ok: false, error: error("internal", "Director Cue proposal omitted its decision") };
+        }
+        authoritative = authoritativeDecision(
+          this.dependencies,
+          command,
+          current,
+          {
+            nextState: proposalDecision.nextState,
+            events: [...parsedEvents.data, ...proposalDecision.events],
+          },
+          acceptedAt,
+          liveDirector.data,
+        );
+      } else {
+        authoritative = authoritativeLiveDirectorUpdate(
+          this.dependencies,
+          command,
+          current,
+          acceptedAt,
+          liveDirector.data,
+          parsedEvents.data[0],
+        );
+      }
     } else {
       let untrustedEngineResult: unknown;
       if (command.type === "streamer.emergency-clear") {

@@ -7,12 +7,18 @@ import {
   ChatXptOrchestrator,
   type MessageIdFactory,
   type DirectorCueLifecycle,
+  type DirectorCueProposalCoordinator,
   type ProjectionContextResolver,
   type QuestEngine,
   type ServerClock,
   type ViewModelProjector,
 } from "@/core";
-import { createDefaultQuestEngine, DefaultDirectorCueLifecycle } from "@/quest-engine";
+import { createConfiguredCandidateProvider } from "@/ai/server";
+import {
+  createDefaultQuestEngine,
+  DefaultDirectorCueLifecycle,
+  DefaultLiveDirectorProposalCoordinator,
+} from "@/quest-engine";
 import {
   ServerCommandAuthorizer,
   bindPersistenceRuntime,
@@ -43,6 +49,7 @@ export interface ChatXptServerRuntimeDependencies {
   readonly persistence: ConfiguredPersistenceRuntime;
   readonly engine?: QuestEngine;
   readonly directorCues?: DirectorCueLifecycle;
+  readonly directorCueProposals?: DirectorCueProposalCoordinator;
   readonly projector?: ViewModelProjector;
   readonly clock?: ServerClock;
   readonly ids?: MessageIdFactory;
@@ -53,6 +60,7 @@ export class ChatXptServerRuntime {
   readonly persistence: ConfiguredPersistenceRuntime;
   private readonly engine: QuestEngine;
   private readonly directorCues: DirectorCueLifecycle;
+  private readonly directorCueProposals: DirectorCueProposalCoordinator;
   private readonly projector: ViewModelProjector;
   private readonly clock: ServerClock;
   private readonly ids: MessageIdFactory;
@@ -61,6 +69,9 @@ export class ChatXptServerRuntime {
     this.persistence = dependencies.persistence;
     this.engine = dependencies.engine ?? createDefaultQuestEngine();
     this.directorCues = dependencies.directorCues ?? new DefaultDirectorCueLifecycle();
+    this.directorCueProposals =
+      dependencies.directorCueProposals ??
+      new DefaultLiveDirectorProposalCoordinator(createConfiguredCandidateProvider().provider);
     this.projector = dependencies.projector ?? new CanonicalViewProjector();
     this.clock = dependencies.clock ?? { now: Date.now };
     this.ids = dependencies.ids ?? new RuntimeMessageIds();
@@ -81,6 +92,7 @@ export class ChatXptServerRuntime {
           authorizer,
           engine: this.engine,
           directorCues: this.directorCues,
+          directorCueProposals: this.directorCueProposals,
           projectionContext,
           projector: this.projector,
           clock: this.clock,
