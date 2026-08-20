@@ -15,6 +15,7 @@ import {
   streamerViewModelSchema,
   type AuthoritativeSessionState,
   type ProjectionContextResolver,
+  type SessionHistorySnapshot,
   type StreamerReadinessView,
   type StreamerViewModel,
 } from "@/core";
@@ -82,6 +83,7 @@ export class StudioSessionApplicationError extends Error {
 export interface StudioSurfaceState {
   readonly view: StreamerViewModel;
   readonly readiness: StreamerReadinessView;
+  readonly history: SessionHistorySnapshot | null;
   readonly roomCode: string | null;
 }
 
@@ -521,6 +523,16 @@ export class StudioSessionApplication {
       // The stored state remains safe to render while Capture Health reports the missing input.
     }
     const at = this.now();
+    let history: SessionHistorySnapshot | null = null;
+    try {
+      history = await this.persistence.sessionHistory.readSessionHistory({
+        broadcasterId: state.session.broadcasterId,
+        at,
+        limit: 25,
+      });
+    } catch {
+      // History is optional P1 data. Keep the current session and controls available on read failure.
+    }
     const envelope = {
       contractVersion: CONTRACT_VERSION,
       sessionId: state.session.sessionId,
@@ -547,6 +559,7 @@ export class StudioSessionApplication {
     return {
       view,
       readiness: await this.readiness(state, twitchVerified, at),
+      history,
       roomCode:
         (await this.persistence.hostedBoardSessions.findHostedBoardSessionBySessionId(
           state.session.sessionId,

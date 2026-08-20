@@ -18,6 +18,8 @@ import {
 import type {
   QuestCandidate,
   ServiceHealth,
+  SessionHistoryEntry,
+  SessionHistorySnapshot,
   StreamerQuestAction,
   StreamerReadinessView,
   StreamerSetupAction,
@@ -47,6 +49,7 @@ import styles from "./studio-management.module.css";
 export interface StudioManagementSurfaceProps {
   readonly view: StreamerViewModel | null;
   readonly readiness?: StreamerReadinessView | null;
+  readonly history?: SessionHistorySnapshot | null;
   readonly theme?: DesignSystemTheme;
   readonly pendingCommandId?: string | null;
   readonly commandMessage?: string | null;
@@ -108,6 +111,29 @@ function healthLabel(status: ServiceHealth["status"]): string {
     misconfigured: "Needs setup",
   };
   return labels[status];
+}
+
+function historyOutcomeTone(outcome: SessionHistoryEntry["outcome"]): StatusTone {
+  if (outcome === "succeeded") return "success";
+  if (outcome === "failed") return "danger";
+  if (outcome === "cancelled") return "warning";
+  return "neutral";
+}
+
+function formatHistoryTimestamp(timestamp: number): string {
+  return `${new Intl.DateTimeFormat("en-SG", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(timestamp)} UTC`;
+}
+
+function formatDuration(seconds: number | null): string {
+  if (seconds === null) return "Not recorded";
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return remainingSeconds === 0 ? `${minutes}m` : `${minutes}m ${remainingSeconds}s`;
 }
 
 function findReadinessService(
@@ -373,6 +399,151 @@ function SessionOverridePanel({ view }: { readonly view: StreamerViewModel }) {
       </Panel>
       <Notice tone="warning" title="Session override contract required">
         The control stays unavailable until Role 1 publishes an effective-value source, session patch, and clear action. Studio will not imitate persistence in browser storage.
+      </Notice>
+    </section>
+  );
+}
+
+function SessionHistorySection({
+  history,
+}: {
+  readonly history?: SessionHistorySnapshot | null;
+}) {
+  if (history === undefined) {
+    return (
+      <section className={styles.section} aria-labelledby="history-heading">
+        <div className={styles.sectionHeading}>
+          <div>
+            <p className={styles.eyebrow}>History</p>
+            <h2 id="history-heading">History &amp; post-stream summary</h2>
+          </div>
+          <StatusBadge tone="neutral">Host not connected</StatusBadge>
+        </div>
+        <Notice tone="warning" title="History is not connected by this host">
+          Live controls remain available. Studio will not derive outcomes or engagement from the current screen.
+        </Notice>
+      </section>
+    );
+  }
+
+  if (history === null) {
+    return (
+      <section className={styles.section} aria-labelledby="history-heading">
+        <div className={styles.sectionHeading}>
+          <div>
+            <p className={styles.eyebrow}>History</p>
+            <h2 id="history-heading">History &amp; post-stream summary</h2>
+          </div>
+          <StatusBadge tone="warning">Temporarily unavailable</StatusBadge>
+        </div>
+        <Notice tone="warning" title="History temporarily unavailable">
+          The authoritative history reader could not respond. Current session controls and saved defaults remain unaffected.
+        </Notice>
+      </section>
+    );
+  }
+
+  const { summary } = history;
+  const successRate = summary.totalQuestCycles === 0
+    ? null
+    : Math.round((summary.succeeded / summary.totalQuestCycles) * 100);
+  const evidenceLabel = history.evidenceClass === "live"
+    ? "Authoritative history"
+    : history.evidenceClass === "diagnostic"
+      ? "Diagnostic history"
+      : "Fixture history";
+
+  return (
+    <section className={styles.section} aria-labelledby="history-heading">
+      <div className={styles.sectionHeading}>
+        <div>
+          <p className={styles.eyebrow}>History</p>
+          <h2 id="history-heading">History &amp; post-stream summary</h2>
+        </div>
+        <StatusBadge tone={history.evidenceClass === "live" ? "success" : "diagnostic"}>
+          {evidenceLabel}
+        </StatusBadge>
+      </div>
+
+      <Panel className={styles.historySummary}>
+        <div className={styles.historySummaryHeading}>
+          <div>
+            <strong>Recent sidequest outcomes</strong>
+            <p>{`Latest ${history.entries.length} of up to ${history.limit} terminal sidequests`}</p>
+          </div>
+          <small>{`Generated ${formatHistoryTimestamp(history.generatedAt)}`}</small>
+        </div>
+        <dl className={styles.historyMetrics} aria-label="Post-stream summary metrics">
+          <div>
+            <dt>Sidequests</dt>
+            <dd>{summary.totalQuestCycles}</dd>
+          </div>
+          <div>
+            <dt>Successes</dt>
+            <dd>
+              {summary.succeeded}
+              <small>{successRate === null ? "No outcomes yet" : `${successRate}% success rate`}</small>
+            </dd>
+          </div>
+          <div>
+            <dt>Accepted votes</dt>
+            <dd>{summary.totalAcceptedVotes}</dd>
+          </div>
+          <div>
+            <dt>Reward points</dt>
+            <dd>{summary.totalRewardPointsAwarded}</dd>
+          </div>
+          <div>
+            <dt>Average completion</dt>
+            <dd>{formatDuration(summary.averageCompletionSeconds)}</dd>
+          </div>
+        </dl>
+      </Panel>
+
+      {history.entries.length === 0 ? (
+        <Notice title="No completed sidequests yet">
+          Completed, skipped, cancelled, failed, or expired sidequests will appear here after the authoritative runtime records their outcome.
+        </Notice>
+      ) : (
+        <ol className={styles.historyList} aria-label="Recent sidequest outcomes">
+          {history.entries.map((entry) => (
+            <li key={`${entry.sessionId}:${entry.questCycleId}:${entry.sessionRevision}`}>
+              <Card className={styles.historyCard}>
+                <div className={styles.historyCardHeading}>
+                  <div>
+                    <small>{formatHistoryTimestamp(entry.endedAt)}</small>
+                    <h3>{entry.title ?? "Untitled sidequest"}</h3>
+                  </div>
+                  <div className={styles.badgeRow}>
+                    <StatusBadge tone={historyOutcomeTone(entry.outcome)}>{titleCase(entry.outcome)}</StatusBadge>
+                    <StatusBadge tone={entry.evidenceClass === "live" ? "success" : "diagnostic"}>
+                      {`${titleCase(entry.evidenceClass)} evidence`}
+                    </StatusBadge>
+                  </div>
+                </div>
+                <p className={styles.historyReason}>{entry.reason}</p>
+                <dl className={styles.historyEntryMetrics}>
+                  <div>
+                    <dt>Duration</dt>
+                    <dd>{formatDuration(entry.durationSeconds)}</dd>
+                  </div>
+                  <div>
+                    <dt>Accepted votes</dt>
+                    <dd>{entry.acceptedVoteCount}</dd>
+                  </div>
+                  <div>
+                    <dt>Reward points</dt>
+                    <dd>{entry.rewardPointsAwarded}</dd>
+                  </div>
+                </dl>
+              </Card>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      <Notice tone="info" title="Privacy-safe history">
+        {history.privacy.retentionNote}
       </Notice>
     </section>
   );
@@ -678,6 +849,7 @@ function QuestManagement({
 export function StudioManagementSurface({
   view,
   readiness,
+  history,
   theme = "dark",
   pendingCommandId = null,
   commandMessage = null,
@@ -714,6 +886,7 @@ export function StudioManagementSurface({
           <a href="#live-director-heading">Live Director</a>
           <a href="#health-recovery-heading">Health &amp; recovery</a>
           <a href="#live-quests-heading">Live sidequests</a>
+          <a href="#history-heading">History</a>
         </nav>
         <p>Full management lives here. Twitch Live Config stays compact for stream-time control.</p>
       </aside>
@@ -786,6 +959,7 @@ export function StudioManagementSurface({
           commandFactory={commandFactory}
           pending={pending}
         />
+        <SessionHistorySection history={history} />
       </main>
     </DesignSystemRoot>
   );

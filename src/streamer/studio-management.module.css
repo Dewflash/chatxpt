@@ -51,7 +51,13 @@
 .definitionList dt,
 .overridePanel p,
 .questChoice small,
-.saveRow > p {
+.saveRow > p,
+.historySummary p,
+.historySummary small,
+.historyCard small,
+.historyReason,
+.historyMetrics dt,
+.historyEntryMetrics dt {
   color: var(--cx-color-text-muted);
 }
 
@@ -124,7 +130,8 @@
 .sectionHeading h2,
 .settingCard h3,
 .healthCard h3,
-.questCard h3 {
+.questCard h3,
+.historyCard h3 {
   margin: 0;
 }
 
@@ -358,9 +365,108 @@
   margin-top: var(--cx-space-md);
 }
 
+.historySummary {
+  display: grid;
+  gap: var(--cx-space-lg);
+  margin-bottom: var(--cx-space-lg);
+  border-color: var(--cx-color-primary);
+  background: var(--cx-color-primary-soft);
+}
+
+.historySummaryHeading,
+.historyCardHeading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--cx-space-lg);
+}
+
+.historySummaryHeading p,
+.historySummaryHeading small,
+.historyReason {
+  margin: var(--cx-space-xs) 0 0;
+}
+
+.historyMetrics,
+.historyEntryMetrics {
+  display: grid;
+  gap: var(--cx-space-md);
+  margin: 0;
+}
+
+.historyMetrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.historyMetrics > div,
+.historyEntryMetrics > div {
+  min-width: 0;
+  display: grid;
+  gap: var(--cx-space-xs);
+}
+
+.historyMetrics dt,
+.historyEntryMetrics dt {
+  font-size: var(--cx-font-size-sm);
+  font-weight: var(--cx-font-weight-medium);
+}
+
+.historyMetrics dd,
+.historyEntryMetrics dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.historyMetrics dd {
+  display: grid;
+  gap: var(--cx-space-xs);
+  font-size: clamp(1.35rem, 2.5vw, 2rem);
+  font-weight: var(--cx-font-weight-bold);
+}
+
+.historyMetrics dd small {
+  font-size: var(--cx-font-size-sm);
+  font-weight: var(--cx-font-weight-regular);
+}
+
+.historyList {
+  display: grid;
+  gap: var(--cx-space-md);
+  margin: 0 0 var(--cx-space-lg);
+  padding: 0;
+  list-style: none;
+}
+
+.historyCard {
+  display: grid;
+  gap: var(--cx-space-lg);
+}
+
+.historyCardHeading > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: var(--cx-space-xs);
+}
+
+.historyCardHeading h3,
+.historyReason {
+  overflow-wrap: anywhere;
+}
+
+.historyEntryMetrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding-top: var(--cx-space-md);
+  border-top: 1px solid var(--cx-color-border);
+}
+
 @media (max-width: 72rem) {
   .questGrid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .historyMetrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -387,13 +493,19 @@
 
   .hero,
   .sectionHeading,
-  .overridePanel {
+  .overridePanel,
+  .historySummaryHeading,
+  .historyCardHeading {
     align-items: stretch;
     flex-direction: column;
   }
 
   .heroGame {
     width: 100%;
+  }
+
+  .historyMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -406,6 +518,11 @@
   }
 
   .manualPanel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .historyMetrics,
+  .historyEntryMetrics {
     grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -31,13 +31,23 @@ function twitchJwt(role: "broadcaster" | "viewer", channelId = "channel-1"): str
   return `${header}.${payload}.${signature}`;
 }
 
-function application() {
+function application(options: { readonly historyFails?: boolean } = {}) {
   let id = 0;
   const persistence = createMemoryPersistenceRuntime();
+  const runtimePersistence = options.historyFails
+    ? {
+        ...persistence,
+        sessionHistory: {
+          readSessionHistory: async () => {
+            throw new Error("fixture history reader unavailable");
+          },
+        },
+      }
+    : persistence;
   return {
-    persistence,
+    persistence: runtimePersistence,
     application: new StudioSessionApplication({
-      runtime: new ChatXptServerRuntime({ persistence, clock: { now: () => NOW } }),
+      runtime: new ChatXptServerRuntime({ persistence: runtimePersistence, clock: { now: () => NOW } }),
       setupKey: SETUP_KEY,
       extensionSecret: EXTENSION_SECRET,
       environment: {
@@ -68,6 +78,16 @@ describe("StudioSessionApplication", () => {
     expect(started.roomCode).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
     expect(started.readiness.ready).toBe(false);
     expect(started.readiness.blockerCodes).toContain("gameplay-capture");
+    expect(started.history).toMatchObject({
+      broadcasterId: "channel-1",
+      entries: [],
+      summary: { totalQuestCycles: 0, totalAcceptedVotes: 0 },
+      privacy: {
+        rawChatHistoryRetained: false,
+        viewerIdentifiersIncluded: false,
+        privateVoteReceiptsIncluded: false,
+      },
+    });
     expect(await context.persistence.twitchChannelSessions.findTwitchChannelSession("channel-1"))
       .toMatchObject({ sessionId: started.view.session.sessionId, status: "live" });
 
@@ -79,6 +99,7 @@ describe("StudioSessionApplication", () => {
     });
     expect(reopened.view.session.sessionId).toBe(started.view.session.sessionId);
     expect(reopened.roomCode).toBe(started.roomCode);
+    expect(reopened.history?.summary.totalQuestCycles).toBe(0);
   });
 
   it("accepts authoritative profile commands through the HttpOnly grant identity", async () => {
@@ -176,5 +197,19 @@ describe("StudioSessionApplication", () => {
         gameName: null,
       }),
     ).rejects.toMatchObject({ code: "unauthenticated" } satisfies Partial<StudioSessionApplicationError>);
+  });
+
+  it("keeps the current Studio session available when optional history cannot load", async () => {
+    const context = application({ historyFails: true });
+    const started = await context.application.start(SETUP_KEY, {
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: null,
+      gameName: null,
+    });
+
+    expect(started.view.session.status).toBe("live");
+    expect(started.history).toBeNull();
+    expect(started.readiness.blockerCodes).toContain("gameplay-capture");
   });
 });

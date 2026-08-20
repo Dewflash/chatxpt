@@ -2,10 +2,15 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { createFixtureUiGatewaySnapshot, streamerViewModelSchema } from "../core";
+import {
+  createFixtureUiGatewaySnapshot,
+  emptySessionHistorySnapshot,
+  streamerViewModelSchema,
+} from "../core";
 import {
   contractFixtureLiveDirectorStateCatalog,
   contractFixtureUiX01ReadinessCatalog,
+  contractFixtureUiX04SessionHistory,
 } from "../core/testing";
 import { StudioManagementSurface } from "./studio-management";
 
@@ -41,7 +46,11 @@ describe("StudioManagementSurface", () => {
       liveDirector: contractFixtureLiveDirectorStateCatalog["live-director.known.v1"],
     });
     const readiness = contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"];
-    const html = renderToStaticMarkup(h(StudioManagementSurface, { view, readiness }));
+    const html = renderToStaticMarkup(h(StudioManagementSurface, {
+      view,
+      readiness,
+      history: contractFixtureUiX04SessionHistory,
+    }));
 
     expect(html).toContain("Profile &amp; defaults");
     expect(html).toContain("Saved profile · revision");
@@ -53,6 +62,50 @@ describe("StudioManagementSurface", () => {
     expect(html).toContain("Temporary overrides never rewrite defaults");
     expect(html).toContain("Effective source: saved default");
     expect(html).toContain("Session override contract required");
+    expect(html).toContain("History &amp; post-stream summary");
+  });
+
+  it("renders a privacy-safe summary and responsive recent outcome cards", () => {
+    const view = createFixtureUiGatewaySnapshot().views.streamer;
+    const html = renderToStaticMarkup(h(StudioManagementSurface, {
+      view,
+      history: contractFixtureUiX04SessionHistory,
+    }));
+
+    expect(html).toContain("Recent sidequest outcomes");
+    expect(html).toContain("Post-stream summary metrics");
+    expect(html).toContain("50% success rate");
+    expect(html).toContain("Hold Your Ground");
+    expect(html).toContain("Succeeded");
+    expect(html).toContain("Skipped");
+    expect(html).toContain("Privacy-safe history");
+    expect(html).toContain("raw chat and viewer identifiers are not retained");
+    expect(html).not.toContain("viewerId");
+    expect(html).not.toContain("rawChat");
+  });
+
+  it("keeps history empty and unavailable states calm without blocking live controls", () => {
+    const view = createFixtureUiGatewaySnapshot().views.streamer;
+    const emptyHistory = emptySessionHistorySnapshot({
+      broadcasterId: view.session.broadcasterId,
+      generatedAt: view.envelope.occurredAt,
+      source: "orchestrator",
+      evidenceClass: "diagnostic",
+      limit: 25,
+    });
+    const emptyHtml = renderToStaticMarkup(h(StudioManagementSurface, {
+      view,
+      history: emptyHistory,
+    }));
+    const unavailableHtml = renderToStaticMarkup(h(StudioManagementSurface, {
+      view,
+      history: null,
+    }));
+
+    expect(emptyHtml).toContain("No completed sidequests yet");
+    expect(emptyHtml).toContain("Diagnostic history");
+    expect(unavailableHtml).toContain("History temporarily unavailable");
+    expect(unavailableHtml).toContain("Live sidequests");
   });
 
   it("shows Capture Health, Signal Confidence, generation, and realtime independently", () => {

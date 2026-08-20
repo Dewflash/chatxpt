@@ -699,6 +699,70 @@
         "The screenshots prove rendering and zero horizontal overflow at the measured widths; they do not prove real keyboard, screen-reader, Twitch-host, reconnect, or multi-device operation.",
         "Turn into vote records the Role 3 conversion request but does not publish candidates until the separate exactly-three conversion pass lands; no engagement or solution-fit effect is claimed."
       ]
+    },
+    {
+      "id": "E-20260819-R4-001",
+      "capturedAt": "2026-08-19T22:24:15+08:00",
+      "owner": { "role": "role-4", "github": "JYL1m" },
+      "reviewer": { "role": "role-4", "github": "JYL1m" },
+      "evidenceClass": "fixture-only",
+      "result": "passed",
+      "claim": "The Studio session-history summary renders five aggregate metrics and two recent terminal outcomes at desktop and narrow viewports without horizontal overflow or private viewer data.",
+      "resourceIds": ["streamer-desktop-browser"],
+      "surfaces": [
+        {
+          "name": "Studio session history desktop fixture",
+          "deviceClass": "desktop",
+          "viewport": "1440x1100 CSS viewport"
+        },
+        {
+          "name": "Studio session history narrow fixture",
+          "deviceClass": "mobile",
+          "viewport": "390x844 CSS viewport"
+        }
+      ],
+      "source": {
+        "gitCommit": "7ec19a0",
+        "branch": "role-4/session-history-summary",
+        "prNumber": 156
+      },
+      "authoritativeState": {
+        "sessionRef": "ui-gateway-session",
+        "questCycleRef": "fixture-history-success",
+        "revision": 4
+      },
+      "inputs": [
+        {
+          "kind": "fixture",
+          "description": "Canonical Studio fixture view plus a schema-validated UI-X04 history snapshot with one succeeded and one skipped terminal sidequest."
+        }
+      ],
+      "commands": [
+        "Render diagnostics/live-director?surface=studio through the production StudioManagementSurface with local Next.js and Playwright/Edge",
+        "Inspect 1440x1100 and 390x844 CSS viewports; count five metrics and two outcomes; compare document and viewport widths",
+        "Run focused Role 4/server tests (3 files / 18 tests)",
+        "Run npm run check (81 test files / 634 tests, lint, TypeScript, boundaries, evidence/runbook validation, production build, and secret scans)"
+      ],
+      "artifacts": [
+        {
+          "storage": "local-only",
+          "reference": "local-artifact:2026-08-19-role-4-studio-history-desktop-fixture-only",
+          "mediaType": "image/png",
+          "privacyReviewed": true,
+          "sha256": "dc90b0be2f60cd565a94e9996448aca5f7d09be28df2805a7f0ed16f8a64c971"
+        },
+        {
+          "storage": "local-only",
+          "reference": "local-artifact:2026-08-19-role-4-studio-history-narrow-fixture-only",
+          "mediaType": "image/png",
+          "privacyReviewed": true,
+          "sha256": "dbe57e0e5f31ffb43b1dac547184a472d4a0b8a1db0ad67836fb0557e48275f9"
+        }
+      ],
+      "limitations": [
+        "This is schema-validated fixture rendering, not a real Twitch broadcaster session, real viewer activity, OBS, Supabase Cloud, or multi-device proof.",
+        "The captures prove responsive layout and zero horizontal overflow at the measured widths; they do not prove keyboard, screen-reader, Twitch-host, or reconnect operation."
+      ]
     }
   ]
 }

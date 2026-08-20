@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 
-import type { StreamerReadinessView, StreamerViewModel } from "@/core";
+import type {
+  SessionHistorySnapshot,
+  StreamerReadinessView,
+  StreamerViewModel,
+} from "@/core";
 import {
   StudioManagementSurface,
   TwitchConfigSurface,
@@ -34,6 +38,7 @@ interface SurfacePayload {
   readonly ok: boolean;
   readonly view?: StreamerViewModel;
   readonly readiness?: StreamerReadinessView;
+  readonly history?: SessionHistorySnapshot | null;
   readonly roomCode?: string | null;
   readonly message?: string;
   readonly error?: { readonly message?: string; readonly retryable?: boolean };
@@ -156,6 +161,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
   const [token, setToken] = useState<string | null>(null);
   const [view, setView] = useState<StreamerViewModel | null>(null);
   const [readiness, setReadiness] = useState<StreamerReadinessView | null>(null);
+  const [history, setHistory] = useState<SessionHistorySnapshot | null>(null);
   const [pendingCommandId, setPendingCommandId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -215,6 +221,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       }
       setView(payload.view);
       setReadiness(payload.readiness);
+      setHistory(payload.history ?? null);
       setRoomCode(payload.roomCode ?? null);
       setRequiresBootstrap(false);
       setError(null);
@@ -267,7 +274,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       }
       setView(payload.view);
       setReadiness(payload.readiness);
-      setRoomCode(payload.roomCode ?? null);
+      setHistory(payload.history ?? null);
       setRoomCode(payload.roomCode ?? null);
       setRequiresBootstrap(false);
       setMessage("Broadcaster session started. Twitch surfaces can now map the signed channel JWT to this session.");
@@ -291,6 +298,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       const payload = (await response.json()) as SurfacePayload;
       if (payload.view !== undefined) setView(payload.view);
       if (payload.readiness !== undefined) setReadiness(payload.readiness);
+      if (payload.history !== undefined) setHistory(payload.history);
       if (!response.ok || !payload.ok) {
         setError(payload.error?.message ?? "The authoritative command was rejected.");
         if (response.status === 409) await refresh();
@@ -381,6 +389,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       <StudioManagementSurface
         view={view}
         readiness={readiness}
+        history={history}
         pendingCommandId={pendingCommandId}
         commandMessage={commandMessage}
         onCommand={(command) => void dispatchCommand(command)}
