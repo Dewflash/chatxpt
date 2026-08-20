@@ -61,7 +61,10 @@ export class GameplayIngressApplicationError extends Error {
 
 export interface GameplayIngressApplicationDependencies {
   readonly persistence: ChatXptPersistenceRuntime;
-  readonly runtime?: Pick<ChatXptServerRuntime, "requestEligibleCycleProposal">;
+  readonly runtime?: Pick<
+    ChatXptServerRuntime,
+    "requestEligibleCycleProposal" | "requestLiveDirectorContextRefresh"
+  >;
   readonly setupKey: string;
   readonly now?: () => number;
   readonly nextId?: () => string;
@@ -76,8 +79,21 @@ export interface GameplayIngressGrantResult {
 export interface GameplayIngressResult {
   readonly result: IngestGameplaySnapshotResult;
   readonly authority: GameplayIngressAuthoritySnapshot;
+  readonly liveDirector: GameplayIngressLiveDirectorResult;
   readonly proposal: GameplayIngressProposalResult;
 }
+
+export type GameplayIngressLiveDirectorResult =
+  | {
+      readonly status: "not-requested";
+      readonly reason:
+        | "duplicate-snapshot"
+        | "rejected-snapshot"
+        | "runtime-unavailable"
+        | "proposal-submitted";
+    }
+  | { readonly status: "submitted" | "duplicate" }
+  | { readonly status: "failed"; readonly message: string; readonly retryable: boolean };
 
 export type GameplayIngressProposalResult =
   | { readonly status: "not-requested"; readonly reason: "duplicate-snapshot" | "rejected-snapshot" | "preparing-session" | "runtime-unavailable" }
@@ -139,7 +155,10 @@ function authApplicationError(caught: unknown): GameplayIngressApplicationError 
 export class GameplayIngressApplication {
   private readonly persistence: ChatXptPersistenceRuntime;
   private readonly grants: GameplayIngressGrantAuthority;
-  private readonly runtime?: Pick<ChatXptServerRuntime, "requestEligibleCycleProposal">;
+  private readonly runtime?: Pick<
+    ChatXptServerRuntime,
+    "requestEligibleCycleProposal" | "requestLiveDirectorContextRefresh"
+  >;
   private readonly now: () => number;
   private readonly nextId: () => string;
   private readonly recentByGrant = new Map<
@@ -258,11 +277,49 @@ export class GameplayIngressApplication {
       });
     }
     const proposal = await this.maybeRequestEligibleCycleProposal(state, result);
+    const liveDirector =
+      proposal.status === "submitted" || proposal.status === "duplicate"
+        ? { status: "not-requested" as const, reason: "proposal-submitted" as const }
+        : await this.maybeRefreshLiveDirectorContext(state, result);
     const latestState =
-      result.status === "rejected" && result.reason === "state-mismatch"
+      (result.status === "rejected" && result.reason === "state-mismatch") ||
+      proposal.status === "submitted" ||
+      proposal.status === "duplicate" ||
+      liveDirector.status === "submitted" ||
+      liveDirector.status === "duplicate"
         ? await this.loadActiveSession(grant.sessionId)
         : state;
-    return { result, authority: authoritySnapshot(latestState), proposal };
+    return { result, authority: authoritySnapshot(latestState), liveDirector, proposal };
+  }
+
+  private async maybeRefreshLiveDirectorContext(
+    state: AuthoritativeSessionState,
+    result: IngestGameplaySnapshotResult,
+  ): Promise<GameplayIngressLiveDirectorResult> {
+    if (result.status === "rejected") return { status: "not-requested", reason: "rejected-snapshot" };
+    if (result.status === "duplicate") return { status: "not-requested", reason: "duplicate-snapshot" };
+    if (this.runtime === undefined) return { status: "not-requested", reason: "runtime-unavailable" };
+    let refresh: Awaited<ReturnType<ChatXptServerRuntime["requestLiveDirectorContextRefresh"]>>;
+    try {
+      refresh = await this.runtime.requestLiveDirectorContextRefresh(
+        { ...state, gameplay: result.snapshot },
+        new GameplayIngressProjectionContext(this.now),
+      );
+    } catch {
+      return {
+        status: "failed",
+        message: "Live Director context refresh runtime failed",
+        retryable: true,
+      };
+    }
+    if (!refresh.ok) {
+      return {
+        status: "failed",
+        message: refresh.error.message,
+        retryable: refresh.error.retryable,
+      };
+    }
+    return { status: refresh.outcome === "duplicate" ? "duplicate" : "submitted" };
   }
 
   private async maybeRequestEligibleCycleProposal(

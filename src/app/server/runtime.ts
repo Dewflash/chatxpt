@@ -1,6 +1,6 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import {
   CanonicalViewProjector,
@@ -10,6 +10,7 @@ import {
   domainErrorSchema,
   intelligenceSnapshotSchema,
   systemIntelligenceCommandSchema,
+  systemLiveDirectorContextCommandSchema,
   type CandidateBatch,
   type CandidateProvider,
   type MessageIdFactory,
@@ -53,6 +54,14 @@ class RequestActorResolver implements VerifiedCommandActorResolver {
   resolve(): VerifiedCommandActor {
     return this.actor;
   }
+}
+
+function stableRuntimeCommandId(prefix: string, parts: readonly unknown[]): string {
+  const digest = createHash("sha256")
+    .update(parts.map((part) => String(part)).join("|"))
+    .digest("hex")
+    .slice(0, 32);
+  return `${prefix}-${digest}`;
 }
 
 export interface ChatXptServerRuntimeDependencies {
@@ -113,6 +122,56 @@ export class ChatXptServerRuntime {
         this.persistence,
       ),
     ).execute(command);
+  }
+
+  async requestLiveDirectorContextRefresh(
+    state: AuthoritativeSessionState,
+    projectionContext: ProjectionContextResolver,
+  ): Promise<OrchestratorResult> {
+    const gameplayId = state.gameplay?.envelope.messageId ?? "no-gameplay";
+    const questCycleId = state.questCycle.envelope.questCycleId;
+    const commandId = stableRuntimeCommandId("live-director-refresh", [
+      state.session.sessionId,
+      state.session.revision,
+      questCycleId ?? "none",
+      gameplayId,
+    ]);
+    const existing = await this.persistence.sessions.findReceipt(commandId);
+    if (existing !== null) {
+      return {
+        ok: true,
+        outcome: "duplicate",
+        receipt: existing,
+        views: null,
+        delivery: "not-republished",
+      };
+    }
+    const now = this.clock.now();
+    const command = systemLiveDirectorContextCommandSchema.parse({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: state.session.sessionId,
+      questCycleId,
+      commandId,
+      correlationId: `live-director-context-refresh-${randomUUID()}`,
+      expectedRevision: state.session.revision,
+      issuedAt: now,
+      actor: { kind: "system", actorId: "role1-live-director-refresh" },
+      type: "system.live-director-context-ready",
+      liveContextId: `live-context-${randomUUID()}`,
+      audiencePointerId: null,
+    });
+    return this.execute(
+      command,
+      {
+        kind: "system",
+        actorId: "role1-live-director-refresh",
+        expiresAt: null,
+        moderatorForBroadcasterIds: [],
+        voterKey: null,
+        participationModes: [],
+      },
+      projectionContext,
+    );
   }
 
   async requestDirectorCueConversion(

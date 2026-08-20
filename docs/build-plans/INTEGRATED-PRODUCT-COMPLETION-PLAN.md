@@ -350,7 +350,7 @@ Connect Twitch
 | Named stream presets | No preset schema, persistence, or UI exists. | ICP-03 |
 | Current-stream overrides | A broadcaster-only `streamer.session-override` command, optional authoritative override state, streamer projection, and Stream Settings apply/reset controls now exist for current-stream intensity/creativity. Preset-aware effective settings and final tests remain incomplete. | ICP-03 |
 | Canonical runtime intelligence composition | Source now mounts the configured candidate provider and intervention coordinator in the server runtime for cue conversion and eligible-cycle proposal requests. Final test execution and real-input proof remain open. | ICP-04/ICP-06 |
-| Automatic Live Director refresh | Context composition exists but no production producer/scheduler emits it. | ICP-04 |
+| Automatic Live Director refresh | Accepted gameplay ingress now asks the shared runtime to emit a canonical Live Director context refresh when the same snapshot did not already submit a quest proposal; final tests and real-input evidence remain open. | ICP-04 |
 | Gameplay Engine page | ICP-01 route shell exists with Overview, Game Capture, Understanding, and Health & Recovery sections and links to `/studio/gameplay/capture`; full understanding workflow remains incomplete. | ICP-04 |
 | Public `Up next` | Overlay projection now has a sanitized nullable `upNext` field derived from authoritative quest-cycle state or a known typed Current Objective with selected-game-compatible fresh gameplay evidence; final tests remain open. | ICP-04/ICP-07 |
 | Ordinary-chat audience intelligence | Non-vote Twitch messages are ignored by the app ingress. | ICP-05 |
