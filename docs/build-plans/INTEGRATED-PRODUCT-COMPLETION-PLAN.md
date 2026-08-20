@@ -352,7 +352,7 @@ Connect Twitch
 | Canonical runtime intelligence composition | Source now mounts the configured candidate provider and intervention coordinator in the server runtime for cue conversion and eligible-cycle proposal requests. Final test execution and real-input proof remain open. | ICP-04/ICP-06 |
 | Automatic Live Director refresh | Context composition exists but no production producer/scheduler emits it. | ICP-04 |
 | Gameplay Engine page | ICP-01 route shell exists with Overview, Game Capture, Understanding, and Health & Recovery sections and links to `/studio/gameplay/capture`; full understanding workflow remains incomplete. | ICP-04 |
-| Public `Up next` | Overlay projection has no accepted activity-context field. | ICP-04/ICP-07 |
+| Public `Up next` | Overlay projection now has a sanitized nullable `upNext` field derived from authoritative quest-cycle state or a known typed Current Objective with selected-game-compatible fresh gameplay evidence; final tests remain open. | ICP-04/ICP-07 |
 | Ordinary-chat audience intelligence | Non-vote Twitch messages are ignored by the app ingress. | ICP-05 |
 | Live Analytics page | ICP-01 route shell exists with Overview, Activity, Topics, and Session History sections; connected ordinary-chat producer, topics, watchlist counts, and history remain incomplete. | ICP-05 |
 | Automatic topics plus watchlist counts | Aggregate contract/UI/persistence are incomplete. | ICP-05 |
@@ -363,7 +363,7 @@ Connect Twitch
 | Dedicated Live Quests page | ICP-01 route shell exists with Now, Recommendations, Why, Voting, and Results sections; full recommendation/review/voting/result workspace remains incomplete. | ICP-06 |
 | Realtime client subscriptions | Studio/viewer/hosted/OBS normally poll every 1.5–2 seconds. | ICP-07 |
 | Persistent private viewer points | Recovery returns `sessionPoints: 0`. | ICP-07 |
-| OBS `Up next` rendering | Overlay supports quest/hype/connection only. | ICP-07 |
+| OBS `Up next` rendering | OBS overlay source now renders the public `upNext` field while staying read-only; final tests and real OBS Browser Source proof remain open. | ICP-07 |
 | Authoritative Home surface previews | Home now has concise current-state compositions and gated Start/End controls; deeper tabbed previews remain incomplete. | ICP-07 |
 | Streamer-facing Test Lab route | ICP-01 route shell exists with Sample/Live Source, Capture Controls, Observed/Unknown, and Recovery sections; sample/live controls and policy-backed recovery remain incomplete. | ICP-08 |
 | Complete history/recovery experience | Read models exist in parts; dedicated product flow is incomplete. | ICP-08 |

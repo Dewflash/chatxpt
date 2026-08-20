@@ -307,6 +307,7 @@ export class CanonicalFixtureViewProjector implements ViewModelProjector {
         session: input.session,
         readOnly: true,
         communityHype: input.communityHype,
+        upNext: null,
         questCycle: input.questCycle,
         connection: input.connection,
       }),

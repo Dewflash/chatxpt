@@ -84,6 +84,7 @@ export interface OverlayPresentation {
   readonly evidenceClass: OverlayViewModel["envelope"]["evidenceClass"] | null;
   readonly revision: number | null;
   readonly connection: OverlayViewModel["connection"] | null;
+  readonly upNext: OverlayViewModel["upNext"] | null;
   readonly options: readonly ViewerQuestOptionPresentation[];
   readonly activeQuest: ViewerQuestOptionPresentation | null;
   readonly startsAt: number | null;
@@ -220,6 +221,7 @@ export function presentOverlay(view: OverlayViewModel | null): OverlayPresentati
       evidenceClass: null,
       revision: null,
       connection: null,
+      upNext: null,
       options: [],
       activeQuest: null,
       startsAt: null,
@@ -238,6 +240,7 @@ export function presentOverlay(view: OverlayViewModel | null): OverlayPresentati
     evidenceClass: view.envelope.evidenceClass,
     revision: view.envelope.revision,
     connection: view.connection,
+    upNext: view.upNext,
     options,
     activeQuest:
       options.find((candidate) => candidate.candidateId === view.questCycle.activeCandidateId) ??
