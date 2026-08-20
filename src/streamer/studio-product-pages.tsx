@@ -443,7 +443,10 @@ function GameplayPage({
         badgeTone={capture.tone}
         detail={capture.detail}
       >
-        <AvailabilityAction availability={capture} />
+        <div className={styles.actions}>
+          <a href="/studio/gameplay/capture">Open Capture Setup</a>
+          <AvailabilityAction availability={capture} />
+        </div>
       </PageSectionCard>
       <PageSectionCard
         title="Understanding"
@@ -461,7 +464,10 @@ function GameplayPage({
         badgeTone={capture.tone}
         detail={capture.state === "available" ? "Capture is currently healthy enough for the selected stream state." : "Recovery actions stay unavailable until the production capture controller is connected here."}
       >
-        <AvailabilityAction availability={capture.state === "available" ? capture : unavailableAvailability("Recovery actions stay unavailable until the production capture controller is connected here.", "Use setup recovery")} />
+        <div className={styles.actions}>
+          <a href="/studio/gameplay/capture">Reconnect Capture</a>
+          <AvailabilityAction availability={capture.state === "available" ? capture : unavailableAvailability("Recovery actions stay unavailable until the production capture controller is connected here.", "Use setup recovery")} />
+        </div>
       </PageSectionCard>
     </CardGrid>
   );

@@ -141,7 +141,7 @@ function StudioCaptureAndOverlaySetup({ sessionId }: { readonly sessionId: strin
           Open the capture surface, choose the game profile, and connect OBS Virtual Camera. Only
           normalized game facts are sent to this session; frames stay in the browser.
         </p>
-        <a href={`/diagnostics/gameplay-extraction?sessionId=${encodeURIComponent(sessionId)}`}>
+        <a href="/studio/gameplay/capture">
           Open Gameplay Capture
         </a>
       </section>

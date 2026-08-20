@@ -344,14 +344,14 @@ Connect Twitch
 | Self-service Twitch connection and recovery | Secure manual mapping exists; full OAuth/EventSub product setup is incomplete. | ICP-02 |
 | Correct readiness-gated start | Current start marks the session live before reporting blockers. | ICP-02 |
 | Twitch game pre-fill with correction | Start currently relies on manually entered game data. | ICP-02 |
-| Production Game Capture | Real capture loop is mounted in diagnostics and requires manual setup keys. | ICP-02 |
-| Automatic Game Capture reconnect | No normal product capture controller owns reconnect. | ICP-02 |
+| Production Game Capture | `/studio/gameplay/capture` now mounts a product capture screen that reuses the OBS Virtual Camera analyzer and gameplay ingress grant/snapshot boundary; it still requires manual setup keys and real OBS proof. | ICP-02 |
+| Automatic Game Capture reconnect | The product capture screen refreshes short-lived ingress grants while running, but no normal controller owns browser/device reconnect metadata yet. | ICP-02 |
 | Complete profile editing | Game, safety lists, quest preferences, and accessibility are view-only. | ICP-03 |
 | Named stream presets | No preset schema, persistence, or UI exists. | ICP-03 |
 | Current-stream overrides | Controls are disabled and no patch/clear authority exists. | ICP-03 |
 | Canonical runtime intelligence composition | Role 2 provider/coordinator ports exist but are not mounted in the production runtime. | ICP-04/ICP-06 |
 | Automatic Live Director refresh | Context composition exists but no production producer/scheduler emits it. | ICP-04 |
-| Gameplay Engine page | ICP-01 route shell exists with Overview, Game Capture, Understanding, and Health & Recovery sections; production capture controls and full understanding workflow remain incomplete. | ICP-04 |
+| Gameplay Engine page | ICP-01 route shell exists with Overview, Game Capture, Understanding, and Health & Recovery sections and links to `/studio/gameplay/capture`; full understanding workflow remains incomplete. | ICP-04 |
 | Public `Up next` | Overlay projection has no accepted activity-context field. | ICP-04/ICP-07 |
 | Ordinary-chat audience intelligence | Non-vote Twitch messages are ignored by the app ingress. | ICP-05 |
 | Live Analytics page | ICP-01 route shell exists with Overview, Activity, Topics, and Session History sections; connected ordinary-chat producer, topics, watchlist counts, and history remain incomplete. | ICP-05 |

@@ -95,6 +95,17 @@ describe("StudioProductPageSurface", () => {
     }
   });
 
+  it("links Gameplay Engine capture setup to the Studio product route", () => {
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "gameplay",
+      view: createFixtureUiGatewaySnapshot().views.streamer,
+      readiness: contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"],
+    }));
+
+    expect(html).toContain("/studio/gameplay/capture");
+    expect(html).not.toContain("/diagnostics/gameplay-extraction");
+  });
+
   it("renders the blocked Home composition without dispatchable start controls", () => {
     const view = createFixtureUiGatewaySnapshot().views.streamer;
     const readiness = contractFixtureUiX01ReadinessCatalog["r4.setup.permission-denied.v1"];
