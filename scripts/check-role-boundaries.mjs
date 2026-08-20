@@ -45,7 +45,12 @@ function resolveLocalTarget(sourceProjectPath, specifier) {
 
 function publicRootTarget(targetProjectPath, targetArea) {
   const target = targetProjectPath.replace(/\.(?:js|jsx|mjs|mts|ts|tsx)$/, "").replace(/\/index$/, "");
-  return target === targetArea.root || target === "src/realtime/server" || target === "src/integrations/server";
+  return (
+    target === targetArea.root ||
+    target === "src/ai/server" ||
+    target === "src/realtime/server" ||
+    target === "src/integrations/server"
+  );
 }
 
 function isTestFile(sourceProjectPath) {
@@ -179,6 +184,7 @@ function selfTest() {
     ["src/streamer/example.ts", "@/core/testing", "public index"],
     ["tests/integration/example.test.ts", "@/realtime/server", null],
     ["src/app/example.ts", "@/integrations/server", null],
+    ["src/app/example.ts", "@/ai/server", null],
     ["src/viewer/example.tsx", "@/realtime/server", "viewer"],
   ];
   for (const [source, specifier, expectedFragment] of cases) {

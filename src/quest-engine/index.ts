@@ -19,6 +19,7 @@ export type {
   ResurfaceDirectorCueInput,
 } from "./director-cue";
 export { DefaultDirectorCueConverter } from "./director-cue-conversion";
+export { DefaultLiveDirectorProposalCoordinator } from "./live-director-proposal";
 export type {
   DirectorCueConversionFailureCode,
   DirectorCueConversionInput,
