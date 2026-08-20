@@ -242,7 +242,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       const payload = (await response.json()) as SurfacePayload;
       if (!response.ok || !payload.ok || payload.view === undefined || payload.readiness === undefined) {
         if ((surface === "studio" || surface === "studio-home") && response.status === 401) setRequiresBootstrap(true);
-        setError(payload.error?.message ?? "Authoritative streamer state is unavailable.");
+        setError(payload.error?.message ?? "Studio state is unavailable.");
         return;
       }
       setView(payload.view);
@@ -252,7 +252,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       setError(null);
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "AbortError") return;
-      setError("Reconnecting to the authoritative streamer session.");
+      setError("Reconnecting to the streamer session.");
     }
   }, [requestHeaders, surface]);
 
@@ -324,13 +324,13 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       if (payload.view !== undefined) setView(payload.view);
       if (payload.readiness !== undefined) setReadiness(payload.readiness);
       if (!response.ok || !payload.ok) {
-        setError(payload.error?.message ?? "The authoritative command was rejected.");
+        setError(payload.error?.message ?? "The Studio action was rejected.");
         if (response.status === 409) await refresh();
         return;
       }
-      setMessage(payload.message ?? "Authoritative command completed.");
+      setMessage(payload.message ?? "Studio action completed.");
     } catch {
-      setError("The command response was interrupted. Studio is refreshing authoritative state.");
+      setError("The command response was interrupted. Studio is refreshing the latest state.");
       await refresh();
     } finally {
       setPendingCommandId(null);

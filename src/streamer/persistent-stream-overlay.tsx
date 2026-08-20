@@ -141,7 +141,7 @@ function ContextCard({
         </StatusBadge>
       </div>
       {facts.length === 0 ? (
-        <p className={styles.bodyText}>No authorised fact is available.</p>
+        <p className={styles.bodyText}>No trusted fact is available.</p>
       ) : (
         <ul className={styles.sourceList}>
           {facts.slice(0, 4).map((fact) => (
@@ -152,7 +152,7 @@ function ContextCard({
               </div>
               <span className={styles.factValue}>{factValue(fact)}</span>
               <small className={styles.metaText}>
-                {`${Math.round(fact.confidence * 100)}% · ${titleCase(fact.evidenceClass)}`}
+                {`${Math.round(fact.confidence * 100)}% · ${fact.evidenceClass === "live" ? "Live signal" : "Unconfirmed signal"}`}
               </small>
             </li>
           ))}
@@ -206,7 +206,7 @@ function QuestStatus({ view }: { readonly view: StreamerViewModel }) {
         </ul>
       ) : null}
       {cycle.options.length === 0 ? (
-        <p className={styles.bodyText}>Waiting for the next authorised three-option proposal.</p>
+        <p className={styles.bodyText}>Waiting for the next three-option proposal.</p>
       ) : null}
     </Card>
   );
@@ -221,7 +221,7 @@ export function PersistentStreamOverlaySurface({
       <DesignSystemRoot theme="dark" density="compact" className={styles.surface}>
         <main className={styles.shell}>
           <Notice title="Loading stream context" politeness="polite">
-            Waiting for an authorised streamer snapshot.
+            Waiting for the latest streamer snapshot.
           </Notice>
         </main>
       </DesignSystemRoot>
@@ -257,14 +257,15 @@ export function PersistentStreamOverlaySurface({
             </div>
             <div className={styles.badgeRow}>
               <StatusBadge tone={sessionTone(view.session.status)}>{titleCase(view.session.status)}</StatusBadge>
-              <StatusBadge tone={evidenceTone(view.envelope.evidenceClass)}>{titleCase(view.envelope.evidenceClass)}</StatusBadge>
-              <StatusBadge tone="diagnostic">{`Rev ${view.envelope.revision}`}</StatusBadge>
+              <StatusBadge tone={evidenceTone(view.envelope.evidenceClass)}>
+                {view.envelope.evidenceClass === "live" ? "Live connected" : "Live connection not confirmed"}
+              </StatusBadge>
             </div>
           </header>
 
           {view.emergencyPaused ? (
             <Notice tone="danger" title="Emergency pause active" politeness="assertive">
-              New sidequests are blocked by the authoritative runtime.
+              New sidequests are blocked until emergency pause is cleared.
             </Notice>
           ) : null}
 

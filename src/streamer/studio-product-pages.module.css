@@ -153,6 +153,7 @@
 }
 
 .actions a,
+.readyAction,
 .disabledAction {
   min-height: 2.5rem;
   display: inline-flex;
@@ -165,6 +166,11 @@
   text-decoration: none;
   background: var(--cx-color-surface-raised);
   font-weight: var(--cx-font-weight-medium);
+}
+
+.readyAction {
+  border-color: var(--cx-color-success);
+  color: var(--cx-color-success);
 }
 
 .disabledAction {

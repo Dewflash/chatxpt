@@ -54,7 +54,7 @@ const setupLabels: Readonly<Partial<Record<StreamerSetupAction, string>>> = {
   "connect-twitch": "Connect Twitch",
   "install-extension": "Install Extension",
   "retry-service": "Retry setup",
-  "open-diagnostics": "Open diagnostics",
+  "open-diagnostics": "Review setup details",
 };
 
 const questLabels: Readonly<Record<StreamerQuestAction, string>> = {
@@ -120,9 +120,8 @@ function CompactHeader({
         <StatusBadge tone={view?.session.status === "live" ? "success" : "neutral"}>
           {view ? titleCase(view.session.status) : "Loading"}
         </StatusBadge>
-        {view ? <StatusBadge tone="diagnostic">{`Rev ${view.envelope.revision}`}</StatusBadge> : null}
         {view && view.envelope.evidenceClass !== "live" ? (
-          <StatusBadge tone="diagnostic">{`${titleCase(view.envelope.evidenceClass)} data`}</StatusBadge>
+          <StatusBadge tone="warning">Live connection not confirmed</StatusBadge>
         ) : null}
       </div>
     </header>
@@ -152,7 +151,7 @@ export function TwitchConfigSurface({
 
         {view === null ? (
           <Notice title="Loading channel setup" politeness="polite">
-            Waiting for an authorised broadcaster snapshot.
+            Waiting for the latest broadcaster setup.
           </Notice>
         ) : (
           <>
@@ -278,8 +277,8 @@ export function TwitchLiveConfigSurface({
       <DesignSystemRoot theme="twitch" density="compact" className={styles.surface}>
         <main className={styles.shell}>
           <CompactHeader eyebrow="Twitch Live Config" title="Live control" view={null} />
-          <Notice title="Loading live controls" politeness="polite">Waiting for the latest authorised session snapshot.</Notice>
-          {commandMessage ? <Notice tone="warning" title="Private authority required">{commandMessage}</Notice> : null}
+          <Notice title="Loading live controls" politeness="polite">Waiting for the latest live-control snapshot.</Notice>
+          {commandMessage ? <Notice tone="warning" title="Private access required">{commandMessage}</Notice> : null}
           <a className={styles.studioLink} href={popoutHref} target="_blank" rel="noreferrer">Open private pop-out</a>
           <OpenStudioLink href={studioHref} />
         </main>
@@ -373,7 +372,7 @@ export function TwitchLiveConfigSurface({
               ))}
             </div>
           ) : (
-            <Notice title="No three-option sidequest proposal">Waiting for the authoritative runtime.</Notice>
+            <Notice title="No three-option sidequest proposal">Waiting for ChatXPT.</Notice>
           )}
 
           {cycle.progress ? (
@@ -422,7 +421,7 @@ export function TwitchLiveConfigSurface({
           <p>Temporary intensity stays disabled until the runtime supplies a session override and reset command. The saved default is not changed here.</p>
         </section>
 
-        <section className={styles.actionSection} aria-label="Authorised sidequest actions">
+        <section className={styles.actionSection} aria-label="Sidequest actions">
           <div className={styles.actionGrid}>
             {regularActions.map((action) => (
               <Button
@@ -460,7 +459,7 @@ export function TwitchLiveConfigSurface({
         <aside className={styles.dockSetup} aria-label="Private pop-out and OBS Custom Dock setup">
           <strong>Private pop-out or OBS Custom Dock</strong>
           <p>
-            Open the Studio-authorised read-only stream context in a browser tab, or use that same URL as an OBS Custom Browser Dock after authorising its browser session. It is not the public OBS overlay.
+            Open the private read-only stream context in a browser tab, or use that same URL as an OBS Custom Browser Dock after signing in. It is not the public OBS overlay.
           </p>
           <a className={styles.studioLink} href={popoutHref} target="_blank" rel="noreferrer">Open private Live Director</a>
         </aside>

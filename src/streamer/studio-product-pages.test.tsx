@@ -50,6 +50,8 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("Unavailable controls stay visible only when ChatXPT can explain what is needed next.");
     expect(html).not.toContain("Not live workflow evidence");
     expect(html).not.toContain("revision label");
+    expect(html).not.toContain("Open diagnostics");
+    expect(html).not.toContain("scheduled for");
   });
 
   it("keeps Test Lab sample/live distinction outside ordinary product pages", () => {
@@ -63,6 +65,6 @@ describe("StudioProductPageSurface", () => {
     }));
 
     expect(home).not.toContain("Sample and live source controls");
-    expect(lab).toContain("Sample and live source controls are scheduled for ICP-08");
+    expect(lab).toContain("Sample and live source controls are not connected yet");
   });
 });

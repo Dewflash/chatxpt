@@ -1,9 +1,14 @@
 "use client";
 
-import { Card, CardGrid, DesignSystemRoot, Notice, StatusBadge, type StatusTone } from "../design-system";
+import { Card, CardGrid, DesignSystemRoot, Notice, StatusBadge } from "../design-system";
 import type { StreamerReadinessView, StreamerViewModel } from "../core";
 import { summarizeGameplayHealth } from "./gameplay-health";
 import { summarizeQuestGeneration } from "./quest-generation-health";
+import {
+  readinessAvailability,
+  unavailableAvailability,
+  type ProductAvailability,
+} from "./studio-availability";
 
 import styles from "./studio-product-pages.module.css";
 
@@ -52,7 +57,7 @@ const PAGE_COPY: Readonly<Record<StudioProductPage, { readonly eyebrow: string; 
   "live-quests": {
     eyebrow: "Live Quests",
     title: "Sidequests waiting for approval",
-    body: "Review recommendations, understand why they fit, and keep voting/result state in one authoritative flow.",
+    body: "Review recommendations, understand why they fit, and keep voting and result state in one trusted flow.",
   },
   profile: {
     eyebrow: "Profile & Defaults",
@@ -66,7 +71,7 @@ const PAGE_COPY: Readonly<Record<StudioProductPage, { readonly eyebrow: string; 
   },
   "test-lab": {
     eyebrow: "Test Lab",
-    title: "Check authorised gameplay inputs",
+    title: "Check gameplay inputs",
     body: "Use approved sample or live capture checks without confusing samples with the active stream.",
   },
 };
@@ -79,24 +84,25 @@ function titleCase(value: string): string {
     .join(" ");
 }
 
-function serviceTone(status: string | undefined): StatusTone {
-  if (status === "ready") return "success";
-  if (status === "degraded" || status === "misconfigured") return "warning";
-  if (status === undefined) return "neutral";
-  return "danger";
+function AvailabilityAction({ availability }: { readonly availability: ProductAvailability }) {
+  return (
+    <span
+      className={availability.state === "available" ? styles.readyAction : styles.disabledAction}
+      aria-disabled={availability.state === "available" ? undefined : "true"}
+    >
+      {availability.state === "available" ? "Ready" : availability.nextStep}
+    </span>
+  );
 }
 
-function serviceStatus(readiness: StreamerReadinessView | null | undefined, serviceId: string) {
-  return readiness?.services.find((service) => service.service === serviceId) ?? null;
-}
-
-function unavailableCard(title: string, detail: string) {
+function unavailableCard(title: string, detail: string, nextStep?: string) {
+  const availability = unavailableAvailability(detail, nextStep);
   return (
     <Card className={styles.card}>
-      <StatusBadge tone="warning">Unavailable</StatusBadge>
+      <StatusBadge tone={availability.tone}>{availability.badge}</StatusBadge>
       <h3>{title}</h3>
-      <p>{detail}</p>
-      <span className={styles.disabledAction} aria-disabled="true">Waiting for setup</span>
+      <p>{availability.detail}</p>
+      <AvailabilityAction availability={availability} />
     </Card>
   );
 }
@@ -109,20 +115,21 @@ function HealthStrip({ view, readiness }: {
   const generation = view === null || view.questCycle.options.length === 0
     ? null
     : summarizeQuestGeneration(view.questCycle.options);
-  const twitch = serviceStatus(readiness, "twitch");
-  const obs = serviceStatus(readiness, "obs-capture");
-  const realtime = serviceStatus(readiness, "realtime");
+  const twitch = readinessAvailability(readiness, "twitch", "Connect Twitch before starting ChatXPT.");
+  const obs = readinessAvailability(readiness, "obs-capture", "Allow OBS Virtual Camera from Studio when capture is ready.");
   return (
     <CardGrid className={styles.grid}>
       <Card className={styles.card}>
-        <StatusBadge tone={serviceTone(twitch?.health.status)}>{twitch?.health.status ? titleCase(twitch.health.status) : "Unknown"}</StatusBadge>
+        <StatusBadge tone={twitch.tone}>{twitch.badge}</StatusBadge>
         <h3>Twitch</h3>
-        <p>{twitch?.health.message ?? "Connect Twitch before starting ChatXPT."}</p>
+        <p>{twitch.detail}</p>
+        <AvailabilityAction availability={twitch} />
       </Card>
       <Card className={styles.card}>
-        <StatusBadge tone={serviceTone(obs?.health.status)}>{obs?.health.status ? titleCase(obs.health.status) : "Unknown"}</StatusBadge>
+        <StatusBadge tone={obs.tone}>{obs.badge}</StatusBadge>
         <h3>Game Capture</h3>
-        <p>{obs?.health.message ?? "Allow OBS Virtual Camera from Studio when capture is ready."}</p>
+        <p>{obs.detail}</p>
+        <AvailabilityAction availability={obs} />
       </Card>
       <Card className={styles.card}>
         <StatusBadge tone={gameplay?.tone ?? "neutral"}>{gameplay?.label ?? "No signal yet"}</StatusBadge>
@@ -130,7 +137,7 @@ function HealthStrip({ view, readiness }: {
         <p>{view?.gameplay === null || view === null ? "No current gameplay snapshot is available." : `${gameplay?.knownCount ?? 0} known facts and ${gameplay?.unknownCount ?? 0} unknown facts.`}</p>
       </Card>
       <Card className={styles.card}>
-        <StatusBadge tone={generation?.tone ?? serviceTone(realtime?.health.status)}>{generation?.label ?? "Waiting"}</StatusBadge>
+        <StatusBadge tone={generation?.tone ?? "neutral"}>{generation?.label ?? "Waiting"}</StatusBadge>
         <h3>Sidequests</h3>
         <p>{generation?.detail ?? "ChatXPT opens voting only after exactly three validated options are approved."}</p>
       </Card>
@@ -190,7 +197,7 @@ function GameplayPage({ view }: { readonly view: StreamerViewModel | null }) {
           <div><dt>Stale facts</dt><dd>{gameplay?.staleCount ?? 0}</dd></div>
         </dl>
       </Card>
-      {unavailableCard("Production capture controls", "The product capture controller is scheduled for ICP-02. Until then, capture setup remains unavailable here.")}
+      {unavailableCard("Capture controls", "Game Capture controls are not connected to the live session yet.", "Available in the next setup pass")}
     </CardGrid>
   );
 }
@@ -204,8 +211,8 @@ function LiveAnalyticsPage({ view }: { readonly view: StreamerViewModel | null }
         <h3>Activity</h3>
         <p>{audience === null ? "Connect Twitch chat to show privacy-safe audience activity." : `${audience.signals.length} aggregate audience signals are available.`}</p>
       </Card>
-      {unavailableCard("Automatic topics", "Topic detection and watchlist counts are scheduled for ICP-05. Raw chat and usernames will not be shown.")}
-      {unavailableCard("Session timeline", "Aggregate audience history is scheduled for ICP-05 and ICP-08.")}
+      {unavailableCard("Automatic topics", "Topic detection and watchlist counts are not connected yet. Raw chat and usernames will not be shown.", "Available after audience setup")}
+      {unavailableCard("Session timeline", "Aggregate audience history is not connected to this page yet.", "Available after history setup")}
     </CardGrid>
   );
 }
@@ -223,7 +230,7 @@ function LiveQuestsPage({ view }: { readonly view: StreamerViewModel | null }) {
         <h3>Recommendations</h3>
         <p>{cycle === null || cycle.options.length !== 3 ? "ChatXPT will not open voting until exactly three validated options are ready." : "Three validated options are available for streamer review."}</p>
       </Card>
-      {unavailableCard("Dedicated approval controls", "The full Live Quests workspace is scheduled for ICP-06. Compact controls remain available in Live Config.")}
+      {unavailableCard("Approval controls", "Full Live Quests controls are not connected here yet. Compact controls remain available in Live Config.", "Use Live Config for now")}
     </CardGrid>
   );
 }
@@ -233,7 +240,7 @@ function ProfilePage({ view }: { readonly view: StreamerViewModel | null }) {
   return (
     <CardGrid className={styles.grid}>
       <Card className={styles.card}>
-        <StatusBadge tone={profile === null ? "neutral" : "success"}>{profile === null ? "No profile" : `Revision ${profile.revision}`}</StatusBadge>
+        <StatusBadge tone={profile === null ? "neutral" : "success"}>{profile === null ? "No profile" : "Saved profile"}</StatusBadge>
         <h3>Personality</h3>
         <p>{profile === null ? "Start a broadcaster session to load saved defaults." : `Intensity ${Math.round((profile.experience.intensity ?? 0.5) * 100)}%, creativity ${Math.round((profile.experience.creativity ?? 0.5) * 100)}%.`}</p>
       </Card>
@@ -241,7 +248,7 @@ function ProfilePage({ view }: { readonly view: StreamerViewModel | null }) {
         <h3>Safety and accessibility</h3>
         <p>{profile === null ? "No saved profile loaded." : `${profile.restrictions.length + profile.forbiddenQuestTypes.length} saved limits, ${profile.accessibilityNeeds.length} accessibility preferences.`}</p>
       </Card>
-      {unavailableCard("Named presets", "Competitive, Chill, Educational, Community, and custom presets are scheduled for ICP-03.")}
+      {unavailableCard("Named presets", "Competitive, Chill, Educational, Community, and custom presets are not connected yet.", "Use saved defaults for now")}
     </CardGrid>
   );
 }
@@ -254,7 +261,7 @@ function StreamSettingsPage({ view }: { readonly view: StreamerViewModel | null 
         <h3>Effective values</h3>
         <p>{view === null ? "Start a session to see current-stream settings." : "This stream currently follows saved profile defaults."}</p>
       </Card>
-      {unavailableCard("Temporary override", "Session-only patch and reset controls are scheduled for ICP-03.")}
+      {unavailableCard("Temporary override", "Session-only changes and reset controls are not connected yet.", "Use saved defaults for now")}
     </CardGrid>
   );
 }
@@ -265,14 +272,13 @@ function TestLabPage() {
       <Card className={styles.card}>
         <StatusBadge tone="warning">Unavailable</StatusBadge>
         <h3>Authorised source check</h3>
-        <p>Sample and live source controls are scheduled for ICP-08. They will stay separate from the active stream.</p>
+        <p>Sample and live source controls are not connected yet. They will stay separate from the active stream.</p>
       </Card>
       <Card className={styles.card}>
-        <h3>Current diagnostic route</h3>
-        <p>Existing diagnostics remain outside the normal product flow until the streamer Test Lab is connected.</p>
-        <div className={styles.actions}>
-          <a href="/diagnostics/gameplay-extraction">Open diagnostics</a>
-        </div>
+        <StatusBadge tone="warning">Unavailable</StatusBadge>
+        <h3>Gameplay source check</h3>
+        <p>Live capture checks remain separated from the active stream until Test Lab is connected.</p>
+        <AvailabilityAction availability={unavailableAvailability("Live capture checks remain separated from the active stream until Test Lab is connected.", "Available after Test Lab setup")} />
       </Card>
     </CardGrid>
   );

@@ -96,7 +96,7 @@ function SourceCard({
       {facts.length === 0 ? (
         <div className={styles.fact}>
           <StatusBadge tone="neutral">Unknown</StatusBadge>
-          <strong>No authorised fact is available.</strong>
+          <strong>No trusted fact is available.</strong>
         </div>
       ) : facts.map((fact) => (
         <div className={styles.fact} key={fact.factId}>
@@ -105,7 +105,7 @@ function SourceCard({
             <StatusBadge tone={statusTone(fact.status)}>{titleCase(fact.status)}</StatusBadge>
           </ControlRow>
           <strong>{factValue(fact)}</strong>
-          <small>{`${Math.round(fact.confidence * 100)}% confidence · ${titleCase(fact.evidenceClass)} evidence`}</small>
+          <small>{`${Math.round(fact.confidence * 100)}% confidence · ${fact.evidenceClass === "live" ? "Live signal" : "Unconfirmed signal"}`}</small>
         </div>
       ))}
       {sourceClass === "audience-derived" && pointer !== null ? (
@@ -270,7 +270,7 @@ export function LiveDirectorControls({
     <div className={styles.workspace} data-compact={compact || undefined}>
       {view.session.status !== "live" ? (
         <Notice tone="warning" title="Live Director is not live">
-          This is the last authorised snapshot. Controls remain unavailable when server authority rejects the session state.
+          This is the last stream snapshot. Controls remain unavailable when the session is not ready.
         </Notice>
       ) : null}
       <Card className={styles.intentCard}>

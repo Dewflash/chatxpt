@@ -39,8 +39,11 @@ function sessionTone(status: StreamerViewModel["session"]["status"]) {
 
 function evidenceTone(evidenceClass: StreamerViewModel["envelope"]["evidenceClass"]) {
   if (evidenceClass === "live") return "success" as const;
-  if (evidenceClass === "diagnostic") return "diagnostic" as const;
   return "warning" as const;
+}
+
+function connectionLabel(evidenceClass: StreamerViewModel["envelope"]["evidenceClass"]): string {
+  return evidenceClass === "live" ? "Live connected" : "Live connection not confirmed";
 }
 
 function observationCounts(snapshot: GameplaySnapshot | AudienceSnapshot | null) {
@@ -96,7 +99,7 @@ function SnapshotCard({
       <div className={styles.sectionHeader}>
         <h3 className={styles.itemTitle}>{title}</h3>
         <StatusBadge tone={snapshot === null ? "neutral" : evidenceTone(snapshot.envelope.evidenceClass)}>
-          {snapshot?.envelope.evidenceClass ?? "missing"}
+          {snapshot === null ? "Missing" : connectionLabel(snapshot.envelope.evidenceClass)}
         </StatusBadge>
       </div>
       <div className={styles.metaRow}>
@@ -141,7 +144,7 @@ function QuestPanel({ view }: { readonly view: StreamerViewModel }) {
         <h2 id="studio-quest-heading" className={styles.sectionTitle}>Quest state</h2>
         <div className={styles.metaRow}>
           <StatusBadge tone="info">{cycle.status}</StatusBadge>
-          <StatusBadge tone="diagnostic">{`rev ${cycle.envelope.revision}`}</StatusBadge>
+          <StatusBadge tone="neutral">Synced state</StatusBadge>
         </div>
       </div>
 
@@ -153,7 +156,7 @@ function QuestPanel({ view }: { readonly view: StreamerViewModel }) {
         </CardGrid>
       ) : (
         <Notice title="No three-option quest is available">
-          ChatXPT is waiting for the next authorised proposal from the runtime.
+          ChatXPT is waiting for the next three-option proposal.
         </Notice>
       )}
 
@@ -165,7 +168,7 @@ function QuestPanel({ view }: { readonly view: StreamerViewModel }) {
 
       {cycle.progress ? (
         <Progress
-          label="Authoritative quest progress"
+          label="Quest progress"
           value={cycle.progress.value}
           max={1}
           valueLabel={`${Math.round(cycle.progress.value * 100)}%`}
@@ -177,7 +180,7 @@ function QuestPanel({ view }: { readonly view: StreamerViewModel }) {
           Available actions: {cycle.availableStreamerActions.join(", ")}
         </p>
       ) : (
-        <p className={styles.finePrint}>No streamer action is currently authorised.</p>
+        <p className={styles.finePrint}>No streamer action is currently available.</p>
       )}
     </section>
   );
@@ -189,7 +192,7 @@ export function StudioStatusSurface({ view, compact = false }: StudioStatusSurfa
       <DesignSystemRoot theme="dark" density={compact ? "compact" : "comfortable"} className={styles.surface}>
         <Panel className={styles.shell}>
           <Notice title="Loading Studio snapshot" politeness="polite">
-            Waiting for an authorised streamer view from ChatXPT.
+            Waiting for the latest Studio view from ChatXPT.
           </Notice>
         </Panel>
       </DesignSystemRoot>
@@ -212,14 +215,13 @@ export function StudioStatusSurface({ view, compact = false }: StudioStatusSurfa
           </div>
           <div className={styles.metaRow}>
             <StatusBadge tone={sessionTone(view.session.status)}>{view.session.status}</StatusBadge>
-            <StatusBadge tone={evidenceTone(view.envelope.evidenceClass)}>{view.envelope.evidenceClass}</StatusBadge>
-            <StatusBadge tone="diagnostic">{`rev ${view.envelope.revision}`}</StatusBadge>
+            <StatusBadge tone={evidenceTone(view.envelope.evidenceClass)}>{connectionLabel(view.envelope.evidenceClass)}</StatusBadge>
           </div>
         </header>
 
         {view.emergencyPaused ? (
           <Notice tone="danger" title="Emergency pause active" politeness="assertive">
-            Quest controls stay paused until the authoritative runtime clears the latch.
+            Quest controls stay paused until emergency pause is cleared.
           </Notice>
         ) : null}
 
@@ -238,7 +240,7 @@ export function StudioStatusSurface({ view, compact = false }: StudioStatusSurfa
         <section className={styles.section} aria-labelledby="studio-signals-heading">
           <div className={styles.sectionHeader}>
             <h2 id="studio-signals-heading" className={styles.sectionTitle}>Signals</h2>
-            <p className={styles.finePrint}>Unknown facts stay unknown; fixtures are never labelled live.</p>
+            <p className={styles.finePrint}>Unknown facts stay unknown and are never labelled live.</p>
           </div>
           <CardGrid className={styles.grid}>
             <SnapshotCard title="Gameplay" snapshot={view.gameplay} />
