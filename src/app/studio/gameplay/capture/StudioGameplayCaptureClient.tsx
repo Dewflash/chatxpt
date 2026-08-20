@@ -21,6 +21,8 @@ import styles from "./studio-gameplay-capture.module.css";
 
 type CaptureGame = "brawl-stars" | "minecraft" | "generic";
 
+const CAPTURE_PREFERENCE_KEY = "chatxpt.studio.gameplayCapture.v1";
+
 interface StudioSessionPayload {
   readonly ok: boolean;
   readonly view?: StreamerViewModel;
@@ -63,11 +65,47 @@ interface LatestCapture {
   readonly detectedFacts: readonly string[];
 }
 
+interface CapturePreference {
+  readonly game: CaptureGame;
+  readonly sessionId: string | null;
+  readonly savedAt: number;
+  readonly lastConnectedAt: number | null;
+}
+
 function captureError(caught: unknown): string {
   if (caught instanceof DOMException && caught.name === "NotAllowedError") {
     return "Camera access is blocked. Allow camera access for this browser, then retry.";
   }
   return caught instanceof Error ? caught.message : "Gameplay Capture could not start.";
+}
+
+function isCaptureGame(value: unknown): value is CaptureGame {
+  return value === "brawl-stars" || value === "minecraft" || value === "generic";
+}
+
+function readCapturePreference(): CapturePreference | null {
+  try {
+    const raw = window.localStorage.getItem(CAPTURE_PREFERENCE_KEY);
+    if (raw === null) return null;
+    const parsed = JSON.parse(raw) as Partial<CapturePreference>;
+    if (!isCaptureGame(parsed.game) || typeof parsed.savedAt !== "number") return null;
+    return {
+      game: parsed.game,
+      sessionId: typeof parsed.sessionId === "string" ? parsed.sessionId : null,
+      savedAt: parsed.savedAt,
+      lastConnectedAt: typeof parsed.lastConnectedAt === "number" ? parsed.lastConnectedAt : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeCapturePreference(input: CapturePreference): void {
+  try {
+    window.localStorage.setItem(CAPTURE_PREFERENCE_KEY, JSON.stringify(input));
+  } catch {
+    // Capture still works when private browsing or storage policy blocks local preferences.
+  }
 }
 
 function customerSafeLabel(label: string | null | undefined, fallback: string): string {
@@ -116,6 +154,7 @@ export function StudioGameplayCaptureClient() {
   const [game, setGame] = useState<CaptureGame>("generic");
   const [running, setRunning] = useState(false);
   const [latest, setLatest] = useState<LatestCapture | null>(null);
+  const [capturePreference, setCapturePreference] = useState<CapturePreference | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ingressStatus, setIngressStatus] = useState("Waiting for Studio session");
   const [acceptedSnapshots, setAcceptedSnapshots] = useState(0);
@@ -136,9 +175,11 @@ export function StudioGameplayCaptureClient() {
           setSessionError(payload.error?.message ?? "Open Studio first so Gameplay Capture can find the stream session.");
           return;
         }
+        const savedPreference = readCapturePreference();
         setView(payload.view);
         setReadiness(payload.readiness);
-        setGame(gameFromProfile(payload.view));
+        setCapturePreference(savedPreference);
+        setGame(savedPreference?.game ?? gameFromProfile(payload.view));
         setIngressStatus("Studio session ready");
         setSessionError(null);
       } catch {
@@ -156,6 +197,21 @@ export function StudioGameplayCaptureClient() {
     controllerRef.current?.abort();
     controllerRef.current = null;
     setRunning(false);
+  }
+
+  function rememberCapturePreference(input: {
+    readonly game: CaptureGame;
+    readonly connected: boolean;
+  }) {
+    const now = Date.now();
+    const next = {
+      game: input.game,
+      sessionId: view?.session.sessionId ?? null,
+      savedAt: now,
+      lastConnectedAt: input.connected ? now : capturePreference?.lastConnectedAt ?? null,
+    } satisfies CapturePreference;
+    setCapturePreference(next);
+    writeCapturePreference(next);
   }
 
   async function start(event: FormEvent<HTMLFormElement>) {
@@ -207,6 +263,7 @@ export function StudioGameplayCaptureClient() {
       ingressGrant = issued.grant;
       ingressAuthority = issued.authority;
       mediaStream = await requestObsVirtualCameraStream();
+      rememberCapturePreference({ game, connected: true });
       const capture = new MediaStreamVideoFrameCapture(mediaStream, { stopStreamOnEnd: true });
       const source = new BrowserMediaFrameSource({
         sessionId: view.session.sessionId,
@@ -339,7 +396,15 @@ export function StudioGameplayCaptureClient() {
           </label>
           <label className={styles.field}>
             Game profile
-            <select value={game} disabled={running || view === null} onChange={(event) => setGame(event.target.value as CaptureGame)}>
+            <select
+              value={game}
+              disabled={running || view === null}
+              onChange={(event) => {
+                const nextGame = event.target.value as CaptureGame;
+                setGame(nextGame);
+                rememberCapturePreference({ game: nextGame, connected: false });
+              }}
+            >
               <option value="minecraft">Minecraft Java - vanilla HUD calibration</option>
               <option value="brawl-stars">Brawl Stars - calibrated when HUD confirms</option>
               <option value="generic">Generic - universal visual signals only</option>
@@ -354,6 +419,11 @@ export function StudioGameplayCaptureClient() {
         <p className={styles.boundary}>
           This page connects the product capture path. It still reports unsupported or low-confidence
           game facts as unknown instead of guessing.
+        </p>
+        <p className={styles.boundary}>
+          {capturePreference?.lastConnectedAt === null || capturePreference === null
+            ? "No saved capture preference yet. The selected game profile is remembered in this browser after setup."
+            : `Last successful capture in this browser: ${new Date(capturePreference.lastConnectedAt).toLocaleString()}.`}
         </p>
       </section>
 
