@@ -364,7 +364,7 @@ Connect Twitch
 | Realtime client subscriptions | Studio/viewer/hosted/OBS normally poll every 1.5–2 seconds. | ICP-07 |
 | Persistent private viewer points | Recovery returns `sessionPoints: 0`. | ICP-07 |
 | OBS `Up next` rendering | Overlay supports quest/hype/connection only. | ICP-07 |
-| Authoritative Home surface previews | Diagnostic preview exists; Home has no current-state tabbed previews. | ICP-07 |
+| Authoritative Home surface previews | Home now has concise current-state compositions and gated Start/End controls; deeper tabbed previews remain incomplete. | ICP-07 |
 | Streamer-facing Test Lab route | ICP-01 route shell exists with customer-safe unavailable states; sample/live controls and policy-backed recovery remain incomplete. | ICP-08 |
 | Complete history/recovery experience | Read models exist in parts; dedicated product flow is incomplete. | ICP-08 |
 | Canonical `/` routing | `/` still mounts the legacy Control Room. | ICP-08 after parity |

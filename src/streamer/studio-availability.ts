@@ -19,6 +19,13 @@ const STATUS_COPY: Readonly<Record<string, { readonly badge: string; readonly to
   "permission-denied": { badge: "Permission needed", tone: "danger" },
 };
 
+function customerSafeDetail(detail: string | null | undefined, fallback: string): string {
+  if (detail === null || detail === undefined || /\bfixture\b/iu.test(detail)) {
+    return fallback;
+  }
+  return detail;
+}
+
 export function unavailableAvailability(detail: string, nextStep = "Waiting for setup"): ProductAvailability {
   return {
     state: "unavailable",
@@ -51,7 +58,7 @@ export function readinessAvailability(
     state: service.health.status === "ready" ? "available" : "unavailable",
     badge: copy.badge,
     tone: copy.tone,
-    detail: service.health.message ?? fallbackDetail,
+    detail: customerSafeDetail(service.health.message, fallbackDetail),
     nextStep: service.allowedActions.length > 0 ? "Use the recovery action in Studio" : "Waiting for setup",
   };
 }

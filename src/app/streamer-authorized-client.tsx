@@ -391,6 +391,8 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
         view={view}
         readiness={readiness}
         commandMessage={commandMessage}
+        pendingCommandId={pendingCommandId}
+        onCommand={(command) => void dispatchCommand(command)}
       />
     );
   }

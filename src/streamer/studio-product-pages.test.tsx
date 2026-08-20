@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { createFixtureUiGatewaySnapshot } from "../core";
 import { contractFixtureUiX01ReadinessCatalog } from "../core/testing";
+import type { StreamerUiCommand } from "./streamer-commands";
 import { StudioProductPageSurface, type StudioProductPage } from "./studio-product-pages";
 
 const pages: readonly StudioProductPage[] = [
@@ -34,7 +35,11 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("Stream Settings");
     expect(html).toContain("Test Lab");
     expect(html).toContain("Open the right workspace");
+    expect(html).toContain("Ready to start ChatXPT");
+    expect(html).toContain("Viewer Voting");
+    expect(html).toContain("Broadcast Overlay");
     expect(html).not.toContain("fixture");
+    expect(html).not.toContain("Fixture");
     expect(html).not.toContain("tester");
     expect(html).not.toContain("Role ");
   });
@@ -66,5 +71,38 @@ describe("StudioProductPageSurface", () => {
 
     expect(home).not.toContain("Sample and live source controls");
     expect(lab).toContain("Sample and live source controls are not connected yet");
+  });
+
+  it("renders the blocked Home composition without dispatchable start controls", () => {
+    const view = createFixtureUiGatewaySnapshot().views.streamer;
+    const readiness = contractFixtureUiX01ReadinessCatalog["r4.setup.permission-denied.v1"];
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "home",
+      view,
+      readiness,
+      onCommand: (_command: StreamerUiCommand) => undefined,
+    }));
+
+    expect(html).toContain("Resolve the highlighted setup blocker before starting ChatXPT.");
+    expect(html).toContain("Resolve setup first");
+    expect(html).not.toContain("<button");
+  });
+
+  it("renders live Home as stream control instead of setup start", () => {
+    const snapshot = createFixtureUiGatewaySnapshot();
+    const view = {
+      ...snapshot.views.streamer,
+      session: { ...snapshot.views.streamer.session, status: "live" as const },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "home",
+      view,
+      readiness: contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"],
+      onCommand: (_command: StreamerUiCommand) => undefined,
+    }));
+
+    expect(html).toContain("ChatXPT is live for this stream");
+    expect(html).toContain("End unavailable");
+    expect(html).toContain("Open Live Quests");
   });
 });

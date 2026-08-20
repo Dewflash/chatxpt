@@ -1,7 +1,12 @@
 "use client";
 
 import { Card, CardGrid, DesignSystemRoot, Notice, StatusBadge } from "../design-system";
-import type { StreamerReadinessView, StreamerViewModel } from "../core";
+import type {
+  StreamerReadinessView,
+  StreamerSetupAction,
+  StreamerSetupService,
+  StreamerViewModel,
+} from "../core";
 import { summarizeGameplayHealth } from "./gameplay-health";
 import { summarizeQuestGeneration } from "./quest-generation-health";
 import {
@@ -9,6 +14,12 @@ import {
   unavailableAvailability,
   type ProductAvailability,
 } from "./studio-availability";
+import {
+  buildSetupCommand,
+  defaultStreamerCommandFactory,
+  type StreamerCommandFactory,
+  type StreamerUiCommand,
+} from "./streamer-commands";
 
 import styles from "./studio-product-pages.module.css";
 
@@ -26,6 +37,9 @@ export interface StudioProductPageSurfaceProps {
   readonly view: StreamerViewModel | null;
   readonly readiness?: StreamerReadinessView | null;
   readonly commandMessage?: string | null;
+  readonly pendingCommandId?: string | null;
+  readonly onCommand?: (command: StreamerUiCommand) => void;
+  readonly commandFactory?: StreamerCommandFactory;
 }
 
 const NAV_ITEMS: readonly { readonly page: StudioProductPage; readonly href: string; readonly label: string }[] = [
@@ -95,6 +109,20 @@ function AvailabilityAction({ availability }: { readonly availability: ProductAv
   );
 }
 
+function serviceById(
+  readiness: StreamerReadinessView | null | undefined,
+  serviceId: StreamerSetupService["service"],
+): StreamerSetupService | null {
+  return readiness?.services.find((service) => service.service === serviceId) ?? null;
+}
+
+function actionAllowed(
+  service: StreamerSetupService | null,
+  action: StreamerSetupAction,
+): boolean {
+  return service?.allowedActions.includes(action) ?? false;
+}
+
 function unavailableCard(title: string, detail: string, nextStep?: string) {
   const availability = unavailableAvailability(detail, nextStep);
   return (
@@ -111,12 +139,18 @@ function HealthStrip({ view, readiness }: {
   readonly view: StreamerViewModel | null;
   readonly readiness?: StreamerReadinessView | null;
 }) {
-  const gameplay = view === null ? null : summarizeGameplayHealth(view.gameplay);
-  const generation = view === null || view.questCycle.options.length === 0
-    ? null
-    : summarizeQuestGeneration(view.questCycle.options);
   const twitch = readinessAvailability(readiness, "twitch", "Connect Twitch before starting ChatXPT.");
   const obs = readinessAvailability(readiness, "obs-capture", "Allow OBS Virtual Camera from Studio when capture is ready.");
+  const voting = readinessAvailability(readiness, "realtime", "Viewer Voting connects after realtime session state is available.");
+  const overlay = view === null
+    ? unavailableAvailability("Broadcast Overlay connects after a broadcaster session exists.", "Start broadcaster session")
+    : {
+        state: "available" as const,
+        badge: "Ready",
+        tone: "success" as const,
+        detail: "Broadcast Overlay can read this session after OBS Browser Source setup.",
+        nextStep: "Ready",
+      };
   return (
     <CardGrid className={styles.grid}>
       <Card className={styles.card}>
@@ -132,25 +166,199 @@ function HealthStrip({ view, readiness }: {
         <AvailabilityAction availability={obs} />
       </Card>
       <Card className={styles.card}>
-        <StatusBadge tone={gameplay?.tone ?? "neutral"}>{gameplay?.label ?? "No signal yet"}</StatusBadge>
-        <h3>Gameplay Activity</h3>
-        <p>{view?.gameplay === null || view === null ? "No current gameplay snapshot is available." : `${gameplay?.knownCount ?? 0} known facts and ${gameplay?.unknownCount ?? 0} unknown facts.`}</p>
+        <StatusBadge tone={voting.tone}>{voting.badge}</StatusBadge>
+        <h3>Viewer Voting</h3>
+        <p>{voting.detail}</p>
+        <AvailabilityAction availability={voting} />
       </Card>
       <Card className={styles.card}>
-        <StatusBadge tone={generation?.tone ?? "neutral"}>{generation?.label ?? "Waiting"}</StatusBadge>
-        <h3>Sidequests</h3>
-        <p>{generation?.detail ?? "ChatXPT opens voting only after exactly three validated options are approved."}</p>
+        <StatusBadge tone={overlay.tone}>{overlay.badge}</StatusBadge>
+        <h3>Broadcast Overlay</h3>
+        <p>{overlay.detail}</p>
+        <AvailabilityAction availability={overlay} />
       </Card>
     </CardGrid>
   );
 }
 
-function HomePage({ view, readiness }: {
+type HomeMode = "cannot-connect" | "ready" | "preparing" | "live" | "reconnecting" | "ended";
+
+function homeMode(
+  view: StreamerViewModel | null,
+  readiness: StreamerReadinessView | null | undefined,
+): HomeMode {
+  if (view === null || readiness === null || readiness === undefined) return "cannot-connect";
+  if (readiness.status === "blocked") return "cannot-connect";
+  if (view.session.status === "live") return readiness.status === "diagnostic" ? "reconnecting" : "live";
+  if (view.session.status === "preparing") return "preparing";
+  if (view.session.status === "ended") return "ended";
+  return "ready";
+}
+
+function homeCopy(mode: HomeMode, readiness: StreamerReadinessView | null | undefined) {
+  if (mode === "live") {
+    return {
+      badge: "Live",
+      title: "ChatXPT is live for this stream",
+      detail: "Keep an eye on Game Capture, viewer participation, sidequests, and broadcast output.",
+    };
+  }
+  if (mode === "preparing") {
+    return {
+      badge: "Preparing",
+      title: "ChatXPT is preparing the session",
+      detail: "Readiness is being checked before the live workflow opens.",
+    };
+  }
+  if (mode === "reconnecting") {
+    return {
+      badge: "Reconnecting",
+      title: "Live session is waiting on a connection",
+      detail: "The session remains visible while ChatXPT refreshes the latest stream state.",
+    };
+  }
+  if (mode === "ended") {
+    return {
+      badge: "Ended",
+      title: "This ChatXPT session has ended",
+      detail: "Start a new broadcaster session when you are ready for the next stream.",
+    };
+  }
+  if (mode === "ready") {
+    return {
+      badge: "Ready",
+      title: "Ready to start ChatXPT",
+      detail: "Twitch, Game Capture, viewer voting, and broadcast output have no blocking setup issues.",
+    };
+  }
+  return {
+    badge: "Needs setup",
+    title: readiness?.label ?? "Connect Studio to continue",
+    detail: readiness?.blockerCodes.length
+      ? "Resolve the highlighted setup blocker before starting ChatXPT."
+      : "Start or reconnect a broadcaster session before ChatXPT can read stream state.",
+  };
+}
+
+function HomeControlButton({
+  label,
+  disabledLabel,
+  disabled,
+  pending,
+  onClick,
+}: {
+  readonly label: string;
+  readonly disabledLabel: string;
+  readonly disabled: boolean;
+  readonly pending: boolean;
+  readonly onClick: () => void;
+}) {
+  if (disabled) {
+    return <span className={styles.disabledAction} aria-disabled="true">{disabledLabel}</span>;
+  }
+  return (
+    <button className={styles.primaryAction} type="button" disabled={pending} onClick={onClick}>
+      {pending ? "Working..." : label}
+    </button>
+  );
+}
+
+function HomeStatePanel({
+  view,
+  readiness,
+  pending,
+  onCommand,
+  commandFactory,
+}: {
   readonly view: StreamerViewModel | null;
   readonly readiness?: StreamerReadinessView | null;
+  readonly pending: boolean;
+  readonly onCommand?: (command: StreamerUiCommand) => void;
+  readonly commandFactory: StreamerCommandFactory;
+}) {
+  const mode = homeMode(view, readiness);
+  const copy = homeCopy(mode, readiness);
+  const session = serviceById(readiness, "session");
+  const canStart = view !== null && readiness?.ready === true && actionAllowed(session, "start-session") && onCommand !== undefined;
+  const canEnd = view !== null && actionAllowed(session, "end-session") && onCommand !== undefined;
+  const gameplay = view === null ? null : summarizeGameplayHealth(view.gameplay);
+  const generation = view === null || view.questCycle.options.length === 0
+    ? null
+    : summarizeQuestGeneration(view.questCycle.options);
+
+  return (
+    <section className={styles.homePanel} aria-labelledby="home-state-heading">
+      <div className={styles.homeSummary}>
+        <StatusBadge tone={mode === "live" || mode === "ready" ? "success" : mode === "cannot-connect" || mode === "reconnecting" ? "warning" : "neutral"}>
+          {copy.badge}
+        </StatusBadge>
+        <h2 id="home-state-heading">{copy.title}</h2>
+        <p>{copy.detail}</p>
+        <div className={styles.actions}>
+          {mode === "live" ? (
+            <HomeControlButton
+              label="End ChatXPT session"
+              disabledLabel="End unavailable"
+              disabled={!canEnd}
+              pending={pending}
+              onClick={() => {
+                if (view !== null) onCommand?.(buildSetupCommand(view, "session", "end-session", commandFactory));
+              }}
+            />
+          ) : (
+            <HomeControlButton
+              label="Start ChatXPT"
+              disabledLabel={readiness?.recommendedAction === "start-session" ? "Start unavailable" : "Resolve setup first"}
+              disabled={!canStart}
+              pending={pending}
+              onClick={() => {
+                if (view !== null) onCommand?.(buildSetupCommand(view, "session", "start-session", commandFactory));
+              }}
+            />
+          )}
+          <a href={mode === "live" ? "/studio/live-quests" : "/studio/gameplay"}>
+            {mode === "live" ? "Open Live Quests" : "Review setup"}
+          </a>
+        </div>
+      </div>
+      <dl className={styles.homeMetrics}>
+        <div>
+          <dt>Stream vibe</dt>
+          <dd>{view?.audience === null || view === null ? "Unknown" : `${view.audience.signals.length} audience signals`}</dd>
+        </div>
+        <div>
+          <dt>Gameplay</dt>
+          <dd>{gameplay?.label ?? "No signal yet"}</dd>
+        </div>
+        <div>
+          <dt>Sidequests</dt>
+          <dd>{generation?.label ?? "Waiting for three options"}</dd>
+        </div>
+        <div>
+          <dt>Game</dt>
+          <dd>{view?.profile.gameName ?? "No game selected"}</dd>
+        </div>
+      </dl>
+    </section>
+  );
+}
+
+function HomePage({ view, readiness, pending, onCommand, commandFactory }: {
+  readonly view: StreamerViewModel | null;
+  readonly readiness?: StreamerReadinessView | null;
+  readonly pending: boolean;
+  readonly onCommand?: (command: StreamerUiCommand) => void;
+  readonly commandFactory: StreamerCommandFactory;
 }) {
   return (
     <>
+      <HomeStatePanel
+        view={view}
+        readiness={readiness}
+        pending={pending}
+        onCommand={onCommand}
+        commandFactory={commandFactory}
+      />
       <HealthStrip view={view} readiness={readiness} />
       <section className={styles.section} aria-labelledby="home-next-heading">
         <h2 id="home-next-heading">Open the right workspace</h2>
@@ -271,7 +479,7 @@ function TestLabPage() {
     <CardGrid className={styles.grid}>
       <Card className={styles.card}>
         <StatusBadge tone="warning">Unavailable</StatusBadge>
-        <h3>Authorised source check</h3>
+        <h3>Trusted source check</h3>
         <p>Sample and live source controls are not connected yet. They will stay separate from the active stream.</p>
       </Card>
       <Card className={styles.card}>
@@ -288,8 +496,21 @@ function PageBody({ page, view, readiness }: {
   readonly page: StudioProductPage;
   readonly view: StreamerViewModel | null;
   readonly readiness?: StreamerReadinessView | null;
+  readonly pending: boolean;
+  readonly onCommand?: (command: StreamerUiCommand) => void;
+  readonly commandFactory: StreamerCommandFactory;
 }) {
-  if (page === "home") return <HomePage view={view} readiness={readiness} />;
+  if (page === "home") {
+    return (
+      <HomePage
+        view={view}
+        readiness={readiness}
+        pending={pending}
+        onCommand={onCommand}
+        commandFactory={commandFactory}
+      />
+    );
+  }
   if (page === "gameplay") return <GameplayPage view={view} />;
   if (page === "live-analytics") return <LiveAnalyticsPage view={view} />;
   if (page === "live-quests") return <LiveQuestsPage view={view} />;
@@ -303,8 +524,12 @@ export function StudioProductPageSurface({
   view,
   readiness,
   commandMessage,
+  pendingCommandId = null,
+  onCommand,
+  commandFactory = defaultStreamerCommandFactory,
 }: StudioProductPageSurfaceProps) {
   const copy = PAGE_COPY[page];
+  const pending = pendingCommandId !== null;
   return (
     <DesignSystemRoot className={styles.surface}>
       <aside className={styles.sidebar} aria-label="Studio navigation">
@@ -336,7 +561,14 @@ export function StudioProductPageSurface({
           </div>
         </section>
         {commandMessage ? <Notice tone="warning" title="Studio status">{commandMessage}</Notice> : null}
-        <PageBody page={page} view={view} readiness={readiness} />
+        <PageBody
+          page={page}
+          view={view}
+          readiness={readiness}
+          pending={pending}
+          onCommand={onCommand}
+          commandFactory={commandFactory}
+        />
       </main>
     </DesignSystemRoot>
   );

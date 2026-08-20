@@ -111,6 +111,67 @@
   gap: var(--cx-space-lg);
 }
 
+.homePanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(17rem, 0.85fr);
+  gap: var(--cx-space-xl);
+  align-items: stretch;
+  padding: var(--cx-space-xl);
+  border: 1px solid var(--cx-color-border);
+  border-radius: var(--cx-radius-lg);
+  background: var(--cx-color-surface);
+}
+
+.homeSummary {
+  display: grid;
+  align-content: start;
+  gap: var(--cx-space-md);
+}
+
+.homeSummary h2 {
+  max-width: 20ch;
+  margin: 0;
+  font-size: var(--cx-font-size-2xl);
+  line-height: 1.08;
+}
+
+.homeSummary p {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--cx-color-text-muted);
+}
+
+.homeMetrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cx-space-sm);
+  margin: 0;
+}
+
+.homeMetrics div {
+  min-width: 0;
+  display: grid;
+  gap: var(--cx-space-xs);
+  padding: var(--cx-space-md);
+  border: 1px solid var(--cx-color-border);
+  border-radius: var(--cx-radius-md);
+  background: var(--cx-color-surface-raised);
+}
+
+.homeMetrics dt,
+.homeMetrics dd {
+  margin: 0;
+}
+
+.homeMetrics dt {
+  color: var(--cx-color-text-muted);
+  font-size: var(--cx-font-size-sm);
+}
+
+.homeMetrics dd {
+  font-weight: var(--cx-font-weight-semibold);
+}
+
 .grid {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
 }
@@ -153,6 +214,7 @@
 }
 
 .actions a,
+.primaryAction,
 .readyAction,
 .disabledAction {
   min-height: 2.5rem;
@@ -166,6 +228,24 @@
   text-decoration: none;
   background: var(--cx-color-surface-raised);
   font-weight: var(--cx-font-weight-medium);
+}
+
+.primaryAction {
+  border-color: var(--cx-color-primary);
+  color: var(--cx-color-primary-contrast);
+  background: var(--cx-color-primary);
+  cursor: pointer;
+}
+
+.primaryAction:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.primaryAction:focus-visible,
+.actions a:focus-visible {
+  outline: none;
+  box-shadow: var(--cx-focus-ring);
 }
 
 .readyAction {
@@ -197,5 +277,10 @@
   .hero {
     align-items: start;
     flex-direction: column;
+  }
+
+  .homePanel,
+  .homeMetrics {
+    grid-template-columns: 1fr;
   }
 }
