@@ -349,7 +349,7 @@ Connect Twitch
 | Complete profile editing | Profile & Defaults now emits the existing authoritative profile-settings command for game, intensity, creativity, safety lists, quest preferences, and accessibility. Presets, richer validation, and final UI/testing remain incomplete. | ICP-03 |
 | Named stream presets | No preset schema, persistence, or UI exists. | ICP-03 |
 | Current-stream overrides | A broadcaster-only `streamer.session-override` command, optional authoritative override state, streamer projection, and Stream Settings apply/reset controls now exist for current-stream intensity/creativity. Preset-aware effective settings and final tests remain incomplete. | ICP-03 |
-| Canonical runtime intelligence composition | Role 2 provider/coordinator ports exist but are not mounted in the production runtime. | ICP-04/ICP-06 |
+| Canonical runtime intelligence composition | Source now mounts the configured candidate provider and intervention coordinator in the server runtime for cue conversion and eligible-cycle proposal requests. Final test execution and real-input proof remain open. | ICP-04/ICP-06 |
 | Automatic Live Director refresh | Context composition exists but no production producer/scheduler emits it. | ICP-04 |
 | Gameplay Engine page | ICP-01 route shell exists with Overview, Game Capture, Understanding, and Health & Recovery sections and links to `/studio/gameplay/capture`; full understanding workflow remains incomplete. | ICP-04 |
 | Public `Up next` | Overlay projection has no accepted activity-context field. | ICP-04/ICP-07 |
@@ -359,7 +359,7 @@ Connect Twitch
 | Game-aware algorithmic candidates | Credential-free algorithmic generation now prefers Minecraft-aware templates when Minecraft is selected or evidenced, and remains game-neutral for other games. Final evaluation/testing remains open. | ICP-06 |
 | Game-aware deterministic fallback | Role 3 deterministic fallback now prefers Minecraft-aware safe definitions when Minecraft is selected or evidenced, and remains game-neutral for other games. Final evaluation/testing remains open. | ICP-06 |
 | Correct weak-evidence OpenAI prompt | Source now keeps weak exact evidence strict while allowing safe Minecraft-aware, non-state-claiming provider instructions for selected/evidenced Minecraft sessions. Final provider/evaluation execution remains open. | ICP-06 |
-| Automatic eligible-cycle candidate call | Candidate provider and intervention coordinator are test-only composition. | ICP-06 |
+| Automatic eligible-cycle candidate call | Accepted live gameplay ingress now asks the server runtime for one policy-gated proposal per session/cycle/revision; denied moments do not call candidate generation. Final tests and real-input evidence remain open. | ICP-06 |
 | Dedicated Live Quests page | ICP-01 route shell exists with Now, Recommendations, Why, Voting, and Results sections; full recommendation/review/voting/result workspace remains incomplete. | ICP-06 |
 | Realtime client subscriptions | Studio/viewer/hosted/OBS normally poll every 1.5–2 seconds. | ICP-07 |
 | Persistent private viewer points | Recovery returns `sessionPoints: 0`. | ICP-07 |

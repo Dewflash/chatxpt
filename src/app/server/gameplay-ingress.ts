@@ -7,9 +7,11 @@ import { z } from "zod";
 import {
   gameplaySnapshotSchema,
   identifierSchema,
+  serviceHealthSchema,
   type AuthoritativeSessionState,
   type GameplaySnapshot,
   type IngestGameplaySnapshotResult,
+  type ProjectionContextResolver,
 } from "@/core";
 import {
   GameplayIngressAuthError,
@@ -18,7 +20,7 @@ import {
 } from "@/integrations/server";
 import type { ChatXptPersistenceRuntime } from "@/realtime";
 
-import { getChatXptServerRuntime } from "./runtime";
+import { getChatXptServerRuntime, type ChatXptServerRuntime } from "./runtime";
 
 const grantRequestSchema = z.object({ sessionId: identifierSchema }).strict();
 
@@ -59,6 +61,7 @@ export class GameplayIngressApplicationError extends Error {
 
 export interface GameplayIngressApplicationDependencies {
   readonly persistence: ChatXptPersistenceRuntime;
+  readonly runtime?: Pick<ChatXptServerRuntime, "requestEligibleCycleProposal">;
   readonly setupKey: string;
   readonly now?: () => number;
   readonly nextId?: () => string;
@@ -73,6 +76,33 @@ export interface GameplayIngressGrantResult {
 export interface GameplayIngressResult {
   readonly result: IngestGameplaySnapshotResult;
   readonly authority: GameplayIngressAuthoritySnapshot;
+  readonly proposal: GameplayIngressProposalResult;
+}
+
+export type GameplayIngressProposalResult =
+  | { readonly status: "not-requested"; readonly reason: "duplicate-snapshot" | "rejected-snapshot" | "preparing-session" | "runtime-unavailable" }
+  | { readonly status: "not-eligible" }
+  | { readonly status: "submitted" | "duplicate" }
+  | { readonly status: "failed"; readonly message: string; readonly retryable: boolean };
+
+class GameplayIngressProjectionContext implements ProjectionContextResolver {
+  constructor(private readonly now: () => number) {}
+
+  resolve() {
+    return {
+      participationMode: "unavailable" as const,
+      viewerId: null,
+      sessionPoints: 0,
+      acceptedCandidateId: null,
+      connection: serviceHealthSchema.parse({
+        service: "gameplay-capture",
+        status: "ready",
+        checkedAt: this.now(),
+        message: "Accepted gameplay snapshot triggered authoritative projection",
+        retryable: false,
+      }),
+    };
+  }
 }
 
 function active(state: AuthoritativeSessionState): boolean {
@@ -109,6 +139,7 @@ function authApplicationError(caught: unknown): GameplayIngressApplicationError 
 export class GameplayIngressApplication {
   private readonly persistence: ChatXptPersistenceRuntime;
   private readonly grants: GameplayIngressGrantAuthority;
+  private readonly runtime?: Pick<ChatXptServerRuntime, "requestEligibleCycleProposal">;
   private readonly now: () => number;
   private readonly nextId: () => string;
   private readonly recentByGrant = new Map<
@@ -118,6 +149,7 @@ export class GameplayIngressApplication {
 
   constructor(dependencies: GameplayIngressApplicationDependencies) {
     this.persistence = dependencies.persistence;
+    this.runtime = dependencies.runtime;
     this.grants = new GameplayIngressGrantAuthority(dependencies.setupKey);
     this.now = dependencies.now ?? Date.now;
     this.nextId = dependencies.nextId ?? randomUUID;
@@ -225,11 +257,44 @@ export class GameplayIngressApplication {
         expiresAt: grant.expiresAt,
       });
     }
+    const proposal = await this.maybeRequestEligibleCycleProposal(state, result);
     const latestState =
       result.status === "rejected" && result.reason === "state-mismatch"
         ? await this.loadActiveSession(grant.sessionId)
         : state;
-    return { result, authority: authoritySnapshot(latestState) };
+    return { result, authority: authoritySnapshot(latestState), proposal };
+  }
+
+  private async maybeRequestEligibleCycleProposal(
+    state: AuthoritativeSessionState,
+    result: IngestGameplaySnapshotResult,
+  ): Promise<GameplayIngressProposalResult> {
+    if (result.status === "rejected") return { status: "not-requested", reason: "rejected-snapshot" };
+    if (result.status === "duplicate") return { status: "not-requested", reason: "duplicate-snapshot" };
+    if (state.session.status !== "live") return { status: "not-requested", reason: "preparing-session" };
+    if (this.runtime === undefined) return { status: "not-requested", reason: "runtime-unavailable" };
+    let proposal: Awaited<ReturnType<ChatXptServerRuntime["requestEligibleCycleProposal"]>>;
+    try {
+      proposal = await this.runtime.requestEligibleCycleProposal(
+        { ...state, gameplay: result.snapshot },
+        new GameplayIngressProjectionContext(this.now),
+      );
+    } catch {
+      return {
+        status: "failed",
+        message: "Eligible-cycle proposal runtime failed",
+        retryable: true,
+      };
+    }
+    if (!proposal.ok) {
+      return {
+        status: "failed",
+        message: proposal.error.message,
+        retryable: proposal.error.retryable,
+      };
+    }
+    if (proposal.outcome === "not-eligible") return { status: "not-eligible" };
+    return { status: proposal.outcome === "duplicate" ? "duplicate" : "submitted" };
   }
 
   private async authorize(authorizationHeader: string | null) {
@@ -283,8 +348,10 @@ const globalApplication = globalThis as typeof globalThis & {
 
 export function getGameplayIngressApplication(): GameplayIngressApplication {
   if (globalApplication[applicationKey] !== undefined) return globalApplication[applicationKey];
+  const runtime = getChatXptServerRuntime();
   globalApplication[applicationKey] = new GameplayIngressApplication({
-    persistence: getChatXptServerRuntime().persistence,
+    persistence: runtime.persistence,
+    runtime,
     setupKey: process.env.CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY ?? "",
   });
   return globalApplication[applicationKey];

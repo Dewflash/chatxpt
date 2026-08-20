@@ -6,6 +6,7 @@ import {
   CanonicalViewProjector,
   ChatXptOrchestrator,
   CONTRACT_VERSION,
+  Role1InterventionCoordinator,
   domainErrorSchema,
   intelligenceSnapshotSchema,
   systemIntelligenceCommandSchema,
@@ -26,6 +27,7 @@ import {
   createDefaultQuestEngine,
   DefaultDirectorCueConverter,
   DefaultDirectorCueLifecycle,
+  DefaultInterventionPolicy,
 } from "@/quest-engine";
 import {
   ServerCommandAuthorizer,
@@ -223,6 +225,101 @@ export class ChatXptServerRuntime {
       },
       projectionContext,
     );
+  }
+
+  async requestEligibleCycleProposal(
+    state: AuthoritativeSessionState,
+    projectionContext: ProjectionContextResolver,
+  ): Promise<OrchestratorResult | { readonly ok: true; readonly outcome: "not-eligible" }> {
+    if (state.session.status !== "live" || state.gameplay === null) {
+      return { ok: true, outcome: "not-eligible" };
+    }
+    const questCycleId = state.questCycle.envelope.questCycleId;
+    const commandId = `eligible-cycle-proposal-${state.session.sessionId}-${state.session.revision}-${questCycleId ?? "none"}`;
+    const existing = await this.persistence.sessions.findReceipt(commandId);
+    if (existing !== null) {
+      return {
+        ok: true,
+        outcome: "duplicate",
+        receipt: existing,
+        views: null,
+        delivery: "not-republished",
+      };
+    }
+    const now = this.clock.now();
+    const envelope = {
+      contractVersion: CONTRACT_VERSION,
+      sessionId: state.session.sessionId,
+      questCycleId,
+      messageId: `eligible-cycle-intelligence-${randomUUID()}`,
+      correlationId: `eligible-cycle-proposal-${randomUUID()}`,
+      revision: state.session.revision,
+      occurredAt: now,
+      receivedAt: now,
+      source: "orchestrator" as const,
+      evidenceClass: state.questCycle.envelope.evidenceClass,
+    };
+    const audience =
+      state.audience !== null &&
+      state.audience.envelope.sessionId === envelope.sessionId &&
+      state.audience.envelope.questCycleId === envelope.questCycleId &&
+      state.audience.envelope.revision === envelope.revision &&
+      state.audience.envelope.evidenceClass === envelope.evidenceClass
+        ? state.audience
+        : {
+            envelope,
+            sampleSize: 0,
+            signals: [],
+          };
+    const intelligence = intelligenceSnapshotSchema.safeParse({
+      envelope,
+      gameplay: state.gameplay,
+      audience,
+    });
+    if (!intelligence.success) {
+      return {
+        ok: false,
+        error: domainErrorSchema.parse({
+          code: "validation",
+          message: "Eligible-cycle intelligence context is not canonical",
+          retryable: false,
+        }),
+      };
+    }
+    const actor = {
+      kind: "system" as const,
+      actorId: "role1-intervention-coordinator",
+      expiresAt: null,
+      moderatorForBroadcasterIds: [],
+      voterKey: null,
+      participationModes: [],
+    };
+    const coordinator = new Role1InterventionCoordinator(
+      new DefaultInterventionPolicy(),
+      this.candidateProvider,
+      this.persistence.candidates,
+      {
+        execute: (command) => this.execute(command, actor, projectionContext),
+      },
+      () => this.clock.now(),
+    );
+    const result = await coordinator.run({
+      state,
+      intelligence: intelligence.data,
+      recentQuests: state.recentQuests ?? [],
+      candidateInputEnvelope: envelope,
+      commandId,
+      correlationId: envelope.correlationId,
+      systemActorId: actor.actorId,
+      issuedAt: now,
+    });
+    if (result.ok && result.outcome === "denied") {
+      return { ok: true, outcome: "not-eligible" };
+    }
+    if (!result.ok) {
+      return { ok: false, error: result.error };
+    }
+    return result.orchestrator;
   }
 }
 
