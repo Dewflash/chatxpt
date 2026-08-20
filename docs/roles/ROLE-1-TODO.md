@@ -6,9 +6,9 @@ Update this file at the start and end of each Role 1 pass. Do not mark `DONE` wi
 
 Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan defines phase order, owner decisions, deadlines, and pass-level evidence.
 
-**Next:** deconflict Role 3 R3-011 exactly-three conversion before wiring it into R1-026 (`LD-R1-04`), while keeping R1-015, R1-016, and the team-owned Supabase/Twitch/OBS evidence tracks moving where they do not overlap. Deconflict each Live Director wave before merge; role labels remain responsibility context, not permission gates.
+**Next:** R3-009 through R3-013 are merged. Execute R1-026 (`LD-R1-04`) now, with Role 3 explicitly free under D-077 to implement the missing Role 1 composition/viewer/OBS slice through public seams rather than wait for ownership. Keep R1-015, R1-016, and the team-owned Supabase/Twitch/OBS evidence tracks moving where they do not overlap; deconfliction controls integration order, not whether another contributor continues.
 
-**Most recently completed pass:** `role-1/live-director-03-streamer-delivery` mounts private source-separated Live Director controls in Studio, Twitch Live Config, and a Studio-authorised browser pop-out/OBS Custom Dock route. Role 1 now authenticates and commits Role 3 cue actions through a dedicated public port; exactly-three candidate publication remains R3-011 follow-up.
+**Most recently completed pass:** `role-1/live-director-03-streamer-delivery` mounts private source-separated Live Director controls in Studio, Twitch Live Config, and a Studio-authorised browser pop-out/OBS Custom Dock route. Role 1 now authenticates and commits Role 3 cue actions through a dedicated public port; Role 3's exactly-three conversion is merged and its runtime publication/delivery wiring is the R1-026/R3-014 follow-up.
 
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
