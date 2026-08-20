@@ -234,14 +234,33 @@
   cursor: pointer;
 }
 
+.secondaryButton {
+  min-height: 2.5rem;
+  justify-self: start;
+  padding: 0.625rem 0.8rem;
+  border: 1px solid var(--cx-color-border);
+  border-radius: var(--cx-radius-md);
+  color: var(--cx-color-text);
+  background: var(--cx-color-surface-raised);
+  font: inherit;
+  font-weight: var(--cx-font-weight-medium);
+  cursor: pointer;
+}
+
 .profileForm button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.secondaryButton:disabled {
   cursor: not-allowed;
   opacity: 0.62;
 }
 
 .compactField input:focus-visible,
 .compactField textarea:focus-visible,
-.profileForm button:focus-visible {
+.profileForm button:focus-visible,
+.secondaryButton:focus-visible {
   outline: none;
   box-shadow: var(--cx-focus-ring);
 }

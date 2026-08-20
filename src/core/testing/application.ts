@@ -274,6 +274,7 @@ export class CanonicalFixtureViewProjector implements ViewModelProjector {
         audience: input.audience,
         questCycle: input.questCycle,
         emergencyPaused: input.emergencyPaused,
+        ...(input.sessionOverride === undefined ? {} : { sessionOverride: input.sessionOverride }),
         ...(input.liveDirector === undefined ? {} : { liveDirector: input.liveDirector }),
       }),
       viewer: viewerViewModelSchema.parse({

@@ -65,6 +65,23 @@ export const streamerProfileSchema = z
     }
   });
 
+export const streamerSessionOverrideSchema = z
+  .object({
+    appliedAt: z.number().int().nonnegative(),
+    experiencePatch: z.record(z.string().trim().min(1).max(80), boundedExperienceValueSchema).default({}),
+  })
+  .strict()
+  .superRefine((override, context) => {
+    if (Object.keys(override.experiencePatch).length === 0) {
+      context.addIssue({
+        code: "custom",
+        message: "Session overrides must include at least one setting",
+        path: ["experiencePatch"],
+      });
+    }
+  });
+
 export type StreamerProfile = z.infer<typeof streamerProfileSchema>;
 export type StreamerVotingPreferences = z.infer<typeof streamerVotingPreferencesSchema>;
 export type StreamerRewardPreferences = z.infer<typeof streamerRewardPreferencesSchema>;
+export type StreamerSessionOverride = z.infer<typeof streamerSessionOverrideSchema>;

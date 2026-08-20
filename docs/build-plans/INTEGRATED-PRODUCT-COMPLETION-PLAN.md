@@ -348,7 +348,7 @@ Connect Twitch
 | Automatic Game Capture reconnect | The product capture screen refreshes short-lived ingress grants while running and remembers the selected game profile plus last successful capture time in browser-local storage; full permission/device-loss recovery is still incomplete. | ICP-02 |
 | Complete profile editing | Profile & Defaults now emits the existing authoritative profile-settings command for game, intensity, creativity, safety lists, quest preferences, and accessibility. Presets, richer validation, and final UI/testing remain incomplete. | ICP-03 |
 | Named stream presets | No preset schema, persistence, or UI exists. | ICP-03 |
-| Current-stream overrides | Controls are disabled and no patch/clear authority exists. | ICP-03 |
+| Current-stream overrides | A broadcaster-only `streamer.session-override` command, optional authoritative override state, streamer projection, and Stream Settings apply/reset controls now exist for current-stream intensity/creativity. Preset-aware effective settings and final tests remain incomplete. | ICP-03 |
 | Canonical runtime intelligence composition | Role 2 provider/coordinator ports exist but are not mounted in the production runtime. | ICP-04/ICP-06 |
 | Automatic Live Director refresh | Context composition exists but no production producer/scheduler emits it. | ICP-04 |
 | Gameplay Engine page | ICP-01 route shell exists with Overview, Game Capture, Understanding, and Health & Recovery sections and links to `/studio/gameplay/capture`; full understanding workflow remains incomplete. | ICP-04 |

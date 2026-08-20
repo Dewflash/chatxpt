@@ -900,6 +900,7 @@ export class TwitchExtensionViewerApplication {
       communityHype: state.communityHype,
       acceptedCandidateId: context.acceptedCandidateId,
       connection: context.connection,
+      sessionOverride: state.sessionOverride,
     });
     const viewer = viewerViewModelSchema.parse(projected.viewer);
     return viewerViewModelSchema.parse(

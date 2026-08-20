@@ -39,6 +39,8 @@ export class CanonicalViewProjector implements ViewModelProjector {
       input.participationMode !== "unavailable";
     const streamerLiveDirector =
       input.liveDirector === undefined ? {} : { liveDirector: input.liveDirector };
+    const sessionOverride =
+      input.sessionOverride === undefined ? {} : { sessionOverride: input.sessionOverride };
     const viewerLiveDirector =
       input.liveDirector === undefined
         ? {}
@@ -59,6 +61,7 @@ export class CanonicalViewProjector implements ViewModelProjector {
         audience: input.audience,
         questCycle: input.questCycle,
         emergencyPaused: input.emergencyPaused,
+        ...sessionOverride,
         ...streamerLiveDirector,
       }),
       viewer: viewerViewModelSchema.parse({

@@ -28,7 +28,7 @@ Issue [#140](https://github.com/Dewflash/chatxpt/issues/140) adds three Role 4-o
 - `TwitchConfigSurface` keeps infrequent channel/Extension setup compact and sends detailed management back to Studio.
 - `TwitchLiveConfigSurface` keeps stream-time status, proposed/active quest state, allowed actions, emergency pause, and a quick-intensity boundary in one responsive column.
 
-The modules emit only canonical commands created by the exported Role 4 command builders. The current `streamer.profile-settings` contract can persist numeric experience, voting, reward, game, restriction, preferred/forbidden quest-type, and accessibility settings through the authoritative orchestrator. The richer Studio list-editing controls remain a UI follow-up; session intensity shows its saved source and remains disabled until Role 1 publishes a session-override view, patch, and clear command. Role 4 does not use browser storage as a substitute.
+The modules emit only canonical commands created by the exported Role 4 command builders. The current `streamer.profile-settings` contract can persist numeric experience, voting, reward, game, restriction, preferred/forbidden quest-type, and accessibility settings through the authoritative orchestrator. The `streamer.session-override` contract applies and clears current-stream intensity/creativity overrides without rewriting saved defaults. Role 4 does not use browser storage as a substitute for authoritative settings.
 
 All health and generation labels are provider-neutral. No API key, raw model/provider selector, viewer-personality profile, or viewer account requirement is exposed.
 

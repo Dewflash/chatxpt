@@ -4,6 +4,7 @@ import {
   streamerLiveDirectorCueCommandSchema,
   streamerLiveDirectorIntentCommandSchema,
   streamerProfileSettingsCommandSchema,
+  streamerSessionOverrideCommandSchema,
   streamerQuestCommandSchema,
   streamerQuestProgressCommandSchema,
   streamerServiceCommandSchema,
@@ -12,6 +13,7 @@ import {
   type StreamerLiveDirectorCueCommand,
   type StreamerLiveDirectorIntentCommand,
   type StreamerProfileSettingsCommand,
+  type StreamerSessionOverrideCommand,
   type StreamerQuestAction,
   type StreamerQuestCommand,
   type StreamerQuestProgressCommand,
@@ -25,6 +27,7 @@ import {
 
 export type StreamerUiCommand =
   | StreamerProfileSettingsCommand
+  | StreamerSessionOverrideCommand
   | StreamerLiveDirectorIntentCommand
   | StreamerLiveDirectorCueCommand
   | StreamerQuestCommand
@@ -132,6 +135,20 @@ export function buildProfileSettingsCommand(
     accessibilityNeeds: [...draft.accessibilityNeeds],
     voting: draft.voting,
     rewards: draft.rewards,
+  });
+}
+
+export function buildSessionOverrideCommand(
+  view: StreamerViewModel,
+  experiencePatch: Readonly<Record<string, number>> | null,
+  factory: StreamerCommandFactory = defaultStreamerCommandFactory,
+): StreamerSessionOverrideCommand {
+  return streamerSessionOverrideCommandSchema.parse({
+    ...metadata(view, factory, experiencePatch === null ? "session-override-clear" : "session-override-apply"),
+    questCycleId: null,
+    type: "streamer.session-override",
+    action: experiencePatch === null ? "clear" : "apply",
+    experiencePatch: experiencePatch ?? {},
   });
 }
 

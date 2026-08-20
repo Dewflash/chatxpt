@@ -18,6 +18,7 @@ import {
 } from "./studio-availability";
 import {
   buildProfileSettingsCommand,
+  buildSessionOverrideCommand,
   buildSetupCommand,
   defaultStreamerCommandFactory,
   editableDefaultsFromView,
@@ -666,17 +667,86 @@ function ProfilePage({
   );
 }
 
-function StreamSettingsPage({ view }: { readonly view: StreamerViewModel | null }) {
+function StreamSettingsPage({
+  view,
+  pending,
+  onCommand,
+  commandFactory,
+}: {
+  readonly view: StreamerViewModel | null;
+  readonly pending: boolean;
+  readonly onCommand?: (command: StreamerUiCommand) => void;
+  readonly commandFactory: StreamerCommandFactory;
+}) {
+  const override = view?.sessionOverride ?? null;
+  const savedIntensity = view?.profile.experience.intensity ?? 0.5;
+  const savedCreativity = view?.profile.experience.creativity ?? 0.5;
+  const effectiveIntensity = override?.experiencePatch.intensity ?? savedIntensity;
+  const effectiveCreativity = override?.experiencePatch.creativity ?? savedCreativity;
   return (
     <CardGrid className={styles.grid}>
       <PageSectionCard
         title="Saved Source"
         badge={view === null ? "Waiting" : "Saved defaults"}
         badgeTone={view === null ? "neutral" : "info"}
-        detail={view === null ? "Start a session to see current-stream settings." : "This stream currently follows saved profile defaults."}
+        detail={view === null ? "Start a session to see current-stream settings." : `Saved defaults: intensity ${Math.round(savedIntensity * 100)}%, creativity ${Math.round(savedCreativity * 100)}%.`}
       />
-      {unavailableCard("Session Override", "Session-only changes are not connected yet.", "Use saved defaults for now")}
-      {unavailableCard("Reset to Saved", "Reset controls are unavailable until session override state is connected.", "No override to reset")}
+      <Card className={styles.card}>
+        <StatusBadge tone={override === null ? "neutral" : "warning"}>
+          {override === null ? "Using defaults" : "Temporary override"}
+        </StatusBadge>
+        <h3>Session Override</h3>
+        <p>
+          {override === null
+            ? "This stream currently follows saved profile defaults."
+            : `This stream is using temporary values: intensity ${Math.round(effectiveIntensity * 100)}%, creativity ${Math.round(effectiveCreativity * 100)}%.`}
+        </p>
+        <form
+          className={styles.profileForm}
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (view === null || onCommand === undefined) return;
+            const data = new FormData(event.currentTarget);
+            onCommand(buildSessionOverrideCommand(view, {
+              intensity: clampUnit(Number(data.get("intensity") ?? effectiveIntensity), effectiveIntensity),
+              creativity: clampUnit(Number(data.get("creativity") ?? effectiveCreativity), effectiveCreativity),
+            }, commandFactory));
+          }}
+        >
+          <label className={styles.compactField}>
+            Current-stream intensity
+            <input name="intensity" type="range" min="0" max="1" step="0.05" defaultValue={effectiveIntensity} disabled={view === null || pending || onCommand === undefined} />
+          </label>
+          <label className={styles.compactField}>
+            Current-stream creativity
+            <input name="creativity" type="range" min="0" max="1" step="0.05" defaultValue={effectiveCreativity} disabled={view === null || pending || onCommand === undefined} />
+          </label>
+          <button type="submit" disabled={view === null || pending || onCommand === undefined}>
+            {pending ? "Saving..." : "Apply to this stream"}
+          </button>
+        </form>
+      </Card>
+      <Card className={styles.card}>
+        <StatusBadge tone={override === null ? "neutral" : "info"}>
+          {override === null ? "No override" : "Reset available"}
+        </StatusBadge>
+        <h3>Reset to Saved</h3>
+        <p>
+          {override === null
+            ? "No temporary override is active for this stream."
+            : "Reset removes only the current-stream override and keeps saved defaults unchanged."}
+        </p>
+        <button
+          className={styles.secondaryButton}
+          type="button"
+          disabled={view === null || override === null || pending || onCommand === undefined}
+          onClick={() => {
+            if (view !== null) onCommand?.(buildSessionOverrideCommand(view, null, commandFactory));
+          }}
+        >
+          Reset to saved defaults
+        </button>
+      </Card>
     </CardGrid>
   );
 }
@@ -729,7 +799,16 @@ function PageBody({ page, view, readiness }: {
       />
     );
   }
-  if (page === "stream-settings") return <StreamSettingsPage view={view} />;
+  if (page === "stream-settings") {
+    return (
+      <StreamSettingsPage
+        view={view}
+        pending={pending}
+        onCommand={onCommand}
+        commandFactory={commandFactory}
+      />
+    );
+  }
   return <TestLabPage />;
 }
 

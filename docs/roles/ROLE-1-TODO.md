@@ -115,6 +115,7 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 - `codex/role-1-profile-settings-current` adds the broadcaster-only `streamer.profile-settings` command for Studio-owned streamer preferences.
 - Role 1 persists the profile revision, stamps the unchanged quest-cycle revision for broadcast consistency, and publishes updated role views without invoking Role 3.
 - Empty nested patches such as `voting: {}` and `rewards: {}` are rejected so UI no-ops cannot create false revision history.
+- `codex/minecraft-schema-decisions` now adds the broadcaster-only `streamer.session-override` command and optional streamer projection for current-stream intensity/creativity overrides; preset-aware propagation and final tests remain open.
 
 ## Current Role 4 setup/session command pass
 

@@ -2,7 +2,7 @@ import type { CommandEnvelope } from "./commands";
 import type { AcceptedVoteTallySnapshot } from "./participation";
 import type { ContractEnvelope, DomainError, ServiceHealth } from "./common";
 import type { ParticipationCapabilities, StreamSession } from "./session";
-import type { StreamerProfile } from "./profile";
+import type { StreamerProfile, StreamerSessionOverride } from "./profile";
 import type {
   CandidateBatch,
   QuestCompletionRule,
@@ -137,6 +137,7 @@ export interface ViewModelProjectionInput {
   readonly communityHype: number;
   readonly acceptedCandidateId: string | null;
   readonly connection: ServiceHealth;
+  readonly sessionOverride?: StreamerSessionOverride | null;
   readonly liveDirector?: LiveDirectorState | null;
 }
 

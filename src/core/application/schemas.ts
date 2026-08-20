@@ -10,6 +10,7 @@ import {
   questEngineEventSchema,
   serviceHealthSchema,
   streamSessionSchema,
+  streamerSessionOverrideSchema,
   streamerProfileSchema,
   timestampSchema,
 } from "../contracts";
@@ -33,6 +34,7 @@ export const authoritativeSessionStateSchema = z
     emergencyPaused: z.boolean(),
     communityHype: z.number().int().nonnegative(),
     recentQuests: z.array(recentQuestSummarySchema).max(20).optional(),
+    sessionOverride: streamerSessionOverrideSchema.nullable().optional(),
     liveDirector: liveDirectorStateSchema.nullable().optional(),
   })
   .strict()

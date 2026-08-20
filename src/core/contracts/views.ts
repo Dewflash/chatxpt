@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { contractEnvelopeSchema, identifierSchema, serviceHealthSchema } from "./common";
-import { streamerProfileSchema } from "./profile";
+import { streamerProfileSchema, streamerSessionOverrideSchema } from "./profile";
 import { questCycleStateSchema } from "./quests";
 import { participationCapabilitiesSchema, streamSessionSchema } from "./session";
 import {
@@ -36,6 +36,7 @@ export const streamerViewModelSchema = z
     audience: audienceSnapshotSchema.nullable(),
     questCycle: questCycleStateSchema,
     emergencyPaused: z.boolean(),
+    sessionOverride: streamerSessionOverrideSchema.nullable().optional(),
     liveDirector: streamerLiveDirectorProjectionSchema.nullable().optional(),
   })
   .strict()

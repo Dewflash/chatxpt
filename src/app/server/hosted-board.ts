@@ -466,6 +466,7 @@ export class HostedBoardApplication {
       communityHype: state.communityHype,
       acceptedCandidateId: context.acceptedCandidateId,
       connection: context.connection,
+      sessionOverride: state.sessionOverride,
     }).viewer);
     return viewerViewModelSchema.parse(
       viewer.questCycle.status === "voting" && viewer.acceptedCandidateId === null

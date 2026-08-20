@@ -12,6 +12,7 @@ import {
   questEngineEventSchema,
   serviceHealthSchema,
   streamSessionSchema,
+  streamerSessionOverrideSchema,
   streamerProfileSchema,
   streamerViewModelSchema,
   audienceSnapshotSchema,
@@ -294,6 +295,54 @@ function authoritativeProfileSettingsUpdate(
   return { state, events: [event.data] };
 }
 
+function authoritativeSessionOverrideUpdate(
+  dependencies: OrchestratorDependencies,
+  command: Extract<CommandEnvelope, { type: "streamer.session-override" }>,
+  current: AuthoritativeSessionState,
+  acceptedAt: number,
+): { state: AuthoritativeSessionState; events: AcceptedCommandReceipt["events"] } | DomainError {
+  const revision = current.session.revision + 1;
+  const nextOverride =
+    command.action === "clear"
+      ? null
+      : streamerSessionOverrideSchema.parse({
+          appliedAt: acceptedAt,
+          experiencePatch: command.experiencePatch,
+        });
+  const questCycle = questCycleStateSchema.parse({
+    ...current.questCycle,
+    envelope: authoritativeEnvelope(
+      dependencies,
+      command,
+      current,
+      current.questCycle.envelope.questCycleId,
+      revision,
+      acceptedAt,
+      "quest-state",
+    ),
+  });
+  const state: AuthoritativeSessionState = {
+    ...current,
+    session: { ...current.session, revision },
+    questCycle,
+    sessionOverride: nextOverride,
+  };
+  const event = questEngineEventSchema.safeParse({
+    envelope: authoritativeEnvelope(dependencies, command, state, null, revision, acceptedAt, "quest-event"),
+    event: {
+      eventType: "profile.session-override-updated",
+      attributes: {
+        action: command.action,
+        experienceKeysChanged: Object.keys(command.experiencePatch).length,
+      },
+    },
+  });
+  if (!event.success) {
+    return error("internal", "Authoritative session override event stamping produced invalid state", true);
+  }
+  return { state, events: [event.data] };
+}
+
 function authoritativeLiveDirectorUpdate(
   dependencies: OrchestratorDependencies,
   command: CommandEnvelope,
@@ -370,6 +419,7 @@ function projectionInput(
     communityHype: state.communityHype,
     acceptedCandidateId: context.acceptedCandidateId,
     connection: context.connection,
+    sessionOverride: state.sessionOverride,
     liveDirector: state.liveDirector,
   };
 }
@@ -663,6 +713,12 @@ export class ChatXptOrchestrator {
         authoritative = authoritativeProfileSettingsUpdate(this.dependencies, command, current, acceptedAt);
       } catch {
         return { ok: false, error: error("internal", "Authoritative profile update failed", true) };
+      }
+    } else if (command.type === "streamer.session-override") {
+      try {
+        authoritative = authoritativeSessionOverrideUpdate(this.dependencies, command, current, acceptedAt);
+      } catch {
+        return { ok: false, error: error("internal", "Authoritative session override update failed", true) };
       }
     } else if (command.type === "streamer.live-director-intent") {
       try {
