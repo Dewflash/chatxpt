@@ -52,6 +52,40 @@ describe("ObsOverlayApplication", () => {
     )).rejects.toMatchObject({ code: "forbidden" });
   });
 
+  it("uses the server signer for Studio overlay setup while leaving manual diagnostics locked", async () => {
+    const persistence = createMemoryPersistenceRuntime();
+    const studio = new StudioSessionApplication({
+      runtime: new ChatXptServerRuntime({ persistence, clock: { now: () => NOW } }),
+      setupKey: STUDIO_KEY,
+      extensionSecret: "",
+      environment: {},
+      now: () => NOW,
+      nextId: () => "isolated",
+    });
+    const isolated = await studio.start(STUDIO_KEY, {
+      channelId: "channel-isolated",
+      displayName: "Isolated Streamer",
+      gameId: null,
+      gameName: null,
+    });
+    const overlay = new ObsOverlayApplication({
+      runtime: new ChatXptServerRuntime({ persistence, clock: { now: () => NOW } }),
+      setupKey: "",
+      grantSecret: OVERLAY_KEY,
+      now: () => NOW,
+      nextId: () => "studio-signer",
+    });
+
+    await expect(overlay.issueGrantForStudio(
+      "https://chatxpt.example",
+      { sessionId: isolated.view.session.sessionId },
+      isolated.view.session.sessionId,
+    )).resolves.toMatchObject({ descriptor: { readOnly: true } });
+    await expect(overlay.issueGrant(null, "https://chatxpt.example", {
+      sessionId: isolated.view.session.sessionId,
+    })).rejects.toMatchObject({ code: "misconfigured" });
+  });
+
   it("issues a fragment-held read grant and projects authoritative overlay state", async () => {
     const { overlay, started } = await context();
     const issued = await overlay.issueGrant(OVERLAY_KEY, "https://chatxpt.example", {

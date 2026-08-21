@@ -83,6 +83,26 @@ describe("Twitch setup readiness", () => {
     expect(JSON.stringify(readiness)).not.toContain("fixture-eventsub-secret");
   });
 
+  it("uses EventSub WebSocket readiness on localhost without a webhook secret", () => {
+    const readiness = resolveTwitchSetupReadiness(
+      {
+        TWITCH_CLIENT_ID: "fixture-client",
+        TWITCH_CLIENT_SECRET: "fixture-client-secret",
+        TWITCH_EXTENSION_CLIENT_ID: "fixture-extension",
+        TWITCH_EXTENSION_SECRET: "fixture-extension-secret",
+      },
+      { baseUrl: "http://localhost:3000", checkedAt: CHECKED_AT },
+    );
+
+    expect(readiness.ok).toBe(true);
+    expect(readiness.missing).toEqual([]);
+    expect(readiness.services.find((service) => service.service === "twitch-eventsub-chat"))
+      .toMatchObject({
+        status: "ready",
+        message: "Twitch EventSub WebSocket delivery is configured for localhost",
+      });
+  });
+
   it("exposes a no-store setup readiness API", async () => {
     vi.stubEnv("TWITCH_CLIENT_ID", "fixture-client");
     vi.stubEnv("TWITCH_CLIENT_SECRET", "fixture-client-secret");

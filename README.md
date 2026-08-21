@@ -31,16 +31,19 @@ Supporting product, evidence, slide, and recording documents are linked later, b
 The judged MVP has a credential-free algorithmic path. A basic local run does not require an AI-provider key, Twitch secret, or Supabase project.
 
 ```bash
-cp .env.example .env.local
 npm ci
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Next.js prints the active URL if port 3000 is already occupied.
+`npm run dev` creates `.env.local` when needed, generates stable private local
+signing values, selects Twitch EventSub WebSockets, and keeps external AI off so
+the credential-free algorithmic generator is the default. Existing values are
+never overwritten. Open [http://localhost:3000](http://localhost:3000). Next.js
+prints the active URL if port 3000 is already occupied.
 
 ### Environment variables
 
-All values in `.env.example` are empty placeholders. Real credentials must remain in `.env.local` or deployment-secret storage and must never be committed.
+Real credentials must remain in `.env.local` or deployment-secret storage and must never be committed. The Twitch client ID and secret identify the ChatXPT-owned Twitch developer application; they are configured by the product owner once and are never requested from a streamer. They are the only external values needed before a real **Connect Twitch** run.
 
 | Variable | Required for basic local demo | Purpose |
 | --- | --- | --- |
@@ -58,10 +61,13 @@ All values in `.env.example` are empty placeholders. Real credentials must remai
 | `TWITCH_EXTENSION_CLIENT_ID` | No | Identifier for the registered Twitch Extension. |
 | `TWITCH_EXTENSION_ASSET_ORIGIN` | Only for cross-origin Local Test assets | Exact asset origin allowed to call broadcaster Studio endpoints, such as `https://localhost:8080`. Hosted Test derives the trusted `https://<extension-id>.ext-twitch.tv` origin from `TWITCH_EXTENSION_CLIENT_ID`. |
 | `TWITCH_EXTENSION_SECRET` | For Twitch tests | Base64 Extension signing secret used only by the server to verify Twitch JWTs and derive pseudonymous, session-scoped participation identity. |
-| `TWITCH_EVENTSUB_SECRET` | For Twitch chat tests | Independent server-only HMAC secret used to verify EventSub webhook delivery. |
+| `TWITCH_EVENTSUB_SECRET` | Hosted webhook only | Independent server-only HMAC secret used to verify hosted EventSub webhook delivery. Local startup generates a private value for pseudonymisation, while localhost delivery uses WebSockets. |
+| `CHATXPT_TWITCH_EVENTSUB_TRANSPORT` | No | Optional `websocket`/`webhook` override. Blank automatically uses Twitch WebSockets on localhost and signed webhooks on hosted HTTPS. |
+| `CHATXPT_LOCAL_TWITCH_STORE_PATH` | No | Optional path for the encrypted, owner-only localhost Twitch authorization store. Defaults under gitignored `.private/`. |
 | `CHATXPT_OBS_OVERLAY_SETUP_KEY` | For secure OBS URLs | Server-only signing key for short-lived, session-scoped overlay grants. Studio issues the normal setup URL without asking the streamer to enter this key. |
 | `CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY` | For authenticated capture | Server-only signing key for short-lived, session-scoped normalised gameplay ingress grants. Studio authorises the normal capture flow through its HttpOnly session cookie. |
-| `CHATXPT_STUDIO_SETUP_KEY` | No | Server-only diagnostic bootstrap key of at least 32 characters. Twitch OAuth is the normal Studio entry; the key is never exposed by the normal product UI. |
+| `CHATXPT_STUDIO_SETUP_KEY` | No | Server-only diagnostic bootstrap key of at least 32 characters. Twitch OAuth never requires this key. |
+| `CHATXPT_STUDIO_SESSION_SECRET` | No | Optional dedicated signer for HttpOnly Studio grants. If omitted, the server reuses the existing Twitch client secret so OAuth needs no additional configuration. |
 | `CHATXPT_HOSTED_BOARD_SECRET` | For hosted fallback | Server-only HMAC secret for anonymous, session-scoped hosted Quest Board viewer grants. |
 | `NEXT_PUBLIC_APP_ENV` | No | Environment label; the example uses `local`. |
 
@@ -71,7 +77,7 @@ Legacy Supabase projects may use the aliases documented in [.env.example](.env.e
 
 | Surface | URL | Purpose |
 | --- | --- | --- |
-| ChatXPT Studio | [http://localhost:3000/studio](http://localhost:3000/studio) | Canonical authenticated management surface for starting the broadcaster session, saved defaults, integration health, and sidequest control. |
+| ChatXPT Studio | [http://localhost:3000/studio](http://localhost:3000/studio) | Canonical management surface for Twitch connection, saved defaults, integration health, and sidequest control. Twitch live/offline state starts and ends the mapped session automatically. |
 | Legacy diagnostic control room | [http://localhost:3000/diagnostics/control-room](http://localhost:3000/diagnostics/control-room) | Preserved diagnostic surface; it is not the canonical finals workflow. |
 | OBS overlay | Generated in Studio Test Lab | Authenticated transparent `/obs-overlay` browser-source output for vote and active-quest states. |
 | Viewer Twitch Extension panel | [https://localhost:3000/viewer.html](https://localhost:3000/viewer.html) | Authenticated viewer voting surface when opened by Twitch Local Test. Direct browser access intentionally cannot vote. |
@@ -111,7 +117,7 @@ Trust the one-time local certificate warning in the test browser, then configure
 | Panel Viewer Path | `viewer.html` |
 | Extension type | Panel; enable additional video placements only if they are intentionally being tested |
 
-Configure `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, `TWITCH_EVENTSUB_SECRET`, and `CHATXPT_PUBLIC_BASE_URL`, then open `/studio` and choose **Connect Twitch**. The state-bound OAuth callback validates the broadcaster, imports the channel's current game, creates or reopens the preparing session, and requests the supported chat EventSub subscription when the public callback origin is HTTPS. Then install and activate the Local Test Extension version on the broadcaster's channel. Twitch `onAuthorized` supplies refreshable broadcaster and viewer Extension JWTs: Config and Live Config require the signed broadcaster role, while the viewer surface derives a non-reversible session voter key and routes votes through the canonical orchestrator and Role 3 engine. A direct `.html` tab is expected to show an authorization recovery message because browser-created identities are not accepted.
+Configure the ChatXPT-owned Twitch app values once, then open `/studio` and choose **Connect Twitch**. The state-bound OAuth callback validates the broadcaster, imports the channel's current game, creates or reopens the authoritative session, and issues HttpOnly Studio/browser-connection grants. Localhost stores the user authorization encrypted in gitignored owner-only storage and uses Twitch EventSub WebSockets; hosted HTTPS uses signed webhooks. Both transports subscribe to `channel.chat.message`, `stream.online`, and `stream.offline`. Twitch going online starts the mapped ChatXPT session automatically, Twitch going offline ends it, and a valid returning browser connection restores Studio and local EventSub without channel-ID, game-ID, or setup-key fields. Then install and activate the Local Test Extension version on the broadcaster's channel. Twitch `onAuthorized` supplies refreshable broadcaster and viewer Extension JWTs: Config and Live Config require the signed broadcaster role, while the viewer surface derives a non-reversible session voter key and routes votes through the canonical orchestrator and Role 3 engine. A direct `.html` tab is expected to show an authorization recovery message because browser-created identities are not accepted.
 
 The upload package under `twitch-extension/` uses a build-owned exact EBS origin in `assets/environment.js`; replace it with the deployed HTTPS ChatXPT origin before Hosted Test and add that domain to Twitch's URL-fetching allowlist. If Local Test assets are served from a separate origin, set that exact base origin in `TWITCH_EXTENSION_ASSET_ORIGIN`; production Asset Hosting is restricted to the registered `TWITCH_EXTENSION_CLIENT_ID` origin. Automated signed-token tests and local diagnostic state are not proof of a real Twitch run, public approval, or cloud persistence; record real Local/Hosted Test evidence separately.
 

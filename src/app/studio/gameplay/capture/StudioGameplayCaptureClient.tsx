@@ -181,11 +181,7 @@ export function StudioGameplayCaptureClient() {
         setView(payload.view);
         setReadiness(payload.readiness);
         setCapturePreference(savedPreference);
-        setGame(
-          savedPreference !== null && savedPreference.sessionId === payload.view.session.sessionId
-            ? savedPreference.game
-            : gameFromProfile(payload.view),
-        );
+        setGame(savedPreference?.game ?? gameFromProfile(payload.view));
         setIngressStatus("Studio session ready");
         setSessionError(null);
       } catch {
@@ -204,7 +200,6 @@ export function StudioGameplayCaptureClient() {
       view === null ||
       capturePreference?.lastConnectedAt === null ||
       capturePreference === null ||
-      capturePreference.sessionId !== view.session.sessionId ||
       running ||
       autoAttemptedRef.current
     ) return;

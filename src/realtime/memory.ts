@@ -36,6 +36,8 @@ import {
   type HostedBoardSessionDirectory,
   type HostedBoardSessionRecord,
   type LifecycleStoreCommitResult,
+  type ObsOverlayConnectionRecord,
+  type ObsOverlayConnectionStore,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
   type RealtimeAccessGrantStore,
@@ -72,6 +74,7 @@ export class MemoryChatXptPersistence
     CurrentGameplaySnapshotRepository,
     DueVoteCycleReader,
     HostedBoardSessionDirectory,
+    ObsOverlayConnectionStore,
     RoleSnapshotPublisher,
     RealtimeAccessGrantStore,
     SessionHistoryReader,
@@ -86,6 +89,7 @@ export class MemoryChatXptPersistence
   private readonly snapshots = new Map<string, RoleViewModels>();
   private readonly roomSessions = new Map<string, string>();
   private readonly broadcasterActiveSessions = new Map<string, string>();
+  private readonly obsOverlayConnections = new Map<string, ObsOverlayConnectionRecord>();
   private readonly lifecycle = new Map<string, MemoryLifecycleMetadata>();
   private readonly lifecycleOperations = new Map<string, SessionLifecycleCommitResult>();
   private readonly accessGrants = new Map<string, RealtimeAccessGrant>();
@@ -404,6 +408,52 @@ export class MemoryChatXptPersistence
     };
   }
 
+  async replaceObsOverlayConnection(
+    input: Omit<ObsOverlayConnectionRecord, "lastSeenAt" | "lastSessionId" | "revokedAt">,
+  ): Promise<ObsOverlayConnectionRecord> {
+    const record: ObsOverlayConnectionRecord = {
+      ...input,
+      lastSeenAt: null,
+      lastSessionId: null,
+      revokedAt: null,
+    };
+    this.obsOverlayConnections.set(input.broadcasterId, record);
+    return clone(record);
+  }
+
+  async findObsOverlayConnection(
+    broadcasterId: string,
+  ): Promise<ObsOverlayConnectionRecord | null> {
+    const record = this.obsOverlayConnections.get(broadcasterId);
+    return record === undefined ? null : clone(record);
+  }
+
+  async touchObsOverlayConnection(
+    broadcasterId: string,
+    grantId: string,
+    sessionId: string | null,
+    seenAt: number,
+  ): Promise<ObsOverlayConnectionRecord | null> {
+    const current = this.obsOverlayConnections.get(broadcasterId);
+    if (current === undefined || current.grantId !== grantId || current.revokedAt !== null) {
+      return null;
+    }
+    const next = { ...current, lastSeenAt: seenAt, lastSessionId: sessionId };
+    this.obsOverlayConnections.set(broadcasterId, next);
+    return clone(next);
+  }
+
+  async revokeObsOverlayConnection(
+    broadcasterId: string,
+    revokedAt: number,
+  ): Promise<ObsOverlayConnectionRecord | null> {
+    const current = this.obsOverlayConnections.get(broadcasterId);
+    if (current === undefined) return null;
+    const next = { ...current, revokedAt };
+    this.obsOverlayConnections.set(broadcasterId, next);
+    return clone(next);
+  }
+
   async grant(input: Omit<RealtimeAccessGrant, "revokedAt">): Promise<RealtimeAccessGrant> {
     if (!this.states.has(input.sessionId)) throw new Error("Cannot grant access to a missing session");
     const value: RealtimeAccessGrant = { ...input, revokedAt: null };
@@ -638,6 +688,7 @@ export function createMemoryPersistenceRuntime() {
     lifecycle: backend,
     hostedBoardSessions: backend,
     twitchChannelSessions: backend,
+    obsOverlayConnections: backend,
     candidates: backend,
     audiencePointers: new EphemeralAudiencePointerAggregateRepository(),
     acceptedVotes: backend,

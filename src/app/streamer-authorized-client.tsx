@@ -66,6 +66,106 @@ interface ObsDescriptorPayload {
   readonly error?: { readonly message?: string };
 }
 
+interface LocalPreviewAccount {
+  readonly id: string;
+  readonly displayName: string;
+  readonly email: string;
+  readonly signedInAt: number;
+}
+
+const LOCAL_PREVIEW_ACCOUNT_KEY = "chatxpt.local-preview-account.v1";
+const localPreviewAccountRequired = process.env.NEXT_PUBLIC_APP_ENV === "local" ||
+  process.env.NEXT_PUBLIC_CHATXPT_PREVIEW_ACCOUNT_ENABLED === "true";
+
+export function twitchOauthErrorMessage(reason: string | null): string {
+  if (reason === "misconfigured") {
+    return "Connect Twitch is unavailable because this local ChatXPT server has no registered Twitch application ID and secret. Configure the product-owned Twitch app once, restart ChatXPT, and try again.";
+  }
+  if (reason === "denied") return "Twitch authorization was cancelled. Choose Connect Twitch when you are ready to try again.";
+  if (reason === "state") return "Twitch authorization expired or opened in another browser. Choose Connect Twitch to start a fresh secure request.";
+  return "Twitch connection did not finish. Choose Connect Twitch to retry authorization.";
+}
+
+function readLocalPreviewAccount(): LocalPreviewAccount | null {
+  try {
+    const source = window.localStorage.getItem(LOCAL_PREVIEW_ACCOUNT_KEY);
+    if (source === null) return null;
+    const parsed = JSON.parse(source) as Partial<LocalPreviewAccount>;
+    if (
+      typeof parsed.id !== "string" ||
+      typeof parsed.displayName !== "string" ||
+      typeof parsed.email !== "string" ||
+      typeof parsed.signedInAt !== "number"
+    ) return null;
+    return parsed as LocalPreviewAccount;
+  } catch {
+    return null;
+  }
+}
+
+export function LocalPreviewAccountGate({
+  loading,
+  onSignIn,
+}: {
+  readonly loading: boolean;
+  readonly onSignIn: (account: LocalPreviewAccount) => void;
+}) {
+  const [accountError, setAccountError] = useState<string | null>(null);
+
+  function signIn(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const displayName = String(data.get("displayName") ?? "").trim();
+    const email = String(data.get("email") ?? "").trim().toLowerCase();
+    const password = String(data.get("password") ?? "");
+    if (displayName.length < 2 || !email.includes("@") || password.length < 8) {
+      setAccountError("Enter a display name, an email address, and at least eight password characters.");
+      return;
+    }
+    setAccountError(null);
+    onSignIn({
+      id: typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `local-${Date.now()}`,
+      displayName,
+      email,
+      signedInAt: Date.now(),
+    });
+  }
+
+  return (
+    <main className={styles.bootstrap}>
+      <section className={styles.bootstrapCard} aria-labelledby="local-account-heading">
+        <div>
+          <p className={styles.accountEyebrow}>Demo account preview</p>
+          <h1 id="local-account-heading">Sign in to ChatXPT</h1>
+        </div>
+        <p>
+          This fake account lets you test the downloaded-app journey before production account
+          authentication is connected. It stays only in this browser; Twitch login comes next.
+        </p>
+        {loading ? <p role="status">Checking this browser for a saved ChatXPT account…</p> : (
+          <form onSubmit={signIn}>
+            <label>
+              Display name
+              <input name="displayName" defaultValue="Local Streamer" autoComplete="name" required />
+            </label>
+            <label>
+              Email
+              <input name="email" type="email" defaultValue="streamer@chatxpt.local" autoComplete="email" required />
+            </label>
+            <label>
+              Password
+              <input name="password" type="password" defaultValue="chatxpt-demo" autoComplete="current-password" minLength={8} required />
+            </label>
+            <button type="submit">Sign in to ChatXPT</button>
+            <small className={styles.accountNote}>The preview password is not transmitted or stored.</small>
+          </form>
+        )}
+        {accountError ? <p className={styles.error} role="alert">{accountError}</p> : null}
+      </section>
+    </main>
+  );
+}
+
 const studioProductPages: Readonly<Record<string, StudioProductPage>> = {
   "studio-home": "home",
   "studio-gameplay": "gameplay",
@@ -180,6 +280,8 @@ function StudioCaptureAndOverlaySetup({ sessionId }: { readonly sessionId: strin
 }
 
 export function StreamerAuthorizedClient({ surface }: { readonly surface: Surface }) {
+  const [localAccountChecked, setLocalAccountChecked] = useState(!localPreviewAccountRequired);
+  const [localAccount, setLocalAccount] = useState<LocalPreviewAccount | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [view, setView] = useState<StreamerViewModel | null>(null);
   const [readiness, setReadiness] = useState<StreamerReadinessView | null>(null);
@@ -187,9 +289,18 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [requiresBootstrap, setRequiresBootstrap] = useState(false);
-  const [starting, setStarting] = useState(false);
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const latestToken = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!localPreviewAccountRequired) return;
+    const account = readLocalPreviewAccount();
+    const timer = window.setTimeout(() => {
+      setLocalAccount(account);
+      setLocalAccountChecked(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     latestToken.current = token;
@@ -200,13 +311,16 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
     const oauth = parameters.get("oauth");
     const notice = window.setTimeout(() => {
       if (oauth === "connected") {
+        const eventSub = parameters.get("eventsub");
         setMessage(
-          parameters.get("eventsub") === "pending"
-            ? "Twitch connected. Channel game details were imported and chat delivery is being verified."
-            : "Twitch connected. Channel game details were imported; chat delivery still needs recovery.",
+          eventSub === "pending"
+            ? "Twitch connected. Channel details were imported; live-status and chat delivery are being verified."
+            : eventSub === "configured"
+              ? "Twitch connected. Channel details, live status, and chat delivery are configured."
+              : "Twitch connected. Channel details were imported; live-status and chat delivery still need recovery.",
         );
       } else if (oauth === "error") {
-        setError("Twitch connection did not finish. Retry Twitch authorization or use the diagnostic fallback.");
+        setError(twitchOauthErrorMessage(parameters.get("reason")));
       }
     }, 0);
     if (oauth !== null) {
@@ -280,6 +394,11 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
   }, [requestHeaders, surface]);
 
   useEffect(() => {
+    if (
+      localPreviewAccountRequired &&
+      isStudioAuthenticatedSurface(surface) &&
+      (!localAccountChecked || localAccount === null)
+    ) return;
     const active = isStudioAuthenticatedSurface(surface) || token !== null;
     if (!active) return;
     const controller = new AbortController();
@@ -290,7 +409,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       window.clearTimeout(initial);
       window.clearInterval(interval);
     };
-  }, [refresh, surface, token]);
+  }, [localAccount, localAccountChecked, refresh, surface, token]);
 
   useEffect(() => {
     const sessionId = view?.session.sessionId;
@@ -350,46 +469,6 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
     };
   }, [requestHeaders, view?.session.status]);
 
-  async function startSession(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const setupKey = String(data.get("setupKey") ?? "");
-    const gameId = String(data.get("gameId") ?? "").trim();
-    const gameName = String(data.get("gameName") ?? "").trim();
-    setStarting(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/studio/session/start", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-chatxpt-studio-setup-key": setupKey,
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          channelId: String(data.get("channelId") ?? "").trim(),
-          displayName: String(data.get("displayName") ?? "").trim(),
-          gameId: gameId || null,
-          gameName: gameName || null,
-        }),
-      });
-      const payload = (await response.json()) as SurfacePayload;
-      if (!response.ok || !payload.ok || payload.view === undefined || payload.readiness === undefined) {
-        setError(payload.error?.message ?? "The broadcaster session could not be started.");
-        return;
-      }
-      setView(payload.view);
-      setReadiness(payload.readiness);
-      setRoomCode(payload.roomCode ?? null);
-      setRequiresBootstrap(false);
-      setMessage("Broadcaster session started. Twitch surfaces can now map the signed channel JWT to this session.");
-    } catch {
-      setError("The secure broadcaster session request was interrupted.");
-    } finally {
-      setStarting(false);
-    }
-  }
-
   const dispatchCommand = useCallback(async (command: StreamerUiCommand) => {
     setPendingCommandId(command.commandId);
     setError(null);
@@ -417,49 +496,40 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
     }
   }, [refresh, requestHeaders]);
 
-  if (isStudioAuthenticatedSurface(surface) && requiresBootstrap && view === null) {
+  const productPage = studioProductPages[surface];
+
+  if (
+    localPreviewAccountRequired &&
+    isStudioAuthenticatedSurface(surface) &&
+    (!localAccountChecked || localAccount === null)
+  ) {
+    return (
+      <LocalPreviewAccountGate
+        loading={!localAccountChecked}
+        onSignIn={(account) => {
+          window.localStorage.setItem(LOCAL_PREVIEW_ACCOUNT_KEY, JSON.stringify(account));
+          setLocalAccount(account);
+        }}
+      />
+    );
+  }
+
+  // Normal Studio pages must remain reachable before Twitch or a live session exists.
+  // They already render honest unavailable/readiness states and the Connect Twitch action.
+  // Non-product broadcaster surfaces recover through the same verified Twitch connection.
+  if (productPage === undefined && isStudioAuthenticatedSurface(surface) && requiresBootstrap && view === null) {
     return (
       <main className={styles.bootstrap}>
         <section className={styles.bootstrapCard}>
           <div>
             <p>ChatXPT Studio</p>
-            <h1>Start the broadcaster session</h1>
+            <h1>Connect the broadcaster</h1>
           </div>
           <p>
             Connect the broadcaster account once. ChatXPT verifies Twitch, imports the channel game,
-            prepares signed chat delivery, and creates the session used by every surface.
+            prepares live-status and chat delivery, and follows the Twitch stream automatically for every surface.
           </p>
           <a className={styles.oauthButton} href="/api/twitch/oauth/start">Connect Twitch</a>
-          <details className={styles.manualFallback}>
-            <summary>Diagnostic manual setup</summary>
-            <p>Use this only when external Twitch credentials are unavailable during local recovery.</p>
-            <form onSubmit={startSession}>
-              <label>
-                Twitch channel ID
-                <input name="channelId" required autoComplete="off" />
-              </label>
-              <label>
-                Streamer display name
-                <input name="displayName" required autoComplete="name" />
-              </label>
-              <label>
-                Game ID (optional; supply with game name)
-                <input name="gameId" autoComplete="off" />
-              </label>
-              <label>
-                Game name (optional; supply with game ID)
-                <input name="gameName" autoComplete="off" />
-              </label>
-              <label>
-                Server-only Studio setup key
-                <input name="setupKey" type="password" required autoComplete="off" />
-              </label>
-              <button type="submit" disabled={starting}>{starting ? "Starting…" : "Start diagnostic session"}</button>
-            </form>
-            <p className={styles.grantNote}>
-              The setup key is sent only over this HTTPS request and is never stored in browser storage.
-            </p>
-          </details>
           {error ? <p className={styles.error} role="alert">{error}</p> : null}
         </section>
       </main>
@@ -467,7 +537,6 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
   }
 
   const commandMessage = error ?? message;
-  const productPage = studioProductPages[surface];
   if (productPage !== undefined) {
     return (
       <>
@@ -479,6 +548,15 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
           pendingCommandId={pendingCommandId}
           onCommand={(command) => void dispatchCommand(command)}
         />
+        {localPreviewAccountRequired && localAccount !== null ? (
+          <aside className={styles.accountBadge} aria-label="Local ChatXPT account">
+            <span><small>Demo account</small><strong>{localAccount.displayName}</strong></span>
+            <button type="button" onClick={() => {
+              window.localStorage.removeItem(LOCAL_PREVIEW_ACCOUNT_KEY);
+              setLocalAccount(null);
+            }}>Sign out</button>
+          </aside>
+        ) : null}
         {productPage === "test-lab" && view !== null
           ? <StudioCaptureAndOverlaySetup sessionId={view.session.sessionId} />
           : null}

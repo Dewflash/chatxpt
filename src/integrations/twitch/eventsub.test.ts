@@ -65,6 +65,38 @@ describe("Twitch EventSub boundary", () => {
     })).toThrow("signature");
   });
 
+  it("parses Twitch stream online and offline lifecycle notifications", () => {
+    const online = JSON.stringify({
+      subscription: { type: "stream.online" },
+      event: {
+        id: "stream-1",
+        broadcaster_user_id: "channel-1",
+        broadcaster_user_name: "Streamer One",
+        started_at: "2026-05-27T10:26:40.000Z",
+      },
+    });
+    expect(parseTwitchEventSubMessage(online, "notification")).toEqual({
+      kind: "stream-online",
+      streamId: "stream-1",
+      broadcasterId: "channel-1",
+      displayName: "Streamer One",
+      startedAt: Date.parse("2026-05-27T10:26:40.000Z"),
+    });
+
+    const offline = JSON.stringify({
+      subscription: { type: "stream.offline" },
+      event: {
+        broadcaster_user_id: "channel-1",
+        broadcaster_user_name: "Streamer One",
+      },
+    });
+    expect(parseTwitchEventSubMessage(offline, "notification")).toEqual({
+      kind: "stream-offline",
+      broadcasterId: "channel-1",
+      displayName: "Streamer One",
+    });
+  });
+
   it("pseudonymizes raw Twitch chatter IDs per session", () => {
     const first = pseudonymizeTwitchChatViewer(SECRET, "session-1", "raw-viewer-1");
     expect(first).toBe(pseudonymizeTwitchChatViewer(SECRET, "session-1", "raw-viewer-1"));

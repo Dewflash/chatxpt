@@ -251,7 +251,7 @@ function HealthStrip({ view, readiness }: {
   readonly view: StreamerViewModel | null;
   readonly readiness?: StreamerReadinessView | null;
 }) {
-  const twitch = readinessAvailability(readiness, "twitch", "Connect Twitch before starting ChatXPT.");
+  const twitch = readinessAvailability(readiness, "twitch", "Connect Twitch so ChatXPT can monitor the stream.");
   const obs = readinessAvailability(readiness, "obs-capture", "Allow OBS Virtual Camera from Studio when capture is ready.");
   const realtime = readinessAvailability(readiness, "realtime", "Viewer Voting connects after session state is available.");
   const participationModes = view === null
@@ -301,7 +301,9 @@ function HealthStrip({ view, readiness }: {
         <StatusBadge tone={obs.tone}>{obs.badge}</StatusBadge>
         <h3>Game Capture</h3>
         <p>{obs.detail}</p>
-        <AvailabilityAction availability={obs} />
+        {obs.state === "available"
+          ? <AvailabilityAction availability={obs} />
+          : <a href="/studio/gameplay/capture" target="_blank" rel="noreferrer">{obs.nextStep}</a>}
       </Card>
       <Card className={styles.card}>
         <StatusBadge tone={voting.tone}>{voting.badge}</StatusBadge>
@@ -343,9 +345,9 @@ function homeCopy(mode: HomeMode, readiness: StreamerReadinessView | null | unde
   }
   if (mode === "preparing") {
     return {
-      badge: "Preparing",
-      title: "ChatXPT is preparing the session",
-      detail: "Readiness is being checked before the live workflow opens.",
+      badge: "Connected",
+      title: "Twitch connected — go live when ready",
+      detail: "ChatXPT watches Twitch and starts the authoritative session automatically when the stream goes live.",
     };
   }
   if (mode === "reconnecting") {
@@ -358,23 +360,23 @@ function homeCopy(mode: HomeMode, readiness: StreamerReadinessView | null | unde
   if (mode === "ended") {
     return {
       badge: "Ended",
-      title: "This ChatXPT session has ended",
-      detail: "Start a new broadcaster session when you are ready for the next stream.",
+      title: "The Twitch stream has ended",
+      detail: "Go live on Twitch again when ready; ChatXPT will open the next session automatically.",
     };
   }
   if (mode === "ready") {
     return {
-      badge: "Ready",
-      title: "Ready to start ChatXPT",
-      detail: "Twitch, Game Capture, viewer voting, and broadcast output have no blocking setup issues.",
+      badge: "Connected",
+      title: "Twitch connected — waiting for the stream",
+      detail: "No Start Session step is required. ChatXPT follows the verified Twitch live state automatically.",
     };
   }
   return {
     badge: "Needs setup",
     title: customerSafeLabel(readiness?.label, "Connect Studio to continue"),
     detail: readiness?.blockerCodes.length
-      ? "Resolve the highlighted setup blocker before starting ChatXPT."
-      : "Start or reconnect a broadcaster session before ChatXPT can read stream state.",
+      ? "Resolve the highlighted setup blocker so ChatXPT can monitor the stream."
+      : "Connect or reopen Twitch before ChatXPT can read stream state.",
   };
 }
 
@@ -417,7 +419,6 @@ function HomeStatePanel({
   const mode = homeMode(view, readiness);
   const copy = homeCopy(mode, readiness);
   const session = serviceById(readiness, "session");
-  const canStart = view !== null && readiness?.ready === true && actionAllowed(session, "start-session") && onCommand !== undefined;
   const canEnd = view !== null && actionAllowed(session, "end-session") && onCommand !== undefined;
   const preset = activePreset(view);
 
@@ -441,15 +442,15 @@ function HomeStatePanel({
               }}
             />
           ) : (
-            <HomeControlButton
-              label="Start ChatXPT"
-              disabledLabel={readiness?.recommendedAction === "start-session" ? "Start unavailable" : "Resolve setup first"}
-              disabled={!canStart}
-              pending={pending}
-              onClick={() => {
-                if (view !== null) onCommand?.(buildSetupCommand(view, "session", "start-session", commandFactory));
-              }}
-            />
+            view === null ? (
+              <a className={styles.primaryAction} href="/api/twitch/oauth/start">
+                Connect Twitch
+              </a>
+            ) : (
+              <span className={styles.disabledAction} aria-live="polite">
+                Waiting for Twitch stream
+              </span>
+            )
           )}
           <a href={mode === "live" ? "/studio/live-quests" : "/studio/gameplay"}>
             {mode === "live" ? "Open Live Quests" : "Review setup"}

@@ -21,6 +21,7 @@ import {
 import type { ChatXptPersistenceRuntime } from "@/realtime";
 
 import { getChatXptServerRuntime, type ChatXptServerRuntime } from "./runtime";
+import { studioSessionSecret } from "./twitch-connection-grant";
 
 const grantRequestSchema = z.object({ sessionId: identifierSchema }).strict();
 
@@ -66,6 +67,7 @@ export interface GameplayIngressApplicationDependencies {
     "execute" | "requestEligibleCycleProposal" | "requestLiveDirectorContextRefresh"
   >;
   readonly setupKey: string;
+  readonly grantSecret?: string;
   readonly now?: () => number;
   readonly nextId?: () => string;
 }
@@ -155,6 +157,7 @@ function authApplicationError(caught: unknown): GameplayIngressApplicationError 
 export class GameplayIngressApplication {
   private readonly persistence: ChatXptPersistenceRuntime;
   private readonly grants: GameplayIngressGrantAuthority;
+  private readonly diagnosticSetup: GameplayIngressGrantAuthority;
   private readonly runtime?: Pick<
     ChatXptServerRuntime,
     "execute" | "requestEligibleCycleProposal" | "requestLiveDirectorContextRefresh"
@@ -170,14 +173,17 @@ export class GameplayIngressApplication {
   constructor(dependencies: GameplayIngressApplicationDependencies) {
     this.persistence = dependencies.persistence;
     this.runtime = dependencies.runtime;
-    this.grants = new GameplayIngressGrantAuthority(dependencies.setupKey);
+    this.grants = new GameplayIngressGrantAuthority(
+      dependencies.grantSecret ?? dependencies.setupKey,
+    );
+    this.diagnosticSetup = new GameplayIngressGrantAuthority(dependencies.setupKey);
     this.now = dependencies.now ?? Date.now;
     this.nextId = dependencies.nextId ?? randomUUID;
   }
 
   async issueGrant(setupKey: string | null, input: unknown): Promise<GameplayIngressGrantResult> {
     try {
-      this.grants.authenticateSetupKey(setupKey);
+      this.diagnosticSetup.authenticateSetupKey(setupKey);
     } catch (caught) {
       throw authApplicationError(caught);
     }
@@ -468,10 +474,12 @@ const globalApplication = globalThis as typeof globalThis & {
 export function getGameplayIngressApplication(): GameplayIngressApplication {
   if (globalApplication[applicationKey] !== undefined) return globalApplication[applicationKey];
   const runtime = getChatXptServerRuntime();
+  const setupKey = process.env.CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY ?? "";
   globalApplication[applicationKey] = new GameplayIngressApplication({
     persistence: runtime.persistence,
     runtime,
-    setupKey: process.env.CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY ?? "",
+    setupKey,
+    grantSecret: setupKey.trim() || studioSessionSecret(process.env),
   });
   return globalApplication[applicationKey];
 }

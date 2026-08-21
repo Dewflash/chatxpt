@@ -7,9 +7,13 @@
     "node": ">=20.9.0"
   },
   "scripts": {
+    "setup:local": "node scripts/prepare-local-runtime.mjs",
+    "predev": "npm run setup:local",
     "dev": "next dev",
+    "predev:twitch": "npm run setup:local",
     "dev:twitch": "next dev --experimental-https",
     "build": "next build",
+    "prestart": "npm run setup:local",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -17,6 +21,7 @@
     "test:contracts": "vitest run src/core/contracts.test.ts",
     "test:integration": "vitest run tests/integration",
     "test:hygiene": "node --test scripts/check-repository-hygiene.test.mjs",
+    "test:local-setup": "node --test scripts/prepare-local-runtime.test.mjs",
     "test:orchestrator": "vitest run tests/integration/orchestrator.test.ts",
     "test:persistence": "vitest run tests/integration/environment.test.ts tests/integration/permissions.test.ts tests/integration/session-lifecycle.test.ts tests/integration/persistence.test.ts tests/integration/realtime-subscriber.test.ts tests/integration/supabase-adapters.test.ts tests/integration/supabase-migration.test.ts",
     "test:evidence": "node --test scripts/check-evidence-manifest.test.mjs",
@@ -32,7 +37,7 @@
     "check:demo-runbook": "node scripts/check-demo-runbook.mjs",
     "check:client-secrets": "node scripts/check-client-secrets.mjs",
     "test:client-secrets": "node --test scripts/check-client-secrets.test.mjs",
-    "check": "npm run lint && npm run typecheck && npm run check:boundaries && npm run check:hygiene && npm run test:hygiene && npm run check:evidence && npm run check:demo-runbook && npm run test:evidence && npm run test:client-secrets && npm test && npm run build && npm run check:client-secrets"
+    "check": "npm run lint && npm run typecheck && npm run check:boundaries && npm run check:hygiene && npm run test:hygiene && npm run test:local-setup && npm run check:evidence && npm run check:demo-runbook && npm run test:evidence && npm run test:client-secrets && npm test && npm run build && npm run check:client-secrets"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.111.0",

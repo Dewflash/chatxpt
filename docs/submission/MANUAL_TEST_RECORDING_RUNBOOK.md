@@ -67,16 +67,17 @@ If a required external resource is unavailable, mark the affected row `NOT RUN`;
 4. Upload or serve `release/chatxpt-twitch-extension-finals.zip` through Twitch Local or Hosted Test and configure the deployed ChatXPT EBS origin.
 5. In OBS, confirm the raw-game source does not contain the ChatXPT overlay. This prevents recursive analysis.
 6. Open only Studio initially. Open the persistent capture tab, Twitch viewer sessions, and OBS Browser Source when the corresponding step calls for them.
-7. Start recording before the first Twitch connection or session action.
+7. Start recording before the first Twitch connection or live-status transition.
 
 ## One uninterrupted final test
 
 ### 1. One Studio, saved identity, and readiness
 
 1. Open `/studio` and show the single navigation.
-2. Connect Twitch through Studio OAuth. Confirm the connected channel/game state appears without entering a server setup key in the UI.
-3. Open **Profile & Defaults**.
-4. Save a clearly recognisable test configuration:
+2. Connect Twitch through Studio OAuth. Confirm the verified channel/game state appears without entering a channel ID, game ID, or server setup key.
+3. Confirm Studio says it is waiting for Twitch rather than presenting a manual **Start Session** action. Go live on Twitch and confirm Studio changes to live automatically.
+4. Open **Profile & Defaults**.
+5. Save a clearly recognisable test configuration:
    - game: Minecraft;
    - one named stream preset;
    - a distinctive but safe intensity/creativity balance;
@@ -84,8 +85,8 @@ If a required external resource is unavailable, mark the affected row `NOT RUN`;
    - one forbidden quest style that can be checked later;
    - one accessibility constraint;
    - a small keyword watchlist used in the chat step.
-5. Reload Studio and confirm the saved values return.
-6. On Home, confirm Twitch, Game Capture, viewer participation, and Broadcast Overlay readiness are separate and honest. Session start must remain unavailable if a required service is genuinely not ready.
+6. Reload Studio and confirm the saved values return without reconnecting Twitch.
+7. On Home, confirm Twitch, Game Capture, viewer participation, and Broadcast Overlay readiness are separate and honest. Stop the Twitch stream at the end and confirm ChatXPT ends the mapped session automatically.
 
 **Pass:** One Studio owns setup and the saved configuration returns after reload.
 **Fail:** A second full Studio is required, readiness claims a missing service is ready, or saved safety/accessibility data disappears.

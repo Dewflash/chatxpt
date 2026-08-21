@@ -30,6 +30,14 @@ const channelsResponseSchema = z.object({
   }).passthrough()).max(1),
 }).passthrough();
 
+const streamsResponseSchema = z.object({
+  data: z.array(z.object({
+    id: z.string().min(1),
+    user_id: z.string().min(1),
+    started_at: z.iso.datetime({ offset: true }),
+  }).passthrough()).max(1),
+}).passthrough();
+
 const appTokenResponseSchema = z.object({
   access_token: z.string().min(1),
   expires_in: z.number().int().positive(),
@@ -51,6 +59,7 @@ export interface TwitchOAuthConfiguration {
   readonly eventSubSecret: string;
   readonly redirectUri: string;
   readonly eventSubWebhookUrl: string;
+  readonly eventSubTransport?: "websocket" | "webhook";
 }
 
 export interface TwitchOAuthConnection {
@@ -60,9 +69,20 @@ export interface TwitchOAuthConnection {
   readonly gameName: string | null;
   readonly grantedScopes: readonly string[];
   readonly tokenExpiresInSeconds: number;
+  readonly stream: {
+    readonly status: "live" | "offline";
+    readonly startedAt: number | null;
+  };
+  /** Server-only user authorization used by localhost EventSub WebSocket recovery. */
+  readonly authorization: {
+    readonly accessToken: string;
+    readonly refreshToken: string;
+    readonly expiresAt: number;
+  };
   readonly eventSub: {
-    readonly status: "pending" | "skipped";
+    readonly status: "configured" | "pending" | "skipped";
     readonly subscriptionId: string | null;
+    readonly subscriptionIds: readonly string[];
     readonly detail: string;
   };
 }
@@ -107,10 +127,12 @@ export class TwitchOAuthClient {
     private readonly configuration: TwitchOAuthConfiguration,
     private readonly request: typeof fetch = fetch,
   ) {
+    const webhookRequiresSecret = configuration.eventSubTransport !== "websocket" &&
+      new URL(configuration.eventSubWebhookUrl).protocol === "https:";
     if (
       configuration.clientId.trim() === "" ||
       configuration.clientSecret.trim() === "" ||
-      configuration.eventSubSecret.trim() === ""
+      (webhookRequiresSecret && configuration.eventSubSecret.trim() === "")
     ) {
       throw new TwitchOAuthError("misconfigured", "Twitch OAuth credentials are incomplete");
     }
@@ -153,7 +175,7 @@ export class TwitchOAuthClient {
       authorization: `Bearer ${token.access_token}`,
       "client-id": this.configuration.clientId,
     };
-    const [usersPayload, channelsPayload] = await Promise.all([
+    const [usersPayload, channelsPayload, streamsPayload] = await Promise.all([
       parseResponse(await this.request("https://api.twitch.tv/helix/users", {
         headers: helixHeaders,
         cache: "no-store",
@@ -162,17 +184,26 @@ export class TwitchOAuthClient {
         `https://api.twitch.tv/helix/channels?broadcaster_id=${encodeURIComponent(validation.user_id)}`,
         { headers: helixHeaders, cache: "no-store" },
       ), "Twitch channel metadata is unavailable"),
+      parseResponse(await this.request(
+        `https://api.twitch.tv/helix/streams?user_id=${encodeURIComponent(validation.user_id)}`,
+        { headers: helixHeaders, cache: "no-store" },
+      ), "Twitch stream status is unavailable"),
     ]);
     const user = usersResponseSchema.parse(usersPayload).data[0];
     const channel = channelsResponseSchema.parse(channelsPayload).data[0] ?? null;
+    const stream = streamsResponseSchema.parse(streamsPayload).data[0] ?? null;
     if (user.id !== validation.user_id) {
       throw new TwitchOAuthError("identity-failed", "Twitch user metadata did not match the token");
     }
+    if (stream !== null && stream.user_id !== validation.user_id) {
+      throw new TwitchOAuthError("identity-failed", "Twitch stream metadata did not match the token");
+    }
 
-    const eventSub = await this.createChatSubscription(validation.user_id).catch(() => ({
+    const eventSub = await this.createEventSubscriptions(validation.user_id).catch(() => ({
       status: "skipped" as const,
       subscriptionId: null,
-      detail: "Twitch connected, but chat delivery still needs EventSub recovery.",
+      subscriptionIds: [],
+      detail: "Twitch connected, but live status and chat delivery still need EventSub recovery.",
     }));
     return {
       broadcasterId: validation.user_id,
@@ -181,19 +212,30 @@ export class TwitchOAuthClient {
       gameName: channel?.game_name.trim() ? channel.game_name : null,
       grantedScopes: validation.scopes,
       tokenExpiresInSeconds: Math.min(token.expires_in, validation.expires_in),
+      stream: stream === null
+        ? { status: "offline", startedAt: null }
+        : { status: "live", startedAt: Date.parse(stream.started_at) },
+      authorization: {
+        accessToken: token.access_token,
+        refreshToken: token.refresh_token,
+        expiresAt: Date.now() + Math.min(token.expires_in, validation.expires_in) * 1_000,
+      },
       eventSub,
     };
   }
 
-  private async createChatSubscription(
+  private async createEventSubscriptions(
     broadcasterId: string,
   ): Promise<TwitchOAuthConnection["eventSub"]> {
     const webhook = new URL(this.configuration.eventSubWebhookUrl);
-    if (webhook.protocol !== "https:") {
+    if (this.configuration.eventSubTransport === "websocket" || webhook.protocol !== "https:") {
       return {
         status: "skipped",
         subscriptionId: null,
-        detail: "EventSub webhook creation requires the deployed HTTPS callback.",
+        subscriptionIds: [],
+        detail: this.configuration.eventSubTransport === "websocket"
+          ? "EventSub WebSocket subscriptions are created after the Twitch connection is stored."
+          : "EventSub webhook creation requires the deployed HTTPS callback.",
       };
     }
     const appTokenBody = new URLSearchParams({
@@ -210,36 +252,54 @@ export class TwitchOAuthClient {
         cache: "no-store",
       },
     ), "Twitch app authorization is unavailable"));
-    const response = await this.request("https://api.twitch.tv/helix/eventsub/subscriptions", {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${appToken.access_token}`,
-        "client-id": this.configuration.clientId,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        type: "channel.chat.message",
-        version: "1",
-        condition: {
-          broadcaster_user_id: broadcasterId,
-          user_id: broadcasterId,
+    const types = ["channel.chat.message", "stream.online", "stream.offline"] as const;
+    const subscriptionIds: string[] = [];
+    let chatSubscriptionId: string | null = null;
+    for (const type of types) {
+      const response = await this.request("https://api.twitch.tv/helix/eventsub/subscriptions", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${appToken.access_token}`,
+          "client-id": this.configuration.clientId,
+          "content-type": "application/json",
         },
-        transport: {
-          method: "webhook",
-          callback: this.configuration.eventSubWebhookUrl,
-          secret: this.configuration.eventSubSecret,
-        },
-      }),
-      cache: "no-store",
-    });
-    if (!response.ok) {
-      throw new TwitchOAuthError("eventsub-failed", "Twitch chat subscription could not be created");
+        body: JSON.stringify({
+          type,
+          version: "1",
+          condition: type === "channel.chat.message"
+            ? {
+                broadcaster_user_id: broadcasterId,
+                user_id: broadcasterId,
+              }
+            : { broadcaster_user_id: broadcasterId },
+          transport: {
+            method: "webhook",
+            callback: this.configuration.eventSubWebhookUrl,
+            secret: this.configuration.eventSubSecret,
+          },
+        }),
+        cache: "no-store",
+      });
+      // Twitch returns 409 when the exact subscription already exists. That is
+      // an idempotent success for a broadcaster reconnecting the same account.
+      if (response.status === 409) continue;
+      if (!response.ok) {
+        throw new TwitchOAuthError(
+          "eventsub-failed",
+          `Twitch ${type} subscription could not be created`,
+        );
+      }
+      const subscription = eventSubResponseSchema.parse(await response.json()).data[0];
+      subscriptionIds.push(subscription.id);
+      if (type === "channel.chat.message") chatSubscriptionId = subscription.id;
     }
-    const subscription = eventSubResponseSchema.parse(await response.json()).data[0];
     return {
-      status: "pending",
-      subscriptionId: subscription.id,
-      detail: "Twitch is verifying the signed EventSub webhook.",
+      status: subscriptionIds.length === 0 ? "configured" : "pending",
+      subscriptionId: chatSubscriptionId,
+      subscriptionIds,
+      detail: subscriptionIds.length === 0
+        ? "Twitch live status and chat delivery subscriptions already exist."
+        : "Twitch live status and chat delivery are configured; new webhooks are being verified.",
     };
   }
 }

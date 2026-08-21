@@ -1,6 +1,6 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { z } from "zod";
 
@@ -34,6 +34,7 @@ import {
 import type { ConfiguredPersistenceRuntime } from "@/realtime/server";
 
 import { getChatXptServerRuntime, type ChatXptServerRuntime } from "./runtime";
+import { studioSessionSecret } from "./twitch-connection-grant";
 
 const startSessionSchema = z
   .object({
@@ -55,6 +56,18 @@ const startSessionSchema = z
 
 const STUDIO_GRANT_TTL_MS = 12 * 60 * 60 * 1_000;
 const studioPresenceSchema = z.object({ action: z.enum(["heartbeat", "disconnect"]) }).strict();
+const twitchStreamEventSchema = z.object({
+  broadcasterId: identifierSchema,
+  displayName: z.string().trim().min(1).max(80),
+  deliveryId: z.string().trim().min(1).max(128),
+  occurredAt: z.number().int().nonnegative(),
+}).strict();
+
+export interface TwitchStreamSynchronizationResult {
+  readonly status: "started" | "already-live" | "ended" | "not-found";
+  readonly sessionId: string | null;
+  readonly revision: number | null;
+}
 
 export type StudioSessionApplicationErrorCode =
   | "misconfigured"
@@ -151,6 +164,7 @@ function commandError(code: string, message: string, retryable: boolean): Studio
 export interface StudioSessionApplicationDependencies {
   readonly runtime: ChatXptServerRuntime;
   readonly setupKey: string;
+  readonly grantSecret?: string;
   readonly extensionSecret: string;
   readonly environment: Record<string, string | undefined>;
   readonly now?: () => number;
@@ -160,12 +174,14 @@ export interface StudioSessionApplicationDependencies {
 export class StudioSessionApplication {
   private readonly persistence: ConfiguredPersistenceRuntime;
   private readonly grants: StudioSessionGrantAuthority;
+  private readonly diagnosticSetup: StudioSessionGrantAuthority;
   private readonly now: () => number;
   private readonly nextId: () => string;
 
   constructor(private readonly dependencies: StudioSessionApplicationDependencies) {
     this.persistence = dependencies.runtime.persistence;
-    this.grants = new StudioSessionGrantAuthority(dependencies.setupKey);
+    this.grants = new StudioSessionGrantAuthority(dependencies.grantSecret ?? dependencies.setupKey);
+    this.diagnosticSetup = new StudioSessionGrantAuthority(dependencies.setupKey);
     this.now = dependencies.now ?? Date.now;
     this.nextId = dependencies.nextId ?? randomUUID;
   }
@@ -176,14 +192,160 @@ export class StudioSessionApplication {
     twitchVerified = false,
   ): Promise<StudioSessionStartResult> {
     try {
-      this.grants.authenticateSetupKey(setupKey);
+      this.diagnosticSetup.authenticateSetupKey(setupKey);
     } catch (caught) {
       throw authError(caught);
     }
+    return this.startAuthorized(input, twitchVerified);
+  }
+
+  async startFromVerifiedTwitch(input: unknown): Promise<StudioSessionStartResult> {
+    return this.startAuthorized(input, true);
+  }
+
+  /** Issues a fresh browser grant only when Twitch already has an active mapped session. */
+  async resumeExistingFromVerifiedTwitch(
+    input: unknown,
+  ): Promise<StudioSessionStartResult | null> {
     const parsed = startSessionSchema.safeParse(input);
     if (!parsed.success) {
       throw new StudioSessionApplicationError("validation", "Studio session setup is invalid");
     }
+    const existing = await this.persistence.twitchChannelSessions.findTwitchChannelSession(
+      parsed.data.channelId,
+    );
+    if (existing === null) return null;
+    const state = await this.loadSession(existing.sessionId);
+    if (state.session.broadcasterId !== parsed.data.channelId) {
+      throw new StudioSessionApplicationError("forbidden", "Twitch session mapping is invalid");
+    }
+    return this.issueStudioGrant(state, true);
+  }
+
+  /**
+   * Signed Twitch EventSub is authoritative for Twitch's broadcast lifecycle.
+   * Going online creates/resumes the mapped session and makes chat ingestion live
+   * without asking the streamer for IDs, keys, or a second start action.
+   */
+  async synchronizeVerifiedTwitchOnline(
+    input: unknown,
+  ): Promise<TwitchStreamSynchronizationResult> {
+    const parsed = twitchStreamEventSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new StudioSessionApplicationError("validation", "Twitch stream event is invalid");
+    }
+    const connected = await this.startAuthorized({
+      channelId: parsed.data.broadcasterId,
+      displayName: parsed.data.displayName,
+      gameId: null,
+      gameName: null,
+    }, true);
+    if (connected.view.session.status === "live") {
+      return {
+        status: "already-live",
+        sessionId: connected.view.session.sessionId,
+        revision: connected.view.session.revision,
+      };
+    }
+    if (connected.view.session.status !== "preparing") {
+      throw new StudioSessionApplicationError(
+        "dependency-unavailable",
+        "Twitch stream could not activate the broadcaster session",
+        true,
+      );
+    }
+    const occurredAt = Math.max(parsed.data.occurredAt, connected.view.session.createdAt);
+    const operationId = `twitch-online-${createHash("sha256")
+      .update(parsed.data.deliveryId)
+      .digest("hex")}`;
+    const started = await new SessionLifecycleService(this.persistence.lifecycle).start(
+      connected.view.session.sessionId,
+      connected.view.session.revision,
+      occurredAt,
+      operationId,
+    );
+    if (!started.ok) {
+      if (started.error.code === "stale-revision") {
+        const latest = await this.loadSession(connected.view.session.sessionId);
+        if (latest.session.status === "live") {
+          return {
+            status: "already-live",
+            sessionId: latest.session.sessionId,
+            revision: latest.session.revision,
+          };
+        }
+      }
+      throw commandError(started.error.code, started.error.message, started.error.retryable);
+    }
+    return {
+      status: "started",
+      sessionId: started.value.sessionId,
+      revision: started.value.revision,
+    };
+  }
+
+  async synchronizeVerifiedTwitchOffline(
+    input: unknown,
+  ): Promise<TwitchStreamSynchronizationResult> {
+    const parsed = twitchStreamEventSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new StudioSessionApplicationError("validation", "Twitch stream event is invalid");
+    }
+    const record = await this.persistence.twitchChannelSessions.findTwitchChannelSession(
+      parsed.data.broadcasterId,
+    );
+    if (record === null) {
+      return { status: "not-found", sessionId: null, revision: null };
+    }
+    const state = await this.loadSession(record.sessionId);
+    const occurredAt = Math.max(
+      parsed.data.occurredAt,
+      state.session.startedAt ?? state.session.createdAt,
+    );
+    const operationId = `twitch-offline-${createHash("sha256")
+      .update(parsed.data.deliveryId)
+      .digest("hex")}`;
+    const ended = await new SessionLifecycleService(this.persistence.lifecycle).end(
+      state.session.sessionId,
+      state.session.revision,
+      occurredAt,
+      "twitch-stream-offline",
+      operationId,
+    );
+    if (!ended.ok) {
+      if (ended.error.code === "stale-revision") {
+        const latest = await this.loadSession(state.session.sessionId);
+        if (latest.session.status === "ended" || latest.session.status === "offline") {
+          return {
+            status: "ended",
+            sessionId: latest.session.sessionId,
+            revision: latest.session.revision,
+          };
+        }
+      }
+      throw commandError(ended.error.code, ended.error.message, ended.error.retryable);
+    }
+    return {
+      status: "ended",
+      sessionId: ended.value.sessionId,
+      revision: ended.value.revision,
+    };
+  }
+
+  private async startAuthorized(
+    input: unknown,
+    twitchVerified: boolean,
+  ): Promise<StudioSessionStartResult> {
+    const parsed = startSessionSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new StudioSessionApplicationError("validation", "Studio session setup is invalid");
+    }
+    const twitchSetup = resolveTwitchSetupReadiness(this.dependencies.environment, {
+      checkedAt: this.now(),
+    });
+    const twitchExtensionReady = twitchSetup.services.some(
+      (service) => service.service === "twitch-extension" && service.status === "ready",
+    );
 
     const lifecycle = new SessionLifecycleService(this.persistence.lifecycle);
     await lifecycle.expireDue(this.now());
@@ -216,7 +378,7 @@ export class StudioSessionApplication {
           startedAt: null,
           endedAt: null,
           capabilities: {
-            twitchExtension: true,
+            twitchExtension: twitchExtensionReady,
             hostedViewerBoard: true,
             twitchChatVoting: true,
             twitchIdentity: true,
@@ -274,6 +436,13 @@ export class StudioSessionApplication {
       state = created.value.state;
     }
 
+    return this.issueStudioGrant(state, twitchVerified);
+  }
+
+  private async issueStudioGrant(
+    state: AuthoritativeSessionState,
+    twitchVerified: boolean,
+  ): Promise<StudioSessionStartResult> {
     const expiresAt = this.now() + STUDIO_GRANT_TTL_MS;
     const grant = this.grants.issue({
       version: 1,
@@ -621,6 +790,19 @@ export class StudioSessionApplication {
     checkedAt: number,
   ): Promise<StreamerReadinessView> {
     const twitch = resolveTwitchSetupReadiness(this.dependencies.environment, { checkedAt });
+    const twitchAppReady = twitch.services.some(
+      (service) => service.service === "twitch-app" && service.status === "ready",
+    );
+    const twitchEventSubReady = twitch.services.some(
+      (service) => service.service === "twitch-eventsub-chat" && service.status === "ready",
+    );
+    const twitchExtensionReady = twitch.services.some(
+      (service) => service.service === "twitch-extension" && service.status === "ready",
+    );
+    const twitchCoreReady = twitchAppReady && twitchEventSubReady;
+    const missingTwitchCore = twitch.missing.filter(
+      (name) => name !== "TWITCH_EXTENSION_CLIENT_ID" && name !== "TWITCH_EXTENSION_SECRET",
+    );
     const gameplayLive = state.gameplay?.envelope.evidenceClass === "live";
     let realtimeHealth = serviceHealthSchema.parse({
       service: "realtime",
@@ -652,7 +834,7 @@ export class StudioSessionApplication {
       retryable: state.gameplay === null,
     });
     const integrationBlockers = [
-      ...(!twitch.ok ? ["twitch-configuration"] : []),
+      ...(!twitchCoreReady ? ["twitch-configuration"] : []),
       ...(state.gameplay === null ? ["gameplay-capture"] : []),
     ];
     const canStartSession = state.session.status === "preparing" && integrationBlockers.length === 0;
@@ -664,7 +846,9 @@ export class StudioSessionApplication {
       message: state.session.status === "live"
         ? "ChatXPT session is live"
         : canStartSession
-          ? "ChatXPT can start after broadcaster confirmation"
+          ? twitchVerified
+            ? "Twitch is connected; ChatXPT starts automatically when the stream goes live"
+            : "ChatXPT can start after diagnostic confirmation"
           : state.session.status === "preparing"
             ? "Resolve blocking setup before starting ChatXPT"
             : `ChatXPT session is ${state.session.status}`,
@@ -679,14 +863,18 @@ export class StudioSessionApplication {
     });
     const twitchHealth = serviceHealthSchema.parse({
       service: "twitch",
-      status: twitch.ok ? "ready" : "misconfigured",
+      status: twitchCoreReady ? "ready" : "misconfigured",
       checkedAt,
-      message: twitch.ok
+      message: twitchCoreReady
         ? twitchVerified
-          ? "Signed Twitch broadcaster authorization verified for this request"
-          : "Twitch credentials are configured; open through Twitch to verify channel authorization"
-        : `Missing ${twitch.missing.join(", ")}`,
-      retryable: !twitch.ok,
+          ? twitchExtensionReady
+            ? "Twitch broadcaster authorization is verified; Extension delivery is configured"
+            : "Twitch broadcaster authorization is verified; the Extension is not configured, so viewer fallbacks remain available"
+          : twitchExtensionReady
+            ? "Twitch app, chat, and Extension credentials are configured"
+            : "Twitch app and chat are configured; the Extension is not configured, so viewer fallbacks remain available"
+        : `Missing ${missingTwitchCore.join(", ")}`,
+      retryable: !twitchCoreReady,
     });
     const realtimeBlocksStart =
       realtimeHealth.status === "unavailable" &&
@@ -707,15 +895,15 @@ export class StudioSessionApplication {
     const sessionActions =
       state.session.status === "live"
         ? ["end-session", "open-diagnostics"]
-        : canStartSession && !realtimeBlocksStart
+        : canStartSession && !realtimeBlocksStart && !twitchVerified
           ? ["start-session", "open-diagnostics"]
           : ["open-diagnostics"];
     const recommendedAction =
-      canStartSession && !realtimeBlocksStart
+      canStartSession && !realtimeBlocksStart && !twitchVerified
         ? "start-session"
         : state.gameplay === null
           ? "request-capture-permission"
-          : !twitch.ok
+          : !twitchCoreReady
             ? "connect-twitch"
             : realtimeBlocksStart
               ? "retry-service"
@@ -726,7 +914,16 @@ export class StudioSessionApplication {
       ready,
       status: ready ? "ready" : "blocked",
       services: [
-        { service: "twitch", configured: twitch.ok, health: twitchHealth, allowedActions: twitch.ok ? ["retry-service", "open-diagnostics"] : ["connect-twitch", "install-extension", "open-diagnostics"] },
+        {
+          service: "twitch",
+          configured: twitchCoreReady,
+          health: twitchHealth,
+          allowedActions: twitchCoreReady
+            ? twitchExtensionReady
+              ? ["retry-service", "open-diagnostics"]
+              : ["install-extension", "retry-service", "open-diagnostics"]
+            : ["connect-twitch", "open-diagnostics"],
+        },
         { service: "obs-capture", configured: state.gameplay !== null, health: captureHealth, allowedActions: state.gameplay === null ? ["request-capture-permission", "select-capture-source", "open-diagnostics"] : ["open-diagnostics"] },
         { service: "realtime", configured: this.persistence.mode === "supabase", health: realtimeHealth, allowedActions: ["retry-service", "open-diagnostics"] },
         { service: "intelligence", configured: true, health: intelligenceHealth, allowedActions: ["retry-service", "open-diagnostics"] },
@@ -737,7 +934,9 @@ export class StudioSessionApplication {
       label: ready
         ? state.session.status === "live"
           ? "Ready for the Twitch workflow"
-          : "Ready to start ChatXPT"
+          : twitchVerified
+            ? "Twitch connected — waiting for the stream"
+            : "Ready to start diagnostic ChatXPT session"
         : `${blockers.length} readiness ${blockers.length === 1 ? "blocker" : "blockers"}`,
     });
   }
@@ -750,9 +949,11 @@ const globalApplication = globalThis as typeof globalThis & {
 
 export function getStudioSessionApplication(): StudioSessionApplication {
   if (globalApplication[applicationKey] !== undefined) return globalApplication[applicationKey];
+  const grantSecret = studioSessionSecret(process.env);
   globalApplication[applicationKey] = new StudioSessionApplication({
     runtime: getChatXptServerRuntime(),
     setupKey: process.env.CHATXPT_STUDIO_SETUP_KEY ?? "",
+    grantSecret,
     extensionSecret: process.env.TWITCH_EXTENSION_SECRET ?? "",
     environment: process.env,
   });

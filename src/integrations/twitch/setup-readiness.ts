@@ -62,19 +62,27 @@ export function resolveTwitchSetupReadiness(
 ): TwitchSetupReadiness {
   const checkedAt = options.checkedAt ?? Date.now();
   const baseUrl = normaliseBaseUrl(options.baseUrl);
+  const configuredTransport = source.CHATXPT_TWITCH_EVENTSUB_TRANSPORT?.trim().toLowerCase();
+  const parsedBaseUrl = baseUrl === null ? null : new URL(baseUrl);
+  const localHttp = parsedBaseUrl?.protocol === "http:" &&
+    ["localhost", "127.0.0.1", "[::1]"].includes(parsedBaseUrl.hostname);
+  const websocketEventSub = configuredTransport === "websocket" ||
+    (configuredTransport !== "webhook" && (localHttp || source.NEXT_PUBLIC_APP_ENV === "local"));
   const required = [
     ["TWITCH_CLIENT_ID", source.TWITCH_CLIENT_ID],
     ["TWITCH_CLIENT_SECRET", source.TWITCH_CLIENT_SECRET],
     ["TWITCH_EXTENSION_CLIENT_ID", source.TWITCH_EXTENSION_CLIENT_ID],
     ["TWITCH_EXTENSION_SECRET", source.TWITCH_EXTENSION_SECRET],
-    ["TWITCH_EVENTSUB_SECRET", source.TWITCH_EVENTSUB_SECRET],
+    ...(websocketEventSub
+      ? []
+      : [["TWITCH_EVENTSUB_SECRET", source.TWITCH_EVENTSUB_SECRET] as const]),
   ] as const;
   const missing = required.filter(([, value]) => !hasValue(value)).map(([name]) => name);
   const appReady = !missing.includes("TWITCH_CLIENT_ID") && !missing.includes("TWITCH_CLIENT_SECRET");
   const extensionReady =
     !missing.includes("TWITCH_EXTENSION_CLIENT_ID") &&
     !missing.includes("TWITCH_EXTENSION_SECRET");
-  const eventSubReady = !missing.includes("TWITCH_EVENTSUB_SECRET");
+  const eventSubReady = websocketEventSub || !missing.includes("TWITCH_EVENTSUB_SECRET");
 
   return {
     ok: missing.length === 0,
@@ -107,13 +115,17 @@ export function resolveTwitchSetupReadiness(
         eventSubReady ? "ready" : "misconfigured",
         checkedAt,
         eventSubReady
-          ? "Twitch EventSub webhook verification is configured"
+          ? websocketEventSub
+            ? "Twitch EventSub WebSocket delivery is configured for localhost"
+            : "Twitch EventSub webhook verification is configured"
           : "Twitch EventSub webhook secret is missing",
       ),
     ],
     limitations: [
       "No Twitch secrets are included in this response or rendered route.",
-      "Studio creates the OAuth chat subscription; the viewer EBS verifies Extension JWTs and the chat webhook verifies every EventSub HMAC delivery.",
+      websocketEventSub
+        ? "Studio stores localhost Twitch authorization encrypted server-side and restores EventSub WebSocket delivery after restart."
+        : "Studio creates the OAuth chat subscription; the viewer EBS verifies Extension JWTs and the chat webhook verifies every EventSub HMAC delivery.",
       "Twitch Asset Hosting compliance, Local Test, or Hosted Test evidence must be recorded separately before Twitch is described as live.",
     ],
   };

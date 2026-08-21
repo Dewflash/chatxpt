@@ -68,6 +68,18 @@ describe("StudioProductPageSurface", () => {
     expect(html).not.toContain("scheduled for");
   });
 
+  it("renders an active Twitch OAuth link before the Studio session exists", () => {
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "home",
+      view: null,
+      readiness: null,
+    }));
+
+    expect(html).toContain('href="/api/twitch/oauth/start"');
+    expect(html).toContain("Connect Twitch");
+    expect(html).not.toContain("Connect Twitch to continue");
+  });
+
   it("keeps Test Lab sample/live distinction outside ordinary product pages", () => {
     const home = renderToStaticMarkup(h(StudioProductPageSurface, {
       page: "home",
@@ -117,8 +129,10 @@ describe("StudioProductPageSurface", () => {
       onCommand: () => undefined,
     }));
 
-    expect(html).toContain("Resolve the highlighted setup blocker before starting ChatXPT.");
-    expect(html).toContain("Resolve setup first");
+    expect(html).toContain("Resolve the highlighted setup blocker so ChatXPT can monitor the stream.");
+    expect(html).toContain("Waiting for Twitch stream");
+    expect(html).toContain('href="/studio/gameplay/capture"');
+    expect(html).toContain("Allow camera");
     expect(html).not.toContain("<button");
   });
 
@@ -140,7 +154,7 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("Open quests");
   });
 
-  it("renders the connected ready-to-start composition with game correction", () => {
+  it("renders the connected waiting-for-Twitch composition without a manual start", () => {
     const snapshot = createFixtureUiGatewaySnapshot();
     const view = {
       ...snapshot.views.streamer,
@@ -153,8 +167,9 @@ describe("StudioProductPageSurface", () => {
       onCommand: () => undefined,
     }));
 
-    expect(html).toContain("Ready to start ChatXPT");
+    expect(html).toContain("Twitch connected — waiting for the stream");
     expect(html).toContain("Change current game");
-    expect(html).toContain("Start ChatXPT");
+    expect(html).toContain("Waiting for Twitch stream");
+    expect(html).not.toContain("Start ChatXPT");
   });
 });

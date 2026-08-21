@@ -143,6 +143,25 @@ describe("authenticated gameplay snapshot ingress", () => {
     )).rejects.toMatchObject({ code: "forbidden" });
   });
 
+  it("uses the server signer for Studio capture while leaving manual diagnostics locked", async () => {
+    const { persistence, state } = await setup();
+    const application = new GameplayIngressApplication({
+      persistence,
+      setupKey: "",
+      grantSecret: KEY,
+      now: () => FIXTURE_NOW + 1_000,
+      nextId: () => "studio-grant",
+    });
+
+    await expect(application.issueGrantForStudio(
+      { sessionId: state.session.sessionId },
+      state.session.sessionId,
+    )).resolves.toMatchObject({ authority: { sessionId: state.session.sessionId } });
+    await expect(application.issueGrant(null, {
+      sessionId: state.session.sessionId,
+    })).rejects.toMatchObject({ code: "misconfigured" });
+  });
+
   it("requests a Live Director context refresh for an accepted gameplay snapshot", async () => {
     const { persistence, state } = await setup();
     let refreshGameplayMessageId: string | null = null;

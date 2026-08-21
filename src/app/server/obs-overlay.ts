@@ -27,6 +27,7 @@ import {
 import type { ChatXptPersistenceRuntime, VerifiedCommandActor } from "@/realtime";
 
 import { getChatXptServerRuntime, type ChatXptServerRuntime } from "./runtime";
+import { studioSessionSecret } from "./twitch-connection-grant";
 
 const grantRequestSchema = z
   .object({
@@ -62,6 +63,7 @@ export class ObsOverlayApplicationError extends Error {
 export interface ObsOverlayApplicationDependencies {
   readonly runtime: ChatXptServerRuntime;
   readonly setupKey: string;
+  readonly grantSecret?: string;
   readonly now?: () => number;
   readonly nextId?: () => string;
 }
@@ -92,12 +94,16 @@ function authError(caught: unknown): ObsOverlayApplicationError {
 export class ObsOverlayApplication {
   private readonly persistence: ChatXptPersistenceRuntime;
   private readonly grants: ObsOverlayGrantAuthority;
+  private readonly diagnosticSetup: ObsOverlayGrantAuthority;
   private readonly now: () => number;
   private readonly nextId: () => string;
 
   constructor(private readonly dependencies: ObsOverlayApplicationDependencies) {
     this.persistence = dependencies.runtime.persistence;
-    this.grants = new ObsOverlayGrantAuthority(dependencies.setupKey);
+    this.grants = new ObsOverlayGrantAuthority(
+      dependencies.grantSecret ?? dependencies.setupKey,
+    );
+    this.diagnosticSetup = new ObsOverlayGrantAuthority(dependencies.setupKey);
     this.now = dependencies.now ?? Date.now;
     this.nextId = dependencies.nextId ?? randomUUID;
   }
@@ -108,7 +114,7 @@ export class ObsOverlayApplication {
     input: unknown,
   ): Promise<ObsOverlayGrantResult> {
     try {
-      this.grants.authenticateSetupKey(setupKey);
+      this.diagnosticSetup.authenticateSetupKey(setupKey);
     } catch (caught) {
       throw authError(caught);
     }
@@ -314,9 +320,11 @@ const globalApplication = globalThis as typeof globalThis & {
 
 export function getObsOverlayApplication(): ObsOverlayApplication {
   if (globalApplication[applicationKey] !== undefined) return globalApplication[applicationKey];
+  const setupKey = process.env.CHATXPT_OBS_OVERLAY_SETUP_KEY ?? "";
   globalApplication[applicationKey] = new ObsOverlayApplication({
     runtime: getChatXptServerRuntime(),
-    setupKey: process.env.CHATXPT_OBS_OVERLAY_SETUP_KEY ?? "",
+    setupKey,
+    grantSecret: setupKey.trim() || studioSessionSecret(process.env),
   });
   return globalApplication[applicationKey];
 }

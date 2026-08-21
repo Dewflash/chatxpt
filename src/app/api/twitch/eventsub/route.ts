@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { BoundedJsonError, readBoundedText } from "@/app/server/bounded-json";
+import { getStudioSessionApplication } from "@/app/server/studio-session";
 import { getTwitchChatApplication } from "@/app/server/twitch-chat";
 import {
   TwitchEventSubError,
@@ -30,8 +31,9 @@ export async function POST(request: Request) {
   }
   try {
     const rawBody = await readBoundedText(request, 64 * 1_024);
+    const deliveryId = request.headers.get("twitch-eventsub-message-id");
     const occurredAt = verifyTwitchEventSubMessage({
-      messageId: request.headers.get("twitch-eventsub-message-id"),
+      messageId: deliveryId,
       messageTimestamp: request.headers.get("twitch-eventsub-message-timestamp"),
       messageSignature: request.headers.get("twitch-eventsub-message-signature"),
       rawBody,
@@ -55,6 +57,20 @@ export async function POST(request: Request) {
         text: payload.text,
         occurredAt,
         receivedAt: Math.max(Date.now(), occurredAt),
+      });
+    } else if (payload.kind === "stream-online") {
+      await getStudioSessionApplication().synchronizeVerifiedTwitchOnline({
+        broadcasterId: payload.broadcasterId,
+        displayName: payload.displayName,
+        deliveryId,
+        occurredAt: payload.startedAt,
+      });
+    } else if (payload.kind === "stream-offline") {
+      await getStudioSessionApplication().synchronizeVerifiedTwitchOffline({
+        broadcasterId: payload.broadcasterId,
+        displayName: payload.displayName,
+        deliveryId,
+        occurredAt,
       });
     }
     return new Response(null, { status: 204, headers });

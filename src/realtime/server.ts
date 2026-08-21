@@ -22,6 +22,7 @@ export {
   SupabaseDataError,
   SupabaseDueVoteCycleReader,
   SupabaseHostedBoardSessionDirectory,
+  SupabaseObsOverlayConnectionStore,
   SupabaseRoleSnapshotPublisher,
   SupabaseRealtimeAccessGrantStore,
   SupabaseSessionHistoryReader,

@@ -3,6 +3,17 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { getStudioSessionApplication } from "@/app/server/studio-session";
+import {
+  TWITCH_BROADCASTER_CONNECTION_COOKIE,
+  TWITCH_BROADCASTER_CONNECTION_TTL_MS,
+  TwitchBroadcasterConnectionAuthority,
+  studioSessionSecret,
+} from "@/app/server/twitch-connection-grant";
+import {
+  ensureLocalTwitchEventSub,
+  shouldUseLocalTwitchEventSub,
+} from "@/app/server/twitch-local-eventsub";
+import { TwitchLocalAuthorizationStore } from "@/app/server/twitch-local-authorization";
 import { STUDIO_SESSION_COOKIE } from "@/app/api/studio/response";
 import { TwitchOAuthClient } from "@/integrations/server";
 
@@ -56,6 +67,7 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("code")?.trim() ?? "";
   if (code === "") return failure(request, "code");
   const origin = baseUrl(request);
+  const localEventSub = shouldUseLocalTwitchEventSub(origin);
   try {
     const connection = await new TwitchOAuthClient({
       clientId: process.env.TWITCH_CLIENT_ID ?? "",
@@ -63,19 +75,48 @@ export async function GET(request: Request) {
       eventSubSecret: process.env.TWITCH_EVENTSUB_SECRET ?? "",
       redirectUri: `${origin}/api/twitch/oauth/callback`,
       eventSubWebhookUrl: `${origin}/api/twitch/eventsub`,
+      eventSubTransport: localEventSub ? "websocket" : "webhook",
     }).connect(code);
-    const result = await getStudioSessionApplication().start(
-      process.env.CHATXPT_STUDIO_SETUP_KEY ?? "",
-      {
-        channelId: connection.broadcasterId,
+    let eventSubStatus = connection.eventSub.status;
+    if (localEventSub) {
+      const secret = studioSessionSecret();
+      await new TwitchLocalAuthorizationStore({ secret }).save({
+        version: 1,
+        broadcasterId: connection.broadcasterId,
         displayName: connection.displayName,
         gameId: connection.gameId,
         gameName: connection.gameName,
-      },
-      true,
-    );
+        accessToken: connection.authorization.accessToken,
+        refreshToken: connection.authorization.refreshToken,
+        scopes: [...connection.grantedScopes],
+        expiresAt: connection.authorization.expiresAt,
+      });
+    }
+    const result = await getStudioSessionApplication().startFromVerifiedTwitch({
+      channelId: connection.broadcasterId,
+      displayName: connection.displayName,
+      gameId: connection.gameId,
+      gameName: connection.gameName,
+    });
+    if (connection.stream.status === "live" && connection.stream.startedAt !== null) {
+      await getStudioSessionApplication().synchronizeVerifiedTwitchOnline({
+        broadcasterId: connection.broadcasterId,
+        displayName: connection.displayName,
+        deliveryId: `oauth-live:${connection.broadcasterId}:${connection.stream.startedAt}`,
+        occurredAt: connection.stream.startedAt,
+      });
+    }
+    if (localEventSub) {
+      try {
+        await ensureLocalTwitchEventSub(connection.broadcasterId);
+        eventSubStatus = "configured";
+      } catch {
+        // The stored authorization lets the Studio session retry without another login.
+        eventSubStatus = "pending";
+      }
+    }
     const response = NextResponse.redirect(new URL(
-      `/studio?oauth=connected&eventsub=${connection.eventSub.status}`,
+      `/studio?oauth=connected&eventsub=${eventSubStatus}`,
       request.url,
     ));
     const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
@@ -85,6 +126,22 @@ export async function GET(request: Request) {
       secure: !local,
       path: "/",
       expires: new Date(result.expiresAt),
+    });
+    const connectionExpiresAt = Date.now() + TWITCH_BROADCASTER_CONNECTION_TTL_MS;
+    const connectionGrant = new TwitchBroadcasterConnectionAuthority(studioSessionSecret()).issue({
+      version: 1,
+      broadcasterId: connection.broadcasterId,
+      displayName: connection.displayName,
+      gameId: connection.gameId,
+      gameName: connection.gameName,
+      expiresAt: connectionExpiresAt,
+    });
+    response.cookies.set(TWITCH_BROADCASTER_CONNECTION_COOKIE, connectionGrant, {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: !local,
+      path: "/",
+      expires: new Date(connectionExpiresAt),
     });
     response.cookies.delete(TWITCH_OAUTH_STATE_COOKIE);
     response.headers.set("cache-control", "no-store");
