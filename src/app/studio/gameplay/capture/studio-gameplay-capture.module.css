@@ -49,33 +49,84 @@
   margin: 0;
 }
 
-.proofGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
+.proofHeading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
 }
 
-.proofGrid span {
+.proofHeading > div {
   display: grid;
   gap: 6px;
+}
+
+.proofHeading > p {
+  max-width: 34rem;
+  color: #aeb8d4;
+  text-align: right;
+}
+
+.proofColumns {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   min-width: 0;
-  padding: 12px;
   border: 1px solid rgba(126, 231, 194, 0.24);
-  border-radius: 9px;
+  border-radius: 8px;
   background: rgba(4, 10, 13, 0.58);
+  overflow: hidden;
 }
 
-.proofGrid small,
-.detectorReason {
-  color: #9eabc8;
+.proofColumn {
+  min-width: 0;
+  padding: 16px;
 }
 
-.proofGrid strong {
+.proofColumn + .proofColumn {
+  border-left: 1px solid rgba(126, 231, 194, 0.18);
+}
+
+.proofColumn h3 {
+  margin: 0 0 10px;
   color: #f3fff9;
+  font-size: 0.9rem;
+}
+
+.proofColumn dl {
+  display: grid;
+  margin: 0;
+}
+
+.proofColumn dl > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(126, 231, 194, 0.14);
+}
+
+.proofColumn dt,
+.proofColumn dd {
+  margin: 0;
+}
+
+.proofColumn dt {
+  color: #9eabc8;
+  font-size: 0.78rem;
+}
+
+.proofColumn dd {
+  color: #f3fff9;
+  font-weight: 800;
   overflow-wrap: anywhere;
 }
 
+.proofColumn [data-availability="coming-soon"] dd {
+  color: #f3ca72;
+}
+
 .detectorReason {
+  color: #9eabc8;
   line-height: 1.5;
 }
 
@@ -309,6 +360,20 @@
   overflow-wrap: anywhere;
 }
 
+@media (max-width: 1050px) {
+  .proofColumns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .proofColumn:nth-child(3) {
+    border-left: 0;
+  }
+
+  .proofColumn:nth-child(n + 3) {
+    border-top: 1px solid rgba(126, 231, 194, 0.18);
+  }
+}
+
 @media (max-width: 560px) {
   .shell {
     gap: 14px;
@@ -316,6 +381,24 @@
 
   .preview {
     grid-template-columns: 1fr;
+  }
+
+  .proofHeading {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .proofHeading > p {
+    text-align: left;
+  }
+
+  .proofColumns {
+    grid-template-columns: 1fr;
+  }
+
+  .proofColumn + .proofColumn {
+    border-top: 1px solid rgba(126, 231, 194, 0.18);
+    border-left: 0;
   }
 
   .sourcePicker > div {
