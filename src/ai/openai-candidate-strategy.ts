@@ -150,6 +150,7 @@ Weak and strong models receive the same typed context; never compensate for mode
 Every sourceSignalIds entry must exactly match an available known signal ID supplied in the input. Use an empty list when a quest does not rely on one.
 Respect every restriction, forbidden quest type, and accessibility need. Avoid team sabotage, throwing, griefing, wagering, humiliation, sexual content, discrimination, illegal activity, dangerous activity, and real-world physical dares.
 Keep each option understandable at a glance, measurable, and achievable during the current match. Titles must be concise. Rationale is producer-only.
+Match Role 3's deterministic duration bands: easy must be 15-90 seconds, medium 30-150 seconds, and hard 45-180 seconds.
 Do not include provider names, lifecycle decisions, voting instructions, success claims, or fields outside the requested schema. Role 3 remains the deterministic safety and feasibility authority.`;
 
 function normalizedSignalValue(signal: NamedSignal): string | number | boolean | undefined {

@@ -65,6 +65,7 @@ function createOpenAITransport(input: {
 }): StructuredCandidateTransport {
   const client = new OpenAI({
     apiKey: input.apiKey,
+    maxRetries: 0,
     ...(input.baseURL === undefined ? {} : { baseURL: input.baseURL }),
   });
   return {
