@@ -78,6 +78,18 @@ describe("StudioProductPageSurface", () => {
     expect(html).not.toContain('target="_blank"');
   });
 
+  it("gives every persistent Studio navigation item a compact icon", () => {
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-analytics",
+      view: createFixtureUiGatewaySnapshot().views.streamer,
+      readiness: twitchVerifiedReadiness(),
+    }));
+
+    for (const icon of ["home", "gameplay", "analytics", "quests", "profile", "settings", "lab"]) {
+      expect(html).toContain(`data-studio-icon="${icon}"`);
+    }
+  });
+
   it.each(pages)("renders %s without a loaded session and keeps controls unavailable", (page) => {
     const html = renderToStaticMarkup(h(StudioProductPageSurface, {
       page,
@@ -335,6 +347,27 @@ describe("StudioProductPageSurface", () => {
     for (const section of requiredPageSections[page]) {
       expect(html).toContain(section);
     }
+  });
+
+  it("renders compact truthful Live Analytics without duplicating Live Quests", () => {
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-analytics",
+      view: createFixtureUiGatewaySnapshot().views.streamer,
+      readiness: twitchVerifiedReadiness(),
+    }));
+
+    expect(html).toContain('data-analytics-metric="audience-mood"');
+    expect(html).toContain('data-analytics-metric="chat-activity"');
+    expect(html).toContain('data-analytics-metric="active-participants"');
+    expect(html).toContain('data-analytics-metric="quest-participation"');
+    expect(html).toContain("Previous equal window");
+    expect(html).toContain("Current window");
+    expect(html).toContain("Participation flow");
+    expect(html).toContain("Quest result");
+    expect(html).toContain("Open Live Quests");
+    expect(html).not.toContain("Exactly three official choices");
+    expect(html).not.toContain("Data health");
+    expect(html).not.toContain("Current rolling aggregates update during this stream");
   });
 
   it("links Gameplay Engine capture setup to the Studio product route", () => {

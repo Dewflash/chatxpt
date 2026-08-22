@@ -128,7 +128,7 @@ const PAGE_COPY: Readonly<Record<StudioProductPage, { readonly eyebrow: string; 
 };
 
 function StudioIcon({ name, className }: { readonly name: StudioIconName; readonly className?: string }) {
-  let drawing: ReactNode;
+  let drawing: ReactNode = null;
   switch (name) {
     case "home":
       drawing = <><path d="M3 10.5 12 3l9 7.5" /><path d="M5.5 9.5V21h13V9.5" /><path d="M9.5 21v-6h5v6" /></>;
@@ -1006,6 +1006,7 @@ function LiveAnalyticsPage({ view, readiness }: {
   const returning = knownSignalValue(audience, "audience-returning-participants");
   const newlyActive = knownSignalValue(audience, "audience-newly-active-participants");
   const recentlyInactive = knownSignalValue(audience, "audience-recently-inactive-participants");
+  const previousMood = knownSignalValue(audience, "audience-previous-mood");
   const previousRate = knownSignalValue(audience, "audience-previous-message-rate");
   const questVotes = view?.questCycle.voteTallies.reduce((sum, tally) => sum + tally.votes, 0) ?? 0;
   const currentRateValue = typeof messageRate === "number" ? messageRate : null;
@@ -1033,7 +1034,7 @@ function LiveAnalyticsPage({ view, readiness }: {
           <div className={styles.metricLabel}><StudioIcon name="mood" className={styles.metricIcon} /><small>Audience mood</small></div>
           <strong>{presentation.mood}</strong>
           <p>{presentation.detail}</p>
-          <span><StatusBadge tone={presentation.tone}>{presentation.badge}</StatusBadge></span>
+          <span className={styles.metricFooter}><StatusBadge tone={presentation.tone}>{presentation.badge}</StatusBadge><small>Previously: {typeof previousMood === "string" ? titleCase(previousMood) : "not enough history yet"}</small></span>
         </article>
         <article className={styles.analyticsMetric} data-analytics-metric="chat-activity">
           <div className={styles.metricLabel}><StudioIcon name="chat" className={styles.metricIcon} /><small>Chat activity</small></div>
