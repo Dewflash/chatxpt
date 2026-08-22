@@ -1187,11 +1187,11 @@ function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
         ...view.profile.forbiddenQuestTypes.map((type) => `Block ${titleCase(type)}`),
         ...view.profile.accessibilityNeeds.map((need) => `Accessibility: ${need}`),
       ].join(" · ") || "Core safety policy only";
-  const selectedDefaults = selectedPreset === null
-    ? "Saved defaults"
-    : effectiveProfile !== null && effectiveProfile.preferredQuestTypes.length > 0
-      ? `${selectedPreset.name} · ${effectiveProfile.preferredQuestTypes.map(titleCase).join(", ")}`
-      : selectedPreset.name;
+  const selectedDefaultQuestTypes = effectiveProfile?.preferredQuestTypes.map(titleCase) ?? [];
+  const selectedDefaultLeadingTypes = selectedDefaultQuestTypes.slice(0, -2);
+  const selectedDefaultTrailingTypes = selectedDefaultQuestTypes.slice(
+    Math.max(0, selectedDefaultQuestTypes.length - 2),
+  );
   const questStatus = cycle === null
     ? "Waiting"
     : cycle.status === "idle"
@@ -1240,7 +1240,25 @@ function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
             <dl className={styles.questBoundaryGrid}>
               <div><dt>Deterministic safety</dt><dd>Selected</dd></div>
               <div><dt>Game-fit boundary</dt><dd>{currentGame === null ? "No game selected" : `${currentGame.gameName} selected`}</dd></div>
-              <div><dt>Selected defaults</dt><dd>{selectedDefaults}</dd></div>
+              <div>
+                <dt>Selected defaults</dt>
+                <dd>
+                  {selectedPreset?.name ?? "Saved defaults"}
+                  {selectedPreset !== null && selectedDefaultQuestTypes.length > 0 ? (
+                    <>
+                      {" · "}
+                      {selectedDefaultLeadingTypes.length > 0
+                        ? `${selectedDefaultLeadingTypes.join(", ")}, `
+                        : null}
+                      {selectedDefaultTrailingTypes.length > 1 ? (
+                        <span className={styles.questBoundaryTrailingDefaults}>
+                          {selectedDefaultTrailingTypes.join(", ")}
+                        </span>
+                      ) : selectedDefaultTrailingTypes[0]}
+                    </>
+                  ) : null}
+                </dd>
+              </div>
               <div><dt>Profile boundaries</dt><dd>{savedProfileBoundaries}</dd></div>
             </dl>
           </div>

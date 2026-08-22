@@ -550,6 +550,7 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("Deterministic safety</dt><dd>Selected");
     expect(html).toContain("Game-fit boundary</dt><dd>Minecraft Java Edition selected");
     expect(html).toContain("Selected defaults</dt><dd>Community");
+    expect(html).toMatch(/Viewer Choice, <span[^>]*>Chat Guided, Creative<\/span>/u);
     expect(html).toContain("No jump scares");
     expect(html).toContain("Block Team Sabotage");
     expect(html).toContain("Accessibility: No flashing prompts");

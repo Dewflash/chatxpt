@@ -1414,21 +1414,20 @@
 }
 
 .questBoundaryGrid {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
   gap: var(--cx-space-sm);
   margin: 0;
 }
 
 .questBoundaryGrid > div {
   min-width: 0;
-  inline-size: fit-content;
-  max-inline-size: 22rem;
-  flex: 0 1 auto;
   display: grid;
-  gap: 0.25rem;
-  padding: var(--cx-space-xs) var(--cx-space-sm);
+  align-content: start;
+  gap: 0.125rem;
+  padding: 0.25rem var(--cx-space-sm);
   border: 1px solid var(--cx-color-border);
   border-radius: var(--cx-radius-md);
   background: var(--cx-color-surface-raised);
@@ -1443,13 +1442,21 @@
   color: var(--cx-color-text-muted);
   font-size: 0.7rem;
   font-weight: var(--cx-font-weight-semibold);
+  line-height: 1.2;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .questBoundaryGrid dd {
   overflow-wrap: anywhere;
+  font-size: 0.9rem;
   font-weight: var(--cx-font-weight-semibold);
+  line-height: 1.2;
+}
+
+.questBoundaryTrailingDefaults {
+  display: inline-block;
+  white-space: nowrap;
 }
 
 .questStatusActions {
@@ -1954,12 +1961,9 @@
   }
 
   .questBoundaryGrid {
-    flex-direction: column;
-  }
-
-  .questBoundaryGrid > div {
-    inline-size: 100%;
-    max-inline-size: none;
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    grid-auto-rows: auto;
   }
 
   .questStatusActions {
