@@ -84,4 +84,22 @@ describe("gameplay ingress HTTP boundary", () => {
       },
     });
   });
+
+  it("marks a background-throttled stale frame as recoverable", async () => {
+    const response = gameplayIngressErrorResponse({
+      name: "GameplayIngressApplicationError",
+      code: "stale-snapshot",
+      message: "Waiting for the next fresh frame",
+      retryable: true,
+    });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: "stale-snapshot",
+        retryable: true,
+      },
+    });
+  });
 });

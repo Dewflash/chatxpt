@@ -27,6 +27,13 @@ const requiredPageSections: Readonly<Record<StudioProductPage, readonly string[]
   "test-lab": ["Clean Start Reset", "Sample / Live Source", "Capture Controls", "Observed / Unknown", "Recovery"],
 };
 
+function twitchVerifiedReadiness() {
+  return {
+    ...contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"],
+    twitchAuthorization: "verified" as const,
+  };
+}
+
 describe("StudioProductPageSurface", () => {
   it("renders the ICP-01 Studio route map with product-facing navigation", () => {
     const view = createFixtureUiGatewaySnapshot().views.streamer;
@@ -38,7 +45,7 @@ describe("StudioProductPageSurface", () => {
     }));
 
     expect(html).toContain("ChatXPT");
-    expect(html).toContain("<h1>Home</h1>");
+    expect(html).toContain("<h1>Get ChatXPT ready for this stream</h1>");
     expect(html).toContain("Account");
     expect(html).toContain("Twitch");
     expect(html).toContain("Game Capture");
@@ -394,5 +401,117 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("Change stream game");
     expect(html).toContain("Waiting for Twitch stream");
     expect(html).not.toContain("Start ChatXPT");
+  });
+
+  it("distinguishes a disconnected Twitch account from configured server credentials", () => {
+    const snapshot = createFixtureUiGatewaySnapshot();
+    const view = {
+      ...snapshot.views.streamer,
+      session: { ...snapshot.views.streamer.session, status: "live" as const },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-analytics",
+      view,
+      readiness: contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"],
+    }));
+
+    expect(html).toContain("Twitch disconnected");
+    expect(html).toContain("Connect Twitch to receive authorised chat activity.");
+    expect(html).not.toContain("Try the quieter route");
+  });
+
+  it("distinguishes a connected but offline stream from live chat", () => {
+    const snapshot = createFixtureUiGatewaySnapshot();
+    const view = {
+      ...snapshot.views.streamer,
+      session: { ...snapshot.views.streamer.session, status: "offline" as const },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-analytics",
+      view,
+      readiness: twitchVerifiedReadiness(),
+    }));
+
+    expect(html).toContain("Stream offline");
+    expect(html).toContain("Twitch is connected. Chat analytics starts when the stream goes live.");
+    expect(html).not.toContain("Try the quieter route");
+  });
+
+  it("distinguishes a live stream awaiting its first authorised chat message", () => {
+    const snapshot = createFixtureUiGatewaySnapshot();
+    const view = {
+      ...snapshot.views.streamer,
+      session: { ...snapshot.views.streamer.session, status: "live" as const },
+      audience: null,
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-analytics",
+      view,
+      readiness: twitchVerifiedReadiness(),
+    }));
+
+    expect(html).toContain("Live · waiting for chat");
+    expect(html).toContain("Waiting for the first authorised Twitch chat message.");
+    expect(html).toContain("0 active participants");
+  });
+
+  it("distinguishes current chat from a stale audience snapshot", () => {
+    const snapshot = createFixtureUiGatewaySnapshot();
+    const currentView = {
+      ...snapshot.views.streamer,
+      session: { ...snapshot.views.streamer.session, status: "live" as const },
+      audience: {
+        ...snapshot.views.streamer.audience!,
+        envelope: {
+          ...snapshot.views.streamer.audience!.envelope,
+          occurredAt: snapshot.views.streamer.envelope.receivedAt,
+          receivedAt: snapshot.views.streamer.envelope.receivedAt,
+        },
+      },
+    };
+    const staleView = {
+      ...currentView,
+      audience: {
+        ...currentView.audience,
+        envelope: {
+          ...currentView.audience.envelope,
+          occurredAt: snapshot.views.streamer.envelope.receivedAt - 31_000,
+          receivedAt: snapshot.views.streamer.envelope.receivedAt - 31_000,
+        },
+      },
+    };
+    const currentHtml = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-analytics",
+      view: currentView,
+      readiness: twitchVerifiedReadiness(),
+    }));
+    const staleHtml = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-analytics",
+      view: staleView,
+      readiness: twitchVerifiedReadiness(),
+    }));
+
+    expect(currentHtml).toContain("Listening");
+    expect(staleHtml).toContain("Live · no recent chat");
+    expect(staleHtml).toContain("If viewers are chatting, reconnect Twitch chat.");
+    expect(staleHtml).not.toContain("Try the quieter route");
+  });
+
+  it("does not present retained audience data as live after the stream ends", () => {
+    const snapshot = createFixtureUiGatewaySnapshot();
+    const view = {
+      ...snapshot.views.streamer,
+      session: { ...snapshot.views.streamer.session, status: "ended" as const },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-analytics",
+      view,
+      readiness: twitchVerifiedReadiness(),
+    }));
+
+    expect(html).toContain("Stream ended");
+    expect(html).toContain("Live chat analytics stopped when this stream ended.");
+    expect(html).toContain("Open Stream History for retained results");
+    expect(html).not.toContain("Try the quieter route");
   });
 });

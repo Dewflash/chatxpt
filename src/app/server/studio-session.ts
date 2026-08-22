@@ -1148,6 +1148,7 @@ export class StudioSessionApplication {
     return streamerReadinessViewSchema.parse({
       evidenceClass: liveInputsUsed ? "live" : "diagnostic",
       liveInputsUsed,
+      twitchAuthorization: twitchVerified ? "verified" : "not-verified",
       ready,
       status: ready ? "ready" : "blocked",
       services: [

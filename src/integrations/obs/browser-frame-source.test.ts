@@ -125,7 +125,12 @@ describe("OBS browser frame source", () => {
     expect(requestedStream).toBe(stream);
     expect(requested).toEqual({
       audio: false,
-      video: { deviceId: { exact: "obs" } },
+      video: {
+        deviceId: { exact: "obs" },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        aspectRatio: { ideal: 16 / 9 },
+      },
     });
   });
 
@@ -161,7 +166,15 @@ describe("OBS browser frame source", () => {
     expect(selected).toBe(obsStream);
     expect(requests).toEqual([
       { audio: false, video: true },
-      { audio: false, video: { deviceId: { exact: "obs" } } },
+      {
+        audio: false,
+        video: {
+          deviceId: { exact: "obs" },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          aspectRatio: { ideal: 16 / 9 },
+        },
+      },
     ]);
     expect(stopped).toBe(1);
   });

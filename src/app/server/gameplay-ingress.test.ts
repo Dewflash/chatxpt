@@ -368,7 +368,10 @@ describe("authenticated gameplay snapshot ingress", () => {
     ).rejects.toMatchObject({ code: "rate-limited" });
 
     setNow(FIXTURE_NOW + 20_000);
-    await expect(application.ingest(header, first)).rejects.toMatchObject({ code: "validation" });
+    await expect(application.ingest(header, first)).rejects.toMatchObject({
+      code: "stale-snapshot",
+      retryable: true,
+    });
     await expect(
       application.ingest(header, {
         ...first,

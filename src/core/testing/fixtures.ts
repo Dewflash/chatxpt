@@ -912,6 +912,7 @@ function readinessFixture(input: {
   readonly status: StreamerReadinessView["status"];
   readonly ready: boolean;
   readonly liveInputsUsed?: boolean;
+  readonly twitchAuthorization?: StreamerReadinessView["twitchAuthorization"];
   readonly services?: ReturnType<typeof readinessServices>;
   readonly blockerCodes?: readonly string[];
   readonly recommendedAction?: StreamerSetupAction | null;
@@ -920,6 +921,7 @@ function readinessFixture(input: {
   return streamerReadinessViewSchema.parse({
     evidenceClass: "fixture",
     liveInputsUsed: input.liveInputsUsed ?? false,
+    twitchAuthorization: input.twitchAuthorization ?? "not-verified",
     ready: input.ready,
     status: input.status,
     services: input.services ?? readinessServices(),

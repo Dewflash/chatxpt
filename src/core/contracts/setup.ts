@@ -87,6 +87,7 @@ export const streamerReadinessViewSchema = z
   .object({
     evidenceClass: evidenceClassSchema,
     liveInputsUsed: z.boolean(),
+    twitchAuthorization: z.enum(["verified", "not-verified"]).default("not-verified"),
     ready: z.boolean(),
     status: z.enum(["ready", "blocked", "diagnostic"]),
     services: z.array(streamerSetupServiceSchema).length(5),

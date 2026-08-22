@@ -34,6 +34,7 @@ const statuses: Record<GameplayIngressApplicationErrorCode, number> = {
   expired: 401,
   "session-not-found": 404,
   "session-inactive": 409,
+  "stale-snapshot": 409,
   validation: 400,
   "rate-limited": 429,
   "dependency-unavailable": 503,

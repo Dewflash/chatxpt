@@ -34,6 +34,10 @@ import {
 } from "@/streamer";
 
 import styles from "./studio-gameplay-capture.module.css";
+import {
+  captureDeliveryResponseAction,
+  captureSnapshotIsStale,
+} from "./capture-delivery-policy";
 
 export type CaptureGame = "brawl-stars" | "minecraft" | "generic";
 type CaptureSource = "screen-window" | "obs-virtual-camera";
@@ -64,7 +68,7 @@ interface GameplayIngressPayload {
   };
   readonly authority?: GameplayIngressAuthority;
   readonly result?: { readonly status: string; readonly reason?: string };
-  readonly error?: { readonly message?: string; readonly retryable?: boolean };
+  readonly error?: { readonly code?: string; readonly message?: string; readonly retryable?: boolean };
 }
 
 interface LatestCapture {
@@ -629,6 +633,10 @@ export function StudioGameplayCaptureClient() {
       const snapshotDelivery = new LatestOnlyDelivery<GameplaySnapshot>({
         deliver: async (snapshot) => {
           try {
+            if (captureSnapshotIsStale(snapshot.envelope.occurredAt)) {
+              setIngressStatus("OBS capture is still live; skipped one stale frame after browser scheduling paused");
+              return;
+            }
             if (ingressGrant === null || ingressGrant.expiresAt <= Date.now() + 30_000) {
               const refreshed = await issueIngressGrant(false);
               ingressGrant = refreshed.grant;
@@ -646,15 +654,24 @@ export function StudioGameplayCaptureClient() {
             });
             const payload = (await response.json()) as GameplayIngressPayload;
             if (payload.authority !== undefined) ingressAuthority = payload.authority;
-            if (!response.ok || !payload.ok) {
-              if (payload.result?.reason === "state-mismatch") {
+            const responseAction = captureDeliveryResponseAction({
+              responseOk: response.ok && payload.ok,
+              status: response.status,
+              resultReason: payload.result?.reason,
+              errorCode: payload.error?.code,
+              retryable: payload.error?.retryable,
+            });
+            if (responseAction !== "accepted") {
+              if (responseAction === "refresh-authority") {
                 setIngressStatus("Session changed; capture connection refreshed");
-              } else if (response.status === 429) {
+              } else if (responseAction === "skip-stale") {
+                setIngressStatus("OBS capture is still live; skipped an out-of-date frame and resumed with the latest one");
+              } else if (responseAction === "throttled") {
                 setIngressStatus("Server delivery throttled; local analysis is continuing");
               } else {
                 throw new CaptureRequestError(
                   payload.error?.message ?? "Gameplay snapshot was rejected.",
-                  payload.error?.retryable === true || response.status >= 500 || response.status === 401,
+                  responseAction === "retry",
                 );
               }
             } else {

@@ -222,7 +222,17 @@ async function requestExactObsDevice(
   try {
     return await mediaDevices.getUserMedia({
       audio: false,
-      video: { deviceId: { exact: deviceId } },
+      video: {
+        deviceId: { exact: deviceId },
+        // A device-only request commonly negotiates the browser's 640x480
+        // camera default. OBS then has to crop its 16:9 canvas before the
+        // preview and analyser receive it. These are ideal (not exact)
+        // constraints so OBS may supply the closest native resolution while
+        // preserving the complete widescreen frame on supported browsers.
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        aspectRatio: { ideal: 16 / 9 },
+      },
     });
   } catch (caught) {
     throw toObsVirtualCameraError(caught, "device-unavailable");

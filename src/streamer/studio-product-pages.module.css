@@ -43,6 +43,7 @@
   min-height: 2.75rem;
   display: flex;
   align-items: center;
+  gap: 0.7rem;
   padding: 0.625rem 0.75rem;
   border: 1px solid transparent;
   border-radius: var(--cx-radius-md);
@@ -51,11 +52,22 @@
   font-weight: var(--cx-font-weight-medium);
 }
 
+.navIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+  color: currentColor;
+}
+
 .nav a:hover,
 .nav a[aria-current="page"] {
   border-color: var(--cx-color-primary);
   color: var(--cx-color-text);
   background: var(--cx-color-primary-soft);
+}
+
+.nav a[aria-current="page"] .navIcon {
+  color: var(--cx-color-primary);
 }
 
 .nav a:focus-visible {
@@ -475,8 +487,10 @@
 .captureCard,
 .understandingPanel,
 .analyticsGrid article,
+.activityComparison,
 .topicPanel,
 .participationPanel,
+.questResultPanel,
 .nowQuest,
 .whyPanel,
 .questControls,
@@ -734,8 +748,10 @@
 
 .engagementCard,
 .previewPanel,
+.activityComparison,
 .topicPanel,
 .participationPanel,
+.questResultPanel,
 .whyPanel,
 .questControls,
 .presetLibrary,
@@ -1059,14 +1075,16 @@
 
 .analyticsGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--cx-space-md);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--cx-space-sm);
 }
 
 .analyticsGrid article {
   display: grid;
-  gap: var(--cx-space-sm);
-  padding: var(--cx-space-lg);
+  align-content: start;
+  gap: 0.45rem;
+  min-height: 10.25rem;
+  padding: var(--cx-space-md);
 }
 
 .analyticsGrid article > strong {
@@ -1077,6 +1095,194 @@
 .privacyNote {
   color: var(--cx-color-text-muted);
   font-size: 0.75rem;
+}
+
+.analyticsMain {
+  gap: var(--cx-space-lg);
+  padding-block: clamp(1rem, 2vw, 2rem);
+}
+
+.analyticsMain .hero {
+  padding-bottom: var(--cx-space-md);
+}
+
+.analyticsMain .hero h1 {
+  font-size: clamp(1.9rem, 3vw, 2.6rem);
+}
+
+.analyticsMain .hero p {
+  margin-top: var(--cx-space-xs);
+  font-size: var(--cx-font-size-md);
+}
+
+.analyticsMain .heroMeta {
+  display: none;
+}
+
+.analyticsWorkspace {
+  gap: var(--cx-space-sm);
+}
+
+.analyticsMetric {
+  position: relative;
+  overflow: hidden;
+}
+
+.analyticsMetric::after {
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  content: "";
+  background: var(--cx-color-primary);
+  opacity: 0.7;
+}
+
+.metricLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.metricLabel small {
+  color: var(--cx-color-text-muted);
+  font-size: 0.7rem;
+  font-weight: var(--cx-font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.metricIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+  color: var(--cx-color-primary);
+}
+
+.metricFooter {
+  display: flex;
+  align-items: center;
+  gap: var(--cx-space-xs);
+  flex-wrap: wrap;
+}
+
+.metricFooter small {
+  color: var(--cx-color-text-muted);
+}
+
+.analyticsContentGrid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--cx-space-sm);
+  align-items: stretch;
+}
+
+.activityComparison {
+  grid-column: span 7;
+}
+
+.topicPanel {
+  grid-column: span 5;
+}
+
+.participationPanel {
+  grid-column: span 8;
+}
+
+.questResultPanel {
+  grid-column: span 4;
+}
+
+.activityComparison,
+.topicPanel,
+.participationPanel,
+.questResultPanel {
+  min-width: 0;
+}
+
+.activityComparison h2,
+.topicPanel h2,
+.participationPanel h2,
+.questResultPanel h2 {
+  margin: 0;
+  font-size: var(--cx-font-size-xl);
+}
+
+.comparisonChart {
+  display: grid;
+  gap: var(--cx-space-md);
+  margin-top: var(--cx-space-lg);
+}
+
+.comparisonChart > div {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.45fr) minmax(8rem, 1fr);
+  align-items: center;
+  gap: var(--cx-space-md);
+}
+
+.comparisonChart span {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.comparisonChart small {
+  color: var(--cx-color-text-muted);
+}
+
+.comparisonChart i {
+  height: 0.7rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--cx-color-surface-raised);
+  font-style: normal;
+}
+
+.comparisonChart i b {
+  width: var(--analytics-bar-width);
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: var(--cx-color-primary);
+  box-shadow: 0 0 1rem var(--cx-color-primary-soft);
+}
+
+.questResultSummary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cx-space-sm);
+  margin: var(--cx-space-lg) 0 var(--cx-space-md);
+}
+
+.questResultSummary div {
+  display: grid;
+  gap: 0.2rem;
+  padding: var(--cx-space-md);
+  border-radius: var(--cx-radius-md);
+  background: var(--cx-color-surface-raised);
+}
+
+.questResultSummary dt,
+.questResultSummary dd {
+  margin: 0;
+}
+
+.questResultSummary dt {
+  color: var(--cx-color-text-muted);
+  font-size: var(--cx-font-size-sm);
+}
+
+.questResultSummary dd {
+  font-weight: var(--cx-font-weight-semibold);
+}
+
+.questResultPanel p {
+  color: var(--cx-color-text-muted);
+}
+
+.questResultPanel > a {
+  color: var(--cx-color-primary);
+  text-decoration: none;
+  font-weight: var(--cx-font-weight-medium);
 }
 
 .flowSummary {
@@ -1318,6 +1524,17 @@
   .testGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .analyticsContentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .activityComparison,
+  .topicPanel,
+  .participationPanel,
+  .questResultPanel {
+    grid-column: auto;
+  }
 }
 
 @media (max-width: 600px) {
@@ -1404,6 +1621,11 @@
 
   .previewTabs {
     flex-direction: column;
+  }
+
+  .comparisonChart > div,
+  .questResultSummary {
+    grid-template-columns: 1fr;
   }
 
   .questLeader,

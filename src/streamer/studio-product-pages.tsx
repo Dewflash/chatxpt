@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 
 import { Card, CardGrid, DesignSystemRoot, Notice, StatusBadge } from "../design-system";
 import {
@@ -66,15 +66,117 @@ export interface StudioProductPageSurfaceProps {
   readonly children?: ReactNode;
 }
 
-const NAV_ITEMS: readonly { readonly page: StudioProductPage; readonly href: string; readonly label: string }[] = [
-  { page: "home", href: "/studio", label: "Home" },
-  { page: "gameplay", href: "/studio/gameplay", label: "Gameplay Engine" },
-  { page: "live-analytics", href: "/studio/live-analytics", label: "Live Analytics" },
-  { page: "live-quests", href: "/studio/live-quests", label: "Live Quests" },
-  { page: "profile", href: "/studio/profile", label: "Profile & Defaults" },
-  { page: "stream-settings", href: "/studio/stream-settings", label: "Stream Settings" },
-  { page: "test-lab", href: "/studio/test-lab", label: "Test Lab" },
+type StudioIconName =
+  | "home"
+  | "gameplay"
+  | "analytics"
+  | "quests"
+  | "profile"
+  | "settings"
+  | "lab"
+  | "mood"
+  | "chat"
+  | "participants"
+  | "votes";
+
+const NAV_ITEMS: readonly { readonly page: StudioProductPage; readonly href: string; readonly label: string; readonly icon: StudioIconName }[] = [
+  { page: "home", href: "/studio", label: "Home", icon: "home" },
+  { page: "gameplay", href: "/studio/gameplay", label: "Gameplay Engine", icon: "gameplay" },
+  { page: "live-analytics", href: "/studio/live-analytics", label: "Live Analytics", icon: "analytics" },
+  { page: "live-quests", href: "/studio/live-quests", label: "Live Quests", icon: "quests" },
+  { page: "profile", href: "/studio/profile", label: "Profile & Defaults", icon: "profile" },
+  { page: "stream-settings", href: "/studio/stream-settings", label: "Stream Settings", icon: "settings" },
+  { page: "test-lab", href: "/studio/test-lab", label: "Test Lab", icon: "lab" },
 ];
+
+const PAGE_COPY: Readonly<Record<StudioProductPage, { readonly eyebrow: string; readonly title: string; readonly body: string }>> = {
+  home: {
+    eyebrow: "Current Stream",
+    title: "Get ChatXPT ready for this stream",
+    body: "Connect Twitch, Game Capture, viewer participation, and broadcast output from one place.",
+  },
+  gameplay: {
+    eyebrow: "Gameplay Engine",
+    title: "What ChatXPT can see",
+    body: "Inspect capture health, supported game facts, confidence, unknowns, and recovery actions.",
+  },
+  "live-analytics": {
+    eyebrow: "Audience health",
+    title: "Live Analytics",
+    body: "Understand audience activity during this stream.",
+  },
+  "live-quests": {
+    eyebrow: "Live Quests",
+    title: "Sidequests waiting for approval",
+    body: "Review recommendations, understand why they fit, and keep voting and result state in one trusted flow.",
+  },
+  profile: {
+    eyebrow: "Profile & Defaults",
+    title: "Settings that return next stream",
+    body: "Manage personality, safety, game preferences, accessibility, voting, rewards, and stream presets.",
+  },
+  "stream-settings": {
+    eyebrow: "Stream Settings",
+    title: "Effective settings for right now",
+    body: "See whether the current stream follows saved defaults or a temporary override.",
+  },
+  "test-lab": {
+    eyebrow: "Test Lab",
+    title: "Check gameplay inputs",
+    body: "Use approved sample or live capture checks without confusing samples with the active stream.",
+  },
+};
+
+function StudioIcon({ name, className }: { readonly name: StudioIconName; readonly className?: string }) {
+  let drawing: ReactNode;
+  switch (name) {
+    case "home":
+      drawing = <><path d="M3 10.5 12 3l9 7.5" /><path d="M5.5 9.5V21h13V9.5" /><path d="M9.5 21v-6h5v6" /></>;
+      break;
+    case "gameplay":
+      drawing = <><path d="M8.5 8h7a5.5 5.5 0 0 1 5.2 7.3l-1 2.8a2.6 2.6 0 0 1-4.2 1.1L13.7 18h-3.4l-1.8 1.2a2.6 2.6 0 0 1-4.2-1.1l-1-2.8A5.5 5.5 0 0 1 8.5 8Z" /><path d="M7 13h4M9 11v4M16.8 12.5h.01M19 14.5h.01" /></>;
+      break;
+    case "analytics":
+      drawing = <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>;
+      break;
+    case "quests":
+      drawing = <><path d="M5 21V4" /><path d="M5 5h11l-1.8 3L16 11H5" /></>;
+      break;
+    case "profile":
+      drawing = <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>;
+      break;
+    case "settings":
+      drawing = <><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h7M15 18h5" /><circle cx="16" cy="6" r="2" /><circle cx="8" cy="12" r="2" /><circle cx="13" cy="18" r="2" /></>;
+      break;
+    case "lab":
+      drawing = <><path d="M9 3h6M10 3v6l-5 8.5A2.3 2.3 0 0 0 7 21h10a2.3 2.3 0 0 0 2-3.5L14 9V3" /><path d="M7.5 16h9" /></>;
+      break;
+    case "mood":
+      drawing = <><circle cx="12" cy="12" r="9" /><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9h.01M15 9h.01" /></>;
+      break;
+    case "chat":
+      drawing = <path d="M4 5h16v11H9l-5 4V5Z" />;
+      break;
+    case "participants":
+      drawing = <><circle cx="9" cy="8" r="3" /><circle cx="17" cy="9" r="2.5" /><path d="M3.5 20a5.5 5.5 0 0 1 11 0M14 15a5 5 0 0 1 6.5 5" /></>;
+      break;
+    case "votes":
+      drawing = <><path d="M5 21V4" /><path d="M5 5h11l-1.8 3L16 11H5" /><path d="m10 16 1.5 1.5L15 14" /></>;
+      break;
+  }
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      data-studio-icon={name}
+      fill="none"
+      focusable="false"
+      viewBox="0 0 24 24"
+    >
+      <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8">{drawing}</g>
+    </svg>
+  );
+}
 
 const PAGE_SECTIONS: Readonly<Partial<Record<StudioProductPage, readonly string[]>>> = {
   gameplay: ["Overview", "Game Capture", "Understanding", "Health & Recovery"],
@@ -246,6 +348,111 @@ function audienceMood(view: StreamerViewModel | null): string {
   if (energy >= 0.45) return "Engaged";
   if (energy >= 0.25) return "Curious";
   return "Quiet";
+}
+
+const CHAT_ANALYTICS_WINDOW_MS = 30_000;
+
+type ChatAnalyticsMode =
+  | "twitch-disconnected"
+  | "stream-offline"
+  | "stream-ended"
+  | "awaiting-chat"
+  | "receiving-chat"
+  | "chat-stale";
+
+interface ChatAnalyticsPresentation {
+  readonly mode: ChatAnalyticsMode;
+  readonly badge: string;
+  readonly tone: "neutral" | "success" | "warning" | "danger" | "info";
+  readonly mood: string;
+  readonly detail: string;
+  readonly topicFallback: string;
+  readonly participation: string;
+  readonly footer: string;
+  readonly showCurrentAudience: boolean;
+}
+
+function chatAnalyticsPresentation(
+  view: StreamerViewModel | null,
+  readiness: StreamerReadinessView | null | undefined,
+): ChatAnalyticsPresentation {
+  if (readiness?.twitchAuthorization !== "verified") {
+    return {
+      mode: "twitch-disconnected",
+      badge: "Twitch disconnected",
+      tone: "danger",
+      mood: "Unavailable",
+      detail: "Connect Twitch to receive authorised chat activity.",
+      topicFallback: "Chat topics unavailable",
+      participation: "No Twitch connection",
+      footer: "Connect Twitch",
+      showCurrentAudience: false,
+    };
+  }
+  if (view === null || view.session.status === "offline" || view.session.status === "preparing") {
+    return {
+      mode: "stream-offline",
+      badge: "Stream offline",
+      tone: "neutral",
+      mood: "Waiting for stream",
+      detail: "Twitch is connected. Chat analytics starts when the stream goes live.",
+      topicFallback: "No live chat to analyse",
+      participation: "No live participation",
+      footer: "Waiting for stream",
+      showCurrentAudience: false,
+    };
+  }
+  if (view.session.status === "ended") {
+    return {
+      mode: "stream-ended",
+      badge: "Stream ended",
+      tone: "neutral",
+      mood: "Ended",
+      detail: "Live chat analytics stopped when this stream ended.",
+      topicFallback: "No current live topic",
+      participation: "Live participation ended",
+      footer: "Open Stream History for retained results",
+      showCurrentAudience: false,
+    };
+  }
+  if (view.audience === null) {
+    return {
+      mode: "awaiting-chat",
+      badge: "Live · waiting for chat",
+      tone: "info",
+      mood: "No chat yet",
+      detail: "The stream is live. Waiting for the first authorised Twitch chat message.",
+      topicFallback: "No chat messages yet",
+      participation: "0 active participants",
+      footer: "Listening for chat",
+      showCurrentAudience: false,
+    };
+  }
+  const audienceAge = view.envelope.receivedAt - view.audience.envelope.receivedAt;
+  if (audienceAge > CHAT_ANALYTICS_WINDOW_MS) {
+    return {
+      mode: "chat-stale",
+      badge: "Live · no recent chat",
+      tone: "warning",
+      mood: "No recent chat",
+      detail: "No authorised chat arrived in the current 30-second window. If viewers are chatting, reconnect Twitch chat.",
+      topicFallback: "No current repeated topic",
+      participation: "No recent participation",
+      footer: "Waiting for a new chat message",
+      showCurrentAudience: false,
+    };
+  }
+  return {
+    mode: "receiving-chat",
+    badge: "Listening",
+    tone: "success",
+    mood: audienceMood(view),
+    detail: "Inferred from the current rolling activity window.",
+    topicFallback: "No repeated topic yet",
+    participation: "Participation building",
+    footer: "Current session only",
+    showCurrentAudience: true,
+  };
 }
 
 function activePreset(view: StreamerViewModel | null): StreamPreset | null {
@@ -529,28 +736,34 @@ function HomeQuestSummary({ view }: { readonly view: StreamerViewModel }) {
   );
 }
 
-function HomeChatSummary({ view }: { readonly view: StreamerViewModel }) {
-  const pointer = view.liveDirector?.audiencePointer ?? null;
+function HomeChatSummary({ view, readiness }: {
+  readonly view: StreamerViewModel;
+  readonly readiness?: StreamerReadinessView | null;
+}) {
+  const presentation = chatAnalyticsPresentation(view, readiness);
+  const pointer = presentation.showCurrentAudience ? view.liveDirector?.audiencePointer ?? null : null;
   const topic = pointer?.status === "known" || pointer?.status === "stale" ? pointer.topic : null;
-  const messageRate = knownSignalValue(view.audience, "audience-message-rate");
+  const messageRate = presentation.showCurrentAudience
+    ? knownSignalValue(view.audience, "audience-message-rate")
+    : null;
   const messagesPerMinute = typeof messageRate === "number" ? messageRate : null;
   return (
     <article className={styles.engagementCard}>
       <div className={styles.panelHeading}>
-        <div><StatusBadge tone={view.audience === null ? "neutral" : "success"}>{view.audience === null ? "Waiting" : "Listening"}</StatusBadge><h2>Chat Analytics</h2></div>
+        <div><StatusBadge tone={presentation.tone}>{presentation.badge}</StatusBadge><h2>Chat Analytics</h2></div>
         <a href="/studio/live-analytics">Open analytics</a>
       </div>
       <div className={styles.chatVibe}>
-        <span><small>Audience mood</small><strong>{audienceMood(view)}</strong><em>Previous meaningful state appears after enough chat history.</em></span>
+        <span><small>Audience mood</small><strong>{presentation.mood}</strong><em>{presentation.detail}</em></span>
         <b>{messagesPerMinute ?? "—"}<small>msg/min</small></b>
       </div>
       <div className={styles.topicChips}>
-        {topic ? <span>{topic}</span> : <span>No repeated topic yet</span>}
+        {topic ? <span>{topic}</span> : <span>{presentation.topicFallback}</span>}
         {view.profile.keywordWatchlist.slice(0, 2).map((keyword) => <span key={keyword}>{keyword}</span>)}
       </div>
       <div className={styles.cardFooter}>
-        <span>{pointer?.status === "known" ? `${pointer.uniqueParticipants} active participants` : "Participation building"}</span>
-        <span>{view.audience === null ? "Waiting for chat" : "Current session only"}</span>
+        <span>{pointer?.status === "known" ? `${pointer.uniqueParticipants} active participants` : presentation.participation}</span>
+        <span>{presentation.footer}</span>
       </div>
     </article>
   );
@@ -636,7 +849,7 @@ function LiveHomeDashboard({ view, readiness, pending, onCommand, commandFactory
       </article>
       <section className={styles.engagementSection} aria-labelledby="engagement-heading">
         <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Stream engagement</span><h2 id="engagement-heading">Audience response and live sidequests</h2></div></div>
-        <div className={styles.engagementGrid}><HomeQuestSummary view={view} /><HomeChatSummary view={view} /></div>
+        <div className={styles.engagementGrid}><HomeQuestSummary view={view} /><HomeChatSummary view={view} readiness={readiness} /></div>
       </section>
       <HomeSurfacePreview view={view} />
       <a className={styles.settingsSummary} href="/studio/stream-settings"><span><small>This stream</small><strong>{preset?.name ?? "Saved defaults"}</strong></span><span>{Math.round((resolveEffectiveStreamerProfile(view.profile, view.sessionOverride, view.session.currentGame).experience.intensity ?? 0.5) * 100)}% intensity · Viewer voting {view.session.capabilities.twitchExtension ? "on" : "using fallback"} · Manual approval</span></a>
@@ -780,9 +993,13 @@ function GameplayPage({
   );
 }
 
-function LiveAnalyticsPage({ view }: { readonly view: StreamerViewModel | null }) {
-  const audience = view?.audience ?? null;
-  const pointer = view?.liveDirector?.audiencePointer ?? null;
+function LiveAnalyticsPage({ view, readiness }: {
+  readonly view: StreamerViewModel | null;
+  readonly readiness?: StreamerReadinessView | null;
+}) {
+  const presentation = chatAnalyticsPresentation(view, readiness);
+  const audience = presentation.showCurrentAudience ? view?.audience ?? null : null;
+  const pointer = presentation.showCurrentAudience ? view?.liveDirector?.audiencePointer ?? null : null;
   const knownPointer = pointer?.status === "known" || pointer?.status === "stale" ? pointer : null;
   const messageRate = knownSignalValue(audience, "audience-message-rate");
   const activeParticipants = knownSignalValue(audience, "audience-active-participants");
@@ -792,6 +1009,16 @@ function LiveAnalyticsPage({ view }: { readonly view: StreamerViewModel | null }
   const previousMood = knownSignalValue(audience, "audience-previous-mood");
   const previousRate = knownSignalValue(audience, "audience-previous-message-rate");
   const questVotes = view?.questCycle.voteTallies.reduce((sum, tally) => sum + tally.votes, 0) ?? 0;
+  const currentRateValue = typeof messageRate === "number" ? messageRate : null;
+  const previousRateValue = typeof previousRate === "number" ? previousRate : null;
+  const comparisonMaximum = Math.max(currentRateValue ?? 0, previousRateValue ?? 0, 1);
+  const comparisonWidth = (value: number | null) => value === null || value === 0
+    ? "0%"
+    : `${Math.max(8, Math.round((value / comparisonMaximum) * 100))}%`;
+  const currentParticipants = typeof activeParticipants === "number"
+    ? activeParticipants
+    : knownPointer?.uniqueParticipants ?? (presentation.mode === "awaiting-chat" ? 0 : null);
+  const questResult = view?.questCycle.result ?? null;
   const topicRows: Array<{ readonly label: string; readonly count: number | null; readonly detail: string }> = [];
   if (knownPointer !== null) {
     topicRows.push({ label: knownPointer.topic, count: knownPointer.qualifyingMessages, detail: `${knownPointer.uniqueParticipants} session participants` });
@@ -803,31 +1030,80 @@ function LiveAnalyticsPage({ view }: { readonly view: StreamerViewModel | null }
   return (
     <div className={styles.analyticsWorkspace}>
       <div id="overview" className={styles.analyticsGrid}>
-        <article><small>Audience mood</small><strong>{audienceMood(view)}</strong><p>{audience === null ? "Waiting for authorised Twitch chat activity." : "Inferred from the current rolling activity window."}</p><span>Previously: {typeof previousMood === "string" ? titleCase(previousMood) : "not enough history yet"}</span></article>
-        <article><small>Chat activity</small><strong>{typeof messageRate === "number" ? `${messageRate} messages/min` : audience === null ? "Waiting" : `${audience.sampleSize * 2} estimated/min`}</strong><p>{typeof activeParticipants === "number" ? `${activeParticipants} active participants in the current window.` : "Unique activity appears only when session-scoped participant keys support it."}</p><span>Previous equal window: {typeof previousRate === "number" ? `${previousRate} messages/min` : "not available yet"}</span></article>
-        <article><small>Quest participation</small><strong>{questVotes} votes</strong><p>Official votes from the current authoritative quest cycle.</p><span>{view?.questCycle.status === "voting" ? "Voting is open now" : `Current state: ${titleCase(view?.questCycle.status ?? "waiting")}`}</span></article>
+        <article className={styles.analyticsMetric} data-analytics-metric="audience-mood">
+          <div className={styles.metricLabel}><StudioIcon name="mood" className={styles.metricIcon} /><small>Audience mood</small></div>
+          <strong>{presentation.mood}</strong>
+          <p>{presentation.detail}</p>
+          <span><StatusBadge tone={presentation.tone}>{presentation.badge}</StatusBadge></span>
+        </article>
+        <article className={styles.analyticsMetric} data-analytics-metric="chat-activity">
+          <div className={styles.metricLabel}><StudioIcon name="chat" className={styles.metricIcon} /><small>Chat activity</small></div>
+          <strong>{currentRateValue === null ? "—" : `${currentRateValue} messages/min`}</strong>
+          <p>{presentation.showCurrentAudience ? "Current rolling activity window." : presentation.detail}</p>
+          <span>{presentation.showCurrentAudience ? `Previous: ${previousRateValue === null ? "not available yet" : `${previousRateValue} messages/min`}` : presentation.footer}</span>
+        </article>
+        <article className={styles.analyticsMetric} data-analytics-metric="active-participants">
+          <div className={styles.metricLabel}><StudioIcon name="participants" className={styles.metricIcon} /><small>Active participants</small></div>
+          <strong>{currentParticipants ?? "—"}</strong>
+          <p>{currentParticipants === null ? presentation.participation : `${currentParticipants} active participants in the current window.`}</p>
+          <span>Privacy-safe session aggregate</span>
+        </article>
+        <article className={styles.analyticsMetric} data-analytics-metric="quest-participation">
+          <div className={styles.metricLabel}><StudioIcon name="votes" className={styles.metricIcon} /><small>Quest participation</small></div>
+          <strong>{questVotes} votes</strong>
+          <p>Official votes from the current authoritative quest cycle.</p>
+          <span>{view?.questCycle.status === "voting" ? "Voting is open now" : `Current state: ${titleCase(view?.questCycle.status ?? "waiting")}`}</span>
+        </article>
       </div>
 
-      <article id="topics" className={styles.topicPanel}>
-        <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Current topics</span><h2>What the audience is reacting to</h2></div><a href="/studio/profile#watchlist">Edit watchlist</a></div>
-        <div className={styles.topicList}>
-          {topicRows.length === 0 ? <p>No repeated topic has passed the current confidence boundary.</p> : topicRows.map((topic) => <div key={`${topic.label}-${topic.detail}`}><span><strong>{topic.label}</strong><small>{topic.detail}</small></span><em>{topic.count === null ? "Waiting" : `${topic.count} mentions`}</em></div>)}
-        </div>
-        <p className={styles.privacyNote}>ChatXPT stores aggregate counts here—not viewer names or raw messages.</p>
-      </article>
+      <div className={styles.analyticsContentGrid}>
+        <article id="activity" className={styles.activityComparison}>
+          <div className={styles.panelHeading}>
+            <div><span className={styles.sectionLabel}>Chat activity</span><h2>Current and previous equal windows</h2></div>
+            <StatusBadge tone={presentation.tone}>{presentation.badge}</StatusBadge>
+          </div>
+          <div className={styles.comparisonChart} aria-label="Chat messages per minute in the previous and current equal windows">
+            <div>
+              <span><small>Previous equal window</small><strong>{previousRateValue === null ? "—" : `${previousRateValue} messages/min`}</strong></span>
+              <i aria-hidden="true"><b style={{ "--analytics-bar-width": comparisonWidth(previousRateValue) } as CSSProperties} /></i>
+            </div>
+            <div>
+              <span><small>Current window</small><strong>{currentRateValue === null ? "—" : `${currentRateValue} messages/min`}</strong></span>
+              <i aria-hidden="true"><b style={{ "--analytics-bar-width": comparisonWidth(currentRateValue) } as CSSProperties} /></i>
+            </div>
+          </div>
+          <p className={styles.privacyNote}>This compares only the two equal rolling windows available from the current stream.</p>
+        </article>
 
-      <article id="activity" className={styles.participationPanel}>
-        <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Participation flow</span><h2>How the audience is active now</h2></div><span className={styles.softLabel}>Current session</span></div>
-        <div className={styles.flowSummary}>
-          <span><b>{typeof newlyActive === "number" ? newlyActive : "—"}</b><small>Newly active</small></span>
-          <span><b>{typeof returning === "number" ? returning : "—"}</b><small>Returning</small></span>
-          <span><b>{typeof recentlyInactive === "number" ? recentlyInactive : "—"}</b><small>Recently inactive</small></span>
-          <span><b>{typeof activeParticipants === "number" ? activeParticipants : knownPointer?.uniqueParticipants ?? "—"}</b><small>Active now</small></span>
-        </div>
-        <p>Returning appears only when a privacy-safe participant key proves earlier activity in this session. This does not claim exact Twitch joins, departures, or cross-session identity.</p>
-      </article>
+        <article id="topics" className={styles.topicPanel}>
+          <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Current topics</span><h2>What the audience is reacting to</h2></div><a href="/studio/profile#watchlist">Edit watchlist</a></div>
+          <div className={styles.topicList}>
+            {topicRows.length === 0 ? <p>{presentation.showCurrentAudience ? "No repeated topic has passed the current confidence boundary." : presentation.topicFallback}</p> : topicRows.map((topic) => <div key={`${topic.label}-${topic.detail}`}><span><strong>{topic.label}</strong><small>{topic.detail}</small></span><em>{topic.count === null ? "Waiting" : `${topic.count} mentions`}</em></div>)}
+          </div>
+          <p className={styles.privacyNote}>ChatXPT stores aggregate counts here—not viewer names or raw messages.</p>
+        </article>
 
-      <PageSectionCard title="Session History" badge="Current session" badgeTone="info" detail="Current rolling aggregates update during this stream. A post-stream summary is not included on this page yet." />
+        <article className={styles.participationPanel}>
+          <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Participation flow</span><h2>How the audience is active now</h2></div><span className={styles.softLabel}>Current session</span></div>
+          <div className={styles.flowSummary}>
+            <span><b>{typeof newlyActive === "number" ? newlyActive : "—"}</b><small>Newly active</small></span>
+            <span><b>{typeof returning === "number" ? returning : "—"}</b><small>Returning</small></span>
+            <span><b>{typeof recentlyInactive === "number" ? recentlyInactive : "—"}</b><small>Recently inactive</small></span>
+            <span><b>{currentParticipants ?? "—"}</b><small>Active now</small></span>
+          </div>
+          <p>Returning appears only when a privacy-safe participant key proves earlier activity in this session. This does not claim exact Twitch joins, departures, or cross-session identity.</p>
+        </article>
+
+        <article className={styles.questResultPanel}>
+          <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Quest result</span><h2>Current cycle</h2></div><StatusBadge tone={questResult?.outcome === "succeeded" ? "success" : questResult === null ? "neutral" : "warning"}>{titleCase(view?.questCycle.status ?? "waiting")}</StatusBadge></div>
+          <dl className={styles.questResultSummary}>
+            <div><dt>Votes</dt><dd>{questVotes}</dd></div>
+            <div><dt>Result</dt><dd>{questResult === null ? "No result yet" : titleCase(questResult.outcome)}</dd></div>
+          </dl>
+          <p>{questResult === null ? "Voting choices and stream controls stay in Live Quests." : `${questResult.reason} · ${questResult.rewardPointsAwarded} points awarded.`}</p>
+          <a href="/studio/live-quests#results">Open Live Quests</a>
+        </article>
+      </div>
     </div>
   );
 }
@@ -1358,7 +1634,7 @@ function PageBody({ page, view, readiness, pending, onCommand, onResetSession, l
     );
   }
   if (page === "gameplay") return <GameplayPage view={view} readiness={readiness} />;
-  if (page === "live-analytics") return <LiveAnalyticsPage view={view} />;
+  if (page === "live-analytics") return <LiveAnalyticsPage view={view} readiness={readiness} />;
   if (page === "live-quests") return <LiveQuestsPage view={view} pending={pending} onCommand={onCommand} commandFactory={commandFactory} />;
   if (page === "profile") {
     return (
@@ -1413,6 +1689,7 @@ export function StudioProductPageSurface({
   children,
 }: StudioProductPageSurfaceProps) {
   const pageLabel = studioPageLabel(page);
+  const copy = PAGE_COPY[page];
   const pending = pendingCommandId !== null;
   const activeProfile = view?.profile ?? localProfile;
   const profileConnection = view?.profileConnection;
@@ -1448,7 +1725,8 @@ export function StudioProductPageSurface({
               href={item.href}
               aria-current={item.page === page ? "page" : undefined}
             >
-              {item.label}
+              <StudioIcon name={item.icon} className={styles.navIcon} />
+              <span>{item.label}</span>
             </a>
           ))}
         </nav>
@@ -1459,11 +1737,12 @@ export function StudioProductPageSurface({
           </section>
         ) : null}
       </aside>
-      <main className={styles.main}>
-        <header className={styles.studioHeader}>
-          <div className={styles.pageIdentity}>
-            <strong>ChatXPT</strong>
-            <h1>{pageLabel}</h1>
+      <main className={`${styles.main} ${page === "live-analytics" ? styles.analyticsMain : ""}`}>
+        <section className={styles.hero}>
+          <div>
+            <p className={styles.muted}>{copy.eyebrow}</p>
+            <h1>{copy.title}</h1>
+            <p>{copy.body}</p>
           </div>
           <div className={styles.accountSummary}>
             <span>Account</span>
@@ -1480,7 +1759,7 @@ export function StudioProductPageSurface({
               </div>
             </dl>
           </div>
-        </header>
+        </section>
         {PAGE_SECTIONS[page] ? (
           <nav className={styles.sectionNav} aria-label={`${pageLabel} sections`}>
             {PAGE_SECTIONS[page]?.map((section) => (

@@ -45,6 +45,7 @@ export type GameplayIngressApplicationErrorCode =
   | "expired"
   | "session-not-found"
   | "session-inactive"
+  | "stale-snapshot"
   | "validation"
   | "rate-limited"
   | "dependency-unavailable";
@@ -265,10 +266,14 @@ export class GameplayIngressApplication {
       );
     }
     const now = this.now();
-    if (
-      snapshot.envelope.occurredAt < now - MAX_SNAPSHOT_AGE_MS ||
-      snapshot.envelope.occurredAt > now + MAX_CLOCK_LEAD_MS
-    ) {
+    if (snapshot.envelope.occurredAt < now - MAX_SNAPSHOT_AGE_MS) {
+      throw new GameplayIngressApplicationError(
+        "stale-snapshot",
+        "Gameplay snapshot became stale while browser capture was paused; waiting for the next fresh frame",
+        true,
+      );
+    }
+    if (snapshot.envelope.occurredAt > now + MAX_CLOCK_LEAD_MS) {
       throw new GameplayIngressApplicationError(
         "validation",
         "Gameplay snapshot timestamp is outside the live capture window",

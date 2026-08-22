@@ -155,6 +155,7 @@ describe("StudioSessionApplication", () => {
     expect(connected.view.session.broadcasterId).toBe("channel-1");
     expect(connected.view.profile.displayName).toBe("Streamer One");
     expect(connected.view.profile.gameName).toBe("Minecraft");
+    expect(connected.readiness.twitchAuthorization).toBe("verified");
     expect(connected.readiness.services.find((service) => service.service === "twitch")?.health.message)
       .toContain("Twitch broadcaster authorization");
 
@@ -743,6 +744,7 @@ describe("StudioSessionApplication", () => {
 
     const reopened = await context.application.read(started.grant, null);
     expect(reopened.readiness.liveInputsUsed).toBe(true);
+    expect(reopened.readiness.twitchAuthorization).toBe("verified");
     expect(reopened.readiness.services.find((service) => service.service === "twitch")?.health.message)
       .toContain("authorization is verified");
   });
