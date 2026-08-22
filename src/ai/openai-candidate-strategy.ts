@@ -28,7 +28,16 @@ const candidateDraftSchema = z
     rationale: z.string().trim().min(8).max(320),
     sourceSignalIds: z.array(z.string().trim().min(1).max(80)).max(8),
   })
-  .strict();
+  .strict()
+  .superRefine((candidate, context) => {
+    if (new Set(candidate.sourceSignalIds).size !== candidate.sourceSignalIds.length) {
+      context.addIssue({
+        code: "custom",
+        message: "Candidate source signal IDs must be distinct",
+        path: ["sourceSignalIds"],
+      });
+    }
+  });
 
 const candidateDraftBundleSchema = z
   .object({ candidates: z.array(candidateDraftSchema).length(3) })
@@ -65,6 +74,7 @@ export const candidateDraftJsonSchema = {
           sourceSignalIds: {
             type: "array",
             maxItems: 8,
+            uniqueItems: true,
             items: { type: "string", minLength: 1, maxLength: 80 },
           },
         },
@@ -348,7 +358,7 @@ function buildMinecraftContext(input: CandidateInput, now: number): MinecraftAwa
     gameId: "minecraft",
     gameFacts,
     streamerIntent: {
-      streamerGoal: null,
+      streamerGoal: input.streamerGoal,
     },
     activeChatXptQuest: input.activeChatXptQuest,
     supportedFacts: [...minecraftSupportedFacts(gameFacts)],
@@ -376,12 +386,14 @@ function providerContext(input: CandidateInput): string {
         signalContext(signal, now, PROVIDER_AUDIENCE_SIGNAL_FRESHNESS_MS)),
     },
     streamer: {
+      goal: input.streamerGoal,
       experience: input.profile.experience,
       restrictions: input.profile.restrictions,
       preferredQuestTypes: input.profile.preferredQuestTypes,
       forbiddenQuestTypes: input.profile.forbiddenQuestTypes,
       accessibilityNeeds: input.profile.accessibilityNeeds,
     },
+    activeChatXptQuest: input.activeChatXptQuest,
     ...(minecraft === null ? {} : { minecraft }),
     recentQuestTitles: input.recentQuestTitles,
   });
@@ -472,7 +484,7 @@ export function createOpenAICandidateStrategy(
       return bundle.candidates.map((draft, index): QuestCandidate => ({
         candidateId: `ai-candidate-${input.envelope.revision}-${index + 1}`,
         ...draft,
-        sourceSignalIds: [...new Set(draft.sourceSignalIds)],
+        sourceSignalIds: [...draft.sourceSignalIds],
         confidence: candidateConfidence(draft.sourceSignalIds),
         generation: {
           method: "ai-provider",

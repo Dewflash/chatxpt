@@ -47,6 +47,11 @@ function activeQuestSummary(input: DirectorCueProposalInput): string | null {
   );
   return active === undefined ? null : `${active.title}: ${active.instruction}`.trim().slice(0, 240);
 }
+
+function currentStreamerGoal(input: DirectorCueProposalInput): string | null {
+  const intent = input.liveDirector.declaredIntent;
+  return intent.status === "known" && intent.expiresAt > input.now ? intent.goal : null;
+}
 /**
  * Work-conserving R3-014 adapter. It invokes Role 2 generation when canonical
  * gameplay is available, treats provider failure as normal fallback input,
@@ -129,6 +134,7 @@ export class DefaultLiveDirectorProposalCoordinator
           intelligence: intelligence.data,
           profile: effectiveProfile,
           recentQuestTitles: (input.current.recentQuests ?? []).map(({ title }) => title),
+          streamerGoal: currentStreamerGoal(input),
           activeChatXptQuest: activeQuestSummary(input),
         }),
       );

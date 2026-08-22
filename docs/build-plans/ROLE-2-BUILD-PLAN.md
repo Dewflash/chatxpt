@@ -288,6 +288,8 @@ Raw chat is processed in memory by default. If Joelyrk's D2-15 choice requires t
 
 **Decision update (18 August 2026):** D-072 approves OpenAI `gpt-5.6-terra` for the judged MVP using an opt-in, server-only team credential and existing prepaid/promotional credit. The model has no OpenAI API free tier. The provider path keeps an 8-second timeout, strict exactly-three schema/citation validation, no raw frame/chat/identity input, `store: false`, no ChatXPT prompt/output retention, truthful disclosure of OpenAI's default abuse-monitoring retention, and mandatory algorithmic plus Role 3 deterministic fallback. Adoption is no longer waiting on a role recommendation; real execution and quality evidence remain unfinished.
 
+**Progress (22 August 2026):** `role-2/ai-io-contract-fixes` adds the current known, unexpired streamer goal to the shared candidate input and carries both goal and active ChatXPT quest into model context for every game. Strict draft validation now rejects duplicate source-signal citations before confidence is calculated, and the server adapter recognises the Responses API's nested refusal content without retaining refusal text. Role 1 and Role 3 producers plus Role 2 consumer and fallback tests cover the additive contract migration. This is fixture/integration evidence only; no live OpenAI, OBS, or Twitch run is claimed.
+
 ### R2-P11 — Context and candidate generation
 
 **Outcome:** Real intelligence produces exactly three distinct structured candidates.

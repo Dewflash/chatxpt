@@ -69,6 +69,7 @@ describe("algorithmic candidate strategy", () => {
       intelligence: await fixtureIntelligence(),
       profile: contractFixtureProfile,
       recentQuestTitles: [],
+      streamerGoal: null,
       activeChatXptQuest: null,
     });
 
@@ -86,6 +87,7 @@ describe("algorithmic candidate strategy", () => {
       intelligence: await fixtureIntelligence(),
       profile: contractFixtureProfile,
       recentQuestTitles: ["Plan Out Loud", "Caster Mode", "Calm Focus"],
+      streamerGoal: null,
       activeChatXptQuest: null,
     });
 
@@ -105,6 +107,7 @@ describe("algorithmic candidate strategy", () => {
         gameName: "Minecraft",
       },
       recentQuestTitles: [],
+      streamerGoal: null,
       activeChatXptQuest: null,
     });
 
@@ -130,6 +133,7 @@ describe("algorithmic candidate strategy", () => {
         "Explain the Choice",
         "Teach the Moment",
       ],
+      streamerGoal: null,
       activeChatXptQuest: null,
     });
 
@@ -192,6 +196,7 @@ describe("algorithmic candidate strategy", () => {
       intelligence: await fixtureIntelligence(audience),
       profile: contractFixtureProfile,
       recentQuestTitles: [],
+      streamerGoal: null,
       activeChatXptQuest: null,
     });
 
@@ -215,6 +220,7 @@ describe("algorithmic candidate strategy", () => {
       ),
       profile: contractFixtureProfile,
       recentQuestTitles: [],
+      streamerGoal: null,
       activeChatXptQuest: null,
     });
 
@@ -236,6 +242,7 @@ describe("algorithmic candidate strategy", () => {
       ),
       profile: contractFixtureProfile,
       recentQuestTitles: [],
+      streamerGoal: null,
       activeChatXptQuest: null,
     });
 
@@ -251,6 +258,7 @@ describe("algorithmic candidate strategy", () => {
       intelligence: await fixtureIntelligence(),
       profile: contractFixtureProfile,
       recentQuestTitles: ["Audience Coach"],
+      streamerGoal: null,
       activeChatXptQuest: null,
     };
 

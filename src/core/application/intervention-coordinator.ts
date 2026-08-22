@@ -101,6 +101,14 @@ function activeQuestSummary(state: QuestCycleState): string | null {
   return `${active.title}: ${active.instruction}`.trim().slice(0, 240);
 }
 
+function currentStreamerGoal(
+  state: AuthoritativeSessionState,
+  now: number,
+): string | null {
+  const intent = state.liveDirector?.declaredIntent;
+  return intent?.status === "known" && intent.expiresAt > now ? intent.goal : null;
+}
+
 export class Role1InterventionCoordinator {
   constructor(
     private readonly policy: InterventionPolicy,
@@ -154,6 +162,7 @@ export class Role1InterventionCoordinator {
         intelligence: intelligence.data,
         profile: input.state.profile,
         recentQuestTitles: input.recentQuests.map((quest) => quest.title),
+        streamerGoal: currentStreamerGoal(input.state, now),
         activeChatXptQuest: activeQuestSummary(input.state.questCycle),
       };
       generated = candidateBatchSchema.parse(await this.candidates.generate(candidateInput, input.signal));

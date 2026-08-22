@@ -33,6 +33,14 @@ function validateRecentQuestTitles(titles: readonly string[]) {
   return [...titles];
 }
 
+function validateStreamerGoal(value: string | null): string | null {
+  if (value === null) return null;
+  if (typeof value !== "string" || value.trim().length < 3 || value.length > 120) {
+    throw new TypeError("streamerGoal must be null or a non-empty goal of 3 to 120 characters");
+  }
+  return value.trim();
+}
+
 function validateActiveChatXptQuest(value: string | null): string | null {
   if (value === null) return null;
   if (typeof value !== "string" || value.trim().length === 0 || value.length > 240) {
@@ -73,6 +81,7 @@ export function createValidatingCandidateProvider(
         intelligence: intelligenceSnapshotSchema.parse(input.intelligence),
         profile: streamerProfileSchema.parse(input.profile),
         recentQuestTitles: validateRecentQuestTitles(input.recentQuestTitles),
+        streamerGoal: validateStreamerGoal(input.streamerGoal),
         activeChatXptQuest: validateActiveChatXptQuest(input.activeChatXptQuest),
       };
       const candidates = await strategy.generate(safeInput, signal);

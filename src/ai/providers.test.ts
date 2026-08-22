@@ -46,10 +46,12 @@ describe("Role 2 provider boundaries", () => {
         intelligence: await intelligence(),
         profile: contractFixtureProfile,
         recentQuestTitles: [],
+        streamerGoal: "  Reach the next safe shelter.  ",
         activeChatXptQuest: "  Active Quest: survive safely.  ",
       }),
     ).resolves.toEqual(contractFixtureCandidateBatch);
     expect(calls[0]).toMatchObject({
+      streamerGoal: "Reach the next safe shelter.",
       activeChatXptQuest: "Active Quest: survive safely.",
     });
   });
@@ -65,6 +67,7 @@ describe("Role 2 provider boundaries", () => {
         intelligence: await intelligence(),
         profile: contractFixtureProfile,
         recentQuestTitles: [],
+        streamerGoal: null,
         activeChatXptQuest: null,
       }),
     ).rejects.toThrow();
@@ -82,6 +85,7 @@ describe("Role 2 provider boundaries", () => {
         intelligence: await intelligence(),
         profile: contractFixtureProfile,
         recentQuestTitles: [],
+        streamerGoal: null,
         activeChatXptQuest: null,
       }),
     ).rejects.toThrow();
@@ -102,9 +106,32 @@ describe("Role 2 provider boundaries", () => {
         intelligence: await intelligence(),
         profile: contractFixtureProfile,
         recentQuestTitles: [],
+        streamerGoal: null,
         activeChatXptQuest: " ",
       }),
     ).rejects.toThrow("activeChatXptQuest");
+    expect(called).toBe(false);
+  });
+
+  it("rejects malformed streamer goal context before invoking a generation strategy", async () => {
+    let called = false;
+    const provider = createValidatingCandidateProvider({
+      generate: () => {
+        called = true;
+        return contractFixtureCandidateBatch.candidates;
+      },
+    });
+
+    await expect(
+      provider.generate({
+        envelope: contractFixtureCandidateBatch.envelope,
+        intelligence: await intelligence(),
+        profile: contractFixtureProfile,
+        recentQuestTitles: [],
+        streamerGoal: " ",
+        activeChatXptQuest: null,
+      }),
+    ).rejects.toThrow("streamerGoal");
     expect(called).toBe(false);
   });
 
@@ -126,6 +153,7 @@ describe("Role 2 provider boundaries", () => {
           intelligence: await intelligence(),
           profile: contractFixtureProfile,
           recentQuestTitles: [],
+          streamerGoal: null,
           activeChatXptQuest: null,
         },
         controller.signal,

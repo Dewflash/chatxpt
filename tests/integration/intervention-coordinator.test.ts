@@ -16,6 +16,7 @@ import {
   contractFixtureCandidateBatch,
   contractFixtureEnvelope,
   contractFixtureGameplaySnapshot,
+  contractFixtureLiveDirectorState,
   contractFixtureProfile,
   contractFixtureQuestCycle,
   contractFixtureSession,
@@ -189,6 +190,7 @@ describe("Role 1 intervention coordinator", () => {
     const active = contractFixtureCandidateBatch.candidates[0];
     const state = {
       ...base,
+      liveDirector: structuredClone(contractFixtureLiveDirectorState),
       questCycle: questCycleStateSchema.parse({
         ...base.questCycle,
         status: "active",
@@ -238,6 +240,11 @@ describe("Role 1 intervention coordinator", () => {
     });
 
     expect(provider.calls).toHaveLength(1);
+    expect(provider.calls[0].streamerGoal).toBe(
+      contractFixtureLiveDirectorState.declaredIntent.status === "known"
+        ? contractFixtureLiveDirectorState.declaredIntent.goal
+        : null,
+    );
     expect(provider.calls[0].activeChatXptQuest).toBe(`${active.title}: ${active.instruction}`);
   });
 });
