@@ -22,6 +22,19 @@ Before starting a pass, read in this order:
 
 `INTEGRATED-PRODUCT-COMPLETION-PLAN.md` records the D-083/D-085 completion bar, owner-reviewed snapshot gate, complete unavailable-capability inventory, and the cross-role vertical slices that turn the current partial surfaces and disconnected runtime seams into one owner-testable streamer product. It supersedes older runtime-first sequencing only where D-085 says so; all role boundaries, privacy/safety rules, exact-three authority, and real-input evidence requirements remain.
 
+## Active streamer persistence initiatives
+
+`STREAMER-PROFILE-PERSISTENCE-PLAN.md` is the first D-087/D-089 initiative. It
+fixes profile bootstrap/load behavior, adds future-compatible account ownership,
+and preserves the explicit established local account/preset fallback without
+making fake login a real authority.
+
+`STREAM-HISTORY-ANALYTICS-PLAN.md` is the second D-087/D-090 initiative. It
+begins after profile ownership passes and adds one durable entry per real ended
+stream, retained privacy-safe analytics, authorized list/detail APIs, and the
+optional-to-visit but required-to-build Studio History surface. Neither plan may
+alter or become a dependency of the golden demo flow.
+
 ## Responsibility for the plans
 
 - Role 1 defines required phases, order, outcomes, deadlines, acceptance criteria, and integration boundaries for Roles 1-3.

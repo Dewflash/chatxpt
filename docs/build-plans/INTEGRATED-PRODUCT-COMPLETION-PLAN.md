@@ -14,11 +14,18 @@ Turn the current collection of contracts, diagnostic tools, fixture surfaces, an
 
 The product is complete only when the same authoritative session travels through real Twitch and OBS inputs, ChatXPT intelligence, deterministic quest decisions, persistence/realtime, streamer controls, viewer participation, the OBS overlay, rewards, and recovery. Passing component tests or rendering fixture data is not product completion.
 
-**Owner scope update (20 August 2026):** post-stream analytics and the dedicated
-history product are deferred for a later owner discussion. Current-session
-privacy-safe analytics, terminal quest state, rewards, and reconnect recovery
-remain required in this pass. The deferral narrows ICP-08/ICP-09 and must not be
-misrepresented as a completed post-stream experience.
+**Owner scope update (22 August 2026; D-087):** persistent streamer
+profiles/presets and post-stream history/analytics are separate required
+initiatives. Neither changes or blocks the existing golden demo flow; only
+restoring the verified streamer's saved presets affects normal demo startup.
+The current local preset/state-persistence method remains the degraded fallback
+when hosted infrastructure is unavailable.
+
+Execution is split across
+`docs/build-plans/STREAMER-PROFILE-PERSISTENCE-PLAN.md` first and
+`docs/build-plans/STREAM-HISTORY-ANALYTICS-PLAN.md` second. Those plans supplement
+this integrated plan and own their detailed migrations, passes, tests, rollout,
+and rollback.
 
 This plan covers the complete agreed scope and records every currently unavailable capability. It supplements the role plans; `AGENTS.md`, `docs/DECISIONS.md`, and `docs/build-plans/INTEGRATION-CONTRACT.md` remain higher authority.
 
@@ -321,14 +328,14 @@ Implementation begins only after the owner accepts the snapshot gate. Each slice
 - Mount `/studio/test-lab` in normal streamer navigation.
 - Support team-owned/authorised video and live capture, source selection, observed/unknown output, and recovery while clearly distinguishing Sample from Live inside the lab.
 - Do not reuse broad tester disclaimers on ordinary product pages.
-- Keep the existing privacy-safe history read model compatible, but defer the dedicated post-stream analytics/history UI and completion claim.
+- Keep the existing privacy-safe history read model compatible; deliver the dedicated post-stream analytics/history UI as its own required initiative without making it a dependency of the demo-critical P0 flow.
 - Complete product recovery actions for Twitch, Game Capture, Viewer Voting, Broadcast Overlay, realtime, token expiry, session expiry, and dependency outage.
 - Run the canonical seven-step workflow twice without manual repair.
 - After parity, redirect `/` to `/studio` and move the legacy Control Room and legacy sidequest path behind protected diagnostics without deleting functionality.
 
 **Primary responsibility areas:** `src/streamer/`, diagnostics routes, history reader/persistence, app routing, integration tests.
 
-**Exit evidence:** Streamer Test Lab route; authorised-input policy; sample/live distinction; current-session privacy; two canonical parity runs; route migration test; legacy diagnostic recovery path. Post-stream analytics/history remains deferred.
+**Exit evidence:** Streamer Test Lab route; authorised-input policy; sample/live distinction; current-session privacy; two canonical parity runs; route migration test; legacy diagnostic recovery path. Post-stream analytics/history has its own acceptance evidence and does not gate this demo flow.
 
 ### ICP-09 — Full real-input acceptance and owner handoff
 
@@ -377,7 +384,7 @@ Connect Twitch
 | Gameplay Engine page | Connected Game Capture, supported facts, stream-period understanding, current/previous behavioral stats, health, combat, exploration, and recovery are implemented. | ICP-04 |
 | Public `Up next` | Overlay projection now has a sanitized nullable `upNext` field derived from authoritative quest-cycle state or a known typed Current Objective with selected-game-compatible fresh gameplay evidence; final tests remain open. | ICP-04/ICP-07 |
 | Ordinary-chat audience intelligence | Twitch chat is aggregated with dedupe, pseudonymous participant lifecycle, mood, rate, previous-window comparison, topics, and watchlist counts; raw ordinary text remains ephemeral. Real EventSub proof remains open. | ICP-05 |
-| Live Analytics page | Connected current-session vibe, audience mood, activity, participants, participation, topics, watchlist, and previous-window comparisons are implemented. Dedicated post-stream history is owner-deferred. | ICP-05 |
+| Live Analytics page | Connected current-session vibe, audience mood, activity, participants, participation, topics, watchlist, and previous-window comparisons are implemented. Dedicated post-stream history is a separate required initiative under D-087. | ICP-05 |
 | Automatic topics plus watchlist counts | Privacy-safe topic ranking and owner-configured watchlist counts are implemented and projected to Studio. | ICP-05 |
 | Game-aware algorithmic candidates | Credential-free algorithmic generation now prefers Minecraft-aware templates when Minecraft is selected or evidenced, and remains game-neutral for other games. Final evaluation/testing remains open. | ICP-06 |
 | Game-aware deterministic fallback | Role 3 deterministic fallback now prefers Minecraft-aware safe definitions when Minecraft is selected or evidenced, and remains game-neutral for other games. Final evaluation/testing remains open. | ICP-06 |
@@ -389,7 +396,7 @@ Connect Twitch
 | OBS `Up next` rendering | OBS overlay source now renders the public `upNext` field while staying read-only; final tests and real OBS Browser Source proof remain open. | ICP-07 |
 | Authoritative Home surface previews | Home presents Current Stream, Live Director, up to three Live Quests, Stream Engagement, Chat Analytics, integrations, and presets with authoritative controls. | ICP-07 |
 | Streamer-facing Test Lab route | Test Lab provides live Gameplay Capture launch/status/recovery, key-free OBS URL generation, viewer fallback link, integration readiness, and diagnostic boundaries. | ICP-08 |
-| Post-stream analytics and dedicated history | Deferred by the owner; current-session aggregate analytics and the existing privacy-safe read model remain. | Deferred |
+| Post-stream analytics and dedicated history | Required as a separate initiative under D-087; it must not change or block the golden demo flow. | Separate required initiative |
 | Canonical `/` routing | `/` redirects to the one `/studio` app; the legacy control room is retained only at `/diagnostics/control-room`. | ICP-08 |
 | Real Twitch/OBS/Supabase/provider proof | Source and fixture tests do not prove the external workflow. | ICP-09 |
 

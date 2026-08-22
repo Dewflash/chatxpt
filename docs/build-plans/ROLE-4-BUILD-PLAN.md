@@ -58,9 +58,11 @@ Role 2 maintains this baseline plan. Role 4's settled answers are recorded in `d
 - Compact Twitch Config and Live Config surfaces.
 - Responsive, keyboard, reduced-motion, failure, reconnect, and consumer-contract evidence.
 
-### P1 only after the P0 integration exit
+### P1 after the P0 integration exit
 
-- Richer session history and post-stream aggregate summary after Role 1 supplies UI-X04.
+- Required richer session history and post-stream aggregate summary after Role 1
+  supplies UI-X04, executed through
+  `STREAM-HISTORY-ANALYTICS-PLAN.md` without gating the golden demo flow.
 - Deeper setup diagnostics, explanations, and non-essential integration telemetry.
 - Streamer-experience measurement hooks proposed to Role 1.
 - Additional visual polish that does not change public seams or threaten the golden workflow.
@@ -316,21 +318,25 @@ All `r4.quest.*`, `r4.error.command-set.v1`, `r4.realtime.reconnecting.v1`, and 
 - No client-side permission, lifecycle, timer, winner, reward, or persistence authority remains.
 - Role 4 TODO and one `changes/role-4/` fragment reflect the verified result.
 
-## Phase 5 / R4-P06: Optional P1 refinement after P0 passes
+## Phase 5 / R4-P06: P1 refinement after P0 passes
 
 **Cutoff:** 7 August 2026, 18:00 SGT
 
-This phase starts after Phase 4 stability evidence passes. No role-owner approval gate applies; the contributor must preserve the golden workflow and deconflict shared changes with Role 1.
+This phase starts after Phase 4 stability evidence passes. The D-087 history
+initiative is required; the remaining refinements are optional. No role-owner
+approval gate applies, and the contributor must preserve the golden workflow
+and deconflict shared changes with Role 1.
 
 ### Owner design gate
 
 | ID | What Codex asks Role 4 | Choices explained in plain language | Recommended starting point | Baseline status |
 | --- | --- | --- | --- | --- |
-| D4-18 | If there is time for only one refinement, what should receive it? | History helps retention, diagnostics helps recovery, and visual polish helps presentation. | Improve the weakest observed P0 usability point first; otherwise add a concise post-stream summary rather than broad analytics. | Open |
+| D4-18 | After the required history initiative, which optional refinement should receive remaining time? | Deeper diagnostics improves recovery; visual polish improves presentation; measurement hooks improve later evaluation. | Improve the weakest observed P0/history usability point first, without broadening analytics or changing the golden flow. | Open |
 
 ### P1 work
 
-- Add richer retained session history and post-stream aggregate summary through UI-X04.
+- Add richer retained session history and post-stream aggregate summary through
+  UI-X04 and `STREAM-HISTORY-ANALYTICS-PLAN.md`.
 - Add deeper diagnostic explanation and non-essential status detail.
 - Add accepted streamer-experience measurement events without collecting raw chat or unnecessary viewer identity.
 - Refine visual polish, empty states, and onboarding copy without changing public contracts.

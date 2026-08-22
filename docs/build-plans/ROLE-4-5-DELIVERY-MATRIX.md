@@ -51,7 +51,7 @@ All deadlines use Singapore time and inherit the integration exits in `docs/buil
 | Twitch Local/Hosted Test shells and identity/JWT mapping | Role 1 | Roles 4/5 | Phase 3/integration | Planned in R1-P07/R1-P08 | Local fixture harness, explicitly not Twitch evidence |
 | OBS capture setup and secure browser-overlay read mount | Role 1 | Role 4 setup and Role 5 overlay | Phase 3/integration | Planned in R1-P09 | Fixture overlay plus documented unverified state |
 | Shared preview deployment and real multi-client snapshot path | Role 1 | Roles 4/5 | Phase 4 | Supabase source foundation implemented; cloud/Vercel evidence pending | Credential-free memory runtime, labelled accordingly |
-| Session history/summary view (UI-X04) | Role 1 | Role 4 | Phase 5 P1 | Optional request | Omit or label unavailable; never derive authoritative history in UI |
+| Session history/summary view (UI-X04) | Role 1 | Role 4 | Phase 5 P1 | Required separate initiative under D-087 and `STREAM-HISTORY-ANALYTICS-PLAN.md` | Omit or label unavailable until built; never derive authoritative history in UI |
 
 ## Public modules and Role 1 mount requests
 
