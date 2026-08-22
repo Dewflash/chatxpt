@@ -16,7 +16,7 @@ async function prepare(filePath) {
   });
 }
 
-test("creates stable owner-only local defaults without external provider credentials", async () => {
+test("creates stable private local defaults without external provider credentials", async () => {
   const directory = await mkdtemp(join(tmpdir(), "chatxpt-local-runtime-"));
   const filePath = join(directory, ".env.local");
   try {
@@ -32,7 +32,12 @@ test("creates stable owner-only local defaults without external provider credent
     assert.match(first, /^CHATXPT_HOSTED_BOARD_SECRET=\S+$/mu);
     assert.doesNotMatch(first, /^TWITCH_CLIENT_ID=/mu);
     assert.doesNotMatch(first, /^TWITCH_CLIENT_SECRET=/mu);
-    assert.equal(metadata.mode & 0o777, 0o600);
+    // Windows exposes inherited ACLs rather than meaningful POSIX mode bits.
+    // The script still requests 0600; enforce that mode where the filesystem
+    // can actually represent and report it.
+    if (process.platform !== "win32") {
+      assert.equal(metadata.mode & 0o777, 0o600);
+    }
 
     await prepare(filePath);
     assert.equal(await readFile(filePath, "utf8"), first);
