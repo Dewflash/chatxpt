@@ -1,6 +1,6 @@
 # Role 2 provider reliability evaluation
 
-Status: **D-072 approves OpenAI `gpt-5.6-terra`; fixture harness implemented; two partial diagnostic provider runs recorded; production-quality evidence remains pending.**
+Status: **D-072 approves OpenAI `gpt-5.6-terra`; fixture harness implemented; one post-fix diagnostic batch passed every deterministic Role 3 gate; representative production-quality evidence remains pending.**
 
 Role 2 measures provider integration, structured-output reliability, latency, timeout, rate-limit behaviour, privacy/retention, credited-account availability, and algorithmic recovery. Role 3 independently applies the hard gates and weighted quest-quality rubric in `src/quest-engine/PROVIDER_QUALITY_RUBRIC.md`. D-072 settles adoption; the two roles still provide execution and quality evidence to Role 1 without treating it as permission to implement or push.
 
@@ -43,6 +43,10 @@ The owner then authorised one follow-up request from integrated commit `7c88187`
 
 The follow-up completed in 6,733 milliseconds and returned exactly three schema-valid `ai-provider` candidates. Usage was 1,408 input tokens, 446 output tokens including 174 reasoning tokens, and 1,854 total tokens; the estimate using the same documented token rates as the first diagnostic was USD 0.008168. Role 3 again accepted two candidates, rejecting the third only as `difficulty-mismatch`. That result exposed a missing prompt/validator seam rather than a transport or schema failure: the prompt now states Role 3's easy 15-90, medium 30-150, and hard 45-180 second bands. The current server client also explicitly sets `maxRetries: 0`, closing an SDK-default mismatch discovered before the call. No third provider request was made, so the hard gate remains open until a later authorised run proves three-of-three acceptance.
 
+A third owner-authorised request then exercised the integrated post-fix revision `3e4ff4a` with the same bounded Brawl replay method and normalised four-signal input. The request again used exact `gpt-5.6-terra`, low reasoning, `store: false`, zero retries, one attempt, an 8-second limit, no fallback, 120 temporary 160x90 frames reduced locally, 3,300 bytes of model context, and no raw frames, chat, audience events, or identities. It completed in 6,636 milliseconds with 1,441 input tokens, 430 output tokens including 150 reasoning tokens, and 1,871 total tokens; the estimate using the same documented rates was USD 0.008042.
+
+The post-fix request returned exactly three schema-valid `ai-provider` candidates and Role 3 accepted all three. Two candidates carried the non-blocking `quality-warning` issued for acceptable but below-preferred confidence; none had a rejection issue. This is a passing single-case deterministic confirmation for the corrected prompt and transport. It is not a representative provider-quality conclusion: the weighted quality rubric, repeated reliability, failure matrix, Minecraft/OBS input, Twitch audience activity, production fallback, and integrated publication path remain open.
+
 ## Role 2 operational report
 
 For each pinned configuration record:
@@ -66,4 +70,4 @@ Role 3 scores each canonical batch for feasibility, clarity, diversity, novelty,
 - `evaluation only`
 - `do not adopt`
 
-D-072 resolves D23-01, D23-03, and D2-17 for the approved path. D23-02 and D2-16 remain open, while D2-18 is resolved by the credential-free algorithmic candidate strategy. The two recorded diagnostics prove provider availability, exactly-three structured transport, and one response inside the exact 8-second limit, but both fail the Role 3 hard gate at two accepted candidates. They do not prove production reliability, representative model quality, OBS/Twitch execution, or end-to-end integration.
+D-072 resolves D23-01, D23-03, and D2-17 for the approved path. D23-02 and D2-16 remain open, while D2-18 is resolved by the credential-free algorithmic candidate strategy. Across three recorded diagnostics, every provider response contained exactly three schema-valid candidates; the integrated post-fix case completed inside eight seconds and passed deterministic validation three-of-three. One passing case does not establish p50/p95 reliability, representative model quality, the weighted Role 3 rubric, OBS/Twitch execution, or end-to-end integration.
