@@ -1,6 +1,6 @@
 # Role 2 provider reliability evaluation
 
-Status: **D-072 approves OpenAI `gpt-5.6-terra`; fixture harness implemented; one partial diagnostic provider run recorded; production-quality evidence remains pending.**
+Status: **D-072 approves OpenAI `gpt-5.6-terra`; fixture harness implemented; two partial diagnostic provider runs recorded; production-quality evidence remains pending.**
 
 Role 2 measures provider integration, structured-output reliability, latency, timeout, rate-limit behaviour, privacy/retention, credited-account availability, and algorithmic recovery. Role 3 independently applies the hard gates and weighted quest-quality rubric in `src/quest-engine/PROVIDER_QUALITY_RUBRIC.md`. D-072 settles adoption; the two roles still provide execution and quality evidence to Role 1 without treating it as permission to implement or push.
 
@@ -39,6 +39,10 @@ The provider completed in 5,091 milliseconds and returned exactly three schema-v
 
 This is partial diagnostic evidence, not a passing D-072 quality trial. The request cap and reasoning effort differed from the current production transport, the test used recording replay rather than OBS Virtual Camera, Brawl Stars remains evaluation-only, and the hard gate failed because not all three candidates passed Role 3. Prompt text, provider output, credentials, raw pixels, and private identifiers were not retained in the repository.
 
+The owner then authorised one follow-up request from integrated commit `7c88187`. It replayed the same bounded recording path to 120 temporary 160x90 frames, selected four confidence-qualified generic visual signals, and sent 3,300 bytes of normalised context with no raw frames, chat, identities, or audience events. This provider-only request matched the accepted transport settings: exact `gpt-5.6-terra`, `reasoning.effort: low`, `store: false`, zero SDK retries, one attempt, an 8-second abort limit, and no fallback accepted as provider output.
+
+The follow-up completed in 6,733 milliseconds and returned exactly three schema-valid `ai-provider` candidates. Usage was 1,408 input tokens, 446 output tokens including 174 reasoning tokens, and 1,854 total tokens; the estimate using the same documented token rates as the first diagnostic was USD 0.008168. Role 3 again accepted two candidates, rejecting the third only as `difficulty-mismatch`. That result exposed a missing prompt/validator seam rather than a transport or schema failure: the prompt now states Role 3's easy 15-90, medium 30-150, and hard 45-180 second bands. The current server client also explicitly sets `maxRetries: 0`, closing an SDK-default mismatch discovered before the call. No third provider request was made, so the hard gate remains open until a later authorised run proves three-of-three acceptance.
+
 ## Role 2 operational report
 
 For each pinned configuration record:
@@ -62,4 +66,4 @@ Role 3 scores each canonical batch for feasibility, clarity, diversity, novelty,
 - `evaluation only`
 - `do not adopt`
 
-D-072 resolves D23-01, D23-03, and D2-17 for the approved path. D23-02 and D2-16 remain open, while D2-18 is resolved by the credential-free algorithmic candidate strategy. The recorded diagnostic proves provider availability and one real-input exactly-three response, but it fails the Role 3 hard gate and does not prove production reliability, representative model quality, OBS/Twitch execution, or end-to-end integration.
+D-072 resolves D23-01, D23-03, and D2-17 for the approved path. D23-02 and D2-16 remain open, while D2-18 is resolved by the credential-free algorithmic candidate strategy. The two recorded diagnostics prove provider availability, exactly-three structured transport, and one response inside the exact 8-second limit, but both fail the Role 3 hard gate at two accepted candidates. They do not prove production reliability, representative model quality, OBS/Twitch execution, or end-to-end integration.
