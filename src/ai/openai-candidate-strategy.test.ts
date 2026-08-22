@@ -10,6 +10,7 @@ import {
 import { gameplaySnapshotSchema, streamerProfileSchema, type CandidateInput } from "../core";
 import { createValidatingIntelligenceProvider } from "./providers";
 import {
+  candidateDraftJsonSchema,
   createOpenAICandidateStrategy,
   type StructuredCandidateTransport,
 } from "./openai-candidate-strategy";
@@ -171,6 +172,14 @@ function knownSignalId(input: CandidateInput): string {
 }
 
 describe("OpenAI-compatible candidate strategy", () => {
+  it("uses only provider-supported array constraints in the strict response schema", () => {
+    const sourceSignalIds =
+      candidateDraftJsonSchema.properties.candidates.items.properties.sourceSignalIds;
+
+    expect(sourceSignalIds).toMatchObject({ type: "array", maxItems: 8 });
+    expect(sourceSignalIds).not.toHaveProperty("uniqueItems");
+  });
+
   it("sends normalized context only and assigns canonical provider metadata itself", async () => {
     const input = await candidateInput();
     const signalId = knownSignalId(input);
@@ -532,6 +541,9 @@ describe("OpenAI-compatible candidate strategy", () => {
       expect.arrayContaining(["hudLayout", "objectiveState", "matchTimer", "scoreState"]),
     );
     expect(context.gameState.unknownGenericFacts).toContain("playerHealth");
+    expect(requests[0].instructions).toContain(
+      "In rationale, describe that constraint generically as not relying on unsupported state.",
+    );
   });
 
   it("classifies refusal, rate limiting, and malformed JSON without leaking payloads", async () => {

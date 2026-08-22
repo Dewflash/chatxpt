@@ -64,6 +64,24 @@
       "requiredBy": "R1-P14 submission evidence",
       "custody": "private-team-drive",
       "notes": "Privacy-review the recording before upload and keep unrestricted share links out of Git."
+    },
+    {
+      "id": "role-2-authorized-gameplay-recordings",
+      "label": "Owner-authorised local gameplay recordings",
+      "owner": { "role": "role-2", "github": "joelyrk" },
+      "status": "assigned",
+      "requiredBy": "R2 real-input and provider evaluation",
+      "custody": "local-only",
+      "notes": "Raw recordings, decoded frames, and visible player details remain outside Git; only sanitised derived measurements may be recorded."
+    },
+    {
+      "id": "openai-provider-evaluation",
+      "label": "OpenAI credited provider evaluation access",
+      "owner": { "role": "role-2", "github": "joelyrk" },
+      "status": "assigned",
+      "requiredBy": "R2-004 and R2-005 provider evaluation",
+      "custody": "private-team-channel",
+      "notes": "Server-side access and billing details remain private; the manifest records only sanctioned privacy-safe trial metadata."
     }
   ],
   "entries": [
@@ -843,6 +861,59 @@
         "The Twitch Extension is installed and active in Local Test, but it did not issue a real viewer JWT or cast a real in-panel vote; mobile still needs an approved public privacy-policy URL.",
         "Two-viewer winner, progress, result, and non-idle OBS proof used locally signed diagnostic identities and game-neutral fixtures. It does not upgrade those steps to real Twitch identity or real live-input evidence.",
         "This run used process memory. It does not prove Supabase Cloud realtime/recovery, Vercel, provider output, deployment durability, or multi-instance consistency."
+      ]
+    },
+    {
+      "id": "E-20260822-R2-001",
+      "capturedAt": "2026-08-22T18:59:32+08:00",
+      "owner": { "role": "role-2", "github": "joelyrk" },
+      "reviewer": null,
+      "evidenceClass": "unverified",
+      "result": "partial",
+      "claim": "An owner-authorised Brawl Stars recording produced bounded generic visual signals and one provider-only GPT-5.6 Terra response with exactly three structured candidates; two passed Role 3 validation.",
+      "resourceIds": ["role-2-authorized-gameplay-recordings", "openai-provider-evaluation"],
+      "surfaces": [
+        {
+          "name": "Role 2 provider-only diagnostic",
+          "deviceClass": "server",
+          "viewport": null
+        }
+      ],
+      "source": {
+        "gitCommit": "7962f8d",
+        "branch": "role-2/openai-structured-output-fix",
+        "prNumber": null
+      },
+      "authoritativeState": {
+        "sessionRef": "diagnostic-brawl-provider-session",
+        "questCycleRef": "diagnostic-brawl-provider-cycle",
+        "revision": 1
+      },
+      "inputs": [
+        {
+          "kind": "unverified",
+          "description": "An owner-authorised local Brawl Stars recording was replayed through the production analyzer at 160x90 and 10 fps; only four derived generic visual signals entered the provider context."
+        }
+      ],
+      "commands": [
+        "Decode a bounded 12-second recording segment to 120 temporary low-resolution frames",
+        "Run the production recording analyzer in generic-action mode and select one confidence-qualified visual snapshot",
+        "Run one provider-only gpt-5.6-terra Responses request with store false, reasoning none, a 30-second diagnostic cap, zero retries, and no fallback",
+        "Apply the public Role 3 deterministic candidate validator to all three provider candidates"
+      ],
+      "artifacts": [
+        {
+          "storage": "local-only",
+          "reference": "local-artifact:codex-runtime-transcript-20260822-role-2-provider",
+          "mediaType": "text/plain",
+          "privacyReviewed": true,
+          "sha256": null
+        }
+      ],
+      "limitations": [
+        "The 30-second diagnostic cap and reasoning-none setting differ from the current production transport, which remains at an 8-second timeout with reasoning low; this is not an exact production-configuration trial.",
+        "Role 3 accepted two of three candidates and rejected one as unknown-dependent, so the provider quality hard gate failed and no batch was eligible for viewers or overlay.",
+        "This used local recording replay with no audience sample. It does not prove OBS Virtual Camera, Minecraft calibration, Twitch activity, repeated provider reliability, or end-to-end golden workflow behavior."
       ]
     }
   ]
