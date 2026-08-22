@@ -73,31 +73,38 @@ describe("captureReadingsForSnapshot", () => {
     ],
   });
 
-  it("shows Minecraft-specific health, food, and environment readings", () => {
+  it("groups Minecraft player condition, activity, environment, and other readings", () => {
     const readings = captureReadingsForSnapshot("minecraft", snapshot);
 
-    expect(readings).toContainEqual(expect.objectContaining({ label: "Health hearts", value: "8" }));
-    expect(readings).toContainEqual(expect.objectContaining({ label: "Food", value: "7" }));
-    expect(readings).toContainEqual(expect.objectContaining({ label: "Scene / environment", value: "grassy-overworld" }));
+    expect(readings).toContainEqual(expect.objectContaining({ label: "Health", value: "8", category: "condition" }));
+    expect(readings).toContainEqual(expect.objectContaining({ label: "Hunger", value: "7", category: "condition" }));
+    expect(readings).toContainEqual(expect.objectContaining({ label: "Day / night", value: "Coming soon", category: "environment" }));
+    expect(readings).toContainEqual(expect.objectContaining({ label: "Scene / environment", value: "grassy-overworld", category: "environment" }));
+    expect(readings).toContainEqual(expect.objectContaining({ label: "Screen state", category: "others" }));
     expect(readings.some(({ label }) => label === "Match active")).toBe(false);
   });
 
   it("shows only Brawl and universal readings for Brawl Stars", () => {
     const readings = captureReadingsForSnapshot("brawl-stars", snapshot);
 
-    expect(readings).toContainEqual(expect.objectContaining({ label: "HUD layout", value: "standard-like" }));
-    expect(readings).toContainEqual(expect.objectContaining({ label: "Match active", value: "true" }));
-    expect(readings.some(({ label }) => label === "Health hearts")).toBe(false);
+    expect(readings).toContainEqual(expect.objectContaining({ label: "HUD layout", value: "standard-like", category: "others" }));
+    expect(readings).toContainEqual(expect.objectContaining({ label: "Match active", value: "true", category: "condition" }));
+    expect(readings).toContainEqual(expect.objectContaining({ label: "Player health", value: "Coming soon", category: "condition" }));
+    expect(readings).toContainEqual(expect.objectContaining({ label: "Arena / map", value: "Coming soon", category: "environment" }));
+    expect(readings.some(({ label }) => label === "Health")).toBe(false);
   });
 
-  it("keeps Generic analysis to universal visual readings", () => {
+  it("keeps Generic analysis honest while preserving the same four categories", () => {
     const readings = captureReadingsForSnapshot("generic", snapshot);
 
-    expect(readings.map(({ label }) => label)).toEqual([
-      "Visual state",
-      "Activity intensity",
-      "Global motion",
-      "Scene transition",
-    ]);
+    expect(new Set(readings.map(({ category }) => category))).toEqual(new Set([
+      "condition",
+      "activity",
+      "environment",
+      "others",
+    ]));
+    expect(readings).toContainEqual(expect.objectContaining({ label: "Player condition", value: "Coming soon" }));
+    expect(readings).toContainEqual(expect.objectContaining({ label: "Activity intensity", value: "0.42" }));
+    expect(readings).toContainEqual(expect.objectContaining({ label: "Visual state", value: "stable" }));
   });
 });

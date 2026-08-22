@@ -5,9 +5,17 @@ import { describe, expect, it } from "vitest";
 import { StudioGameplayCaptureClient } from "./StudioGameplayCaptureClient";
 
 describe("StudioGameplayCaptureClient recovery navigation", () => {
-  it("keeps setup compact and shows source controls only while capture is stopped", () => {
+  it("shows game-aware detector columns before compact stopped capture controls", () => {
     const html = renderToStaticMarkup(h(StudioGameplayCaptureClient));
 
+    expect(html).toContain("Live Detector Proof");
+    expect(html).toContain("Generic profile");
+    expect(html).toContain('id="proof-condition"');
+    expect(html).toContain('id="proof-activity"');
+    expect(html).toContain('id="proof-environment"');
+    expect(html).toContain('id="proof-others"');
+    expect(html).toContain("Player condition");
+    expect(html).toContain("Coming soon");
     expect(html).toContain("Stream Capture");
     expect(html).toContain("Stream Capture instructions");
     expect(html).toContain('role="tooltip"');
@@ -26,7 +34,7 @@ describe("StudioGameplayCaptureClient recovery navigation", () => {
     expect(html).toContain("Last successful capture: None");
     expect(html.indexOf("Current Studio session")).toBeLessThan(html.indexOf("Game profile"));
     expect(html.indexOf("Game profile")).toBeLessThan(html.indexOf("Select Screen or Window"));
-    expect(html).not.toContain("Live detector proof");
+    expect(html.indexOf("Live Detector Proof")).toBeLessThan(html.indexOf("Stream Capture"));
     expect(html).not.toContain("Gameplay Capture status");
     expect(html).not.toContain("Detected Game Facts");
     expect(html).not.toContain("This page connects the product capture path");

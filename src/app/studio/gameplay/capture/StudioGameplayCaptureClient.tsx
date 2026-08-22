@@ -92,7 +92,21 @@ export interface CaptureReading {
   readonly signalId: string;
   readonly label: string;
   readonly value: string;
+  readonly category: CaptureReadingCategory;
+  readonly availability: "supported" | "coming-soon";
 }
+
+export type CaptureReadingCategory = "condition" | "activity" | "environment" | "others";
+
+const CAPTURE_READING_CATEGORIES: readonly {
+  readonly id: CaptureReadingCategory;
+  readonly label: string;
+}[] = [
+  { id: "condition", label: "Condition" },
+  { id: "activity", label: "Activity" },
+  { id: "environment", label: "Environment" },
+  { id: "others", label: "Others" },
+];
 
 interface CapturePreference {
   readonly game: CaptureGame;
@@ -245,32 +259,45 @@ function signalValue(snapshot: GameplaySnapshot, signalId: string): string {
 
 const CAPTURE_READING_DEFINITIONS: Readonly<Record<CaptureGame, readonly Omit<CaptureReading, "value">[]>> = {
   minecraft: [
-    { signalId: "minecraft-health-hearts", label: "Health hearts" },
-    { signalId: "minecraft-hunger-shanks", label: "Food" },
-    { signalId: "minecraft-recent-damage", label: "Recent damage" },
-    { signalId: "minecraft-movement", label: "Movement" },
-    { signalId: "minecraft-turning", label: "Turning" },
-    { signalId: "minecraft-combat", label: "Combat" },
-    { signalId: "minecraft-eating", label: "Eating" },
-    { signalId: "minecraft-health-trend", label: "Health trend" },
-    { signalId: "minecraft-screen", label: "Screen state" },
-    { signalId: "minecraft-environment", label: "Land / water" },
-    { signalId: "minecraft-biome-environment", label: "Scene / environment" },
-    { signalId: "minecraft-life", label: "Alive / dead" },
+    { signalId: "minecraft-health-hearts", label: "Health", category: "condition", availability: "supported" },
+    { signalId: "minecraft-hunger-shanks", label: "Hunger", category: "condition", availability: "supported" },
+    { signalId: "minecraft-armor-points", label: "Armor", category: "condition", availability: "supported" },
+    { signalId: "minecraft-recent-damage", label: "Recent damage", category: "condition", availability: "supported" },
+    { signalId: "minecraft-health-trend", label: "Health trend", category: "condition", availability: "supported" },
+    { signalId: "minecraft-life", label: "Alive / dead", category: "condition", availability: "supported" },
+    { signalId: "minecraft-turning", label: "Turning", category: "activity", availability: "supported" },
+    { signalId: "minecraft-movement", label: "Movement", category: "activity", availability: "supported" },
+    { signalId: "minecraft-combat", label: "Combat", category: "activity", availability: "supported" },
+    { signalId: "minecraft-eating", label: "Eating", category: "activity", availability: "supported" },
+    { signalId: "minecraft-time-of-day", label: "Day / night", category: "environment", availability: "coming-soon" },
+    { signalId: "minecraft-environment", label: "Land / water", category: "environment", availability: "supported" },
+    { signalId: "minecraft-biome-environment", label: "Scene / environment", category: "environment", availability: "supported" },
+    { signalId: "minecraft-screen", label: "Screen state", category: "others", availability: "supported" },
+    { signalId: "minecraft-selected-hotbar-category", label: "Selected item", category: "others", availability: "supported" },
   ],
   "brawl-stars": [
-    { signalId: "brawl-hud-layout", label: "HUD layout" },
-    { signalId: "brawl-match-active", label: "Match active" },
-    { signalId: "game-vision-state", label: "Visual state" },
-    { signalId: "game-vision-activity", label: "Activity intensity" },
-    { signalId: "game-global-motion-pattern", label: "Global motion" },
-    { signalId: "game-scene-transition", label: "Scene transition" },
+    { signalId: "brawl-match-active", label: "Match active", category: "condition", availability: "supported" },
+    { signalId: "brawl-player-health", label: "Player health", category: "condition", availability: "coming-soon" },
+    { signalId: "brawl-player-life", label: "Alive / eliminated", category: "condition", availability: "coming-soon" },
+    { signalId: "game-vision-activity", label: "Activity intensity", category: "activity", availability: "supported" },
+    { signalId: "game-global-motion-pattern", label: "Global motion", category: "activity", availability: "supported" },
+    { signalId: "brawl-combat-state", label: "Combat state", category: "activity", availability: "coming-soon" },
+    { signalId: "brawl-arena-map", label: "Arena / map", category: "environment", availability: "coming-soon" },
+    { signalId: "game-scene-transition", label: "Scene transition", category: "environment", availability: "supported" },
+    { signalId: "brawl-match-mode", label: "Match mode", category: "environment", availability: "coming-soon" },
+    { signalId: "brawl-hud-layout", label: "HUD layout", category: "others", availability: "supported" },
+    { signalId: "game-vision-state", label: "Visual state", category: "others", availability: "supported" },
   ],
   generic: [
-    { signalId: "game-vision-state", label: "Visual state" },
-    { signalId: "game-vision-activity", label: "Activity intensity" },
-    { signalId: "game-global-motion-pattern", label: "Global motion" },
-    { signalId: "game-scene-transition", label: "Scene transition" },
+    { signalId: "generic-player-condition", label: "Player condition", category: "condition", availability: "coming-soon" },
+    { signalId: "generic-player-life", label: "Alive / eliminated", category: "condition", availability: "coming-soon" },
+    { signalId: "game-vision-activity", label: "Activity intensity", category: "activity", availability: "supported" },
+    { signalId: "game-global-motion-pattern", label: "Global motion", category: "activity", availability: "supported" },
+    { signalId: "generic-action-type", label: "Action type", category: "activity", availability: "coming-soon" },
+    { signalId: "generic-time-of-day", label: "Day / night", category: "environment", availability: "coming-soon" },
+    { signalId: "game-scene-transition", label: "Scene transition", category: "environment", availability: "supported" },
+    { signalId: "generic-environment", label: "Environment type", category: "environment", availability: "coming-soon" },
+    { signalId: "game-vision-state", label: "Visual state", category: "others", availability: "supported" },
   ],
 };
 
@@ -280,7 +307,12 @@ export function captureReadingsForSnapshot(
 ): readonly CaptureReading[] {
   return CAPTURE_READING_DEFINITIONS[game].map((reading) => ({
     ...reading,
-    value: snapshot === null ? "Waiting" : signalValue(snapshot, reading.signalId),
+    value:
+      reading.availability === "coming-soon"
+        ? "Coming soon"
+        : snapshot === null
+          ? "Waiting"
+          : signalValue(snapshot, reading.signalId),
   }));
 }
 
@@ -774,10 +806,66 @@ export function StudioGameplayCaptureClient() {
     }
   }
 
+  const detectorReadings = latest?.profileReadings ?? captureReadingsForSnapshot(game, null);
+
   return (
     <div className={styles.shell}>
         {sessionError !== null ? <p className={styles.error} role="alert">{sessionError}</p> : null}
         {error !== null ? <p className={styles.error} role="alert">{error}</p> : null}
+
+        <section className={styles.proofPanel} aria-live="polite" aria-labelledby="proof-heading">
+          <div className={styles.proofHeading}>
+            <div>
+              <p className={styles.eyebrow}>{captureGameLabel(game)} profile</p>
+              <h2 id="proof-heading">Live Detector Proof</h2>
+            </div>
+            <p>
+              {latest === null
+                ? "Waiting for a captured feed. Planned reads remain marked Coming soon."
+                : `${latest.frameCount} frames analysed locally at ${latest.analysisRateFps?.toFixed(1) ?? "starting"} frames/sec.`}
+            </p>
+          </div>
+          <div className={styles.proofColumns}>
+            {CAPTURE_READING_CATEGORIES.map((category) => (
+              <section className={styles.proofColumn} key={category.id} aria-labelledby={`proof-${category.id}`}>
+                <h3 id={`proof-${category.id}`}>{category.label}</h3>
+                <dl>
+                  {detectorReadings
+                    .filter((reading) => reading.category === category.id)
+                    .map((reading) => (
+                      <div key={reading.signalId} data-availability={reading.availability}>
+                        <dt>{reading.label}</dt>
+                        <dd>{reading.value}</dd>
+                      </div>
+                    ))}
+                  {category.id === "others" ? (
+                    <>
+                      <div>
+                        <dt>HUD detector</dt>
+                        <dd>{latest?.hudStatus ?? "Waiting"}</dd>
+                      </div>
+                      <div>
+                        <dt>Analysis sample</dt>
+                        <dd>{latest?.sampleResolution ?? "Waiting"}</dd>
+                      </div>
+                      <div>
+                        <dt>Unknown facts</dt>
+                        <dd>{latest?.unknownFactCount ?? "Waiting"}</dd>
+                      </div>
+                    </>
+                  ) : null}
+                </dl>
+              </section>
+            ))}
+          </div>
+          <p className={styles.detectorReason}>{latest?.hudReason ?? `Connect the ${captureGameLabel(game)} gameplay feed to begin.`}</p>
+          {game === "minecraft" ? (
+            <details>
+              <summary>HUD anchor confidence</summary>
+              <p>{latest?.hudAnchorScores ?? "Waiting for the first analysed frame."}</p>
+            </details>
+          ) : null}
+        </section>
 
         <section className={styles.panel} aria-labelledby="setup-heading">
         <div className={styles.setupHeading}>
@@ -875,33 +963,6 @@ export function StudioGameplayCaptureClient() {
 
         {previewConnected ? (
           <>
-        <section className={styles.proofPanel} aria-live="polite" aria-labelledby="proof-heading">
-        <div>
-          <p className={styles.eyebrow}>Live detector proof</p>
-          <h2 id="proof-heading">What ChatXPT reads from this exact feed</h2>
-          <p>
-            {latest === null
-              ? "Waiting for the first analysed frame."
-              : `${latest.frameCount} frames analysed locally at ${latest.analysisRateFps?.toFixed(1) ?? "starting"} frames/sec.`}
-          </p>
-        </div>
-        <div className={styles.proofGrid}>
-          {(latest?.profileReadings ?? captureReadingsForSnapshot(game, null)).map((reading) => (
-            <span key={reading.signalId}><small>{reading.label}</small><strong>{reading.value}</strong></span>
-          ))}
-          <span><small>HUD detector</small><strong>{latest?.hudStatus ?? "Waiting"}</strong></span>
-          <span><small>Analysis sample</small><strong>{latest?.sampleResolution ?? "Waiting"}</strong></span>
-          <span><small>Unknown facts</small><strong>{latest?.unknownFactCount ?? "Waiting"}</strong></span>
-        </div>
-        <p className={styles.detectorReason}>{latest?.hudReason ?? `Connect the ${captureGameLabel(game)} gameplay feed to begin.`}</p>
-        {game === "minecraft" ? (
-          <details>
-            <summary>HUD anchor confidence</summary>
-            <p>{latest?.hudAnchorScores ?? "Waiting for the first analysed frame."}</p>
-          </details>
-        ) : null}
-        </section>
-
         <section className={styles.grid} aria-live="polite" aria-label="Gameplay Capture status">
         <article className={styles.metric}><span>Capture Health</span><strong>{captureHealthCopy(running, latest !== null, error, failureReason, captureSource)}</strong></article>
         <article className={styles.metric}><span>Studio connection</span><strong>{ingressStatus}</strong></article>
