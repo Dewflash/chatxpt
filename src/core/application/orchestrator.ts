@@ -161,11 +161,17 @@ function authoritativeDecision(
   }
 
   const revision = current.session.revision + 1;
+  const startsNewQuestCycle =
+    parsedDecision.data.status === "proposed" &&
+    (current.questCycle.status === "idle" || current.questCycle.status === "evaluating");
+  const questCycleId = startsNewQuestCycle
+    ? `cycle-${acceptedAt}-${revision}`
+    : parsedDecision.data.envelope.questCycleId;
   const questEnvelope = authoritativeEnvelope(
     dependencies,
     command,
     current,
-    parsedDecision.data.envelope.questCycleId,
+    questCycleId,
     revision,
     acceptedAt,
     "quest-state",

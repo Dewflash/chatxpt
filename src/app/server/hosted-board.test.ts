@@ -24,14 +24,15 @@ const HOSTED_SECRET = "hosted-board-secret-at-least-32-characters";
 
 async function createContext() {
   let id = 0;
+  let now = NOW;
   const persistence = createMemoryPersistenceRuntime();
-  const runtime = new ChatXptServerRuntime({ persistence, clock: { now: () => NOW } });
+  const runtime = new ChatXptServerRuntime({ persistence, clock: { now: () => now } });
   const studio = new StudioSessionApplication({
     runtime,
     setupKey: STUDIO_KEY,
     extensionSecret: "",
     environment: {},
-    now: () => NOW,
+    now: () => now,
     nextId: () => `studio-${++id}`,
   });
   const started = await studio.start(STUDIO_KEY, {
@@ -50,10 +51,19 @@ async function createContext() {
   const hosted = new HostedBoardApplication({
     runtime,
     secret: HOSTED_SECRET,
-    now: () => NOW,
+    now: () => now,
     nextId: () => `hosted-${++id}`,
   });
-  return { hosted, started, runtime, persistence };
+  return {
+    hosted,
+    started,
+    runtime,
+    persistence,
+    now: () => now,
+    setNow: (nextNow: number) => {
+      now = nextNow;
+    },
+  };
 }
 
 const projectionContext: ProjectionContextResolver = {
@@ -71,10 +81,19 @@ const projectionContext: ProjectionContextResolver = {
   }),
 };
 
-async function openVotingCycle(context: Awaited<ReturnType<typeof createContext>>) {
+async function openVotingCycle(
+  context: Awaited<ReturnType<typeof createContext>>,
+  suffix = "",
+) {
   const state = await context.persistence.sessions.load(context.started.view.session.sessionId);
   if (state === null) throw new Error("test session is missing");
-  const batchId = "hosted-test-batch";
+  const identifierSuffix = suffix.length > 0 ? `-${suffix}` : "";
+  const batchId = `hosted-test-batch${identifierSuffix}`;
+  const candidateIds = [
+    `candidate-one${identifierSuffix}`,
+    `candidate-two${identifierSuffix}`,
+    `candidate-three${identifierSuffix}`,
+  ] as const;
   await context.persistence.candidates.store(candidateBatchSchema.parse({
     envelope: {
       ...state.questCycle.envelope,
@@ -83,9 +102,9 @@ async function openVotingCycle(context: Awaited<ReturnType<typeof createContext>
       source: "algorithm",
     },
     candidates: [
-      ["candidate-one", "Hold Your Ground", "Stay in your current playable area for thirty seconds."],
-      ["candidate-two", "Caster Mode", "Narrate the next thirty seconds like a sports commentator."],
-      ["candidate-three", "Audience Check-In", "Explain your next move before taking another action."],
+      [candidateIds[0], "Hold Your Ground", "Stay in your current playable area for thirty seconds."],
+      [candidateIds[1], "Caster Mode", "Narrate the next thirty seconds like a sports commentator."],
+      [candidateIds[2], "Audience Check-In", "Explain your next move before taking another action."],
     ].map(([candidateId, title, instruction], index) => ({
       candidateId,
       title,
@@ -96,7 +115,7 @@ async function openVotingCycle(context: Awaited<ReturnType<typeof createContext>
       rationale: "Safe end-to-end hosted-board test candidate.",
       sourceSignalIds: [],
       confidence: 0.8,
-      generation: { method: "algorithmic", provider: null, generatedAt: NOW },
+      generation: { method: "algorithmic", provider: null, generatedAt: context.now() },
     })),
   }));
   const systemActor: VerifiedCommandActor = {
@@ -111,10 +130,10 @@ async function openVotingCycle(context: Awaited<ReturnType<typeof createContext>
     contractVersion: CONTRACT_VERSION,
     sessionId: state.session.sessionId,
     questCycleId: state.questCycle.envelope.questCycleId,
-    commandId: "hosted-test-intelligence",
+    commandId: `hosted-test-intelligence${identifierSuffix}`,
     correlationId: batchId,
     expectedRevision: state.session.revision,
-    issuedAt: NOW,
+    issuedAt: context.now(),
     actor: { kind: "system", actorId: systemActor.actorId },
     type: "system.intelligence-ready",
     candidateBatchId: batchId,
@@ -131,17 +150,18 @@ async function openVotingCycle(context: Awaited<ReturnType<typeof createContext>
   const approved = await context.runtime.execute(streamerQuestCommandSchema.parse({
     contractVersion: CONTRACT_VERSION,
     sessionId: state.session.sessionId,
-    questCycleId: state.questCycle.envelope.questCycleId,
-    commandId: "hosted-test-approve",
+    questCycleId: proposed.receipt.state.questCycle.envelope.questCycleId,
+    commandId: `hosted-test-approve${identifierSuffix}`,
     correlationId: batchId,
     expectedRevision: proposed.receipt.state.session.revision,
-    issuedAt: NOW,
+    issuedAt: context.now(),
     actor: { kind: "broadcaster", actorId: broadcasterActor.actorId },
     type: "streamer.quest",
     action: "approve",
     candidateId: null,
   }), broadcasterActor, projectionContext);
   if (!approved.ok) throw new Error(approved.error.message);
+  return { state: approved.receipt.state, candidateIds };
 }
 
 describe("HostedBoardApplication", () => {
@@ -202,6 +222,69 @@ describe("HostedBoardApplication", () => {
 
     const restored = await current.hosted.read(opened.token);
     expect(restored.acceptedCandidateId).toBe("candidate-two");
+  });
+
+  it("isolates accepted votes when the same viewer joins a later quest cycle", async () => {
+    const current = await createContext();
+    const firstCycle = await openVotingCycle(current, "first");
+    const opened = await current.hosted.open(current.started.roomCode ?? "", null);
+    const firstVote = await current.hosted.vote(opened.token, {
+      commandId: "hosted-vote-first",
+      candidateId: firstCycle.candidateIds[1],
+    });
+    expect(firstVote).toMatchObject({ ok: true, outcome: "committed" });
+
+    current.setNow(NOW + 31_000);
+    await current.hosted.read(opened.token);
+    current.setNow(NOW + 42_000);
+    await current.hosted.read(opened.token);
+    const active = await current.persistence.sessions.load(current.started.view.session.sessionId);
+    if (active === null || active.questCycle.status !== "active") {
+      throw new Error("Expected the accepted vote to activate its winner");
+    }
+    const broadcasterActor: VerifiedCommandActor = {
+      kind: "broadcaster",
+      actorId: active.session.broadcasterId,
+      expiresAt: null,
+      moderatorForBroadcasterIds: [],
+      voterKey: null,
+      participationModes: [],
+    };
+    const succeeded = await current.runtime.execute(streamerQuestCommandSchema.parse({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: active.session.sessionId,
+      questCycleId: active.questCycle.envelope.questCycleId,
+      commandId: "hosted-test-succeed-first",
+      correlationId: "hosted-test-succeed-first",
+      expectedRevision: active.session.revision,
+      issuedAt: current.now(),
+      actor: { kind: "broadcaster", actorId: broadcasterActor.actorId },
+      type: "streamer.quest",
+      action: "succeed",
+      candidateId: null,
+    }), broadcasterActor, projectionContext);
+    if (!succeeded.ok) throw new Error(succeeded.error.message);
+
+    current.setNow(NOW + 163_000);
+    const idle = await current.runtime.advanceQuestLifecycleIfDue(succeeded.receipt.state);
+    expect(idle.questCycle.status).toBe("idle");
+
+    const secondCycle = await openVotingCycle(current, "second");
+    expect(secondCycle.state.questCycle.envelope.questCycleId).not.toBe(
+      firstCycle.state.questCycle.envelope.questCycleId,
+    );
+    await expect(current.hosted.read(opened.token)).resolves.toMatchObject({
+      canVote: true,
+      acceptedCandidateId: null,
+    });
+    await expect(current.hosted.vote(opened.token, {
+      commandId: "hosted-vote-second",
+      candidateId: secondCycle.candidateIds[2],
+    })).resolves.toMatchObject({
+      ok: true,
+      outcome: "committed",
+      view: { acceptedCandidateId: secondCycle.candidateIds[2] },
+    });
   });
 
   it("rejects missing and tampered viewer grants", async () => {

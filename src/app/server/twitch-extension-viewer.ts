@@ -810,6 +810,10 @@ export class TwitchExtensionViewerApplication {
     if (!proposed.ok) {
       throw applicationError("dependency-unavailable", proposed.error.message, proposed.error.retryable);
     }
+    const proposedQuestCycleId = proposed.receipt.state.questCycle.envelope.questCycleId;
+    if (proposedQuestCycleId === null) {
+      throw applicationError("dependency-unavailable", "Proposed quest cycle has no authority");
+    }
 
     const broadcasterActor: VerifiedCommandActor = {
       kind: "broadcaster",
@@ -823,7 +827,7 @@ export class TwitchExtensionViewerApplication {
       streamerQuestCommandSchema.parse({
         contractVersion: CONTRACT_VERSION,
         sessionId,
-        questCycleId,
+        questCycleId: proposedQuestCycleId,
         commandId: `approve-${this.nextId()}`,
         correlationId: staged.batchId,
         expectedRevision: proposed.receipt.state.session.revision,
