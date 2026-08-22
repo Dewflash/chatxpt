@@ -22,6 +22,8 @@ Before starting a pass, read in this order:
 
 `INTEGRATED-PRODUCT-COMPLETION-PLAN.md` records the D-083/D-085 completion bar, owner-reviewed snapshot gate, complete unavailable-capability inventory, and the cross-role vertical slices that turn the current partial surfaces and disconnected runtime seams into one owner-testable streamer product. It supersedes older runtime-first sequencing only where D-085 says so; all role boundaries, privacy/safety rules, exact-three authority, and real-input evidence requirements remain.
 
+`APP_STATE_SINGLE_SOURCE_OF_TRUTH.md` records the required final hardening pass for consistent health, readiness, freshness, fallback, and revision display across Studio, viewers, fallbacks, and OBS after the remaining feature branches are reconciled.
+
 ## Responsibility for the plans
 
 - Role 1 defines required phases, order, outcomes, deadlines, acceptance criteria, and integration boundaries for Roles 1-3.
