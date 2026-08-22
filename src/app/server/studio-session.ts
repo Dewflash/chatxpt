@@ -459,7 +459,8 @@ export class StudioSessionApplication {
 
   async read(cookieGrant: string | null, authorizationHeader: string | null): Promise<StudioSurfaceState> {
     const authorized = await this.authorize(cookieGrant, authorizationHeader);
-    return this.surfaceState(authorized.state, authorized.twitchVerified);
+    const state = await this.dependencies.runtime.advanceQuestLifecycleIfDue(authorized.state);
+    return this.surfaceState(state, authorized.twitchVerified);
   }
 
   async presence(

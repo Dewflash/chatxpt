@@ -10,8 +10,10 @@ import {
   domainErrorSchema,
   intelligenceSnapshotSchema,
   resolveEffectiveStreamerProfile,
+  serviceHealthSchema,
   systemIntelligenceCommandSchema,
   systemLiveDirectorContextCommandSchema,
+  systemQuestTickCommandSchema,
   type CandidateProvider,
   type AuthoritativeSessionState,
   type DirectorCueLifecycle,
@@ -80,6 +82,14 @@ type EligibleCycleProposalResult =
   | OrchestratorResult
   | { readonly ok: true; readonly outcome: "not-eligible" };
 
+const terminalQuestStatuses = new Set([
+  "succeeded",
+  "failed",
+  "cancelled",
+  "skipped",
+  "expired",
+]);
+
 /** Shared production composition root for persistence and the sole command orchestrator. */
 export class ChatXptServerRuntime {
   readonly persistence: ConfiguredPersistenceRuntime;
@@ -130,6 +140,85 @@ export class ChatXptServerRuntime {
         this.persistence,
       ),
     ).execute(command);
+  }
+
+  /**
+   * Advances an elapsed active/terminal/cooldown quest through Role 3's
+   * authoritative tick command. Read surfaces call this before projection so
+   * a process-local runtime cannot strand a completed cycle indefinitely.
+   */
+  async advanceQuestLifecycleIfDue(
+    inputState: AuthoritativeSessionState,
+  ): Promise<AuthoritativeSessionState> {
+    let state = inputState;
+    const actor: VerifiedCommandActor = {
+      kind: "system",
+      actorId: "role1-quest-lifecycle-scheduler",
+      expiresAt: null,
+      moderatorForBroadcasterIds: [],
+      voterKey: null,
+      participationModes: [],
+    };
+    const projectionContext: ProjectionContextResolver = {
+      resolve: () => ({
+        participationMode: "unavailable",
+        viewerId: null,
+        sessionPoints: 0,
+        acceptedCandidateId: null,
+        connection: serviceHealthSchema.parse({
+          service: "realtime",
+          status: "ready",
+          checkedAt: this.clock.now(),
+          message: "Authoritative quest lifecycle advanced",
+          retryable: false,
+        }),
+      }),
+    };
+
+    // Gameplay capture may advance the session revision while the tick is in
+    // flight. Rebase against the newest state without weakening idempotency.
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const now = this.clock.now();
+      const cycle = state.questCycle;
+      const questCycleId = cycle.envelope.questCycleId;
+      const due =
+        questCycleId !== null &&
+        ((cycle.status === "active" && cycle.endsAt !== null && cycle.endsAt <= now) ||
+          terminalQuestStatuses.has(cycle.status) ||
+          (cycle.status === "cooldown" && cycle.endsAt !== null && cycle.endsAt <= now));
+      if (!due || questCycleId === null) return state;
+
+      const commandId = stableRuntimeCommandId("quest-lifecycle-tick", [
+        state.session.sessionId,
+        questCycleId,
+        state.session.revision,
+        cycle.status,
+        cycle.startsAt ?? "none",
+        cycle.endsAt ?? "none",
+        cycle.result?.occurredAt ?? "none",
+      ]);
+      const result = await this.execute(
+        systemQuestTickCommandSchema.parse({
+          contractVersion: CONTRACT_VERSION,
+          sessionId: state.session.sessionId,
+          questCycleId,
+          commandId,
+          correlationId: cycle.envelope.correlationId,
+          expectedRevision: state.session.revision,
+          issuedAt: now,
+          actor: { kind: "system", actorId: actor.actorId },
+          type: "system.quest-tick",
+        }),
+        actor,
+        projectionContext,
+      );
+      if (result.ok) return result.receipt.state;
+      if (result.error.code !== "stale-revision") return state;
+      const latest = await this.persistence.sessions.load(state.session.sessionId);
+      if (latest === null) return state;
+      state = latest;
+    }
+    return state;
   }
 
   async requestLiveDirectorContextRefresh(
