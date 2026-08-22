@@ -32,12 +32,20 @@ const pageLabels: Readonly<Record<StudioProductPage, string>> = {
 
 const requiredPageSections: Readonly<Record<StudioProductPage, readonly string[]>> = {
   home: ["Stream engagement", "Live Quests", "Chat Analytics", "Live surfaces", "Viewer Voting", "Broadcast Overlay"],
-  gameplay: ["Overview", "Game Capture", "Understanding", "Health &amp; Recovery"],
-  "live-analytics": ["Overview", "Activity", "Topics", "Session History"],
+  gameplay: ["Overview", "Stream Capture", "Capture Stats", "Facts", "Session Readiness"],
+  "live-analytics": ["Stats", "Chat Activity", "Participation"],
   "live-quests": ["Quest Status", "Recommendations", "Why", "Voting", "Results"],
-  profile: ["Personality", "Stream Presets", "Community", "Safety &amp; Accessibility"],
+  profile: ["Personality", "Desktop Director", "Stream Presets", "Community", "Safety &amp; Accessibility"],
   "stream-settings": ["Saved Source", "Session Override", "Reset to Saved"],
   "test-lab": ["Clean Start Reset", "Sample / Live Source", "Capture Controls", "Observed / Unknown", "Recovery"],
+};
+
+const sectionNavigation: Readonly<Partial<Record<StudioProductPage, readonly string[]>>> = {
+  gameplay: ["overview", "stream-capture", "capture-stats", "facts", "session-readiness"],
+  "live-analytics": ["stats", "chat-activity", "participation"],
+  "live-quests": ["quest-status", "recommendations", "voting", "results"],
+  profile: ["personality", "desktop-director", "stream-presets", "community", "safety-accessibility"],
+  "stream-settings": ["saved-source", "session-override", "reset-to-saved"],
 };
 
 function twitchVerifiedReadiness() {
@@ -614,6 +622,13 @@ describe("StudioProductPageSurface", () => {
 
     for (const section of requiredPageSections[page]) {
       expect(html).toContain(section);
+    }
+
+    for (const target of sectionNavigation[page] ?? []) {
+      expect(html).toContain(`href="#${target}"`);
+      if (page !== "gameplay") {
+        expect(html).toContain(`id="${target}"`);
+      }
     }
   });
 

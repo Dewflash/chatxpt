@@ -15,6 +15,7 @@ describe("StudioGameplayCaptureClient recovery navigation", () => {
     const html = renderToStaticMarkup(h(StudioGameplayCaptureClient));
 
     expect(html).toContain("Live Detector Proof");
+    expect(html).toContain('id="overview"');
     expect(html).toContain("Generic profile");
     expect(html).toContain('id="proof-condition"');
     expect(html).toContain('id="proof-activity"');
@@ -27,6 +28,7 @@ describe("StudioGameplayCaptureClient recovery navigation", () => {
     expect(html).not.toContain("Planned reads");
     expect(html).not.toContain("Coming soon");
     expect(html).toContain("Stream Capture");
+    expect(html).toContain('id="stream-capture"');
     expect(html).toContain("Stream Capture instructions");
     expect(html).toContain('role="tooltip"');
     expect(html).toContain("Select the matching game profile.");
@@ -46,6 +48,7 @@ describe("StudioGameplayCaptureClient recovery navigation", () => {
     expect(html.indexOf("Game profile")).toBeLessThan(html.indexOf("Select Screen or Window"));
     expect(html.indexOf("Live Detector Proof")).toBeLessThan(html.indexOf("Stream Capture"));
     expect(html).toContain("Capture Stats");
+    expect(html).toContain('id="capture-stats"');
     expect(html.indexOf("Stream Capture")).toBeLessThan(html.indexOf("Capture Stats"));
     expect(html).toContain('id="capture-stats-connection"');
     expect(html).toContain('id="capture-stats-processing"');

@@ -155,10 +155,10 @@ function StudioIcon({ name, className }: { readonly name: StudioIconName; readon
 }
 
 const PAGE_SECTIONS: Readonly<Partial<Record<StudioProductPage, readonly string[]>>> = {
-  gameplay: ["Overview", "Game Capture", "Understanding", "Health & Recovery"],
-  "live-analytics": ["Overview", "Activity", "Topics", "Session History"],
+  gameplay: ["Overview", "Stream Capture", "Capture Stats", "Facts", "Session Readiness"],
+  "live-analytics": ["Stats", "Chat Activity", "Participation"],
   "live-quests": ["Quest Status", "Recommendations", "Voting", "Results"],
-  profile: ["Personality", "Stream Presets", "Community", "Safety & Accessibility"],
+  profile: ["Personality", "Desktop Director", "Stream Presets", "Community", "Safety & Accessibility"],
   "stream-settings": ["Saved Source", "Session Override", "Reset to Saved"],
   "test-lab": ["Clean Start Reset", "Sample / Live Source", "Capture Controls", "Observed / Unknown", "Recovery"],
 };
@@ -1025,7 +1025,7 @@ function LiveAnalyticsPage({ view, readiness }: {
   }
   return (
     <div className={styles.analyticsWorkspace}>
-      <div id="overview" className={styles.analyticsGrid}>
+      <div id="stats" className={styles.analyticsGrid}>
         <article className={styles.analyticsMetric} data-analytics-metric="audience-mood">
           <div className={styles.metricLabel}><StudioIcon name="mood" className={styles.metricIcon} /><small>Audience mood</small></div>
           <strong>{presentation.mood}</strong>
@@ -1053,7 +1053,7 @@ function LiveAnalyticsPage({ view, readiness }: {
       </div>
 
       <div className={styles.analyticsContentGrid}>
-        <article id="activity" className={styles.activityComparison}>
+        <article id="chat-activity" className={styles.activityComparison}>
           <div className={styles.panelHeading}>
             <div><span className={styles.sectionLabel}>Chat activity</span><h2>Current and previous equal windows</h2></div>
             <StatusBadge tone={presentation.tone}>{presentation.badge}</StatusBadge>
@@ -1079,7 +1079,7 @@ function LiveAnalyticsPage({ view, readiness }: {
           <p className={styles.privacyNote}>ChatXPT stores aggregate counts here—not viewer names or raw messages.</p>
         </article>
 
-        <article className={styles.participationPanel}>
+        <article id="participation" className={styles.participationPanel}>
           <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Participation flow</span><h2>How the audience is active now</h2></div><span className={styles.softLabel}>Current session</span></div>
           <div className={styles.flowSummary}>
             <span><b>{typeof newlyActive === "number" ? newlyActive : "—"}</b><small>Newly active</small></span>

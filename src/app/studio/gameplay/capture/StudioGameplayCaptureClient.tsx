@@ -894,7 +894,7 @@ export function StudioGameplayCaptureClient() {
         {sessionError !== null ? <p className={styles.error} role="alert">{sessionError}</p> : null}
         {error !== null ? <p className={styles.error} role="alert">{error}</p> : null}
 
-        <section className={styles.proofPanel} aria-live="polite" aria-labelledby="proof-heading">
+        <section id="overview" className={styles.proofPanel} aria-live="polite" aria-labelledby="proof-heading">
           <div className={styles.proofHeading}>
             <div>
               <p className={styles.eyebrow}>{captureGameLabel(game)} profile</p>
@@ -952,7 +952,7 @@ export function StudioGameplayCaptureClient() {
           ) : null}
         </section>
 
-        <section className={styles.panel} aria-labelledby="setup-heading">
+        <section id="stream-capture" className={styles.panel} aria-labelledby="setup-heading">
         <div className={styles.setupHeading}>
           <h2 id="setup-heading">Stream Capture</h2>
           <div className={styles.captureInfo}>
@@ -1046,7 +1046,7 @@ export function StudioGameplayCaptureClient() {
         </p>
         </section>
 
-        <section className={`${styles.panel} ${styles.statsPanel}`} aria-live="polite" aria-labelledby="capture-stats-heading">
+        <section id="capture-stats" className={`${styles.panel} ${styles.statsPanel}`} aria-live="polite" aria-labelledby="capture-stats-heading">
           <h2 id="capture-stats-heading">Capture Stats</h2>
           <div className={styles.statsColumns}>
             {captureStatsColumns.map((column) => (
@@ -1067,7 +1067,7 @@ export function StudioGameplayCaptureClient() {
 
         {previewConnected ? (
           <>
-        <section className={styles.panel}>
+        <section id="facts" className={styles.panel}>
         <h2>Observed and unknown facts</h2>
         <p>
           {latest === null
@@ -1082,7 +1082,7 @@ export function StudioGameplayCaptureClient() {
         </details>
         </section>
 
-        <section className={styles.panel}>
+        <section id="session-readiness" className={styles.panel}>
         <h2>Session readiness</h2>
         <p>{customerSafeLabel(readiness?.label, "Readiness has not loaded yet.")}</p>
         <p>
