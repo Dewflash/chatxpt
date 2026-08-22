@@ -17,6 +17,16 @@ const pages: readonly StudioProductPage[] = [
   "test-lab",
 ];
 
+const pageLabels: Readonly<Record<StudioProductPage, string>> = {
+  home: "Home",
+  gameplay: "Gameplay Engine",
+  "live-analytics": "Live Analytics",
+  "live-quests": "Live Quests",
+  profile: "Profile &amp; Defaults",
+  "stream-settings": "Stream Settings",
+  "test-lab": "Test Lab",
+};
+
 const requiredPageSections: Readonly<Record<StudioProductPage, readonly string[]>> = {
   home: ["Stream engagement", "Live Quests", "Chat Analytics", "Live surfaces", "Viewer Voting", "Broadcast Overlay"],
   gameplay: ["Overview", "Game Capture", "Understanding", "Health &amp; Recovery"],
@@ -44,8 +54,8 @@ describe("StudioProductPageSurface", () => {
       readiness,
     }));
 
-    expect(html).toContain("ChatXPT");
-    expect(html).toContain("<h1>Get ChatXPT ready for this stream</h1>");
+    expect(html).toContain("<strong>ChatXPT</strong><span>Streamer Studio</span>");
+    expect(html).toContain("<strong>ChatXPT</strong><h1>Home</h1>");
     expect(html).toContain("Account");
     expect(html).toContain("Twitch");
     expect(html).toContain("Game Capture");
@@ -100,10 +110,27 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("Disconnected");
     expect(html).toContain("Game Capture");
     expect(html).toContain("None");
+    expect(html).toContain(`<strong>ChatXPT</strong><h1>${pageLabels[page]}</h1>`);
     expect(html).not.toContain("Not live workflow evidence");
     expect(html).not.toContain("revision label");
     expect(html).not.toContain("Open diagnostics");
     expect(html).not.toContain("scheduled for");
+  });
+
+  it("places the shared account header and divider before page section controls", () => {
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-analytics",
+      view: createFixtureUiGatewaySnapshot().views.streamer,
+      readiness: twitchVerifiedReadiness(),
+    }));
+    const pageHeader = html.indexOf("<h1>Live Analytics</h1>");
+    const account = html.indexOf(">Account<");
+    const sectionControls = html.indexOf('aria-label="Live Analytics sections"');
+
+    expect(pageHeader).toBeGreaterThan(-1);
+    expect(account).toBeGreaterThan(pageHeader);
+    expect(sectionControls).toBeGreaterThan(account);
+    expect(html).not.toContain("Understand audience activity during this stream.");
   });
 
   it("renders an active Twitch OAuth link before the Studio session exists", () => {

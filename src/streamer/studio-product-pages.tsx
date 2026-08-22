@@ -89,44 +89,6 @@ const NAV_ITEMS: readonly { readonly page: StudioProductPage; readonly href: str
   { page: "test-lab", href: "/studio/test-lab", label: "Test Lab", icon: "lab" },
 ];
 
-const PAGE_COPY: Readonly<Record<StudioProductPage, { readonly eyebrow: string; readonly title: string; readonly body: string }>> = {
-  home: {
-    eyebrow: "Current Stream",
-    title: "Get ChatXPT ready for this stream",
-    body: "Connect Twitch, Game Capture, viewer participation, and broadcast output from one place.",
-  },
-  gameplay: {
-    eyebrow: "Gameplay Engine",
-    title: "What ChatXPT can see",
-    body: "Inspect capture health, supported game facts, confidence, unknowns, and recovery actions.",
-  },
-  "live-analytics": {
-    eyebrow: "Audience health",
-    title: "Live Analytics",
-    body: "Understand audience activity during this stream.",
-  },
-  "live-quests": {
-    eyebrow: "Live Quests",
-    title: "Sidequests waiting for approval",
-    body: "Review recommendations, understand why they fit, and keep voting and result state in one trusted flow.",
-  },
-  profile: {
-    eyebrow: "Profile & Defaults",
-    title: "Settings that return next stream",
-    body: "Manage personality, safety, game preferences, accessibility, voting, rewards, and stream presets.",
-  },
-  "stream-settings": {
-    eyebrow: "Stream Settings",
-    title: "Effective settings for right now",
-    body: "See whether the current stream follows saved defaults or a temporary override.",
-  },
-  "test-lab": {
-    eyebrow: "Test Lab",
-    title: "Check gameplay inputs",
-    body: "Use approved sample or live capture checks without confusing samples with the active stream.",
-  },
-};
-
 function StudioIcon({ name, className }: { readonly name: StudioIconName; readonly className?: string }) {
   let drawing: ReactNode = null;
   switch (name) {
@@ -1689,7 +1651,6 @@ export function StudioProductPageSurface({
   children,
 }: StudioProductPageSurfaceProps) {
   const pageLabel = studioPageLabel(page);
-  const copy = PAGE_COPY[page];
   const pending = pendingCommandId !== null;
   const activeProfile = view?.profile ?? localProfile;
   const profileConnection = view?.profileConnection;
@@ -1718,6 +1679,10 @@ export function StudioProductPageSurface({
   return (
     <DesignSystemRoot className={styles.surface}>
       <aside className={styles.sidebar} aria-label="Studio navigation">
+        <div className={styles.sidebarIdentity} aria-label="ChatXPT Streamer Studio">
+          <strong>ChatXPT</strong>
+          <span>Streamer Studio</span>
+        </div>
         <nav className={styles.nav}>
           {NAV_ITEMS.map((item) => (
             <a
@@ -1738,11 +1703,10 @@ export function StudioProductPageSurface({
         ) : null}
       </aside>
       <main className={`${styles.main} ${page === "live-analytics" ? styles.analyticsMain : ""}`}>
-        <section className={styles.hero}>
-          <div>
-            <p className={styles.muted}>{copy.eyebrow}</p>
-            <h1>{copy.title}</h1>
-            <p>{copy.body}</p>
+        <section className={styles.studioHeader}>
+          <div className={styles.pageIdentity}>
+            <strong>ChatXPT</strong>
+            <h1>{pageLabel}</h1>
           </div>
           <div className={styles.accountSummary}>
             <span>Account</span>
