@@ -72,7 +72,9 @@ All cross-role calls use the public ports and canonical envelopes in `docs/build
 
 Supabase Free is the accepted authoritative MVP store/realtime layer. The Role 1 foundation uses relational session identity, lifecycle, uniqueness, revision, and foreign-key constraints around versioned JSONB canonical payloads. It stores profiles, sessions, quest cycles/candidate batches, accepted command receipts, accepted participation facts, quest events, lifecycle operations, short-lived realtime access grants, and role-sanitised reconnect snapshots. Raw chat is not stored by this foundation.
 
-State changes use command IDs, expected/current revisions, server timestamps, typed errors, atomic persistence before broadcast, and reconnect snapshots. Realtime notifications do not replace the persisted source of truth.
+Verified Twitch provider subjects resolve server-side to private internal accounts and one persisted streamer profile. New sessions load that complete profile before bootstrap. `StreamerProfile.gameId/gameName` remain saved next-stream defaults, while `StreamSession.currentGame` is the current Twitch or streamer-selected capture context used by extraction, AI, quest generation, and live UI. Ordinary profile editing cannot silently replace the active session game. Verified Twitch category changes and Generic capture update only the current stream; calibrated capture choices may explicitly update both. Every current-game change passes through the quest engine, clears incompatible gameplay/director context, and cancels an in-flight quest before switching games.
+
+State changes use command IDs, expected/current revisions, server timestamps, typed errors, atomic persistence before broadcast, and reconnect snapshots. Full profile replacement additionally requires the expected profile revision so a session-revision retry cannot overwrite a newer profile. Realtime notifications do not replace the persisted source of truth.
 
 Only ChatXPT's server key may write product tables or call state-changing RPCs. Browser, Twitch Extension, and OBS clients submit commands through Role 1 services; they never write authoritative Supabase rows. All exposed tables have RLS enabled and direct `anon`/`authenticated` table privileges revoked.
 
@@ -80,7 +82,7 @@ The database persists a general viewer snapshot with viewer identity, personal p
 
 One broadcaster may have one preparing/live ChatXPT session. Preparing sessions expire after two inactive hours. Live duration has no fixed maximum while broadcaster heartbeats continue; a disconnect starts one non-extending ten-minute reconnect grace, which a returning heartbeat clears. Manual end, confirmed Twitch offline, or grace expiry closes access without deleting session history.
 
-Credential-free local work uses the same application ports with in-memory state and permissions. This is a functional developer fallback, not shared-cloud or multi-browser evidence. Vercel hosting and the real Supabase Free project activation remain separately evidenced deployment work.
+Credential-free local work uses the same application ports with in-memory state and permissions. The established browser-local fallback stores one validated, size-bounded profile/preset envelope on that device; it does not authenticate Twitch, authorise server commands, or grant Supabase/history access. These are functional developer and recovery fallbacks, not shared-cloud or multi-browser evidence. Vercel hosting and the real Supabase Free project activation remain separately evidenced deployment work.
 
 All viewer clients use one private participation service. The Twitch Extension uses a verified Twitch JWT, the hosted board uses a signed HttpOnly anonymous grant, and EventSub chat messages are HMAC-verified then pseudonymized before exact `1`/`2`/`3` votes enter the same ledger. No UI or adapter owns authoritative vote, lifecycle, scoring, or reward rules.
 

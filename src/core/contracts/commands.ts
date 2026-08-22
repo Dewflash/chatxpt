@@ -11,6 +11,7 @@ import {
 import { streamerQuestActionSchema } from "./quests";
 import { participationSourceModeSchema } from "./participation";
 import { streamPresetSchema } from "./profile";
+import { streamSessionGameSchema } from "./session";
 import {
   audienceSnapshotSchema,
   directorCueActionSchema,
@@ -160,8 +161,12 @@ export const streamerProfileSettingsCommandSchema = z
     ...commandEnvelopeFields,
     questCycleId: z.null(),
     type: z.literal("streamer.profile-settings"),
+    // Optional while parsing stored pre-migration receipts. The orchestrator
+    // requires this value for every new profile write.
+    expectedProfileRevision: revisionSchema.optional(),
     experiencePatch: z.record(z.string().trim().min(1).max(80), z.number().min(0).max(1)).default({}),
     game: streamerGameProfilePatchSchema.optional(),
+    gameApplication: z.enum(["saved-only", "saved-and-current"]).default("saved-only"),
     restrictions: profileRestrictionListPatchSchema.optional(),
     preferredQuestTypes: profileQuestTypeListPatchSchema.optional(),
     forbiddenQuestTypes: profileQuestTypeListPatchSchema.optional(),
@@ -207,7 +212,32 @@ export const streamerProfileSettingsCommandSchema = z
         path: ["experiencePatch"],
       });
     }
+    if (command.gameApplication === "saved-and-current" && command.game === undefined) {
+      context.addIssue({
+        code: "custom",
+        message: "Applying a game to the current session requires a game setting",
+        path: ["gameApplication"],
+      });
+    }
   });
+
+export const streamerCurrentGameCommandSchema = z
+  .object({
+    ...commandEnvelopeFields,
+    questCycleId: identifierSchema,
+    type: z.literal("streamer.current-game"),
+    game: streamSessionGameSchema.omit({ source: true }),
+  })
+  .strict();
+
+export const systemCurrentGameCommandSchema = z
+  .object({
+    ...commandEnvelopeFields,
+    questCycleId: identifierSchema,
+    type: z.literal("system.current-game"),
+    game: streamSessionGameSchema.omit({ source: true }),
+  })
+  .strict();
 
 export const streamerSessionOverrideCommandSchema = z
   .object({
@@ -360,6 +390,8 @@ export const commandEnvelopeSchema = z
     systemQuestProgressCommandSchema,
     streamerEmergencyClearCommandSchema,
     streamerProfileSettingsCommandSchema,
+    streamerCurrentGameCommandSchema,
+    systemCurrentGameCommandSchema,
     streamerSessionOverrideCommandSchema,
     streamerLiveDirectorIntentCommandSchema,
     systemAudienceSnapshotCommandSchema,
@@ -381,6 +413,8 @@ export const commandEnvelopeSchema = z
       "system.quest-progress": ["system"],
       "streamer.emergency-clear": ["broadcaster", "moderator"],
       "streamer.profile-settings": ["broadcaster"],
+      "streamer.current-game": ["broadcaster"],
+      "system.current-game": ["system"],
       "streamer.session-override": ["broadcaster"],
       "streamer.live-director-intent": ["broadcaster"],
       "system.audience-snapshot-ready": ["system"],
@@ -412,6 +446,8 @@ export type StreamerQuestProgressCommand = z.infer<typeof streamerQuestProgressC
 export type SystemQuestProgressCommand = z.infer<typeof systemQuestProgressCommandSchema>;
 export type StreamerEmergencyClearCommand = z.infer<typeof streamerEmergencyClearCommandSchema>;
 export type StreamerProfileSettingsCommand = z.infer<typeof streamerProfileSettingsCommandSchema>;
+export type StreamerCurrentGameCommand = z.infer<typeof streamerCurrentGameCommandSchema>;
+export type SystemCurrentGameCommand = z.infer<typeof systemCurrentGameCommandSchema>;
 export type StreamerSessionOverrideCommand = z.infer<typeof streamerSessionOverrideCommandSchema>;
 export type StreamerLiveDirectorIntentCommand = z.infer<
   typeof streamerLiveDirectorIntentCommandSchema

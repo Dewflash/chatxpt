@@ -14,6 +14,8 @@ import {
 import { contractFixtureStreamerView } from "../core/testing";
 import {
   buildEmergencyClearCommand,
+  buildCurrentGameProfileSettingsCommand,
+  buildCurrentStreamGameCommand,
   buildLiveDirectorCueCommand,
   buildLiveDirectorIntentCommand,
   buildProfileSettingsCommand,
@@ -58,8 +60,10 @@ describe("Role 4 streamer command builders", () => {
       commandId: "test-profile-settings",
       correlationId: "test-profile-settings",
       expectedRevision: contractFixtureStreamerView.envelope.revision,
+      expectedProfileRevision: contractFixtureStreamerView.profile.revision,
       actor: { kind: "broadcaster", actorId: contractFixtureStreamerView.profile.streamerId },
       questCycleId: null,
+      gameApplication: "saved-only",
       game: { gameId: "minecraft", gameName: "Minecraft Java Edition" },
       experiencePatch: { intensity: 0.8 },
       restrictions: expect.arrayContaining(["No elytra challenges"]),
@@ -70,6 +74,43 @@ describe("Role 4 streamer command builders", () => {
       selectedPresetId: "competitive",
       voting: { voteVisibility: "hidden-until-close" },
       rewards: { rewardDisplay: "session-points" },
+    });
+  });
+
+  it("builds a current-stream-only game command without a saved profile patch", () => {
+    const command = buildCurrentStreamGameCommand(
+      contractFixtureStreamerView,
+      { gameId: "generic", gameName: "Current Game" },
+      factory,
+    );
+
+    expect(commandEnvelopeSchema.safeParse(command).success).toBe(true);
+    expect(command).toMatchObject({
+      type: "streamer.current-game",
+      commandId: "test-current-game",
+      questCycleId: contractFixtureStreamerView.questCycle.envelope.questCycleId,
+      game: { gameId: "generic", gameName: "Current Game" },
+    });
+    expect(command).not.toHaveProperty("expectedProfileRevision");
+  });
+
+  it("marks Gameplay Capture game changes as saved and current-session settings", () => {
+    const draft = {
+      ...editableDefaultsFromView(contractFixtureStreamerView),
+      gameId: "minecraft",
+      gameName: "Minecraft Java Edition",
+    };
+
+    const command = buildCurrentGameProfileSettingsCommand(
+      contractFixtureStreamerView,
+      draft,
+      factory,
+    );
+
+    expect(command).toMatchObject({
+      type: "streamer.profile-settings",
+      game: { gameId: "minecraft", gameName: "Minecraft Java Edition" },
+      gameApplication: "saved-and-current",
     });
   });
 

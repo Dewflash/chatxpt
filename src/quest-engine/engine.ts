@@ -742,6 +742,36 @@ function transitionVote(input: QuestEngineInput): QuestEngineResult {
   ]);
 }
 
+function transitionCurrentGame(input: QuestEngineInput): QuestEngineResult {
+  if (input.command.type !== "streamer.current-game" && input.command.type !== "system.current-game") {
+    return error("internal", "Current-game transition received another command type");
+  }
+  const source = input.command.type === "system.current-game" ? "twitch" : "streamer";
+  const transition = ["proposed", "voting", "active"].includes(input.currentState.status)
+    ? terminalTransition(
+        input,
+        "cancelled",
+        "The current stream game changed, so the previous quest cycle was cancelled.",
+        "quest-cycle.game-change-cancelled",
+        { gameId: input.command.game.gameId, source },
+      )
+    : accept(input.currentState, {}, []);
+  if (!transition.ok) return transition;
+  return {
+    ok: true,
+    decision: {
+      ...transition.decision,
+      events: [
+        ...transition.decision.events,
+        event("session.current-game-updated", {
+          gameId: input.command.game.gameId,
+          source,
+        }),
+      ],
+    },
+  };
+}
+
 export class DefaultQuestEngine implements QuestEngine {
   decide(input: QuestEngineInput): QuestEngineResult {
     const boundaryError = validateBoundary(input);
@@ -774,6 +804,9 @@ export class DefaultQuestEngine implements QuestEngine {
         return error("unavailable-capability", "Emergency clear is handled by the Role 1 latch");
       case "streamer.profile-settings":
         return error("unavailable-capability", "Profile settings are handled by the Role 1 state seam");
+      case "streamer.current-game":
+      case "system.current-game":
+        return transitionCurrentGame(input);
       case "streamer.session-override":
         return error("unavailable-capability", "Session overrides are handled by the Role 1 state seam");
       case "streamer.live-director-intent":

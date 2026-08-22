@@ -12,6 +12,7 @@ import {
   gameplaySnapshotSchema,
   overlayViewModelSchema,
   serviceHealthSchema,
+  streamerProfileSchema,
   streamerViewModelSchema,
   viewerRecoveryStateSchema,
   viewerViewModelSchema,
@@ -30,6 +31,7 @@ import {
   type IngestGameplaySnapshotResult,
   type RoleViewModels,
   type ServiceHealth,
+  type StreamerProfile,
   type ViewerRecoveryReadInput,
   type ViewerRecoveryReader,
   type ViewerRecoveryState,
@@ -58,8 +60,12 @@ import {
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,
+  type StreamerProfileRecord,
+  type StreamerProfileRepository,
+  type StreamerProfileResolution,
   type TwitchChannelSessionDirectory,
   type TwitchChannelSessionRecord,
+  type VerifiedStreamerIdentity,
 } from "./types";
 import { sanitizeRoleViewsForBroadcast } from "./sanitization";
 import { buildSessionHistoryFromReceipts } from "./session-history";
@@ -130,6 +136,23 @@ const obsOverlayConnectionRowSchema = z
     revoked_at: z.iso.datetime({ offset: true }).nullable(),
   })
   .passthrough();
+const streamerProfileRowSchema = z
+  .object({
+    account_id: z.uuid(),
+    profile: streamerProfileSchema,
+    created_at: z.iso.datetime({ offset: true }),
+    updated_at: z.iso.datetime({ offset: true }),
+  })
+  .passthrough();
+const streamerProfileResolutionSchema = z
+  .object({
+    accountId: z.uuid(),
+    profile: streamerProfileSchema,
+    createdAt: z.number().int().nonnegative(),
+    updatedAt: z.number().int().nonnegative(),
+    created: z.boolean(),
+  })
+  .strict();
 
 const lifecycleCommitResultSchema = z.discriminatedUnion("status", [
   z
@@ -214,6 +237,31 @@ function rowJson(row: unknown, key: string): unknown {
 
 export class SupabaseChatXptDataApi {
   constructor(private readonly client: SupabaseClient) {}
+
+  async loadStreamerProfile(streamerId: string): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("streamer_profiles")
+      .select("account_id, profile, created_at, updated_at")
+      .eq("streamer_id", streamerId)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
+  }
+
+  async getOrCreateStreamerProfile(
+    identity: VerifiedStreamerIdentity,
+    defaults: StreamerProfile,
+  ): Promise<unknown> {
+    const { data, error } = await this.client.rpc("get_or_create_streamer_profile", {
+      p_provider: identity.provider,
+      p_provider_subject_id: identity.providerSubjectId,
+      p_display_name: identity.displayName,
+      p_default_profile: defaults,
+      p_verified_at_ms: identity.verifiedAt,
+    });
+    throwIfError(error);
+    return data;
+  }
 
   async loadState(sessionId: string): Promise<unknown | null> {
     const { data, error } = await this.client
@@ -659,6 +707,43 @@ export class SupabaseSessionStateRepository {
   }
 }
 
+export class SupabaseStreamerProfileRepository implements StreamerProfileRepository {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async loadByStreamerId(streamerId: string): Promise<StreamerProfileRecord | null> {
+    const raw = await this.api.loadStreamerProfile(streamerId);
+    if (raw === null) return null;
+    const row = streamerProfileRowSchema.parse(raw);
+    return {
+      accountId: row.account_id,
+      profile: row.profile,
+      createdAt: Date.parse(row.created_at),
+      updatedAt: Date.parse(row.updated_at),
+    };
+  }
+
+  async getOrCreateForVerifiedIdentity(
+    identity: VerifiedStreamerIdentity,
+    defaults: StreamerProfile,
+  ): Promise<StreamerProfileResolution> {
+    return streamerProfileResolutionSchema.parse(
+      await this.api.getOrCreateStreamerProfile(identity, defaults),
+    );
+  }
+
+  async getOrCreateForDiagnostic(
+    defaults: StreamerProfile,
+    at: number,
+  ): Promise<StreamerProfileResolution> {
+    void defaults;
+    void at;
+    throw new PersistenceConflictError(
+      "profile",
+      "Diagnostic sessions cannot read or create cloud streamer profiles",
+    );
+  }
+}
+
 export class SupabaseAcceptedVoteTallyReader implements AcceptedVoteTallyReader {
   constructor(private readonly api: SupabaseChatXptDataApi) {}
 
@@ -1074,6 +1159,7 @@ export function createSupabasePersistenceRuntime(
   probe(checkedAt?: number): Promise<ServiceHealth>;
 } {
   const api = new SupabaseChatXptDataApi(createSupabaseServerClient(environment));
+  const profiles = new SupabaseStreamerProfileRepository(api);
   const sessions = new SupabaseSessionStateRepository(api);
   const acceptedVotes = new SupabaseAcceptedVoteTallyReader(api);
   const gameplaySnapshots = new SupabaseCurrentGameplaySnapshotRepository(api);
@@ -1087,6 +1173,7 @@ export function createSupabasePersistenceRuntime(
   return {
     mode: "supabase",
     api,
+    profiles,
     sessions,
     lifecycle: new SupabaseSessionLifecycleStore(api, sessions),
     hostedBoardSessions,

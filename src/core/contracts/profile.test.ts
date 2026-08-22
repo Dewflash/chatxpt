@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  createDefaultStreamerProfile,
   resolveEffectiveStreamerProfile,
   streamerProfileSchema,
   streamerSessionOverrideSchema,
@@ -45,5 +46,25 @@ describe("stream preset profile contract", () => {
     expect(effective.preferredQuestTypes).toContain("exploration");
     expect(profile.selectedPresetId).toBe("community");
     expect(profile.experience.intensity).toBe(0.5);
+  });
+
+  it("uses one canonical starter profile and keeps current-stream game separate", () => {
+    const defaults = createDefaultStreamerProfile({
+      profileId: "profile-new",
+      streamerId: "streamer-new",
+      displayName: "New Streamer",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    });
+    const effective = resolveEffectiveStreamerProfile(defaults, null, {
+      gameId: "fortnite",
+      gameName: "Fortnite",
+      source: "twitch",
+    });
+
+    expect(defaults.streamPresets).toHaveLength(4);
+    expect(defaults.selectedPresetId).toBe("community");
+    expect(effective.gameName).toBe("Fortnite");
+    expect(defaults.gameName).toBe("Minecraft");
   });
 });

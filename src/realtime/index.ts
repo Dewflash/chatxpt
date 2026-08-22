@@ -73,8 +73,12 @@ export {
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,
+  type StreamerProfileRecord,
+  type StreamerProfileRepository,
+  type StreamerProfileResolution,
   type TwitchChannelSessionDirectory,
   type TwitchChannelSessionRecord,
+  type VerifiedStreamerIdentity,
 } from "./types";
 export type {
   AcceptedCommandReceipt,

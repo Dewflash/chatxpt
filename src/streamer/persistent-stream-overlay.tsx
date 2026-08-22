@@ -11,15 +11,16 @@ import {
   StatusBadge,
   type StatusTone,
 } from "../design-system";
-import type {
-  AudienceSnapshot,
-  DirectorCue,
-  LiveContextFact,
-  LiveContextSourceClass,
-  QuestCandidate,
-  ServiceHealth,
-  StreamerReadinessView,
-  StreamerViewModel,
+import {
+  resolveCurrentStreamGame,
+  type AudienceSnapshot,
+  type DirectorCue,
+  type LiveContextFact,
+  type LiveContextSourceClass,
+  type QuestCandidate,
+  type ServiceHealth,
+  type StreamerReadinessView,
+  type StreamerViewModel,
 } from "../core";
 import { summarizeGameplayHealth } from "./gameplay-health";
 import { summarizeQuestGeneration } from "./quest-generation-health";
@@ -251,7 +252,9 @@ export function PersistentStreamOverlaySurface({
             <div className={styles.titleBlock}>
               <p className={styles.eyebrow}>ChatXPT Stream Context</p>
               <h1 className={styles.title}>
-                {view.profile.gameName ? `${view.profile.gameName} · ` : ""}
+                {resolveCurrentStreamGame(view.profile, view.session.currentGame)?.gameName
+                  ? `${resolveCurrentStreamGame(view.profile, view.session.currentGame)?.gameName} · `
+                  : ""}
                 {view.profile.displayName}
               </h1>
             </div>

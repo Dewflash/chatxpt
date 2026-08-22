@@ -9,12 +9,13 @@ import {
   Progress,
   StatusBadge,
 } from "../design-system";
-import type {
-  AudienceSnapshot,
-  GameplaySnapshot,
-  QuestCandidate,
-  ServiceHealth,
-  StreamerViewModel,
+import {
+  resolveCurrentStreamGame,
+  type AudienceSnapshot,
+  type GameplaySnapshot,
+  type QuestCandidate,
+  type ServiceHealth,
+  type StreamerViewModel,
 } from "../core";
 import styles from "./studio-status.module.css";
 
@@ -207,7 +208,9 @@ export function StudioStatusSurface({ view, compact = false }: StudioStatusSurfa
             <p className={styles.eyebrow}>ChatXPT Studio</p>
             <h1 className={styles.title}>
               {view.profile.displayName}
-              {view.profile.gameName ? ` · ${view.profile.gameName}` : ""}
+              {resolveCurrentStreamGame(view.profile, view.session.currentGame)?.gameName
+                ? ` · ${resolveCurrentStreamGame(view.profile, view.session.currentGame)?.gameName}`
+                : ""}
             </h1>
             <p className={styles.subtitle}>
               Setup status is shown per service so the streamer can see the exact blocker.

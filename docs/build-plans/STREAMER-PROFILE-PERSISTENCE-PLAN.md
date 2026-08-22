@@ -1,6 +1,6 @@
 # Persistent Streamer Profile and Local Fallback Execution Plan
 
-**Status:** Ready for implementation after existing-project verification and remote migration audit
+**Status:** In progress. SPP-01 through SPP-04 are implemented and locally verified; SPP-00 remote audit and SPP-05 real cloud/browser/restart evidence remain open.
 
 **Decision authority:** D-013, D-037 through D-041, D-058, D-061, D-083, D-087, D-089, D-091, and D-092
 
@@ -54,23 +54,20 @@ Already implemented:
 - The Studio profile UI already emits the canonical
   `streamer.profile-settings` command.
 
-Unsafe or incomplete:
+Resolved in the current implementation branch:
 
-- `StudioSessionApplication.startAuthorized` creates a default profile whenever
-  no active session exists; it does not first read `streamer_profiles`.
-- `bootstrap_chatxpt_session` currently upserts that default over an existing
-  broadcaster profile, including revision and profile JSON.
-- `SupabaseChatXptDataApi` has session reads but no profile-by-broadcaster reader.
-- Twitch display/current-game metadata and streamer-owned saved game settings
-  are not cleanly separated during session construction.
-- No internal account/connected-identity ownership anchor exists for later
-  ChatXPT-account linking.
-- The browser stores `chatxpt.local-preview-account.v1`, but it does not currently
-  store a durable versioned preset/profile bundle. Presets in the memory runtime
-  are process-local and do not survive a server restart by themselves.
-- The worktree currently contains unrelated changes in `studio-session.ts`,
-  `streamer-authorized-client.tsx`, and Studio profile/capture files. Preserve
-  and integrate those changes before editing overlaps.
+- `StudioSessionApplication` resolves the verified Twitch profile before session bootstrap.
+- Forward migrations reject destructive profile bootstrap and add internal account/identity ownership.
+- Memory and Supabase runtimes implement the same profile repository contract.
+- Saved default game and current-session game are separate; only Gameplay Capture explicitly applies both.
+- The established local profile uses a validated, versioned, size-bounded browser envelope with explicit cloud conflict handling.
+- Studio exposes account, live-input, and profile-storage health independently.
+
+Still open:
+
+- Link and audit the existing Supabase and Vercel projects without creating replacements.
+- Execute the pgTAP database tests against the linked Supabase project.
+- Capture real Supabase Cloud, Vercel Preview, second-browser, server-restart, and separate-broadcaster evidence required by D-083.
 
 ## Settled behavior
 
@@ -112,8 +109,7 @@ does not enter AI, viewer, or OBS projections.
 
 ## Public and private seams
 
-Likely additions under `src/realtime/types.ts` or an equivalent Role 1 public
-server-only entry:
+Implemented under `src/realtime/types.ts` and the Role 1 server-only entry:
 
 ```ts
 interface VerifiedStreamerIdentity {
@@ -123,12 +119,23 @@ interface VerifiedStreamerIdentity {
   verifiedAt: number;
 }
 
+interface StreamerProfileRecord {
+  accountId: string;
+  profile: StreamerProfile;
+  createdAt: number;
+  updatedAt: number;
+}
+
 interface StreamerProfileRepository {
-  loadByTwitchBroadcasterId(broadcasterId: string): Promise<StreamerProfile | null>;
+  loadByStreamerId(streamerId: string): Promise<StreamerProfileRecord | null>;
   getOrCreateForVerifiedIdentity(
     identity: VerifiedStreamerIdentity,
     defaults: StreamerProfile,
-  ): Promise<{ accountId: string; profile: StreamerProfile; created: boolean }>;
+  ): Promise<StreamerProfileRecord & { created: boolean }>;
+  getOrCreateForDiagnostic(
+    defaults: StreamerProfile,
+    at: number,
+  ): Promise<StreamerProfileRecord & { created: boolean }>;
 }
 ```
 
@@ -145,9 +152,9 @@ responsibilities and dependency direction are fixed:
 
 ### Migration SPP-M01 — profile bootstrap preservation
 
-Likely file:
+Implemented file:
 
-`supabase/migrations/<next>_profile_bootstrap_preservation.sql`
+`supabase/migrations/202608220001_profile_bootstrap_preservation.sql`
 
 Work:
 
@@ -162,9 +169,9 @@ Work:
 
 ### Migration SPP-M02 — internal accounts and connected identities
 
-Likely file:
+Implemented file:
 
-`supabase/migrations/<next>_streamer_accounts_connected_identities.sql`
+`supabase/migrations/202608220002_streamer_accounts_connected_identities.sql`
 
 Add:
 

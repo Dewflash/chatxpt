@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   acceptedCommandReceiptSchema,
   commandFingerprint,
+  createDefaultStreamerProfile,
   streamerQuestCommandSchema,
   viewerViewModelSchema,
   type CommitAuthoritativeStateInput,
@@ -28,6 +29,7 @@ import {
   SupabaseRoleSnapshotPublisher,
   SupabaseSessionHistoryReader,
   SupabaseSessionStateRepository,
+  SupabaseStreamerProfileRepository,
   SupabaseTwitchChannelSessionDirectory,
   SupabaseViewerRecoveryReader,
 } from "../../src/realtime/server";
@@ -48,6 +50,8 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
     snapshot: contractFixtureGameplaySnapshot,
   };
   currentGameplaySnapshot: unknown | null = contractFixtureGameplaySnapshot;
+  streamerProfileRow: unknown | null = null;
+  streamerProfileResolution: unknown = null;
 
   constructor() {
     super({} as SupabaseClient);
@@ -100,6 +104,14 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
   override async loadCurrentGameplaySnapshot(): Promise<unknown | null> {
     return this.currentGameplaySnapshot;
   }
+
+  override async loadStreamerProfile(): Promise<unknown | null> {
+    return this.streamerProfileRow;
+  }
+
+  override async getOrCreateStreamerProfile(): Promise<unknown> {
+    return this.streamerProfileResolution;
+  }
 }
 
 class VoteConflictDataApi extends RecordingDataApi {
@@ -114,6 +126,42 @@ class VoteConflictDataApi extends RecordingDataApi {
 }
 
 describe("Supabase production adapters", () => {
+  it("parses saved profiles and verified identity get-or-create results", async () => {
+    const api = new RecordingDataApi();
+    const profile = createDefaultStreamerProfile({
+      profileId: "profile-twitch-owner",
+      streamerId: "twitch-owner",
+      displayName: "Twitch Owner",
+    });
+    api.streamerProfileRow = {
+      account_id: "00000000-0000-4000-8000-000000000001",
+      profile,
+      created_at: "2026-08-22T00:00:00.000Z",
+      updated_at: "2026-08-22T00:01:00.000Z",
+    };
+    api.streamerProfileResolution = {
+      accountId: "00000000-0000-4000-8000-000000000001",
+      profile,
+      createdAt: Date.parse("2026-08-22T00:00:00.000Z"),
+      updatedAt: Date.parse("2026-08-22T00:01:00.000Z"),
+      created: false,
+    };
+    const repository = new SupabaseStreamerProfileRepository(api);
+
+    await expect(repository.loadByStreamerId("twitch-owner")).resolves.toMatchObject({
+      profile: { streamerId: "twitch-owner" },
+      updatedAt: Date.parse("2026-08-22T00:01:00.000Z"),
+    });
+    await expect(repository.getOrCreateForVerifiedIdentity({
+      provider: "twitch",
+      providerSubjectId: "twitch-owner",
+      displayName: "Twitch Owner",
+      verifiedAt: 1_000,
+    }, profile)).resolves.toMatchObject({ created: false, profile });
+    await expect(repository.getOrCreateForDiagnostic(profile, 1_000))
+      .rejects.toMatchObject({ kind: "profile" });
+  });
+
   it("validates and authority-filters the current gameplay snapshot boundary", async () => {
     const api = new RecordingDataApi();
     const repository = new SupabaseCurrentGameplaySnapshotRepository(api);

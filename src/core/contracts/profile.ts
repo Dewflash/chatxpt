@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { identifierSchema, revisionSchema } from "./common";
+import type { StreamSessionGame } from "./session";
 
 const boundedExperienceValueSchema = z.number().min(0).max(1);
 
@@ -182,6 +183,34 @@ export type StreamerRewardPreferences = z.infer<typeof streamerRewardPreferences
 export type StreamPreset = z.infer<typeof streamPresetSchema>;
 export type StreamerSessionOverride = z.infer<typeof streamerSessionOverrideSchema>;
 
+export interface DefaultStreamerProfileInput {
+  readonly profileId: string;
+  readonly streamerId: string;
+  readonly displayName: string;
+  readonly gameId?: string | null;
+  readonly gameName?: string | null;
+  readonly revision?: number;
+}
+
+/** Creates the one canonical starter profile used by cloud and local recovery. */
+export function createDefaultStreamerProfile(
+  input: DefaultStreamerProfileInput,
+): StreamerProfile {
+  return streamerProfileSchema.parse({
+    profileId: input.profileId,
+    streamerId: input.streamerId,
+    revision: input.revision ?? 0,
+    displayName: input.displayName,
+    gameId: input.gameId ?? null,
+    gameName: input.gameName ?? null,
+    experience: { intensity: 0.5, creativity: 0.5 },
+    restrictions: [],
+    preferredQuestTypes: [],
+    forbiddenQuestTypes: [],
+    accessibilityNeeds: [],
+  });
+}
+
 export function resolveSelectedStreamPreset(
   profile: StreamerProfile,
   override: StreamerSessionOverride | null | undefined = null,
@@ -192,14 +221,29 @@ export function resolveSelectedStreamPreset(
     : profile.streamPresets.find((preset) => preset.presetId === presetId) ?? null;
 }
 
+/** Resolves the game used by live extraction and quest context without mutating saved defaults. */
+export function resolveCurrentStreamGame(
+  profile: StreamerProfile,
+  currentGame: StreamSessionGame | null | undefined,
+): StreamSessionGame | null {
+  if (currentGame !== null && currentGame !== undefined) return currentGame;
+  return profile.gameId !== null && profile.gameName !== null
+    ? { gameId: profile.gameId, gameName: profile.gameName, source: "profile" }
+    : null;
+}
+
 /** Builds the bounded settings context consumed by intelligence and quest policy. */
 export function resolveEffectiveStreamerProfile(
   profile: StreamerProfile,
   override: StreamerSessionOverride | null | undefined = null,
+  currentGame: StreamSessionGame | null | undefined = null,
 ): StreamerProfile {
   const preset = resolveSelectedStreamPreset(profile, override);
+  const game = resolveCurrentStreamGame(profile, currentGame);
   return streamerProfileSchema.parse({
     ...profile,
+    gameId: game?.gameId ?? null,
+    gameName: game?.gameName ?? null,
     selectedPresetId: preset?.presetId ?? profile.selectedPresetId,
     experience: {
       ...profile.experience,

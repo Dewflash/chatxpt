@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 
-import type { StreamerReadinessView, StreamerViewModel } from "@/core";
+import {
+  streamerViewModelSchema,
+  type StreamerReadinessView,
+  type StreamerViewModel,
+} from "@/core";
 import { connectRealtimeSnapshot } from "@/app/realtime-snapshot-client";
 import { StudioGameplayCaptureClient } from "@/app/studio/gameplay/capture/StudioGameplayCaptureClient";
 import {
@@ -13,6 +17,14 @@ import {
   TwitchLiveConfigSurface,
   type StudioProductPage,
   type StreamerUiCommand,
+  acceptLocalFallbackProfile,
+  buildProfileSettingsCommand,
+  cacheCloudProfileForFallback,
+  LOCAL_FALLBACK_ACCOUNT_ID,
+  localProfileCloudStatus,
+  readLocalFallbackProfile,
+  writeLocalFallbackProfile,
+  type LocalFallbackProfileEnvelope,
 } from "@/streamer";
 
 import styles from "./streamer-authorized-client.module.css";
@@ -80,6 +92,24 @@ const GAMEPLAY_CAPTURE_PREFERENCE_KEY = "chatxpt.studio.gameplayCapture.v1";
 const localPreviewAccountRequired = process.env.NEXT_PUBLIC_APP_ENV === "local" ||
   process.env.NEXT_PUBLIC_CHATXPT_PREVIEW_ACCOUNT_ENABLED === "true";
 
+export function mergeStreamerRealtimeView(
+  previous: StreamerViewModel | null,
+  next: StreamerViewModel,
+): StreamerViewModel {
+  if (
+    next.profileConnection !== undefined ||
+    previous?.profileConnection === undefined ||
+    previous.session.sessionId !== next.session.sessionId ||
+    previous.profile.streamerId !== next.profile.streamerId
+  ) {
+    return next;
+  }
+  return streamerViewModelSchema.parse({
+    ...next,
+    profileConnection: previous.profileConnection,
+  });
+}
+
 export function twitchOauthErrorMessage(reason: string | null): string {
   if (reason === "misconfigured") {
     return "Connect Twitch is unavailable because this local ChatXPT server has no registered Twitch application ID and secret. Configure the product-owned Twitch app once, restart ChatXPT, and try again.";
@@ -118,7 +148,7 @@ function readLocalPreviewAccount(): LocalPreviewAccount | null {
       typeof parsed.email !== "string" ||
       typeof parsed.signedInAt !== "number"
     ) return null;
-    return parsed as LocalPreviewAccount;
+    return { ...parsed, id: LOCAL_FALLBACK_ACCOUNT_ID } as LocalPreviewAccount;
   } catch {
     return null;
   }
@@ -151,7 +181,7 @@ export function LocalPreviewAccountGate({
     }
     setAccountError(null);
     onSignIn({
-      id: typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `local-${Date.now()}`,
+      id: LOCAL_FALLBACK_ACCOUNT_ID,
       displayName,
       email,
       signedInAt: Date.now(),
@@ -162,12 +192,13 @@ export function LocalPreviewAccountGate({
     <main className={styles.bootstrap}>
       <section className={styles.bootstrapCard} aria-labelledby="local-account-heading">
         <div>
-          <p className={styles.accountEyebrow}>Demo account preview</p>
-          <h1 id="local-account-heading">Sign in to ChatXPT</h1>
+          <p className={styles.accountEyebrow}>Local recovery</p>
+          <h1 id="local-account-heading">Use local demo account</h1>
         </div>
         <p>
-          This required local fake account previews the future ChatXPT login. It stays in this browser
-          and must be completed before connecting Twitch or entering Studio.
+          This required local fake account previews the future ChatXPT login and unlocks device-only
+          profile defaults and presets. It stays in this browser and must be completed before connecting
+          Twitch or entering Studio; it does not create cloud access or connect Twitch by itself.
         </p>
         {loading ? <p role="status">Checking this browser for a saved ChatXPT account…</p> : (
           <form onSubmit={signIn}>
@@ -183,7 +214,7 @@ export function LocalPreviewAccountGate({
               Password
               <input name="password" type="password" defaultValue="chatxpt-demo" autoComplete="current-password" minLength={8} required />
             </label>
-            <button type="submit">Sign in to ChatXPT</button>
+            <button type="submit">Use local demo account</button>
             <small className={styles.accountNote}>The preview password is not transmitted or stored.</small>
           </form>
         )}
@@ -305,6 +336,8 @@ function StudioCaptureAndOverlaySetup() {
 export function StreamerAuthorizedClient({ surface }: { readonly surface: Surface }) {
   const [localAccountChecked, setLocalAccountChecked] = useState(!localPreviewAccountRequired);
   const [localAccount, setLocalAccount] = useState<LocalPreviewAccount | null>(null);
+  const [localProfileEnvelope, setLocalProfileEnvelope] = useState<LocalFallbackProfileEnvelope | null>(null);
+  const [localProfileDiagnostic, setLocalProfileDiagnostic] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [view, setView] = useState<StreamerViewModel | null>(null);
   const [readiness, setReadiness] = useState<StreamerReadinessView | null>(null);
@@ -316,11 +349,42 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
   const [requiresBootstrap, setRequiresBootstrap] = useState(false);
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const latestToken = useRef<string | null>(null);
+  const applyingLocalProfile = useRef(false);
+
+  const persistLocalProfileEnvelope = useCallback((envelope: LocalFallbackProfileEnvelope) => {
+    try {
+      writeLocalFallbackProfile(window.localStorage, envelope);
+      setLocalProfileEnvelope(envelope);
+      setLocalProfileDiagnostic(null);
+    } catch {
+      setLocalProfileDiagnostic("This browser could not save the local profile. Existing saved data was left unchanged.");
+    }
+  }, []);
+
+  const acceptServerView = useCallback((nextView: StreamerViewModel) => {
+    setView((current) => mergeStreamerRealtimeView(current, nextView));
+    if (
+      localAccount !== null &&
+      localProfileEnvelope !== null &&
+      localProfileEnvelope.pendingPatch === null &&
+      localProfileEnvelope.baseCloudRevision !== nextView.profile.revision
+    ) {
+      persistLocalProfileEnvelope(
+        cacheCloudProfileForFallback(localProfileEnvelope, nextView.profile),
+      );
+    }
+  }, [localAccount, localProfileEnvelope, persistLocalProfileEnvelope]);
 
   useEffect(() => {
     if (!localPreviewAccountRequired) return;
     const account = readLocalPreviewAccount();
     const timer = window.setTimeout(() => {
+      if (account !== null) {
+        window.localStorage.setItem(LOCAL_PREVIEW_ACCOUNT_KEY, JSON.stringify(account));
+        const local = readLocalFallbackProfile(window.localStorage, account.displayName);
+        setLocalProfileEnvelope(local.envelope);
+        setLocalProfileDiagnostic(local.diagnostic);
+      }
       setLocalAccount(account);
       setLocalAccountChecked(true);
     }, 0);
@@ -404,10 +468,10 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
           setRoomCode(null);
           setRequiresBootstrap(true);
         }
-        setError(payload.error?.message ?? "Studio state is unavailable.");
+        setError(localAccount === null ? payload.error?.message ?? "Studio state is unavailable." : null);
         return;
       }
-      setView(payload.view);
+      acceptServerView(payload.view);
       setReadiness(payload.readiness);
       setRoomCode(payload.roomCode ?? null);
       setRequiresBootstrap(false);
@@ -416,7 +480,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       if (caught instanceof DOMException && caught.name === "AbortError") return;
       setError("Reconnecting to the streamer session.");
     }
-  }, [requestHeaders, surface]);
+  }, [acceptServerView, localAccount, requestHeaders, surface]);
 
   useEffect(() => {
     if (
@@ -456,7 +520,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
         return response.ok && payload.ok ? payload.view ?? null : null;
       },
       onSnapshot: (snapshot) => {
-        if (!stopped) setView(snapshot);
+        if (!stopped) acceptServerView(snapshot);
       },
     }).then((release) => {
       if (stopped) void release?.();
@@ -468,7 +532,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       stopped = true;
       void disconnect?.();
     };
-  }, [requestHeaders, token, view?.session.sessionId]);
+  }, [acceptServerView, requestHeaders, token, view?.session.sessionId]);
 
   useEffect(() => {
     if (view?.session.status !== "live") return;
@@ -506,21 +570,31 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
         body: JSON.stringify(command),
       });
       const payload = (await response.json()) as SurfacePayload;
-      if (payload.view !== undefined) setView(payload.view);
+      if (payload.view !== undefined) acceptServerView(payload.view);
       if (payload.readiness !== undefined) setReadiness(payload.readiness);
       if (!response.ok || !payload.ok) {
         setError(payload.error?.message ?? "The Studio action was rejected.");
         if (response.status === 409) await refresh();
         return;
       }
+      if (
+        applyingLocalProfile.current &&
+        payload.view !== undefined &&
+        localProfileEnvelope !== null
+      ) {
+        persistLocalProfileEnvelope(
+          cacheCloudProfileForFallback(localProfileEnvelope, payload.view.profile),
+        );
+      }
       setMessage(payload.message ?? "Studio action completed.");
     } catch {
       setError("The command response was interrupted. Studio is refreshing the latest state.");
       await refresh();
     } finally {
+      applyingLocalProfile.current = false;
       setPendingCommandId(null);
     }
-  }, [refresh, requestHeaders]);
+  }, [acceptServerView, localProfileEnvelope, persistLocalProfileEnvelope, refresh, requestHeaders]);
 
   const resetToCleanStart = useCallback(async (command: StreamerUiCommand | null) => {
     setPendingCommandId(command?.commandId ?? "clean-start-reset");
@@ -564,6 +638,9 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
         onSignIn={(account) => {
           window.localStorage.removeItem(LEGACY_LOCAL_PREVIEW_BYPASS_KEY);
           window.localStorage.setItem(LOCAL_PREVIEW_ACCOUNT_KEY, JSON.stringify(account));
+          const local = readLocalFallbackProfile(window.localStorage, account.displayName);
+          setLocalProfileEnvelope(local.envelope);
+          setLocalProfileDiagnostic(local.diagnostic);
           setLocalAccount(account);
         }}
       />
@@ -594,6 +671,18 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
 
   const commandMessage = oauthError ?? error ?? oauthMessage ?? message;
   if (productPage !== undefined) {
+    const localProfile = localAccount === null ? null : localProfileEnvelope?.profile ?? null;
+    const localSyncState = view === null || localProfileEnvelope === null
+      ? "clean"
+      : localProfileCloudStatus(localProfileEnvelope, view.profile.revision);
+    const connectedView = view;
+    const pendingLocalPatch = localProfileEnvelope?.pendingPatch ?? null;
+    const applyLocalProfile = connectedView !== null && pendingLocalPatch !== null
+      ? () => {
+          applyingLocalProfile.current = true;
+          void dispatchCommand(buildProfileSettingsCommand(connectedView, pendingLocalPatch));
+        }
+      : undefined;
     return (
       <>
         <StudioProductPageSurface
@@ -604,19 +693,38 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
           pendingCommandId={pendingCommandId}
           onCommand={(command) => void dispatchCommand(command)}
           onResetSession={(command) => void resetToCleanStart(command)}
+          localProfile={localProfile}
+          localProfileDiagnostic={localAccount === null ? null : localProfileDiagnostic}
+          localProfileSyncState={localSyncState}
+          onLocalProfileChange={localProfileEnvelope === null ? undefined : (profile) => {
+            try {
+              persistLocalProfileEnvelope(
+                acceptLocalFallbackProfile(localProfileEnvelope, profile),
+              );
+              setMessage("Local profile saved on this device.");
+            } catch {
+              setLocalProfileDiagnostic("The local profile update was rejected and the previous saved version was kept.");
+            }
+          }}
+          onApplyLocalProfile={applyLocalProfile}
+          onKeepCloudProfile={
+            view === null || localProfileEnvelope === null
+              ? undefined
+              : () => persistLocalProfileEnvelope(
+                  cacheCloudProfileForFallback(localProfileEnvelope, view.profile),
+                )
+          }
+          localAccountDisplayName={localAccount?.displayName ?? null}
+          onLocalAccountSignOut={localAccount === null ? undefined : () => {
+            window.localStorage.removeItem(LOCAL_PREVIEW_ACCOUNT_KEY);
+            window.localStorage.removeItem(LEGACY_LOCAL_PREVIEW_BYPASS_KEY);
+            setLocalAccount(null);
+            setLocalProfileEnvelope(null);
+            setLocalProfileDiagnostic(null);
+          }}
         >
           {productPage === "gameplay" ? <StudioGameplayCaptureClient /> : undefined}
         </StudioProductPageSurface>
-        {localPreviewAccountRequired && localAccount !== null ? (
-          <aside className={styles.accountBadge} aria-label="Local ChatXPT account">
-            <span><small>Demo account</small><strong>{localAccount.displayName}</strong></span>
-            <button type="button" onClick={() => {
-              window.localStorage.removeItem(LOCAL_PREVIEW_ACCOUNT_KEY);
-              window.localStorage.removeItem(LEGACY_LOCAL_PREVIEW_BYPASS_KEY);
-              setLocalAccount(null);
-            }}>Sign out</button>
-          </aside>
-        ) : null}
         {productPage === "test-lab" && view !== null
           ? <StudioCaptureAndOverlaySetup />
           : null}

@@ -5,6 +5,7 @@ import {
   canonicalJsonStringify,
   candidateBatchSchema,
   gameplaySnapshotSchema,
+  streamerProfileSchema,
   viewerRecoveryStateSchema,
   type AcceptedCommandReceipt,
   type AcceptedVoteTallyReadInput,
@@ -19,6 +20,7 @@ import {
   type GameplaySnapshot,
   type IngestGameplaySnapshotResult,
   type RoleViewModels,
+  type StreamerProfile,
   type ViewerRecoveryReadInput,
   type ViewerRecoveryReader,
   type ViewerRecoveryState,
@@ -48,8 +50,12 @@ import {
   type SessionPresenceAction,
   type SessionPresenceResult,
   type SnapshotRole,
+  type StreamerProfileRecord,
+  type StreamerProfileRepository,
+  type StreamerProfileResolution,
   type TwitchChannelSessionDirectory,
   type TwitchChannelSessionRecord,
+  type VerifiedStreamerIdentity,
 } from "./types";
 import { sanitizeRoleViewsForBroadcast } from "./sanitization";
 
@@ -79,10 +85,12 @@ export class MemoryChatXptPersistence
     RealtimeAccessGrantStore,
     SessionHistoryReader,
     SessionLifecycleStore,
+    StreamerProfileRepository,
     TwitchChannelSessionDirectory,
     ViewerRecoveryReader
 {
   private readonly states = new Map<string, AuthoritativeSessionState>();
+  private readonly profiles = new Map<string, StreamerProfileRecord>();
   private readonly receipts = new Map<string, AcceptedCommandReceipt>();
   private readonly batches = new Map<string, CandidateBatch>();
   private readonly gameplaySnapshots = new Map<string, GameplaySnapshot>();
@@ -131,6 +139,25 @@ export class MemoryChatXptPersistence
       );
     }
 
+    const existingProfile = this.profiles.get(state.profile.streamerId);
+    if (
+      existingProfile !== undefined &&
+      canonicalJsonStringify(existingProfile.profile) !== canonicalJsonStringify(state.profile)
+    ) {
+      throw new PersistenceConflictError(
+        "profile",
+        "Session bootstrap must use the persisted streamer profile",
+      );
+    }
+    if (existingProfile === undefined) {
+      this.profiles.set(state.profile.streamerId, {
+        accountId: `account-${state.profile.streamerId}`,
+        profile: clone(state.profile),
+        createdAt: input.createdAt,
+        updatedAt: input.createdAt,
+      });
+    }
+
     this.states.set(state.session.sessionId, clone(state));
     this.roomSessions.set(input.roomCode, state.session.sessionId);
     this.broadcasterActiveSessions.set(state.session.broadcasterId, state.session.sessionId);
@@ -144,6 +171,31 @@ export class MemoryChatXptPersistence
   async load(sessionId: string): Promise<AuthoritativeSessionState | null> {
     const state = this.states.get(sessionId);
     return state === undefined ? null : clone(state);
+  }
+
+  async loadByStreamerId(streamerId: string): Promise<StreamerProfileRecord | null> {
+    const record = this.profiles.get(streamerId);
+    return record === undefined ? null : clone(record);
+  }
+
+  async getOrCreateForVerifiedIdentity(
+    identity: VerifiedStreamerIdentity,
+    defaults: StreamerProfile,
+  ): Promise<StreamerProfileResolution> {
+    if (
+      identity.provider !== "twitch" ||
+      identity.providerSubjectId !== defaults.streamerId
+    ) {
+      throw new PersistenceConflictError("profile", "Verified identity does not own the profile");
+    }
+    return this.getOrCreateProfile(defaults, identity.verifiedAt);
+  }
+
+  async getOrCreateForDiagnostic(
+    defaults: StreamerProfile,
+    at: number,
+  ): Promise<StreamerProfileResolution> {
+    return this.getOrCreateProfile(defaults, at);
   }
 
   async findOperation(operationId: string): Promise<SessionLifecycleCommitResult | null> {
@@ -621,6 +673,33 @@ export class MemoryChatXptPersistence
   }
 
   private replaceState(nextState: AuthoritativeSessionState): void {
+    const parsedProfile = streamerProfileSchema.parse(nextState.profile);
+    const storedProfile = this.profiles.get(parsedProfile.streamerId);
+    if (storedProfile !== undefined) {
+      if (parsedProfile.revision < storedProfile.profile.revision) {
+        throw new PersistenceConflictError("profile", "Profile revision cannot move backwards");
+      }
+      if (
+        parsedProfile.revision === storedProfile.profile.revision &&
+        canonicalJsonStringify(parsedProfile) !== canonicalJsonStringify(storedProfile.profile)
+      ) {
+        throw new PersistenceConflictError("profile", "Profile content changed without a revision");
+      }
+      if (parsedProfile.revision > storedProfile.profile.revision) {
+        this.profiles.set(parsedProfile.streamerId, {
+          ...storedProfile,
+          profile: clone(parsedProfile),
+          updatedAt: nextState.questCycle.envelope.receivedAt,
+        });
+      }
+    } else {
+      this.profiles.set(parsedProfile.streamerId, {
+        accountId: `account-${parsedProfile.streamerId}`,
+        profile: clone(parsedProfile),
+        createdAt: nextState.session.createdAt,
+        updatedAt: nextState.session.createdAt,
+      });
+    }
     const previous = this.states.get(nextState.session.sessionId);
     this.states.set(nextState.session.sessionId, clone(nextState));
     if (previous !== undefined && active(previous.session.status) && !active(nextState.session.status)) {
@@ -633,6 +712,23 @@ export class MemoryChatXptPersistence
         nextState.session.sessionId,
       );
     }
+  }
+
+  private getOrCreateProfile(
+    defaults: StreamerProfile,
+    at: number,
+  ): StreamerProfileResolution {
+    const profile = streamerProfileSchema.parse(defaults);
+    const existing = this.profiles.get(profile.streamerId);
+    if (existing !== undefined) return { ...clone(existing), created: false };
+    const record: StreamerProfileRecord = {
+      accountId: `account-${profile.streamerId}`,
+      profile: clone(profile),
+      createdAt: at,
+      updatedAt: at,
+    };
+    this.profiles.set(profile.streamerId, record);
+    return { ...clone(record), created: true };
   }
 
   private grantKey(principalId: string, sessionId: string, role: SnapshotRole): string {
@@ -684,6 +780,7 @@ export function createMemoryPersistenceRuntime() {
   const backend = new MemoryChatXptPersistence();
   return {
     mode: "memory" as const,
+    profiles: backend,
     sessions: backend,
     lifecycle: backend,
     hostedBoardSessions: backend,

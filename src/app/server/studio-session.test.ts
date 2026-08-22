@@ -184,6 +184,33 @@ describe("StudioSessionApplication", () => {
     })).rejects.toMatchObject({ code: "unauthenticated" });
   });
 
+  it("updates an existing session from the freshly verified Twitch category without replacing saved defaults", async () => {
+    const context = application();
+    const connected = await context.application.startFromVerifiedTwitch({
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    });
+
+    const reconnected = await context.application.startFromVerifiedTwitch({
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "brawl-stars",
+      gameName: "Brawl Stars",
+    });
+
+    expect(reconnected.view.session.sessionId).toBe(connected.view.session.sessionId);
+    expect(reconnected.view.session.revision).toBe(connected.view.session.revision + 1);
+    expect(reconnected.view.profile.gameName).toBe("Minecraft");
+    expect(reconnected.view.session.currentGame).toEqual({
+      gameId: "brawl-stars",
+      gameName: "Brawl Stars",
+      source: "twitch",
+    });
+    expect(reconnected.view.gameplay).toBeNull();
+  });
+
   it("keeps connected Twitch ready when only Extension credentials are absent", async () => {
     const context = application({
       TWITCH_EXTENSION_CLIENT_ID: undefined,
@@ -391,6 +418,7 @@ describe("StudioSessionApplication", () => {
       commandId: "profile-command-1",
       correlationId: "profile-command-1",
       expectedRevision: started.view.session.revision,
+      expectedProfileRevision: started.view.profile.revision,
       issuedAt: NOW,
       actor: { kind: "broadcaster", actorId: "channel-1" },
       type: "streamer.profile-settings",
@@ -412,6 +440,164 @@ describe("StudioSessionApplication", () => {
     expect(restored.view.profile.keywordWatchlist).toEqual(["diamonds", "food supplies"]);
   });
 
+  it("keeps saved defaults separate from the active stream game unless capture applies both", async () => {
+    const context = application();
+    const started = await context.application.startFromVerifiedTwitch({
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    });
+    const savedOnly = streamerProfileSettingsCommandSchema.parse({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: started.view.session.sessionId,
+      questCycleId: null,
+      commandId: "profile-default-game-only",
+      correlationId: "profile-default-game-only",
+      expectedRevision: started.view.session.revision,
+      expectedProfileRevision: started.view.profile.revision,
+      issuedAt: NOW,
+      actor: { kind: "broadcaster", actorId: "channel-1" },
+      type: "streamer.profile-settings",
+      game: { gameId: "fortnite", gameName: "Fortnite" },
+      experiencePatch: {},
+    });
+
+    const defaultChanged = await context.application.execute(started.grant, null, savedOnly);
+    expect(defaultChanged.view.profile.gameName).toBe("Fortnite");
+    expect(defaultChanged.view.session.currentGame).toEqual({
+      gameId: "minecraft",
+      gameName: "Minecraft",
+      source: "twitch",
+    });
+
+    const applyBoth = streamerProfileSettingsCommandSchema.parse({
+      ...savedOnly,
+      commandId: "profile-current-game-too",
+      correlationId: "profile-current-game-too",
+      expectedRevision: defaultChanged.view.session.revision,
+      expectedProfileRevision: defaultChanged.view.profile.revision,
+      game: { gameId: "brawl-stars", gameName: "Brawl Stars" },
+      gameApplication: "saved-and-current",
+    });
+    const currentChanged = await context.application.execute(started.grant, null, applyBoth);
+
+    expect(currentChanged.view.profile.gameName).toBe("Brawl Stars");
+    expect(currentChanged.view.session.currentGame).toEqual({
+      gameId: "brawl-stars",
+      gameName: "Brawl Stars",
+      source: "streamer",
+    });
+  });
+
+  it("isolates profiles and authorised reads between Twitch broadcaster accounts", async () => {
+    const context = application();
+    const first = await context.application.startFromVerifiedTwitch({
+      channelId: "channel-one",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    });
+    const firstCommand = streamerProfileSettingsCommandSchema.parse({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: first.view.session.sessionId,
+      questCycleId: null,
+      commandId: "profile-account-one",
+      correlationId: "profile-account-one",
+      expectedRevision: first.view.session.revision,
+      expectedProfileRevision: first.view.profile.revision,
+      issuedAt: NOW,
+      actor: { kind: "broadcaster", actorId: "channel-one" },
+      type: "streamer.profile-settings",
+      experiencePatch: { intensity: 0.9 },
+      restrictions: ["Account one only"],
+    });
+    await context.application.execute(first.grant, null, firstCommand);
+
+    const second = await context.application.startFromVerifiedTwitch({
+      channelId: "channel-two",
+      displayName: "Streamer Two",
+      gameId: "brawl-stars",
+      gameName: "Brawl Stars",
+    });
+    const firstRead = await context.application.read(first.grant, null);
+    const secondRead = await context.application.read(second.grant, null);
+
+    expect(firstRead.view.profile.streamerId).toBe("channel-one");
+    expect(firstRead.view.profile.restrictions).toEqual(["Account one only"]);
+    expect(secondRead.view.profile.streamerId).toBe("channel-two");
+    expect(secondRead.view.profile.restrictions).toEqual([]);
+    expect(secondRead.view.profile.experience.intensity).not.toBe(0.9);
+  });
+
+  it("hydrates a new stream from the saved profile without letting Twitch overwrite defaults", async () => {
+    const context = application();
+    const started = await context.application.startFromVerifiedTwitch({
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    });
+    const customPreset = {
+      ...started.view.profile.streamPresets[0],
+      presetId: "saved-custom",
+      name: "Saved Custom",
+      origin: "custom" as const,
+    };
+    const command = streamerProfileSettingsCommandSchema.parse({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: started.view.session.sessionId,
+      questCycleId: null,
+      commandId: "profile-persist-across-streams",
+      correlationId: "profile-persist-across-streams",
+      expectedRevision: started.view.session.revision,
+      expectedProfileRevision: started.view.profile.revision,
+      issuedAt: NOW,
+      actor: { kind: "broadcaster", actorId: "channel-1" },
+      type: "streamer.profile-settings",
+      experiencePatch: {},
+      streamPresets: [...started.view.profile.streamPresets, customPreset],
+      selectedPresetId: customPreset.presetId,
+    });
+    const saved = await context.application.execute(started.grant, null, command);
+
+    await context.application.synchronizeVerifiedTwitchOnline({
+      broadcasterId: "channel-1",
+      displayName: "Streamer One",
+      deliveryId: "profile-online",
+      occurredAt: NOW + 1_000,
+    });
+    await context.application.synchronizeVerifiedTwitchOffline({
+      broadcasterId: "channel-1",
+      displayName: "Streamer One",
+      deliveryId: "profile-offline",
+      occurredAt: NOW + 2_000,
+    });
+    const next = await context.application.startFromVerifiedTwitch({
+      channelId: "channel-1",
+      displayName: "Renamed on Twitch",
+      gameId: "fortnite",
+      gameName: "Fortnite",
+    });
+
+    expect(next.view.session.sessionId).not.toBe(started.view.session.sessionId);
+    expect(next.view.profile.revision).toBe(saved.view.profile.revision);
+    expect(next.view.profile.selectedPresetId).toBe("saved-custom");
+    expect(next.view.profile.streamPresets.some((preset) => preset.presetId === "saved-custom")).toBe(true);
+    expect(next.view.profile.displayName).toBe("Streamer One");
+    expect(next.view.profile.gameName).toBe("Minecraft");
+    expect(next.view.session.currentGame).toEqual({
+      gameId: "fortnite",
+      gameName: "Fortnite",
+      source: "twitch",
+    });
+    expect(next.view.profileConnection).toMatchObject({
+      accountStatus: "twitch-verified",
+      profileOrigin: "memory",
+      persistenceStatus: "temporary",
+    });
+  });
+
   it("rebases an authenticated Studio command while live inputs advance the session revision", async () => {
     const context = application();
     const started = await context.application.start(SETUP_KEY, {
@@ -428,6 +614,7 @@ describe("StudioSessionApplication", () => {
       commandId: "profile-command-after-live-input",
       correlationId: "profile-command-after-live-input",
       expectedRevision: started.view.session.revision,
+      expectedProfileRevision: started.view.profile.revision,
       issuedAt: NOW,
       actor: { kind: "broadcaster", actorId: "channel-1" },
       type: "streamer.profile-settings",
@@ -442,6 +629,45 @@ describe("StudioSessionApplication", () => {
     expect(result.outcome).toBe("committed");
     expect(result.view.profile.experience.intensity).toBe(0.6);
     expect(result.view.session.revision).toBeGreaterThan(started.view.session.revision);
+  });
+
+  it("does not rebase a stale full-profile write over a newer profile", async () => {
+    const context = application();
+    const started = await context.application.start(SETUP_KEY, {
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    });
+    const stale = streamerProfileSettingsCommandSchema.parse({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: started.view.session.sessionId,
+      questCycleId: null,
+      commandId: "stale-profile-window",
+      correlationId: "stale-profile-window",
+      expectedRevision: started.view.session.revision,
+      expectedProfileRevision: started.view.profile.revision,
+      issuedAt: NOW,
+      actor: { kind: "broadcaster", actorId: "channel-1" },
+      type: "streamer.profile-settings",
+      experiencePatch: { intensity: 0.1 },
+    });
+    const fresh = streamerProfileSettingsCommandSchema.parse({
+      ...stale,
+      commandId: "fresh-profile-window",
+      correlationId: "fresh-profile-window",
+      experiencePatch: { intensity: 0.9 },
+    });
+
+    const accepted = await context.application.execute(started.grant, null, fresh);
+    expect(accepted.view.profile.experience.intensity).toBe(0.9);
+    await expect(context.application.execute(started.grant, null, stale)).rejects.toMatchObject({
+      code: "stale-revision",
+      retryable: true,
+    } satisfies Partial<StudioSessionApplicationError>);
+    await expect(context.application.read(started.grant, null)).resolves.toMatchObject({
+      view: { profile: { experience: { intensity: 0.9 } } },
+    });
   });
 
   it("persists private declared intent through the same broadcaster-authorised command path", async () => {

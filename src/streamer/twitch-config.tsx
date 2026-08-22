@@ -270,7 +270,7 @@ export function TwitchLiveConfigSurface({
   });
   const effectiveIntensity = view === null
     ? 0.5
-    : resolveEffectiveStreamerProfile(view.profile, view.sessionOverride).experience.intensity ?? 0.5;
+    : resolveEffectiveStreamerProfile(view.profile, view.sessionOverride, view.session.currentGame).experience.intensity ?? 0.5;
   const intensitySourceKey = view === null
     ? "loading"
     : `${view.session.sessionId}:${view.sessionOverride?.appliedAt ?? "saved"}:${effectiveIntensity}`;

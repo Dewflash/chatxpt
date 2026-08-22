@@ -6,6 +6,7 @@ import {
   gameplaySnapshotSchema,
   questCycleStateSchema,
   streamerProfileSchema,
+  streamerCurrentGameCommandSchema,
   streamerEmergencyClearCommandSchema,
   streamerLiveDirectorIntentCommandSchema,
   streamerLiveDirectorCueCommandSchema,
@@ -317,7 +318,18 @@ describe("Role 1 application orchestrator", () => {
   });
 
   it("applies broadcaster profile settings without invoking Role 3", async () => {
-    const repository = new FixtureSessionStateRepository([initialState()]);
+    const initial = initialState();
+    const repository = new FixtureSessionStateRepository([{
+      ...initial,
+      session: {
+        ...initial.session,
+        currentGame: {
+          gameId: "brawl-stars",
+          gameName: "Brawl Stars",
+          source: "twitch",
+        },
+      },
+    }]);
     const engine = successfulEngine();
     const publisher = new RecordingFixturePublisher();
     const orchestrator = new ChatXptOrchestrator(dependencies(repository, publisher, engine));
@@ -328,6 +340,7 @@ describe("Role 1 application orchestrator", () => {
       commandId: "fixture-profile-settings",
       correlationId: "fixture-profile-settings-correlation",
       expectedRevision: 0,
+      expectedProfileRevision: initial.profile.revision,
       issuedAt: ACCEPTED_AT,
       actor: { kind: "broadcaster", actorId: contractFixtureSession.broadcasterId },
       type: "streamer.profile-settings",
@@ -350,6 +363,11 @@ describe("Role 1 application orchestrator", () => {
     expect(result.receipt.state.profile.revision).toBe(1);
     expect(result.receipt.state.profile.gameId).toBe("minecraft");
     expect(result.receipt.state.profile.gameName).toBe("Minecraft Java Edition");
+    expect(result.receipt.state.session.currentGame).toEqual({
+      gameId: "brawl-stars",
+      gameName: "Brawl Stars",
+      source: "twitch",
+    });
     expect(result.receipt.state.profile.restrictions).toEqual(["No wagering", "No elytra challenges"]);
     expect(result.receipt.state.profile.preferredQuestTypes).toEqual(["exploration", "chat-choice"]);
     expect(result.receipt.state.profile.forbiddenQuestTypes).toEqual(["humiliation", "inventory-trash"]);
@@ -372,6 +390,200 @@ describe("Role 1 application orchestrator", () => {
       "hidden-until-close",
     );
     expect(publisher.published[0]?.streamer.profile.gameName).toBe("Minecraft Java Edition");
+  });
+
+  it("changes the active game only when the broadcaster explicitly applies it to this session", async () => {
+    const initial = initialState();
+    const repository = new FixtureSessionStateRepository([{
+      ...initial,
+      session: {
+        ...initial.session,
+        status: "live",
+        startedAt: ACCEPTED_AT - 60_000,
+        currentGame: {
+          gameId: "brawl-stars",
+          gameName: "Brawl Stars",
+          source: "twitch",
+        },
+      },
+    }]);
+    const orchestrator = new ChatXptOrchestrator(
+      dependencies(repository, new RecordingFixturePublisher(), successfulEngine()),
+    );
+    const command = streamerProfileSettingsCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: contractFixtureSession.sessionId,
+      questCycleId: null,
+      commandId: "fixture-current-game-settings",
+      correlationId: "fixture-current-game-settings-correlation",
+      expectedRevision: 0,
+      expectedProfileRevision: initial.profile.revision,
+      issuedAt: ACCEPTED_AT,
+      actor: { kind: "broadcaster", actorId: contractFixtureSession.broadcasterId },
+      type: "streamer.profile-settings",
+      game: { gameId: "minecraft", gameName: "Minecraft Java Edition" },
+      gameApplication: "saved-and-current",
+      experiencePatch: {},
+    });
+
+    const result = await orchestrator.execute(command);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.receipt.state.profile.gameName).toBe("Minecraft Java Edition");
+    expect(result.receipt.state.session.currentGame).toEqual({
+      gameId: "minecraft",
+      gameName: "Minecraft Java Edition",
+      source: "streamer",
+    });
+  });
+
+  it("does not replace saved defaults when a combined capture-game change would strand a live quest", async () => {
+    const initial = initialState();
+    const proposed = questCycleStateSchema.parse({
+      ...initial.questCycle,
+      status: "proposed",
+      options: contractFixtureCandidateBatch.candidates,
+      availableStreamerActions: ["approve", "reject", "skip", "emergency-pause"],
+    });
+    const repository = new FixtureSessionStateRepository([{ ...initial, questCycle: proposed }]);
+    const orchestrator = new ChatXptOrchestrator(
+      dependencies(repository, new RecordingFixturePublisher(), successfulEngine()),
+    );
+    const command = streamerProfileSettingsCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: initial.session.sessionId,
+      questCycleId: null,
+      commandId: "fixture-blocked-capture-game-settings",
+      correlationId: "fixture-blocked-capture-game-settings-correlation",
+      expectedRevision: initial.session.revision,
+      expectedProfileRevision: initial.profile.revision,
+      issuedAt: ACCEPTED_AT,
+      actor: { kind: "broadcaster", actorId: initial.session.broadcasterId },
+      type: "streamer.profile-settings",
+      game: { gameId: "minecraft", gameName: "Minecraft Java Edition" },
+      gameApplication: "saved-and-current",
+      experiencePatch: {},
+    });
+
+    const result = await orchestrator.execute(command);
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "unavailable-capability" },
+    });
+    expect((await repository.load(initial.session.sessionId))?.profile).toEqual(initial.profile);
+  });
+
+  it("changes only current-stream game context and clears incompatible gameplay evidence", async () => {
+    const initial = initialState();
+    const repository = new FixtureSessionStateRepository([initial]);
+    const orchestrator = new ChatXptOrchestrator(
+      dependencies(repository, new RecordingFixturePublisher(), new DefaultQuestEngine()),
+    );
+    const command = streamerCurrentGameCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: initial.session.sessionId,
+      questCycleId: initial.questCycle.envelope.questCycleId,
+      commandId: "fixture-current-stream-game",
+      correlationId: "fixture-current-stream-game-correlation",
+      expectedRevision: initial.session.revision,
+      issuedAt: ACCEPTED_AT,
+      actor: { kind: "broadcaster", actorId: initial.session.broadcasterId },
+      type: "streamer.current-game",
+      game: { gameId: "generic", gameName: "Current Game" },
+    });
+
+    const result = await orchestrator.execute(command);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.receipt.state.profile).toEqual(initial.profile);
+    expect(result.receipt.state.session.currentGame).toEqual({
+      gameId: "generic",
+      gameName: "Current Game",
+      source: "streamer",
+    });
+    expect(result.receipt.state.gameplay).toBeNull();
+    expect(result.receipt.events.at(-1)?.event.eventType).toBe("session.current-game-updated");
+  });
+
+  it("cancels an in-flight quest cycle before switching current-stream game", async () => {
+    const initial = initialState();
+    const proposed = questCycleStateSchema.parse({
+      ...initial.questCycle,
+      status: "proposed",
+      options: contractFixtureCandidateBatch.candidates,
+      availableStreamerActions: ["approve", "reject", "skip", "emergency-pause"],
+    });
+    const repository = new FixtureSessionStateRepository([{ ...initial, questCycle: proposed }]);
+    const orchestrator = new ChatXptOrchestrator(
+      dependencies(repository, new RecordingFixturePublisher(), new DefaultQuestEngine()),
+    );
+    const command = streamerCurrentGameCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: initial.session.sessionId,
+      questCycleId: proposed.envelope.questCycleId,
+      commandId: "fixture-current-game-cancels-cycle",
+      correlationId: "fixture-current-game-cancels-cycle-correlation",
+      expectedRevision: initial.session.revision,
+      issuedAt: ACCEPTED_AT,
+      actor: { kind: "broadcaster", actorId: initial.session.broadcasterId },
+      type: "streamer.current-game",
+      game: { gameId: "generic", gameName: "Current Game" },
+    });
+
+    const result = await orchestrator.execute(command);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.receipt.state.questCycle.status).toBe("cancelled");
+    expect(result.receipt.state.questCycle.result?.reason).toContain("current stream game changed");
+    expect(result.receipt.events.map((item) => item.event.eventType)).toEqual([
+      "quest-cycle.game-change-cancelled",
+      "session.current-game-updated",
+    ]);
+  });
+
+  it("rejects a stale profile revision even when the session revision is current", async () => {
+    const initial = initialState();
+    const repository = new FixtureSessionStateRepository([initial]);
+    const orchestrator = new ChatXptOrchestrator(
+      dependencies(repository, new RecordingFixturePublisher(), successfulEngine()),
+    );
+    const first = streamerProfileSettingsCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: initial.session.sessionId,
+      questCycleId: null,
+      commandId: "fixture-first-profile-settings",
+      correlationId: "fixture-first-profile-settings-correlation",
+      expectedRevision: initial.session.revision,
+      expectedProfileRevision: initial.profile.revision,
+      issuedAt: ACCEPTED_AT,
+      actor: { kind: "broadcaster", actorId: initial.session.broadcasterId },
+      type: "streamer.profile-settings",
+      experiencePatch: { intensity: 0.9 },
+    });
+    const firstResult = await orchestrator.execute(first);
+    expect(firstResult.ok).toBe(true);
+    if (!firstResult.ok) return;
+
+    const stale = streamerProfileSettingsCommandSchema.parse({
+      ...first,
+      commandId: "fixture-stale-profile-settings",
+      correlationId: "fixture-stale-profile-settings-correlation",
+      expectedRevision: firstResult.receipt.state.session.revision,
+      expectedProfileRevision: initial.profile.revision,
+      experiencePatch: { intensity: 0.1 },
+    });
+    const staleResult = await orchestrator.execute(stale);
+
+    expect(staleResult).toMatchObject({
+      ok: false,
+      error: { code: "stale-revision", retryable: true },
+    });
+    expect((await repository.load(initial.session.sessionId))?.profile.experience.intensity)
+      .toBe(0.9);
   });
 
   it("passes a canonical candidate batch through the engine before persistence and broadcast", async () => {

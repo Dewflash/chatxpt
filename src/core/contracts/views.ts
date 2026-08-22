@@ -25,6 +25,17 @@ export const participationModeSchema = z.enum([
 
 export const streamerLiveDirectorProjectionSchema = liveDirectorStateSchema;
 
+export const streamerProfileConnectionSchema = z
+  .object({
+    accountStatus: z.enum(["twitch-verified", "diagnostic", "local-fallback"]),
+    profileOrigin: z.enum(["supabase", "memory", "device-seed"]),
+    persistenceStatus: z.enum(["synced", "temporary", "device-only", "unavailable"]),
+    checkedAt: timestampSchema,
+    lastPersistedAt: timestampSchema.nullable(),
+    message: z.string().trim().min(1).max(240),
+  })
+  .strict();
+
 export const viewerLiveDirectorProjectionSchema = z
   .object({
     publicContext: publicViewerContextSchema.nullable(),
@@ -41,6 +52,7 @@ export const streamerViewModelSchema = z
     audience: audienceSnapshotSchema.nullable(),
     questCycle: questCycleStateSchema,
     emergencyPaused: z.boolean(),
+    profileConnection: streamerProfileConnectionSchema.optional(),
     sessionOverride: streamerSessionOverrideSchema.nullable().optional(),
     liveDirector: streamerLiveDirectorProjectionSchema.nullable().optional(),
   })
@@ -211,6 +223,7 @@ export const overlayViewModelSchema = z
   });
 
 export type StreamerViewModel = z.infer<typeof streamerViewModelSchema>;
+export type StreamerProfileConnection = z.infer<typeof streamerProfileConnectionSchema>;
 export type ViewerViewModel = z.infer<typeof viewerViewModelSchema>;
 export type OverlayUpNext = z.infer<typeof overlayUpNextSchema>;
 export type OverlayViewModel = z.infer<typeof overlayViewModelSchema>;
