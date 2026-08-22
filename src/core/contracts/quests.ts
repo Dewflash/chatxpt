@@ -200,6 +200,7 @@ export const questCycleStatusSchema = z.enum([
   "evaluating",
   "proposed",
   "voting",
+  "selected",
   "active",
   "succeeded",
   "failed",
@@ -279,14 +280,14 @@ export const questCycleStateSchema = z
     if (state.endsAt !== null && state.startsAt !== null && state.endsAt < state.startsAt) {
       context.addIssue({ code: "custom", message: "endsAt cannot precede startsAt", path: ["endsAt"] });
     }
-    if (state.status === "active" && state.activeCandidateId === null) {
+    if (["selected", "active"].includes(state.status) && state.activeCandidateId === null) {
       context.addIssue({
         code: "custom",
-        message: "Active quest cycles require activeCandidateId",
+        message: "Selected and active quest cycles require activeCandidateId",
         path: ["activeCandidateId"],
       });
     }
-    if (["proposed", "voting", "active"].includes(state.status) && state.options.length !== 3) {
+    if (["proposed", "voting", "selected", "active"].includes(state.status) && state.options.length !== 3) {
       context.addIssue({
         code: "custom",
         message: `${state.status} quest cycles require exactly three options`,
@@ -347,14 +348,14 @@ export const publicQuestCycleStateSchema = z
     if (state.endsAt !== null && state.startsAt !== null && state.endsAt < state.startsAt) {
       context.addIssue({ code: "custom", message: "endsAt cannot precede startsAt", path: ["endsAt"] });
     }
-    if (state.status === "active" && state.activeCandidateId === null) {
+    if (["selected", "active"].includes(state.status) && state.activeCandidateId === null) {
       context.addIssue({
         code: "custom",
-        message: "Active quest cycles require activeCandidateId",
+        message: "Selected and active quest cycles require activeCandidateId",
         path: ["activeCandidateId"],
       });
     }
-    if (["proposed", "voting", "active"].includes(state.status) && state.options.length !== 3) {
+    if (["proposed", "voting", "selected", "active"].includes(state.status) && state.options.length !== 3) {
       context.addIssue({
         code: "custom",
         message: `${state.status} quest cycles require exactly three options`,

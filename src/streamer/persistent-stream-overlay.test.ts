@@ -6,6 +6,7 @@ import { createFixtureUiGatewaySnapshot, streamerViewModelSchema } from "../core
 import {
   contractFixtureLiveDirectorStateCatalog,
   contractFixtureUiX01ReadinessCatalog,
+  contractFixtureUiX06RoleViewCatalog,
 } from "../core/testing";
 import { PersistentStreamOverlaySurface } from "./persistent-stream-overlay";
 
@@ -21,18 +22,13 @@ describe("PersistentStreamOverlaySurface", () => {
       readiness: contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"],
     }));
 
-    expect(html).toContain("ChatXPT Stream Context");
-    expect(html).toContain("OBS Capture");
+    expect(html).toContain("Private Live Director");
+    expect(html).toContain("Chat health");
     expect(html).toContain("Gameplay");
-    expect(html).toContain("Audience");
-    expect(html).toContain("Sidequests");
+    expect(html).toContain("Sidequest");
     expect(html).toContain("Realtime");
-    expect(html).toContain("Director Cue");
-    expect(html).toContain("Streamer says");
-    expect(html).toContain("ChatXPT detects");
-    expect(html).toContain("Chat suggests");
-    expect(html).toContain("Sources stay separate");
-    expect(html).toContain("Private broadcaster context only");
+    expect(html).toContain("Director cue");
+    expect(html).toContain("Private · no raw chat");
     expect(html).not.toContain("<button");
     expect(html).not.toContain("Turn into vote");
     expect(html).not.toContain(">Approve<");
@@ -43,7 +39,7 @@ describe("PersistentStreamOverlaySurface", () => {
 
   it("keeps loading and emergency-pause states informational", () => {
     const loading = renderToStaticMarkup(h(PersistentStreamOverlaySurface, { view: null }));
-    expect(loading).toContain("Loading stream context");
+    expect(loading).toContain("Live Director is ready");
     expect(loading).not.toContain("<button");
 
     const base = createFixtureUiGatewaySnapshot().views.streamer;
@@ -55,8 +51,19 @@ describe("PersistentStreamOverlaySurface", () => {
     const pausedHtml = renderToStaticMarkup(h(PersistentStreamOverlaySurface, { view: paused }));
 
     expect(pausedHtml).toContain("Emergency pause active");
-    expect(pausedHtml).toContain("Permission Denied");
     expect(pausedHtml).not.toContain("Clear emergency pause");
     expect(pausedHtml).not.toContain("<button");
+  });
+
+  it("shows the authoritative quest result during its display window", () => {
+    const view = contractFixtureUiX06RoleViewCatalog["r5.quest.succeeded-reward.v1"].streamer;
+    const active = view.questCycle.options.find(
+      (option) => option.candidateId === view.questCycle.activeCandidateId,
+    );
+    const html = renderToStaticMarkup(h(PersistentStreamOverlaySurface, { view }));
+
+    expect(html).toContain("Succeeded");
+    expect(html).toContain(view.questCycle.result?.reason ?? "missing result");
+    expect(html).not.toContain(active?.instruction ?? "missing active instruction");
   });
 });

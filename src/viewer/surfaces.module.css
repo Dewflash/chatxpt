@@ -75,6 +75,34 @@
   margin: 0;
 }
 
+.livePulse {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 9px;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--cx-color-border);
+  border-radius: var(--cx-radius-sm);
+  color: var(--cx-color-text-muted);
+  background: color-mix(in srgb, var(--cx-color-surface-muted) 64%, transparent);
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.livePulse b {
+  color: var(--cx-color-accent);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.livePulse small {
+  flex-basis: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--cx-color-text-muted);
+}
+
 .options {
   display: grid;
   grid-template-columns: 1fr;

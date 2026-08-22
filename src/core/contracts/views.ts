@@ -40,6 +40,8 @@ export const streamerViewModelSchema = z
     gameplay: gameplaySnapshotSchema.nullable(),
     audience: audienceSnapshotSchema.nullable(),
     questCycle: questCycleStateSchema,
+    publicContext: publicViewerContextSchema.nullable().default(null),
+    communityHype: z.number().int().nonnegative().default(0),
     emergencyPaused: z.boolean(),
     sessionOverride: streamerSessionOverrideSchema.nullable().optional(),
     liveDirector: streamerLiveDirectorProjectionSchema.nullable().optional(),
@@ -107,6 +109,7 @@ export const viewerViewModelSchema = z
     communityHype: z.number().int().nonnegative(),
     acceptedCandidateId: identifierSchema.nullable(),
     questCycle: publicQuestCycleStateSchema,
+    publicContext: publicViewerContextSchema.nullable().default(null),
     connection: serviceHealthSchema,
     liveDirector: viewerLiveDirectorProjectionSchema.nullable().optional(),
   })
@@ -177,6 +180,7 @@ export const overlayViewModelSchema = z
     communityHype: z.number().int().nonnegative(),
     upNext: overlayUpNextSchema.nullable(),
     questCycle: publicQuestCycleStateSchema,
+    publicContext: publicViewerContextSchema.nullable().default(null),
     connection: serviceHealthSchema,
   })
   .strict()

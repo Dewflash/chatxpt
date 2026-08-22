@@ -138,6 +138,8 @@ export function buildProfileSettingsCommand(
   draft: EditableProfileDefaults,
   factory: StreamerCommandFactory = defaultStreamerCommandFactory,
 ): StreamerProfileSettingsCommand {
+  const votingChanged = JSON.stringify(draft.voting) !== JSON.stringify(view.profile.voting);
+  const rewardsChanged = JSON.stringify(draft.rewards) !== JSON.stringify(view.profile.rewards);
   return streamerProfileSettingsCommandSchema.parse({
     ...metadata(view, factory, "profile-settings"),
     questCycleId: null,
@@ -152,12 +154,18 @@ export function buildProfileSettingsCommand(
     forbiddenQuestTypes: [...draft.forbiddenQuestTypes],
     accessibilityNeeds: [...draft.accessibilityNeeds],
     keywordWatchlist: [...draft.keywordWatchlist],
-    streamPresets: draft.streamPresets.map((preset) => ({
-      ...preset,
-      experience: { ...preset.experience },
-      preferredQuestTypes: [...preset.preferredQuestTypes],
-      voting: { ...preset.voting },
-      rewards: { ...preset.rewards },
+    streamPresets: draft.streamPresets.map((sourcePreset) => ({
+      ...sourcePreset,
+      voting:
+        sourcePreset.presetId === draft.selectedPresetId && votingChanged
+          ? { ...draft.voting }
+          : { ...sourcePreset.voting },
+      rewards:
+        sourcePreset.presetId === draft.selectedPresetId && rewardsChanged
+          ? { ...draft.rewards }
+          : { ...sourcePreset.rewards },
+      experience: { ...sourcePreset.experience },
+      preferredQuestTypes: [...sourcePreset.preferredQuestTypes],
     })),
     selectedPresetId: draft.selectedPresetId,
     voting: draft.voting,

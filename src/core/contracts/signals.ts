@@ -636,6 +636,10 @@ export const publicViewerContextSchema = z
     currentDecision: z.string().trim().min(1).max(160).nullable(),
     activeSidequest: z.string().trim().min(1).max(160).nullable(),
     result: z.string().trim().min(1).max(160).nullable(),
+    chatStatus: z.enum(["quiet", "steady", "hype", "unknown"]).default("unknown"),
+    chatEnergy: z.number().min(0).max(1).nullable().default(null),
+    gameplayStatus: z.string().trim().min(1).max(160).nullable().default(null),
+    explainer: z.string().trim().min(1).max(200).nullable().default(null),
     publishedAt: timestampSchema,
     expiresAt: timestampSchema,
   })
@@ -656,6 +660,8 @@ export const publicViewerContextSchema = z
         publicContext.currentDecision,
         publicContext.activeSidequest,
         publicContext.result,
+        publicContext.gameplayStatus,
+        publicContext.explainer,
       ].every((value) => value === null)
     ) {
       context.addIssue({

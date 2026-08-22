@@ -1069,6 +1069,11 @@ function ProfilePage({
                   voteVisibility: data.get("voteVisibility") === "hidden-until-close"
                     ? "hidden-until-close"
                     : "live-tally",
+                  voteDurationSeconds: data.get("voteDurationSeconds") === "60" ? 60 : 30,
+                  winnerActivationMode:
+                    data.get("winnerActivationMode") === "streamer-approval"
+                      ? "streamer-approval"
+                      : "automatic",
                   showCountdown: data.get("showCountdown") === "on",
                 },
                 rewards: {
@@ -1092,6 +1097,8 @@ function ProfilePage({
                 <label className={styles.compactField}>Creativity<input name="presetCreativity" type="range" min="0" max="1" step="0.05" defaultValue={selectedPreset.experience.creativity ?? 0.5} disabled={pending} /></label>
                 <label className={styles.compactField}>Playfulness<input name="presetPlayfulness" type="range" min="0" max="1" step="0.05" defaultValue={selectedPreset.experience.playfulness ?? 0.5} disabled={pending} /></label>
                 <label className={styles.compactField}>Preferred quest styles<textarea name="presetQuestTypes" defaultValue={listToText(selectedPreset.preferredQuestTypes)} disabled={pending} /></label>
+                <label className={styles.compactField}>Voting window<select name="voteDurationSeconds" defaultValue={String(selectedPreset.voting.voteDurationSeconds)} disabled={pending}><option value="30">30 seconds</option><option value="60">60 seconds</option></select></label>
+                <label className={styles.compactField}>Winning quest<select name="winnerActivationMode" defaultValue={selectedPreset.voting.winnerActivationMode} disabled={pending}><option value="automatic">Show for 10 seconds, then start</option><option value="streamer-approval">Wait for streamer approval</option></select></label>
                 <label className={styles.compactField}>Vote results<select name="voteVisibility" defaultValue={selectedPreset.voting.voteVisibility} disabled={pending}><option value="live-tally">Show live tally</option><option value="hidden-until-close">Reveal when voting closes</option></select></label>
                 <label className={styles.compactField}>Reward display<select name="rewardDisplay" defaultValue={selectedPreset.rewards.rewardDisplay} disabled={pending}><option value="session-points-and-hype">Session points + community hype</option><option value="session-points">Session points</option><option value="community-hype">Community hype</option></select></label>
                 <label className={styles.checkField}><input name="showCountdown" type="checkbox" defaultChecked={selectedPreset.voting.showCountdown} disabled={pending} /> Show voting countdown</label>
