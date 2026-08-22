@@ -46,7 +46,12 @@ describe("Role 4 streamer command builders", () => {
       accessibilityNeeds: ["high-contrast", "reduced-motion"],
       keywordWatchlist: ["diamonds", "food supplies"],
       selectedPresetId: "competitive",
-      voting: { ...draft.voting, voteVisibility: "hidden-until-close" as const },
+      voting: {
+        ...draft.voting,
+        voteVisibility: "hidden-until-close" as const,
+        voteDurationSeconds: 60 as const,
+        winnerActivationMode: "streamer-approval" as const,
+      },
       rewards: { ...draft.rewards, rewardDisplay: "session-points" as const },
     };
 
@@ -68,8 +73,50 @@ describe("Role 4 streamer command builders", () => {
       accessibilityNeeds: ["high-contrast", "reduced-motion"],
       keywordWatchlist: ["diamonds", "food supplies"],
       selectedPresetId: "competitive",
-      voting: { voteVisibility: "hidden-until-close" },
+      voting: {
+        voteVisibility: "hidden-until-close",
+        voteDurationSeconds: 60,
+        winnerActivationMode: "streamer-approval",
+      },
       rewards: { rewardDisplay: "session-points" },
+    });
+    expect(
+      command.streamPresets?.find(({ presetId }) => presetId === "competitive"),
+    ).toMatchObject({
+      voting: {
+        voteVisibility: "hidden-until-close",
+        voteDurationSeconds: 60,
+        winnerActivationMode: "streamer-approval",
+      },
+    });
+  });
+
+  it("preserves a preset-specific voting edit when global defaults are unchanged", () => {
+    const draft = editableDefaultsFromView(contractFixtureStreamerView);
+    const selectedPresetId = draft.selectedPresetId;
+    const changed = {
+      ...draft,
+      streamPresets: draft.streamPresets.map((preset) =>
+        preset.presetId === selectedPresetId
+          ? {
+              ...preset,
+              voting: {
+                ...preset.voting,
+                voteDurationSeconds: 60 as const,
+                winnerActivationMode: "streamer-approval" as const,
+              },
+            }
+          : preset,
+      ),
+    };
+
+    const command = buildProfileSettingsCommand(contractFixtureStreamerView, changed, factory);
+    expect(command.voting).toEqual(draft.voting);
+    expect(
+      command.streamPresets?.find(({ presetId }) => presetId === selectedPresetId)?.voting,
+    ).toMatchObject({
+      voteDurationSeconds: 60,
+      winnerActivationMode: "streamer-approval",
     });
   });
 

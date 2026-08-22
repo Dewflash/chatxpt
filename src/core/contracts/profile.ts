@@ -8,6 +8,7 @@ export const DEFAULT_STREAMER_VOTING_PREFERENCES = {
   voteVisibility: "live-tally",
   showCountdown: true,
   voteDurationSeconds: 30,
+  winnerActivationMode: "automatic",
   voteChangesAllowed: false,
 } as const;
 
@@ -65,7 +66,8 @@ export const streamerVotingPreferencesSchema = z
   .object({
     voteVisibility: z.enum(["live-tally", "hidden-until-close"]).default("live-tally"),
     showCountdown: z.boolean().default(true),
-    voteDurationSeconds: z.literal(30).default(30),
+    voteDurationSeconds: z.union([z.literal(30), z.literal(60)]).default(30),
+    winnerActivationMode: z.enum(["automatic", "streamer-approval"]).default("automatic"),
     voteChangesAllowed: z.literal(false).default(false),
   })
   .strict();

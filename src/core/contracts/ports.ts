@@ -65,6 +65,8 @@ export interface QuestEngineInput {
   readonly currentState: QuestCycleState;
   readonly command: CommandEnvelope;
   readonly candidateBatch: CandidateBatch | null;
+  /** Effective saved broadcaster profile used only for lifecycle preferences. */
+  readonly profile?: StreamerProfile | null;
   /** Present only for a valid system.vote-close boundary; it never prescribes a winner. */
   readonly acceptedVoteTally?: AcceptedVoteTallySnapshot | null;
   /**

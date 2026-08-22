@@ -2,27 +2,13 @@
 
 import {
   Card,
-  CardGrid,
-  ControlRow,
   DesignSystemRoot,
   Notice,
-  Panel,
   Progress,
   StatusBadge,
   type StatusTone,
 } from "../design-system";
-import type {
-  AudienceSnapshot,
-  DirectorCue,
-  LiveContextFact,
-  LiveContextSourceClass,
-  QuestCandidate,
-  ServiceHealth,
-  StreamerReadinessView,
-  StreamerViewModel,
-} from "../core";
-import { summarizeGameplayHealth } from "./gameplay-health";
-import { summarizeQuestGeneration } from "./quest-generation-health";
+import type { StreamerReadinessView, StreamerViewModel } from "../core";
 
 import styles from "./persistent-stream-overlay.module.css";
 
@@ -30,12 +16,6 @@ export interface PersistentStreamOverlaySurfaceProps {
   readonly view: StreamerViewModel | null;
   readonly readiness?: StreamerReadinessView | null;
 }
-
-const sourceLabels: Readonly<Record<LiveContextSourceClass, string>> = {
-  "streamer-declared": "Streamer says",
-  "gameplay-observed": "ChatXPT detects",
-  "audience-derived": "Chat suggests",
-};
 
 function titleCase(value: string): string {
   return value
@@ -52,161 +32,74 @@ function sessionTone(status: StreamerViewModel["session"]["status"]): StatusTone
   return "warning";
 }
 
-function evidenceTone(evidenceClass: StreamerViewModel["envelope"]["evidenceClass"]): StatusTone {
-  if (evidenceClass === "live") return "success";
-  if (evidenceClass === "diagnostic") return "diagnostic";
-  return "warning";
-}
-
-function serviceTone(status: ServiceHealth["status"]): StatusTone {
-  if (status === "ready") return "success";
-  if (status === "degraded" || status === "misconfigured") return "warning";
-  if (status === "permission-denied" || status === "unavailable") return "danger";
+function chatTone(status: NonNullable<StreamerViewModel["publicContext"]>["chatStatus"]): StatusTone {
+  if (status === "hype") return "success";
+  if (status === "quiet") return "warning";
+  if (status === "steady") return "info";
   return "neutral";
 }
 
-function factTone(status: LiveContextFact["status"]): StatusTone {
-  if (status === "known") return "success";
-  if (status === "stale" || status === "conflicting") return "warning";
-  if (status === "permission-denied") return "danger";
-  return "neutral";
+function remainingSeconds(view: StreamerViewModel): number | null {
+  if (view.questCycle.endsAt === null) return null;
+  return Math.max(0, Math.ceil((view.questCycle.endsAt - view.envelope.receivedAt) / 1_000));
 }
 
-function cueTone(cue: DirectorCue | null): StatusTone {
-  if (cue === null) return "neutral";
-  if (cue.state === "proposed") return "info";
-  if (cue.state === "stale" || cue.state === "expired") return "warning";
-  if (cue.state === "cancelled") return "danger";
-  return "neutral";
-}
-
-function factValue(fact: LiveContextFact): string {
-  if (fact.value !== null) return String(fact.value);
-  if (fact.status === "conflicting") return "Conflicting";
-  if (fact.status === "permission-denied") return "Permission denied";
-  if (fact.status === "stale") return "Stale";
-  return "Unknown";
-}
-
-function observationCounts(snapshot: AudienceSnapshot | StreamerViewModel["gameplay"] | null) {
-  const counts = { known: 0, unknown: 0, stale: 0, unavailable: 0 };
-  for (const signal of snapshot?.signals ?? []) {
-    counts[signal.observation.status] += 1;
-  }
-  return counts;
-}
-
-function readinessService(
-  readiness: StreamerReadinessView | null | undefined,
-  id: string,
-) {
-  return readiness?.services.find((service) => service.service === id) ?? null;
-}
-
-function MetricCard({
-  title,
-  value,
-  tone,
-  detail,
-}: {
-  readonly title: string;
-  readonly value: string;
-  readonly tone: StatusTone;
-  readonly detail: string;
-}) {
+function QuestBand({ view }: { readonly view: StreamerViewModel }) {
+  const cycle = view.questCycle;
+  const winner = cycle.options.find((option) => option.candidateId === cycle.activeCandidateId);
+  const remaining = remainingSeconds(view);
+  const statusLabel = cycle.status === "selected"
+    ? cycle.endsAt === null
+      ? "Approval needed"
+      : "Winner selected"
+    : titleCase(cycle.status);
   return (
-    <Card className={styles.metricCard}>
-      <ControlRow>
-        <h3>{title}</h3>
-        <StatusBadge tone={tone}>{value}</StatusBadge>
-      </ControlRow>
-      <p className={styles.bodyText}>{detail}</p>
-    </Card>
-  );
-}
-
-function ContextCard({
-  sourceClass,
-  facts,
-}: {
-  readonly sourceClass: LiveContextSourceClass;
-  readonly facts: readonly LiveContextFact[];
-}) {
-  return (
-    <Card className={styles.contextCard}>
-      <div className={styles.factHeader}>
-        <h3>{sourceLabels[sourceClass]}</h3>
-        <StatusBadge tone={facts.some((fact) => fact.status === "known") ? "success" : "neutral"}>
-          {facts.length === 0 ? "Unknown" : `${facts.length} facts`}
+    <Card className={styles.band}>
+      <div className={styles.bandHeader}>
+        <span>Sidequest</span>
+        <StatusBadge tone={cycle.status === "active" ? "success" : cycle.status === "selected" ? "info" : "neutral"}>
+          {statusLabel}
         </StatusBadge>
       </div>
-      {facts.length === 0 ? (
-        <p className={styles.bodyText}>No trusted fact is available.</p>
-      ) : (
-        <ul className={styles.sourceList}>
-          {facts.slice(0, 4).map((fact) => (
-            <li className={styles.factItem} key={fact.factId}>
-              <div className={styles.factHeader}>
-                <span>{titleCase(fact.kind)}</span>
-                <StatusBadge tone={factTone(fact.status)}>{titleCase(fact.status)}</StatusBadge>
-              </div>
-              <span className={styles.factValue}>{factValue(fact)}</span>
-              <small className={styles.metaText}>
-                {`${Math.round(fact.confidence * 100)}% · ${fact.evidenceClass === "live" ? "Live signal" : "Unconfirmed signal"}`}
-              </small>
+      {cycle.result ? (
+        <div className={styles.primaryCopy}>
+          <strong>{titleCase(cycle.result.outcome)}</strong>
+          <span>{cycle.result.reason}</span>
+        </div>
+      ) : winner ? (
+        <div className={styles.primaryCopy}>
+          <strong>{winner.title}</strong>
+          <span>{winner.instruction}</span>
+        </div>
+      ) : cycle.status === "voting" ? (
+        <ol className={styles.questList}>
+          {cycle.options.map((option, index) => (
+            <li key={option.candidateId}>
+              <b>{index + 1}</b>
+              <span>{option.title}</span>
+              <small>{cycle.voteTallies.find((tally) => tally.candidateId === option.candidateId)?.votes ?? 0}</small>
             </li>
           ))}
-        </ul>
+        </ol>
+      ) : (
+        <span className={styles.muted}>Waiting for the next safe three-option vote.</span>
       )}
-    </Card>
-  );
-}
-
-function QuestOption({ option }: { readonly option: QuestCandidate }) {
-  return (
-    <li className={styles.optionItem}>
-      <span className={styles.optionTitle}>{option.title}</span>
-      <span className={styles.bodyText}>{option.instruction}</span>
-      <div className={styles.badgeRow}>
-        <StatusBadge tone="info">{`${option.durationSeconds}s`}</StatusBadge>
-        <StatusBadge tone={option.difficulty === "hard" ? "danger" : option.difficulty === "medium" ? "warning" : "success"}>
-          {titleCase(option.difficulty)}
-        </StatusBadge>
-      </div>
-    </li>
-  );
-}
-
-function QuestStatus({ view }: { readonly view: StreamerViewModel }) {
-  const cycle = view.questCycle;
-  const active = cycle.options.find((option) => option.candidateId === cycle.activeCandidateId);
-  return (
-    <Card className={styles.questCard}>
-      <ControlRow>
-        <div>
-          <p className={styles.eyebrow}>Sidequest</p>
-          <h2>{active?.title ?? titleCase(cycle.status)}</h2>
-        </div>
-        <StatusBadge tone="info">{titleCase(cycle.status)}</StatusBadge>
-      </ControlRow>
-      {active ? <p className={styles.bodyText}>{active.instruction}</p> : null}
+      {cycle.status === "selected" ? (
+        <p className={styles.explainer}>
+          {cycle.endsAt === null
+            ? "The viewers chose this quest. Approve Start in Studio or Twitch Live Config."
+            : `The viewers chose this quest. It starts automatically in ${remaining ?? 0}s.`}
+        </p>
+      ) : cycle.status === "voting" && remaining !== null ? (
+        <p className={styles.explainer}>{`${remaining}s left in the audience vote.`}</p>
+      ) : null}
       {cycle.progress ? (
-        <div className={styles.progressWrap}>
-          <Progress
-            label={`Progress · ${titleCase(cycle.progress.method)}`}
-            value={cycle.progress.value}
-            max={1}
-            valueLabel={`${Math.round(cycle.progress.value * 100)}%`}
-          />
-        </div>
-      ) : null}
-      {active === undefined && cycle.options.length > 0 ? (
-        <ul className={styles.optionList}>
-          {cycle.options.slice(0, 3).map((option) => <QuestOption key={option.candidateId} option={option} />)}
-        </ul>
-      ) : null}
-      {cycle.options.length === 0 ? (
-        <p className={styles.bodyText}>Waiting for the next three-option proposal.</p>
+        <Progress
+          label={`Progress · ${titleCase(cycle.progress.method)}`}
+          value={cycle.progress.value}
+          max={1}
+          valueLabel={`${Math.round(cycle.progress.value * 100)}%`}
+        />
       ) : null}
     </Card>
   );
@@ -220,122 +113,81 @@ export function PersistentStreamOverlaySurface({
     return (
       <DesignSystemRoot theme="dark" density="compact" className={styles.surface}>
         <main className={styles.shell}>
-          <Notice title="Loading stream context" politeness="polite">
-            Waiting for the latest streamer snapshot.
+          <Notice title="Live Director is ready" politeness="polite">
+            Waiting for this broadcaster&apos;s active ChatXPT session.
           </Notice>
         </main>
       </DesignSystemRoot>
     );
   }
 
-  const gameplayCounts = observationCounts(view.gameplay);
-  const audienceCounts = observationCounts(view.audience);
-  const gameplay = summarizeGameplayHealth(view.gameplay);
-  const generation = summarizeQuestGeneration(view.questCycle.options);
-  const obs = readinessService(readiness, "obs-capture");
-  const realtime = readinessService(readiness, "realtime");
-  const liveDirector = view.liveDirector ?? null;
-  const facts = liveDirector?.liveContext?.facts ?? [];
-  const cue = liveDirector?.cue ?? null;
-  const sourceClasses = [
-    "streamer-declared",
-    "gameplay-observed",
-    "audience-derived",
-  ] as const satisfies readonly LiveContextSourceClass[];
+  const context = view.publicContext;
+  const capture = readiness?.services.find((service) => service.service === "obs-capture")?.health ??
+    view.services.find((service) => service.service === "gameplay-capture");
+  const realtime = readiness?.services.find((service) => service.service === "realtime")?.health ??
+    view.services.find((service) => service.service === "realtime");
+  const cue = view.liveDirector?.cue ?? null;
 
   return (
     <DesignSystemRoot theme="dark" density="compact" className={styles.surface}>
       <main className={styles.shell}>
-        <Panel className={styles.card}>
-          <header className={styles.header}>
-            <div className={styles.titleBlock}>
-              <p className={styles.eyebrow}>ChatXPT Stream Context</p>
-              <h1 className={styles.title}>
-                {view.profile.gameName ? `${view.profile.gameName} · ` : ""}
-                {view.profile.displayName}
-              </h1>
-            </div>
-            <div className={styles.badgeRow}>
-              <StatusBadge tone={sessionTone(view.session.status)}>{titleCase(view.session.status)}</StatusBadge>
-              <StatusBadge tone={evidenceTone(view.envelope.evidenceClass)}>
-                {view.envelope.evidenceClass === "live" ? "Live connected" : "Live connection not confirmed"}
-              </StatusBadge>
-            </div>
-          </header>
+        <header className={styles.header}>
+          <div>
+            <p className={styles.eyebrow}>Private Live Director</p>
+            <h1>{view.profile.gameName ?? view.profile.displayName}</h1>
+          </div>
+          <StatusBadge tone={sessionTone(view.session.status)}>{titleCase(view.session.status)}</StatusBadge>
+        </header>
 
-          {view.emergencyPaused ? (
-            <Notice tone="danger" title="Emergency pause active" politeness="assertive">
-              New sidequests are blocked until emergency pause is cleared.
-            </Notice>
-          ) : null}
+        {view.emergencyPaused ? (
+          <Notice tone="danger" title="Emergency pause active" politeness="assertive">
+            New sidequests are blocked until the pause is cleared.
+          </Notice>
+        ) : null}
 
-          <CardGrid className={styles.grid}>
-            <MetricCard
-              title="OBS Capture"
-              value={obs ? titleCase(obs.health.status) : "Unknown"}
-              tone={obs ? serviceTone(obs.health.status) : "neutral"}
-              detail={obs?.health.message ?? "No OBS capture readiness was supplied."}
-            />
-            <MetricCard
-              title="Gameplay"
-              value={gameplay.label}
-              tone={gameplay.tone}
-              detail={`Known ${gameplayCounts.known} · Unknown ${gameplayCounts.unknown} · Stale ${gameplayCounts.stale}`}
-            />
-            <MetricCard
-              title="Audience"
-              value={audienceCounts.known > 0 ? "Signal" : "Unknown"}
-              tone={audienceCounts.known > 0 ? "success" : "neutral"}
-              detail={`Known ${audienceCounts.known} · Unknown ${audienceCounts.unknown} · Stale ${audienceCounts.stale}`}
-            />
-            <MetricCard
-              title="Sidequests"
-              value={generation.label}
-              tone={generation.tone}
-              detail={view.questCycle.options.length === 3 ? "Three candidate options are available." : "No complete option set is available."}
-            />
-            <MetricCard
-              title="Realtime"
-              value={realtime ? titleCase(realtime.health.status) : "Unknown"}
-              tone={realtime ? serviceTone(realtime.health.status) : "neutral"}
-              detail={realtime?.health.message ?? "No realtime readiness was supplied."}
-            />
-            <MetricCard
-              title="Director Cue"
-              value={cue === null ? "None" : titleCase(cue.state)}
-              tone={cueTone(cue)}
-              detail={cue?.reason ?? "No fresh private cue is available."}
-            />
-          </CardGrid>
-        </Panel>
+        <Card className={styles.band}>
+          <div className={styles.bandHeader}>
+            <span>Chat health</span>
+            <StatusBadge tone={chatTone(context?.chatStatus ?? "unknown")}>
+              {titleCase(context?.chatStatus ?? "unknown")}
+            </StatusBadge>
+          </div>
+          <div className={styles.metricRow}>
+            <strong>{context?.chatEnergy === null || context?.chatEnergy === undefined ? "—" : `${Math.round(context.chatEnergy * 100)}%`}</strong>
+            <span>Energy</span>
+            <strong>{view.communityHype}</strong>
+            <span>Community hype</span>
+          </div>
+        </Card>
 
-        <section className={styles.wideGrid} aria-label="Private stream context">
-          <Card className={styles.card}>
-            <div className={styles.sectionHeader}>
-              <div>
-                <p className={styles.eyebrow}>Private Context</p>
-                <h2 className={styles.title}>Sources stay separate</h2>
-              </div>
-              <StatusBadge tone={liveDirector?.liveContext ? "info" : "neutral"}>
-                {liveDirector?.liveContext ? "Authoritative" : "Unknown"}
-              </StatusBadge>
-            </div>
-            <CardGrid className={styles.grid}>
-              {sourceClasses.map((sourceClass) => (
-                <ContextCard
-                  key={sourceClass}
-                  sourceClass={sourceClass}
-                  facts={facts.filter((fact) => fact.sourceClass === sourceClass)}
-                />
-              ))}
-            </CardGrid>
-          </Card>
-          <QuestStatus view={view} />
-        </section>
+        <Card className={styles.band}>
+          <div className={styles.bandHeader}>
+            <span>Gameplay</span>
+            <StatusBadge tone={context?.gameplayStatus ? "success" : "neutral"}>
+              {context?.gameplayStatus ? "Observed" : "Unknown"}
+            </StatusBadge>
+          </div>
+          <strong className={styles.gameplayStatus}>{context?.gameplayStatus ?? "No supported fresh state yet"}</strong>
+          <p className={styles.explainer}>{context?.explainer ?? "ChatXPT is still observing the current stream."}</p>
+        </Card>
 
-        <p className={`${styles.finePrint} ${styles.privacyNote}`}>
-          Private broadcaster context only. Raw chat, usernames, viewer identifiers, provider payloads, and command controls are absent from this surface.
-        </p>
+        <QuestBand view={view} />
+
+        <Card className={styles.band}>
+          <div className={styles.bandHeader}>
+            <span>Director cue</span>
+            <StatusBadge tone={cue?.state === "proposed" ? "info" : "neutral"}>
+              {cue ? titleCase(cue.state) : "None"}
+            </StatusBadge>
+          </div>
+          <p className={styles.explainer}>{cue?.reason ?? "No private cue needs attention."}</p>
+        </Card>
+
+        <footer className={styles.footer}>
+          <span><i data-tone={capture?.status ?? "unknown"} />Capture {titleCase(capture?.status ?? "unknown")}</span>
+          <span><i data-tone={realtime?.status ?? "unknown"} />Realtime {titleCase(realtime?.status ?? "unknown")}</span>
+          <span className={styles.private}>Private · no raw chat</span>
+        </footer>
       </main>
     </DesignSystemRoot>
   );

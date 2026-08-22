@@ -161,8 +161,13 @@ function QuestPanel({ view }: { readonly view: StreamerViewModel }) {
       )}
 
       {active ? (
-        <Notice tone="success" title="Active quest" politeness="polite">
+        <Notice tone={cycle.status === "selected" ? "info" : "success"} title={cycle.status === "selected" ? "Vote winner" : "Active quest"} politeness="polite">
           {active.title}
+          {cycle.status === "selected"
+            ? cycle.endsAt === null
+              ? " · Waiting for streamer approval"
+              : " · Starts automatically after the winner reveal"
+            : null}
         </Notice>
       ) : null}
 

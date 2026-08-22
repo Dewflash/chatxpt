@@ -88,6 +88,52 @@ describe("ObsOverlayApplication", () => {
     expect(nextView.session.sessionId).not.toBe(started.view.session.sessionId);
   });
 
+  it("issues a permanent private Live Director installation that follows the broadcaster", async () => {
+    const { overlay, persistence, started, studio } = await context();
+    const issued = await overlay.issueLiveDirectorInstallation(
+      "channel-1",
+      "https://chatxpt.example",
+      {},
+    );
+    expect(issued.descriptor).toMatchObject({
+      role: "live-director",
+      broadcasterId: "channel-1",
+      reusableAcrossSessions: true,
+      width: 420,
+      height: 900,
+    });
+    const url = new URL(issued.descriptor.url);
+    const token = new URLSearchParams(url.hash.slice(1)).get("directorAccessToken");
+    expect(token).not.toBeNull();
+
+    const firstView = await overlay.readLiveDirector(`Bearer ${token}`, "channel-1");
+    expect(firstView).toMatchObject({
+      session: { sessionId: started.view.session.sessionId },
+      profile: { streamerId: "channel-1" },
+    });
+    await expect(
+      overlay.read(`Bearer ${token}`, { broadcasterId: "channel-1", sessionId: null }),
+    ).rejects.toMatchObject({ code: "forbidden" } satisfies Partial<ObsOverlayApplicationError>);
+
+    const ended = await new SessionLifecycleService(persistence.lifecycle).end(
+      started.view.session.sessionId,
+      started.view.session.revision,
+      NOW,
+      "test-director-next-stream",
+      "end-director-first-session",
+    );
+    expect(ended.ok).toBe(true);
+    const next = await studio.start(STUDIO_KEY, {
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: null,
+      gameName: null,
+    });
+    const nextView = await overlay.readLiveDirector(`Bearer ${token}`, "channel-1");
+    expect(nextView.session.sessionId).toBe(next.view.session.sessionId);
+    expect(nextView.session.sessionId).not.toBe(started.view.session.sessionId);
+  });
+
   it("rejects unauthenticated and cross-broadcaster reads", async () => {
     const { overlay } = await context();
     await expect(overlay.read(null, {

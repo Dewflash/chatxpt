@@ -20,6 +20,7 @@ export const liveDirectorInterventionActionSchema = z.union([
 export const liveDirectorInterventionOutcomeSchema = z.enum([
   "no-publication",
   "voting",
+  "selected",
   "active",
   "succeeded",
   "failed",

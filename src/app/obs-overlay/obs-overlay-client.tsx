@@ -10,13 +10,14 @@ import styles from "./page.module.css";
 interface OverlayPayload {
   readonly ok: boolean;
   readonly view?: OverlayViewModel;
-  readonly error?: { readonly message?: string };
+  readonly error?: { readonly code?: string; readonly message?: string };
 }
 
 export function ObsOverlayClient() {
   const [view, setView] = useState<OverlayViewModel | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [setupError, setSetupError] = useState<string | null>(null);
+  const [standby, setStandby] = useState<"connecting" | "offline">("connecting");
   const tokenRef = useRef<string | null>(null);
   const broadcasterIdRef = useRef<string | null>(null);
 
@@ -57,12 +58,13 @@ export function ObsOverlayClient() {
   useEffect(() => {
     let stopped = false;
     let activeController: AbortController | null = null;
+    let refreshing = false;
 
     const refresh = async () => {
       const token = tokenRef.current;
       const broadcasterId = broadcasterIdRef.current;
-      if (token === null || broadcasterId === null) return;
-      activeController?.abort();
+      if (token === null || broadcasterId === null || refreshing) return;
+      refreshing = true;
       activeController = new AbortController();
       try {
         const response = await fetch(
@@ -75,11 +77,19 @@ export function ObsOverlayClient() {
         );
         const payload = (await response.json()) as OverlayPayload;
         if (!response.ok || !payload.ok || payload.view === undefined) {
-          if (!stopped) setSetupError(payload.error?.message ?? "Overlay state is unavailable.");
+          if (!stopped && payload.error?.code === "session-not-found") {
+            setView(null);
+            setStandby("offline");
+            setSetupError(null);
+          } else if (!stopped) {
+            setStandby("connecting");
+            setSetupError(payload.error?.message ?? "Overlay state is unavailable.");
+          }
           return;
         }
         if (!stopped) {
           setView(payload.view);
+          setStandby("connecting");
           setSetupError(null);
           setNow(Date.now());
         }
@@ -87,6 +97,9 @@ export function ObsOverlayClient() {
         if (!stopped && !(caught instanceof DOMException && caught.name === "AbortError")) {
           setSetupError("Reconnecting to authoritative overlay state.");
         }
+      } finally {
+        refreshing = false;
+        activeController = null;
       }
     };
 
@@ -104,7 +117,7 @@ export function ObsOverlayClient() {
 
   return (
     <main className={`${styles.root} canonical-obs-overlay`}>
-      <ObsQuestOverlaySurface view={view} now={now} />
+      <ObsQuestOverlaySurface view={view} now={now} standby={standby} />
       {setupError !== null ? (
         <p className={styles.error} role="status">{setupError}</p>
       ) : null}

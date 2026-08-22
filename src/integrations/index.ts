@@ -22,6 +22,9 @@ export { LatestOnlyDelivery } from "./latest-only-delivery";
 export {
   OBS_BROWSER_SOURCE_DEFAULT_HEIGHT,
   OBS_BROWSER_SOURCE_DEFAULT_WIDTH,
+  LIVE_DIRECTOR_DOCK_DEFAULT_HEIGHT,
+  LIVE_DIRECTOR_DOCK_DEFAULT_WIDTH,
+  createLiveDirectorDockDescriptor,
   createObsBrowserSourceDescriptor,
   parseObsBrowserSourceRequest,
   redactObsBrowserSourceUrl,
@@ -37,6 +40,8 @@ export type {
 export type { LatestOnlyDeliveryOptions } from "./latest-only-delivery";
 export type {
   CreateObsBrowserSourceDescriptorInput,
+  CreateLiveDirectorDockDescriptorInput,
+  LiveDirectorDockDescriptor,
   ObsBrowserSourceDescriptor,
   ObsBrowserSourceRequest,
 } from "./obs/browser-source";

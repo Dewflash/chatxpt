@@ -120,7 +120,8 @@ const streamerVotingPreferencesPatchSchema = z
   .object({
     voteVisibility: z.enum(["live-tally", "hidden-until-close"]).optional(),
     showCountdown: z.boolean().optional(),
-    voteDurationSeconds: z.literal(30).optional(),
+    voteDurationSeconds: z.union([z.literal(30), z.literal(60)]).optional(),
+    winnerActivationMode: z.enum(["automatic", "streamer-approval"]).optional(),
     voteChangesAllowed: z.literal(false).optional(),
   })
   .strict();

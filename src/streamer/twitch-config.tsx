@@ -366,9 +366,12 @@ export function TwitchLiveConfigSurface({
 
           {active ? (
             <Card className={styles.activeQuest}>
-              <small>Active sidequest</small>
+              <small>{cycle.status === "selected" ? "Vote winner" : "Active sidequest"}</small>
               <strong>{active.title}</strong>
               <p>{active.instruction}</p>
+              {cycle.status === "selected" ? (
+                <p>{cycle.endsAt === null ? "Waiting for streamer approval." : "Starts automatically after the winner reveal."}</p>
+              ) : null}
             </Card>
           ) : cycle.options.length === 3 ? (
             <div className={styles.optionList}>

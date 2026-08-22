@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  createLiveDirectorDockDescriptor,
   createObsBrowserSourceDescriptor,
   parseObsBrowserSourceRequest,
   redactObsBrowserSourceUrl,
@@ -50,6 +51,29 @@ describe("OBS browser source descriptor", () => {
         accessToken: "fixture-overlay-token-0001",
       }),
     ).toThrow("HTTPS");
+  });
+
+  it("creates a permanent broadcaster-linked private Live Director URL", () => {
+    const descriptor = createLiveDirectorDockDescriptor({
+      baseUrl: "https://chatxpt.example",
+      broadcasterId: "fixture-broadcaster",
+      accessToken: "fixture-director-token-0001",
+    });
+
+    expect(descriptor).toMatchObject({
+      width: 420,
+      height: 900,
+      readOnly: true,
+      reusableAcrossSessions: true,
+      role: "live-director",
+      broadcasterId: "fixture-broadcaster",
+    });
+    const url = new URL(descriptor.url);
+    expect(url.pathname).toBe("/live-director-overlay");
+    expect(url.searchParams.get("broadcasterId")).toBe("fixture-broadcaster");
+    expect(url.searchParams.has("directorAccessToken")).toBe(false);
+    expect(new URLSearchParams(url.hash.slice(1)).get("directorAccessToken"))
+      .toBe("fixture-director-token-0001");
   });
 
   it("redacts the overlay access token before logging or documentation", () => {

@@ -25,9 +25,20 @@ const broadcasterOverlayGrantSchema = z
   })
   .strict();
 
+const broadcasterSurfaceGrantSchema = z
+  .object({
+    version: z.literal(3),
+    grantId: identifierSchema,
+    broadcasterId: identifierSchema,
+    surface: z.enum(["broadcast-overlay", "live-director"]),
+    issuedAt: timestampSchema,
+  })
+  .strict();
+
 const overlayGrantSchema = z.discriminatedUnion("version", [
   sessionOverlayGrantSchema,
   broadcasterOverlayGrantSchema,
+  broadcasterSurfaceGrantSchema,
 ]);
 
 export type ObsOverlayGrant = z.infer<typeof overlayGrantSchema>;

@@ -25,12 +25,15 @@ import { defaultCooldownEndsAt } from "./intervention";
 import { validateCandidateAtVoteClose } from "./validation";
 
 export const DEFAULT_VOTING_MILLISECONDS = 30_000;
+export const DEFAULT_WINNER_DISPLAY_MILLISECONDS = 10_000;
+export const DEFAULT_RESULT_DISPLAY_MILLISECONDS = 10_000;
 
 const actionsByStatus = {
   idle: [],
   evaluating: [],
   proposed: ["approve", "reject", "skip", "emergency-pause"],
   voting: ["cancel", "skip", "emergency-pause"],
+  selected: ["cancel", "skip", "emergency-pause"],
   active: ["cancel", "skip", "succeed", "fail", "emergency-pause"],
   succeeded: [],
   failed: [],
@@ -300,6 +303,10 @@ function terminalTransition(
   statePatch: Omit<Partial<QuestCycleState>, "envelope"> = {},
   completedProgressOverride: QuestProgress | null = null,
 ): QuestEngineResult {
+  const resultDisplayEndsAt = input.now + DEFAULT_RESULT_DISPLAY_MILLISECONDS;
+  if (!Number.isSafeInteger(resultDisplayEndsAt)) {
+    return error("validation", "Quest result display deadline exceeds supported range");
+  }
   const activeCandidate = input.currentState.options.find(
     (candidate) => candidate.candidateId === input.currentState.activeCandidateId,
   ) ?? null;
@@ -337,7 +344,7 @@ function terminalTransition(
       ...statePatch,
       status: outcome,
       availableStreamerActions: [...actionsByStatus[outcome]],
-      endsAt: input.now,
+      endsAt: resultDisplayEndsAt,
       progress: completedProgress ?? input.currentState.progress,
       completionRule: null,
       result: {
@@ -391,6 +398,22 @@ function advanceTerminalTick(
   if (result === null || result.outcome !== input.currentState.status) {
     return error("validation", "Terminal quest tick requires a matching authoritative result");
   }
+  const resultDisplayEndsAt = result.occurredAt + DEFAULT_RESULT_DISPLAY_MILLISECONDS;
+  const legacyTerminalWindow =
+    input.currentState.endsAt === null ||
+    input.currentState.endsAt === result.occurredAt;
+  if (!Number.isSafeInteger(resultDisplayEndsAt)) {
+    return error("validation", "Terminal quest display window is inconsistent");
+  }
+  if (
+    !legacyTerminalWindow &&
+    input.currentState.endsAt !== resultDisplayEndsAt
+  ) {
+    return error("validation", "Terminal quest display window is inconsistent");
+  }
+  if (!legacyTerminalWindow && input.now < resultDisplayEndsAt) {
+    return accept(input.currentState, {}, [...precedingEvents]);
+  }
   const cooldownEndsAt = defaultCooldownEndsAt(result.occurredAt);
   if (cooldownEndsAt === null) {
     return error("validation", "Quest cooldown deadline exceeds supported time");
@@ -418,6 +441,16 @@ function advanceTerminalTick(
 function transitionQuestTick(input: QuestEngineInput): QuestEngineResult {
   if (input.command.type !== "system.quest-tick") {
     return error("internal", "Quest-tick transition received another command type");
+  }
+
+  if (input.currentState.status === "selected") {
+    if (input.currentState.endsAt === null) {
+      return accept(input.currentState, {}, []);
+    }
+    if (input.now < input.currentState.endsAt) {
+      return accept(input.currentState, {}, []);
+    }
+    return activateSelectedWinner(input);
   }
 
   if (input.currentState.status === "active") {
@@ -487,6 +520,38 @@ function noActivation(
     "quest-cycle.vote-closed-no-activation",
     { reasonCode, ...details },
     { voteTallies: [...voteTallies] },
+  );
+}
+
+function activateSelectedWinner(input: QuestEngineInput): QuestEngineResult {
+  const winnerId = input.currentState.activeCandidateId;
+  const winner = input.currentState.options.find(
+    (candidate) => candidate.candidateId === winnerId,
+  );
+  if (input.currentState.status !== "selected" || winner === undefined) {
+    return error("validation", "Selected quest activation requires an authoritative winner");
+  }
+  const questEndsAt = input.now + winner.durationSeconds * 1_000;
+  if (!Number.isSafeInteger(questEndsAt)) {
+    return error("validation", "Winning quest end time exceeds supported range");
+  }
+  return accept(
+    input.currentState,
+    {
+      status: "active",
+      availableStreamerActions: [...actionsByStatus.active],
+      startsAt: input.now,
+      endsAt: questEndsAt,
+      progress: {
+        value: 0,
+        updatedAt: input.now,
+        method: "unknown",
+        evidenceSignalIds: [],
+      },
+      completionRule: winner.completionRule ?? null,
+      result: null,
+    },
+    [event("quest-cycle.activated", { candidateId: winner.candidateId })],
   );
 }
 
@@ -624,35 +689,38 @@ function transitionVoteClose(input: QuestEngineInput): QuestEngineResult {
     );
   }
 
-  const questEndsAt = input.now + winner.durationSeconds * 1_000;
-  if (!Number.isSafeInteger(questEndsAt)) {
-    return error("validation", "Winning quest end time exceeds supported range");
+  const automaticActivation =
+    profile.data.voting.winnerActivationMode === "automatic";
+  const winnerDisplayEndsAt = automaticActivation
+    ? input.now + DEFAULT_WINNER_DISPLAY_MILLISECONDS
+    : null;
+  if (winnerDisplayEndsAt !== null && !Number.isSafeInteger(winnerDisplayEndsAt)) {
+    return error("validation", "Winner display deadline exceeds supported range");
   }
   return accept(
     input.currentState,
     {
-      status: "active",
+      status: "selected",
       activeCandidateId: winner.candidateId,
-      availableStreamerActions: [...actionsByStatus.active],
+      availableStreamerActions: automaticActivation
+        ? [...actionsByStatus.selected]
+        : ["start", ...actionsByStatus.selected],
       voteTallies: [...tally.data.tallies],
       startsAt: input.now,
-      endsAt: questEndsAt,
-      progress: {
-        value: 0,
-        updatedAt: input.now,
-        method: "unknown",
-        evidenceSignalIds: [],
-      },
-      completionRule: winner.completionRule ?? null,
+      endsAt: winnerDisplayEndsAt,
+      progress: null,
+      completionRule: null,
       result: null,
     },
     [
-      event("quest-cycle.activated", {
+      event("quest-cycle.winner-selected", {
         candidateId: winner.candidateId,
         winningVotes: highestVotes,
         acceptedVoteCount: tally.data.acceptedVoteCount,
         tiedCandidateCount: tiedCandidateIds.length,
         tieBreakUsed,
+        activationMode: profile.data.voting.winnerActivationMode,
+        winnerDisplayEndsAt,
       }),
     ],
   );
@@ -663,13 +731,22 @@ function transitionStreamerCommand(input: QuestEngineInput): QuestEngineResult {
     return error("internal", "Streamer transition received another command type");
   }
   const { action } = input.command;
-  const availableActions: readonly StreamerQuestAction[] = actionsByStatus[input.currentState.status];
+  const availableActions: readonly StreamerQuestAction[] =
+    input.currentState.availableStreamerActions;
   if (!availableActions.includes(action)) {
     return illegalCommand(input.currentState, input.command);
   }
 
   if (action === "approve" && input.currentState.status === "proposed") {
-    const votingEndsAt = input.now + DEFAULT_VOTING_MILLISECONDS;
+    const profile = input.profile === null || input.profile === undefined
+      ? null
+      : streamerProfileSchema.safeParse(input.profile);
+    if (profile !== null && !profile.success) {
+      return error("validation", "Voting preferences are invalid");
+    }
+    const voteDurationSeconds = profile?.data.voting.voteDurationSeconds ??
+      DEFAULT_VOTING_MILLISECONDS / 1_000;
+    const votingEndsAt = input.now + voteDurationSeconds * 1_000;
     if (!Number.isSafeInteger(votingEndsAt)) {
       return error("validation", "Voting end time exceeds supported range");
     }
@@ -685,8 +762,21 @@ function transitionStreamerCommand(input: QuestEngineInput): QuestEngineResult {
         startsAt: input.now,
         endsAt: votingEndsAt,
       },
-      [event("quest-cycle.voting-started")],
+      [event("quest-cycle.voting-started", { voteDurationSeconds })],
     );
+  }
+
+  if (action === "start" && input.currentState.status === "selected") {
+    if (input.currentState.endsAt !== null) {
+      return error("forbidden", "Automatic quest activation is already scheduled");
+    }
+    if (
+      input.command.candidateId !== null &&
+      input.command.candidateId !== input.currentState.activeCandidateId
+    ) {
+      return error("validation", "Streamer approval does not match the selected winner");
+    }
+    return activateSelectedWinner(input);
   }
 
   if (action === "reject" && input.currentState.status === "proposed") {

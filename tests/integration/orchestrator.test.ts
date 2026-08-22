@@ -337,7 +337,11 @@ describe("Role 1 application orchestrator", () => {
       preferredQuestTypes: ["exploration", "chat-choice"],
       forbiddenQuestTypes: ["humiliation", "inventory-trash"],
       accessibilityNeeds: ["high-contrast", "reduced-motion"],
-      voting: { voteVisibility: "hidden-until-close" },
+      voting: {
+        voteVisibility: "hidden-until-close",
+        voteDurationSeconds: 60,
+        winnerActivationMode: "streamer-approval",
+      },
       rewards: { rewardDisplay: "session-points" },
     });
 
@@ -357,7 +361,8 @@ describe("Role 1 application orchestrator", () => {
     expect(result.receipt.state.profile.experience.intensity).toBe(0.8);
     expect(result.receipt.state.profile.voting).toMatchObject({
       voteVisibility: "hidden-until-close",
-      voteDurationSeconds: 30,
+      voteDurationSeconds: 60,
+      winnerActivationMode: "streamer-approval",
       voteChangesAllowed: false,
     });
     expect(result.receipt.state.profile.rewards).toMatchObject({
@@ -366,6 +371,16 @@ describe("Role 1 application orchestrator", () => {
       monetaryRewards: false,
     });
     expect(result.receipt.state.questCycle.envelope.revision).toBe(1);
+    expect(
+      result.receipt.state.profile.streamPresets.find(
+        ({ presetId }) => presetId === result.receipt.state.profile.selectedPresetId,
+      ),
+    ).toMatchObject({
+      voting: {
+        voteDurationSeconds: 60,
+        winnerActivationMode: "streamer-approval",
+      },
+    });
     expect(result.receipt.events[0]?.event.eventType).toBe("profile.settings-updated");
     expect(result.views?.streamer.profile.experience.intensity).toBe(0.8);
     expect(publisher.published[0]?.streamer.profile.voting.voteVisibility).toBe(

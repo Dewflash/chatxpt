@@ -38,6 +38,22 @@ function projectorInput() {
 }
 
 describe("CanonicalViewProjector overlay up next", () => {
+  it("publishes one privacy-safe live context across streamer, viewer, and overlay views", () => {
+    const projected = new CanonicalViewProjector().project(projectorInput());
+
+    expect(projected.streamer.publicContext).toEqual(projected.viewer.publicContext);
+    expect(projected.viewer.publicContext).toEqual(projected.overlay.publicContext);
+    expect(projected.viewer.liveDirector?.publicContext).toEqual(
+      projected.viewer.publicContext,
+    );
+    expect(projected.overlay.publicContext).toMatchObject({
+      phase: contractFixtureQuestCycle.status,
+      chatStatus: expect.any(String),
+      explainer: expect.any(String),
+    });
+    expect(JSON.stringify(projected.overlay.publicContext)).not.toContain("rawMessages");
+  });
+
   it("hides typed Current Objective without selected-game-compatible gameplay evidence", () => {
     const projected = new CanonicalViewProjector().project(projectorInput());
 

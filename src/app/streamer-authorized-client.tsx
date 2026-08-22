@@ -212,9 +212,13 @@ function isStudioAuthenticatedSurface(surface: Surface): boolean {
 
 function StudioCaptureAndOverlaySetup() {
   const [descriptor, setDescriptor] = useState<ObsDescriptorPayload["descriptor"]>(undefined);
+  const [directorDescriptor, setDirectorDescriptor] = useState<ObsDescriptorPayload["descriptor"]>(undefined);
   const [pending, setPending] = useState(false);
+  const [directorPending, setDirectorPending] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
+  const [directorError, setDirectorError] = useState<string | null>(null);
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
+  const [directorCopyMessage, setDirectorCopyMessage] = useState<string | null>(null);
 
   async function generateOverlay(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -252,6 +256,45 @@ function StudioCaptureAndOverlaySetup() {
       setCopyMessage("Permanent OBS Browser Source URL copied.");
     } catch {
       setCopyMessage("Copy the URL from the field manually.");
+    }
+  }
+
+  async function generateDirectorDock(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    setDirectorPending(true);
+    setDirectorError(null);
+    setDirectorCopyMessage(null);
+    try {
+      const response = await fetch("/api/live-director/grant", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          width: Number(data.get("directorWidth")),
+          height: Number(data.get("directorHeight")),
+        }),
+      });
+      const payload = (await response.json()) as ObsDescriptorPayload;
+      if (!response.ok || !payload.ok || payload.descriptor === undefined) {
+        setDirectorError(payload.error?.message ?? "Live Director Dock setup failed.");
+        return;
+      }
+      setDirectorDescriptor(payload.descriptor);
+    } catch {
+      setDirectorError("Live Director Dock setup was interrupted.");
+    } finally {
+      setDirectorPending(false);
+    }
+  }
+
+  async function copyDirectorUrl() {
+    if (directorDescriptor === undefined) return;
+    try {
+      await navigator.clipboard.writeText(directorDescriptor.url);
+      setDirectorCopyMessage("Permanent private Live Director URL copied.");
+    } catch {
+      setDirectorCopyMessage("Copy the private URL from the field manually.");
     }
   }
 
@@ -297,6 +340,36 @@ function StudioCaptureAndOverlaySetup() {
         ) : null}
         {setupError ? <p className={styles.setupError} role="alert">{setupError}</p> : null}
         {copyMessage ? <p className={styles.copyMessage} role="status">{copyMessage}</p> : null}
+      </section>
+      <section>
+        <p className={styles.setupEyebrow}>Private streamer display</p>
+        <h2>Permanent Live Director Dock</h2>
+        <p>
+          Add this private URL once in OBS under Docks → Custom Browser Docks. OBS saves it, and
+          ChatXPT follows this broadcaster into every future session without another login or setup key.
+        </p>
+        <form onSubmit={generateDirectorDock}>
+          <div className={styles.dimensionRow}>
+            <label>Width<input name="directorWidth" type="number" defaultValue="420" min="280" max="1920" required /></label>
+            <label>Height<input name="directorHeight" type="number" defaultValue="900" min="400" max="2160" required /></label>
+          </div>
+          <button type="submit" disabled={directorPending}>{directorPending ? "Creating…" : "Get permanent Live Director URL"}</button>
+        </form>
+        {directorDescriptor !== undefined ? (
+          <div className={styles.descriptor}>
+            <label>
+              Private Live Director Dock URL
+              <input value={directorDescriptor.url} readOnly aria-label="Private Live Director Dock URL" />
+            </label>
+            <button type="button" onClick={() => void copyDirectorUrl()}>Copy URL</button>
+            <small>
+              {directorDescriptor.width}×{directorDescriptor.height}; private; read-only; reusable across streams.
+              If this private URL is exposed, rotate the server overlay secret and generate a replacement.
+            </small>
+          </div>
+        ) : null}
+        {directorError ? <p className={styles.setupError} role="alert">{directorError}</p> : null}
+        {directorCopyMessage ? <p className={styles.copyMessage} role="status">{directorCopyMessage}</p> : null}
       </section>
     </aside>
   );
