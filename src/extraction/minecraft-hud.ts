@@ -962,9 +962,11 @@ function estimateTenIconValue(input: {
 
 function estimateArmorValue(features: RegionVisualFeatures, confidence: number): MinecraftHudFact<number> {
   const armourPixelRatio = Math.max(features.bluePixelRatio, features.brightPixelRatio * 0.75);
-  if (confidence < 0.68 || armourPixelRatio < 0.05) {
+  const repeatedIconStructure =
+    features.edgeDensity >= 0.09 && features.lumaStandardDeviation >= 0.09;
+  if (confidence < 0.68 || armourPixelRatio < 0.05 || !repeatedIconStructure) {
     return unknownHudFact(
-      "The armor band did not meet the confidence threshold.",
+      "The armor band did not show enough repeated icon structure at the confidence threshold.",
       confidence,
       [features.regionId],
     );

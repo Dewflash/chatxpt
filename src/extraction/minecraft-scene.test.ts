@@ -31,14 +31,23 @@ function paint(
 }
 
 describe("Minecraft scene facts", () => {
-  it("detects water-like environments without claiming a hostile", () => {
+  it("keeps a blue water-like scene unknown without independent HUD evidence", () => {
     const sample = frame(100, 60, [40, 130, 220, 255]);
+    for (let stripe = 0; stripe < 25; stripe += 2) {
+      paint(sample, { left: stripe * 4, top: 0, right: stripe * 4 + 2, bottom: 60 }, [20, 75, 165, 255]);
+    }
 
     const facts = detectMinecraftSceneFacts(sample);
 
-    expect(facts.biomeOrEnvironment).toMatchObject({ status: "known", value: "water-or-rain" });
+    expect(facts.biomeOrEnvironment).toMatchObject({ status: "unknown", value: null });
     expect(facts.damageCauseHint).toMatchObject({ status: "unknown", value: null });
     expect(facts.visibleHostile).toMatchObject({ status: "unknown", value: null });
+  });
+
+  it("keeps a flat blue night-like scene unknown without water texture", () => {
+    const facts = detectMinecraftSceneFacts(frame(100, 60, [72, 82, 132, 255]));
+
+    expect(facts.biomeOrEnvironment).toMatchObject({ status: "unknown", value: null });
   });
 
   it("detects lava-like environmental risk", () => {

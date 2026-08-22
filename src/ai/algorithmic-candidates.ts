@@ -10,6 +10,7 @@ interface AlgorithmicTemplate {
   readonly difficulty: QuestCandidate["difficulty"];
   readonly rewardPoints: number;
   readonly rationale: string;
+  readonly supportedRationale?: string;
   readonly preferredSignals: readonly string[];
 }
 
@@ -41,12 +42,12 @@ function selectedGame(input: CandidateInput): SelectedGame {
 function algorithmicTemplatesFor(game: SelectedGame): readonly AlgorithmicTemplate[] {
   const instructions = game.isMinecraft
     ? {
-        plan: "Before your next Minecraft action, explain whether you will build, explore, gather, or craft and why.",
+        plan: "Before your next Minecraft action, explain what you intend to do and why.",
         caster: "Narrate the next 45 seconds of Minecraft like a friendly sports commentator.",
-        decision: "Before your next Minecraft action, explain why building, crafting, gathering, or exploring best supports your objective.",
-        coach: "Teach viewers one Minecraft tip about building, crafting, resource gathering, or navigation.",
-        focus: "For 60 seconds, name each Minecraft action before placing, breaking, crafting, or moving.",
-        preview: "State your next three Minecraft actions using building, gathering, crafting, or exploration before acting.",
+        decision: "Before your next Minecraft action, explain why it supports your objective.",
+        coach: "Teach viewers one useful beginner Minecraft tip during the next 45 seconds.",
+        focus: "For 60 seconds, name each Minecraft action before taking it.",
+        preview: "State your next three intended Minecraft actions before acting.",
         positive: "Keep your Minecraft commentary constructive for the next 60 seconds.",
         mentor: "Teach one Minecraft mechanic and show how it informs your next decision within 60 seconds.",
         recap: "Give a dramatic recap of your most recent Minecraft decision in one minute.",
@@ -63,7 +64,7 @@ function algorithmicTemplatesFor(game: SelectedGame): readonly AlgorithmicTempla
         recap: `Give a dramatic recap of your most recent ${game.name} decision in one minute.`,
       };
   const rationale = (purpose: string) =>
-    `Credential-free ${game.name} fallback ${purpose} without claiming unsupported current state.`;
+    `Local algorithmic ${game.name} fallback ${purpose} without claiming unsupported current state.`;
 
   return [
     {
@@ -133,7 +134,8 @@ function algorithmicTemplatesFor(game: SelectedGame): readonly AlgorithmicTempla
       durationSeconds: 60,
       difficulty: "easy",
       rewardPoints: 100,
-      rationale: rationale("lowers risk when chat pressure is negative"),
+      rationale: rationale("creates a constructive commentary moment"),
+      supportedRationale: rationale("lowers risk when chat pressure is negative"),
       preferredSignals: ["audience-negative-pressure"],
     },
     {
@@ -271,7 +273,10 @@ export function createAlgorithmicCandidateStrategy(): CandidateGenerationStrateg
           durationSeconds: template.durationSeconds,
           difficulty: template.difficulty,
           rewardPoints: template.rewardPoints,
-          rationale: template.rationale,
+          rationale:
+            signalIds.length > 0 && template.supportedRationale !== undefined
+              ? template.supportedRationale
+              : template.rationale,
           sourceSignalIds: [...signalIds],
           confidence: confidenceFor(template, signalIds),
           generation: {

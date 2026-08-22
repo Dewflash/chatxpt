@@ -583,6 +583,16 @@ describe("Minecraft vanilla and modded HUD capability detection", () => {
     });
   });
 
+  it("does not treat a smooth blue night tint above the HUD as armor", () => {
+    const tinted = minecraftHudFrame();
+    paintNormalizedBox(tinted, { x: 0.33, y: 0.82, width: 0.16, height: 0.04 }, () => [72, 82, 132]);
+
+    expect(fingerprintMinecraftHud(tinted, minecraftJavaGameProfile).facts.armorPoints).toMatchObject({
+      status: "unknown",
+      value: null,
+    });
+  });
+
   it("detects the independent air row without confusing it with hunger or armor", () => {
     const fingerprint = fingerprintMinecraftHud(submergedMinecraftFrame(), minecraftJavaGameProfile);
 

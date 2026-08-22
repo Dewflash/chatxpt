@@ -277,6 +277,34 @@ describe("algorithmic candidate strategy", () => {
       .filter(({ title }) => title === "Calm Focus" || title === "Positive Commentary")
       .every(({ sourceSignalIds }) => sourceSignalIds.includes("audience-negative-pressure-two")))
       .toBe(true);
+    expect(batch.candidates.find(({ title }) => title === "Positive Commentary")?.rationale)
+      .toContain("chat pressure is negative");
+  });
+
+  it("does not claim negative chat when an unsupported fallback rotation selects positive commentary", async () => {
+    const provider = createValidatingCandidateProvider(createAlgorithmicCandidateStrategy());
+    const batch = await provider.generate({
+      envelope: contractFixtureCandidateBatch.envelope,
+      intelligence: await fixtureIntelligence(),
+      profile: minecraftProfile,
+      recentQuestTitles: [
+        "Plan Out Loud",
+        "Caster Mode",
+        "Decision Spotlight",
+        "Audience Coach",
+        "Calm Focus",
+        "Three-Step Preview",
+        "One-Minute Mentor",
+        "Dramatic Recap",
+      ],
+      streamerGoal: null,
+      activeChatXptQuest: null,
+    });
+
+    expect(batch.candidates.find(({ title }) => title === "Positive Commentary")).toMatchObject({
+      sourceSignalIds: [],
+      rationale: expect.not.stringContaining("negative"),
+    });
   });
 
   it("does not cite zero-valued audience pressure or requests", async () => {

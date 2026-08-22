@@ -45,7 +45,17 @@ function unknownMenuState(
 }
 
 function scorePanelMenu(features: RegionVisualFeatures): number {
-  if (features.horizontalRepeatScore < 0.9) return 0;
+  const midtonePixelRatio = 1 - features.darkPixelRatio - features.brightPixelRatio;
+  // A Minecraft container is a dense, mostly grey panel. Bright, low-detail
+  // gameplay (especially snow fields and sky) can be horizontally repetitive,
+  // but it does not contain enough panel edges or midtones to support a menu.
+  if (
+    features.horizontalRepeatScore < 0.9 ||
+    features.edgeDensity < 0.04 ||
+    midtonePixelRatio < 0.2
+  ) {
+    return 0;
+  }
   return Math.max(
     0,
     Math.min(

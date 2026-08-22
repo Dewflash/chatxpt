@@ -74,14 +74,9 @@ function environmentFact(features: readonly RegionVisualFeatures[]): MinecraftHu
       sceneIds,
     );
   }
-  if (blue >= 0.42 && (center?.bluePixelRatio ?? 0) >= 0.25) {
-    return knownSceneFact(
-      "water-or-rain",
-      Math.min(0.86, 0.6 + blue * 0.45),
-      "Large blue scene coverage suggests water, rain, or underwater visibility.",
-      sceneIds,
-    );
-  }
+  // Blue coverage alone cannot distinguish water/rain from a blue-tinted
+  // night, snow shadow, or shader. Water remains unknown here; the independent
+  // air-bubble/submersion detector can establish it with HUD evidence.
   if (darkness >= 0.68 && (center?.edgeDensity ?? 0) >= 0.04) {
     return knownSceneFact(
       "dark-cave-or-night",
