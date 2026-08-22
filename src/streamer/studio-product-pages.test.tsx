@@ -400,6 +400,8 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain('data-analytics-metric="quest-participation"');
     expect(html).toContain("Previous equal window");
     expect(html).toContain("Current window");
+    expect(html).toContain("Audience reactions");
+    expect(html).not.toContain("What the audience is reacting to");
     expect(html).toContain("Participation flow");
     expect(html).toContain("Quest result");
     expect(html).toContain("Open Live Quests");

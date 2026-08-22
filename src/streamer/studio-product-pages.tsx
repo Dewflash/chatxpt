@@ -1050,7 +1050,7 @@ function LiveAnalyticsPage({ view, readiness }: {
         </article>
 
         <article id="topics" className={styles.topicPanel}>
-          <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Current topics</span><h2>What the audience is reacting to</h2></div><a href="/studio/profile#watchlist">Edit watchlist</a></div>
+          <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Current topics</span><h2>Audience reactions</h2></div><a href="/studio/profile#watchlist">Edit watchlist</a></div>
           <div className={styles.topicList}>
             {topicRows.length === 0 ? <p>{presentation.showCurrentAudience ? "No repeated topic has passed the current confidence boundary." : presentation.topicFallback}</p> : topicRows.map((topic) => <div key={`${topic.label}-${topic.detail}`}><span><strong>{topic.label}</strong><small>{topic.detail}</small></span><em>{topic.count === null ? "Waiting" : `${topic.count} mentions`}</em></div>)}
           </div>
