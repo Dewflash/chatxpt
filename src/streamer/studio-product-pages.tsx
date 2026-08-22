@@ -4,9 +4,11 @@ import { useState, type ReactNode } from "react";
 
 import { Card, CardGrid, DesignSystemRoot, Notice, StatusBadge } from "../design-system";
 import {
+  resolveCurrentStreamGame,
   resolveEffectiveStreamerProfile,
   resolveSelectedStreamPreset,
   type StreamPreset,
+  type StreamerProfile,
   type StreamerReadinessView,
   type StreamerSetupAction,
   type StreamerSetupService,
@@ -27,7 +29,8 @@ import {
   buildSessionOverrideCommand,
   buildSetupCommand,
   defaultStreamerCommandFactory,
-  editableDefaultsFromView,
+  applyEditableDefaultsToProfile,
+  editableDefaultsFromProfile,
   type StreamerCommandFactory,
   type StreamerUiCommand,
 } from "./streamer-commands";
@@ -51,6 +54,14 @@ export interface StudioProductPageSurfaceProps {
   readonly pendingCommandId?: string | null;
   readonly onCommand?: (command: StreamerUiCommand) => void;
   readonly onResetSession?: (command: StreamerUiCommand | null) => void;
+  readonly localProfile?: StreamerProfile | null;
+  readonly localProfileDiagnostic?: string | null;
+  readonly localProfileSyncState?: "clean" | "apply-ready" | "conflict";
+  readonly onLocalProfileChange?: (profile: StreamerProfile) => void;
+  readonly onApplyLocalProfile?: () => void;
+  readonly onKeepCloudProfile?: () => void;
+  readonly localAccountDisplayName?: string | null;
+  readonly onLocalAccountSignOut?: () => void;
   readonly commandFactory?: StreamerCommandFactory;
   readonly children?: ReactNode;
 }
@@ -458,13 +469,13 @@ function HomeStatePanel({
           <a href={mode === "live" ? "/studio/live-quests" : "/studio/gameplay"}>
             {mode === "live" ? "Open Live Quests" : "Review setup"}
           </a>
-          {mode === "ready" ? <a href="/studio/profile">Change current game</a> : null}
+          {mode === "ready" ? <a href="/studio/gameplay/capture">Change stream game</a> : null}
         </div>
       </div>
       <dl className={styles.readyDetails}>
         <div>
           <dt>Game</dt>
-          <dd>{view?.profile.gameName ?? "Not selected"}</dd>
+          <dd>{view === null ? "Not selected" : resolveCurrentStreamGame(view.profile, view.session.currentGame)?.gameName ?? "Not selected"}</dd>
         </div>
         <div>
           <dt>Preset</dt>
@@ -615,7 +626,7 @@ function LiveHomeDashboard({ view, readiness, pending, onCommand, commandFactory
     <div className={styles.liveHome}>
       <article className={styles.currentStream}>
         <div className={styles.currentStreamHeader}>
-          <div><StatusBadge tone="success">Live</StatusBadge><h2>{view.profile.gameName ?? "Current stream"}</h2><small>{preset?.name ?? "Saved defaults"} · {formatElapsed(view.session.startedAt, view.envelope.receivedAt)}</small></div>
+          <div><StatusBadge tone="success">Live</StatusBadge><h2>{resolveCurrentStreamGame(view.profile, view.session.currentGame)?.gameName ?? "Current stream"}</h2><small>{preset?.name ?? "Saved defaults"} · {formatElapsed(view.session.startedAt, view.envelope.receivedAt)}</small></div>
           <HomeControlButton label="End ChatXPT session" disabledLabel="End unavailable" disabled={!canEnd} pending={pending} onClick={() => onCommand?.(buildSetupCommand(view, "session", "end-session", commandFactory))} />
         </div>
         <div className={styles.directorReading}>
@@ -635,7 +646,7 @@ function LiveHomeDashboard({ view, readiness, pending, onCommand, commandFactory
         <div className={styles.engagementGrid}><HomeQuestSummary view={view} /><HomeChatSummary view={view} /></div>
       </section>
       <HomeSurfacePreview view={view} />
-      <a className={styles.settingsSummary} href="/studio/stream-settings"><span><small>This stream</small><strong>{preset?.name ?? "Saved defaults"}</strong></span><span>{Math.round((resolveEffectiveStreamerProfile(view.profile, view.sessionOverride).experience.intensity ?? 0.5) * 100)}% intensity · Viewer voting {view.session.capabilities.twitchExtension ? "on" : "using fallback"} · Manual approval</span></a>
+      <a className={styles.settingsSummary} href="/studio/stream-settings"><span><small>This stream</small><strong>{preset?.name ?? "Saved defaults"}</strong></span><span>{Math.round((resolveEffectiveStreamerProfile(view.profile, view.sessionOverride, view.session.currentGame).experience.intensity ?? 0.5) * 100)}% intensity · Viewer voting {view.session.capabilities.twitchExtension ? "on" : "using fallback"} · Manual approval</span></a>
       <HealthStrip view={view} readiness={readiness} />
     </div>
   );
@@ -960,23 +971,36 @@ function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
 
 function ProfilePage({
   view,
+  localProfile,
   pending,
   onCommand,
+  onLocalProfileChange,
   commandFactory,
 }: {
   readonly view: StreamerViewModel | null;
+  readonly localProfile?: StreamerProfile | null;
   readonly pending: boolean;
   readonly onCommand?: (command: StreamerUiCommand) => void;
+  readonly onLocalProfileChange?: (profile: StreamerProfile) => void;
   readonly commandFactory: StreamerCommandFactory;
 }) {
-  const profile = view?.profile ?? null;
-  const saved = view === null ? null : editableDefaultsFromView(view);
+  const profile = view?.profile ?? localProfile ?? null;
+  const saved = profile === null ? null : editableDefaultsFromProfile(profile);
+  const canEdit = !pending && (
+    (view !== null && onCommand !== undefined) ||
+    (view === null && localProfile !== null && localProfile !== undefined && onLocalProfileChange !== undefined)
+  );
   const selectedPresetId = profile?.selectedPresetId ?? profile?.streamPresets[0]?.presetId ?? null;
   const selectedPreset = profile?.streamPresets.find((preset) => preset.presetId === selectedPresetId) ?? profile?.streamPresets[0] ?? null;
 
   function commitProfile(next: NonNullable<typeof saved>) {
-    if (view === null || onCommand === undefined) return;
-    onCommand(buildProfileSettingsCommand(view, next, commandFactory));
+    if (view !== null && onCommand !== undefined) {
+      onCommand(buildProfileSettingsCommand(view, next, commandFactory));
+      return;
+    }
+    if (localProfile !== null && localProfile !== undefined && onLocalProfileChange !== undefined) {
+      onLocalProfileChange(applyEditableDefaultsToProfile(localProfile, next));
+    }
   }
 
   function selectPreset(presetId: string) {
@@ -1002,12 +1026,12 @@ function ProfilePage({
   return (
     <div className={styles.profileWorkspace}>
       <Card id="personality" className={styles.profileIdentity}>
-        <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Personality</span><h2>Saved stream defaults</h2></div><StatusBadge tone={profile === null ? "neutral" : "success"}>{profile === null ? "Waiting" : "Saved profile"}</StatusBadge></div>
+        <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Personality</span><h2>Saved stream defaults</h2></div><StatusBadge tone={profile === null ? "neutral" : "success"}>{profile === null ? "Waiting" : view === null ? "Saved on device" : "Saved to account"}</StatusBadge></div>
         <form
           className={styles.profileForm}
           onSubmit={(event) => {
             event.preventDefault();
-            if (view === null || saved === null || onCommand === undefined) return;
+            if (saved === null) return;
             const data = new FormData(event.currentTarget);
             const gameName = String(data.get("gameName") ?? "").trim();
             const gameId = gameName.length === 0
@@ -1015,36 +1039,36 @@ function ProfilePage({
               : profile?.gameName === gameName
                 ? saved.gameId ?? gameIdFromName(gameName)
                 : gameIdFromName(gameName);
-            onCommand(buildProfileSettingsCommand(view, {
+            commitProfile({
               ...saved,
               gameId,
               gameName: gameName.length === 0 ? null : gameName,
-            }, commandFactory));
+            });
           }}
         >
           <label className={styles.compactField}>
-            Game
+            Default game
             <input
               key={profile?.gameName ?? "loading-game"}
               name="gameName"
               defaultValue={profile?.gameName ?? ""}
-              disabled={view === null || pending}
+              disabled={!canEdit}
               placeholder="Minecraft"
             />
           </label>
-          <button type="submit" disabled={view === null || pending || onCommand === undefined}>
-            {pending ? "Saving..." : "Save current game"}
+          <button type="submit" disabled={!canEdit}>
+            {pending ? "Saving..." : "Save default game"}
           </button>
         </form>
       </Card>
 
       <div id="stream-presets" className={styles.presetWorkspace}>
         <article className={styles.presetLibrary}>
-          <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Stream Presets</span><h2>Choose a starting style</h2></div><button type="button" className={styles.iconButton} aria-label="Create preset" disabled={saved === null || pending || onCommand === undefined} onClick={duplicatePreset}>+</button></div>
+          <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Stream Presets</span><h2>Choose a starting style</h2></div><button type="button" className={styles.iconButton} aria-label="Create preset" disabled={saved === null || !canEdit} onClick={duplicatePreset}>+</button></div>
           <div className={styles.presetList}>
-            {profile?.streamPresets.map((preset) => <button key={preset.presetId} type="button" aria-pressed={preset.presetId === selectedPresetId} onClick={() => selectPreset(preset.presetId)} disabled={pending || onCommand === undefined}><span className={styles.presetGlyph}>{preset.name.slice(0, 1).toUpperCase()}</span><span><strong>{preset.name}</strong><small>{preset.description}</small></span><em>{preset.presetId === selectedPresetId ? "Selected" : "Open"}</em></button>)}
+            {profile?.streamPresets.map((preset) => <button key={preset.presetId} type="button" aria-pressed={preset.presetId === selectedPresetId} onClick={() => selectPreset(preset.presetId)} disabled={!canEdit}><span className={styles.presetGlyph}>{preset.name.slice(0, 1).toUpperCase()}</span><span><strong>{preset.name}</strong><small>{preset.description}</small></span><em>{preset.presetId === selectedPresetId ? "Selected" : "Open"}</em></button>)}
           </div>
-          <button type="button" className={styles.secondaryButton} disabled={saved === null || pending || onCommand === undefined} onClick={duplicatePreset}>Create custom preset</button>
+          <button type="button" className={styles.secondaryButton} disabled={saved === null || !canEdit} onClick={duplicatePreset}>Create custom preset</button>
         </article>
 
         <article className={styles.presetEditor}>
@@ -1090,26 +1114,26 @@ function ProfilePage({
               commitProfile({ ...saved, streamPresets: saved.streamPresets.map((preset) => preset.presetId === updated.presetId ? updated : preset), selectedPresetId: updated.presetId });
             }}>
               <div className={styles.presetEditorHead}><div><StatusBadge tone="success">{selectedPreset.presetId === profile?.selectedPresetId ? "Selected default" : "Preset"}</StatusBadge><h2>{selectedPreset.name}</h2><p>{selectedPreset.description}</p></div></div>
-              <label className={styles.compactField}>Preset name<input name="presetName" defaultValue={selectedPreset.name} maxLength={48} required disabled={pending} /></label>
-              <label className={styles.compactField}>Description<input name="presetDescription" defaultValue={selectedPreset.description} maxLength={180} required disabled={pending} /></label>
+              <label className={styles.compactField}>Preset name<input name="presetName" defaultValue={selectedPreset.name} maxLength={48} required disabled={!canEdit} /></label>
+              <label className={styles.compactField}>Description<input name="presetDescription" defaultValue={selectedPreset.description} maxLength={180} required disabled={!canEdit} /></label>
               <div className={styles.presetBalance}>
-                <label className={styles.compactField}>Quest intensity<input name="presetIntensity" type="range" min="0" max="1" step="0.05" defaultValue={selectedPreset.experience.intensity ?? 0.5} disabled={pending} /></label>
-                <label className={styles.compactField}>Creativity<input name="presetCreativity" type="range" min="0" max="1" step="0.05" defaultValue={selectedPreset.experience.creativity ?? 0.5} disabled={pending} /></label>
-                <label className={styles.compactField}>Playfulness<input name="presetPlayfulness" type="range" min="0" max="1" step="0.05" defaultValue={selectedPreset.experience.playfulness ?? 0.5} disabled={pending} /></label>
-                <label className={styles.compactField}>Preferred quest styles<textarea name="presetQuestTypes" defaultValue={listToText(selectedPreset.preferredQuestTypes)} disabled={pending} /></label>
-                <label className={styles.compactField}>Voting window<select name="voteDurationSeconds" defaultValue={String(selectedPreset.voting.voteDurationSeconds)} disabled={pending}><option value="30">30 seconds</option><option value="60">60 seconds</option></select></label>
-                <label className={styles.compactField}>Winning quest<select name="winnerActivationMode" defaultValue={selectedPreset.voting.winnerActivationMode} disabled={pending}><option value="automatic">Show for 10 seconds, then start</option><option value="streamer-approval">Wait for streamer approval</option></select></label>
-                <label className={styles.compactField}>Vote results<select name="voteVisibility" defaultValue={selectedPreset.voting.voteVisibility} disabled={pending}><option value="live-tally">Show live tally</option><option value="hidden-until-close">Reveal when voting closes</option></select></label>
-                <label className={styles.compactField}>Reward display<select name="rewardDisplay" defaultValue={selectedPreset.rewards.rewardDisplay} disabled={pending}><option value="session-points-and-hype">Session points + community hype</option><option value="session-points">Session points</option><option value="community-hype">Community hype</option></select></label>
-                <label className={styles.checkField}><input name="showCountdown" type="checkbox" defaultChecked={selectedPreset.voting.showCountdown} disabled={pending} /> Show voting countdown</label>
-                <label className={styles.checkField}><input name="showRewardPreview" type="checkbox" defaultChecked={selectedPreset.rewards.showRewardPreview} disabled={pending} /> Preview quest rewards</label>
+                <label className={styles.compactField}>Quest intensity<input name="presetIntensity" type="range" min="0" max="1" step="0.05" defaultValue={selectedPreset.experience.intensity ?? 0.5} disabled={!canEdit} /></label>
+                <label className={styles.compactField}>Creativity<input name="presetCreativity" type="range" min="0" max="1" step="0.05" defaultValue={selectedPreset.experience.creativity ?? 0.5} disabled={!canEdit} /></label>
+                <label className={styles.compactField}>Playfulness<input name="presetPlayfulness" type="range" min="0" max="1" step="0.05" defaultValue={selectedPreset.experience.playfulness ?? 0.5} disabled={!canEdit} /></label>
+                <label className={styles.compactField}>Preferred quest styles<textarea name="presetQuestTypes" defaultValue={listToText(selectedPreset.preferredQuestTypes)} disabled={!canEdit} /></label>
+                <label className={styles.compactField}>Voting window<select name="voteDurationSeconds" defaultValue={String(selectedPreset.voting.voteDurationSeconds)} disabled={!canEdit}><option value="30">30 seconds</option><option value="60">60 seconds</option></select></label>
+                <label className={styles.compactField}>Winning quest<select name="winnerActivationMode" defaultValue={selectedPreset.voting.winnerActivationMode} disabled={!canEdit}><option value="automatic">Show for 10 seconds, then start</option><option value="streamer-approval">Wait for streamer approval</option></select></label>
+                <label className={styles.compactField}>Vote results<select name="voteVisibility" defaultValue={selectedPreset.voting.voteVisibility} disabled={!canEdit}><option value="live-tally">Show live tally</option><option value="hidden-until-close">Reveal when voting closes</option></select></label>
+                <label className={styles.compactField}>Reward display<select name="rewardDisplay" defaultValue={selectedPreset.rewards.rewardDisplay} disabled={!canEdit}><option value="session-points-and-hype">Session points + community hype</option><option value="session-points">Session points</option><option value="community-hype">Community hype</option></select></label>
+                <label className={styles.checkField}><input name="showCountdown" type="checkbox" defaultChecked={selectedPreset.voting.showCountdown} disabled={!canEdit} /> Show voting countdown</label>
+                <label className={styles.checkField}><input name="showRewardPreview" type="checkbox" defaultChecked={selectedPreset.rewards.showRewardPreview} disabled={!canEdit} /> Preview quest rewards</label>
               </div>
               <div className={styles.presetRules}><span><strong>Viewer voting</strong><small>Extension with hosted board and chat fallbacks</small></span><span><strong>Manual approval</strong><small>The streamer reviews each official batch</small></span><span><strong>Session rewards</strong><small>{titleCase(selectedPreset.rewards.rewardDisplay)}</small></span><span><strong>Global boundaries</strong><small>Safety and accessibility below always apply</small></span></div>
-              <div className={styles.presetActions}><button type="button" className={styles.secondaryButton} disabled={pending || onCommand === undefined} onClick={duplicatePreset}>Duplicate</button>{selectedPreset.origin === "custom" && saved !== null ? <button type="button" className={styles.dangerAction} disabled={pending || onCommand === undefined || saved.streamPresets.length === 1} onClick={() => {
+              <div className={styles.presetActions}><button type="button" className={styles.secondaryButton} disabled={!canEdit} onClick={duplicatePreset}>Duplicate</button>{selectedPreset.origin === "custom" && saved !== null ? <button type="button" className={styles.dangerAction} disabled={!canEdit || saved.streamPresets.length === 1} onClick={() => {
                 const remaining = saved.streamPresets.filter((preset) => preset.presetId !== selectedPreset.presetId);
                 const nextSelected = remaining[0]?.presetId ?? null;
                 commitProfile({ ...saved, streamPresets: remaining, selectedPresetId: nextSelected });
-              }}>Delete</button> : null}<button type="submit" disabled={pending || onCommand === undefined}>Save preset</button></div>
+              }}>Delete</button> : null}<button type="submit" disabled={!canEdit}>Save preset</button></div>
             </form>
           )}
         </article>
@@ -1119,42 +1143,42 @@ function ProfilePage({
         <div><StatusBadge tone={profile === null ? "neutral" : "success"}>{profile === null ? "Waiting" : "Global boundaries"}</StatusBadge><h3>Safety & Accessibility</h3><p>These boundaries apply to every preset and cannot be weakened by a live override.</p></div>
         <label className={styles.compactField}>
           Safety limits
-          <textarea key={listToText(profile?.restrictions ?? []) || "loading-restrictions"} form="profile-lists-form" name="restrictions" defaultValue={listToText(profile?.restrictions ?? [])} disabled={view === null || pending} />
+          <textarea key={listToText(profile?.restrictions ?? []) || "loading-restrictions"} form="profile-lists-form" name="restrictions" defaultValue={listToText(profile?.restrictions ?? [])} disabled={!canEdit} />
         </label>
         <label className={styles.compactField}>
           Preferred sidequests
-          <textarea key={listToText(profile?.preferredQuestTypes ?? []) || "loading-preferred"} form="profile-lists-form" name="preferredQuestTypes" defaultValue={listToText(profile?.preferredQuestTypes ?? [])} disabled={view === null || pending} />
+          <textarea key={listToText(profile?.preferredQuestTypes ?? []) || "loading-preferred"} form="profile-lists-form" name="preferredQuestTypes" defaultValue={listToText(profile?.preferredQuestTypes ?? [])} disabled={!canEdit} />
         </label>
         <label className={styles.compactField}>
           Forbidden sidequests
-          <textarea key={listToText(profile?.forbiddenQuestTypes ?? []) || "loading-forbidden"} form="profile-lists-form" name="forbiddenQuestTypes" defaultValue={listToText(profile?.forbiddenQuestTypes ?? [])} disabled={view === null || pending} />
+          <textarea key={listToText(profile?.forbiddenQuestTypes ?? []) || "loading-forbidden"} form="profile-lists-form" name="forbiddenQuestTypes" defaultValue={listToText(profile?.forbiddenQuestTypes ?? [])} disabled={!canEdit} />
         </label>
         <form
           id="profile-lists-form"
           className={styles.profileForm}
           onSubmit={(event) => {
             event.preventDefault();
-            if (view === null || saved === null || onCommand === undefined) return;
+            if (saved === null) return;
             const data = new FormData(event.currentTarget);
-            onCommand(buildProfileSettingsCommand(view, {
+            commitProfile({
               ...saved,
               restrictions: textToList(data.get("restrictions")),
               preferredQuestTypes: textToList(data.get("preferredQuestTypes")),
               forbiddenQuestTypes: textToList(data.get("forbiddenQuestTypes")),
               accessibilityNeeds: textToList(data.get("accessibilityNeeds")),
               keywordWatchlist: textToList(data.get("keywordWatchlist")),
-            }, commandFactory));
+            });
           }}
         >
           <label id="accessibility" className={styles.compactField}>
             Accessibility needs
-            <textarea key={listToText(profile?.accessibilityNeeds ?? []) || "loading-accessibility"} name="accessibilityNeeds" defaultValue={listToText(profile?.accessibilityNeeds ?? [])} disabled={view === null || pending} />
+            <textarea key={listToText(profile?.accessibilityNeeds ?? []) || "loading-accessibility"} name="accessibilityNeeds" defaultValue={listToText(profile?.accessibilityNeeds ?? [])} disabled={!canEdit} />
           </label>
           <label className={styles.compactField} id="watchlist">
             Keyword watchlist
-            <textarea key={listToText(profile?.keywordWatchlist ?? []) || "loading-watchlist"} name="keywordWatchlist" defaultValue={listToText(profile?.keywordWatchlist ?? [])} disabled={view === null || pending} />
+            <textarea key={listToText(profile?.keywordWatchlist ?? []) || "loading-watchlist"} name="keywordWatchlist" defaultValue={listToText(profile?.keywordWatchlist ?? [])} disabled={!canEdit} />
           </label>
-          <button type="submit" disabled={view === null || pending || onCommand === undefined}>
+          <button type="submit" disabled={!canEdit}>
             {pending ? "Saving..." : "Save global boundaries"}
           </button>
         </form>
@@ -1176,9 +1200,10 @@ function StreamSettingsPage({
 }) {
   const override = view?.sessionOverride ?? null;
   const savedProfile = view === null ? null : resolveEffectiveStreamerProfile(view.profile, null);
-  const effectiveProfile = view === null ? null : resolveEffectiveStreamerProfile(view.profile, override);
+  const effectiveProfile = view === null ? null : resolveEffectiveStreamerProfile(view.profile, override, view.session.currentGame);
   const savedPreset = view === null ? null : resolveSelectedStreamPreset(view.profile, null);
   const effectivePreset = view === null ? null : resolveSelectedStreamPreset(view.profile, override);
+  const currentGame = view === null ? null : resolveCurrentStreamGame(view.profile, view.session.currentGame);
   const savedIntensity = savedProfile?.experience.intensity ?? 0.5;
   const savedCreativity = savedProfile?.experience.creativity ?? 0.5;
   const effectiveIntensity = effectiveProfile?.experience.intensity ?? savedIntensity;
@@ -1189,7 +1214,7 @@ function StreamSettingsPage({
         title="Saved Source"
         badge={view === null ? "Waiting" : "Saved defaults"}
         badgeTone={view === null ? "neutral" : "info"}
-        detail={view === null ? "Start a session to see current-stream settings." : `${savedPreset?.name ?? "Saved defaults"}: intensity ${Math.round(savedIntensity * 100)}%, creativity ${Math.round(savedCreativity * 100)}%.`}
+        detail={view === null ? "Start a session to see current-stream settings." : `${savedPreset?.name ?? "Saved defaults"}: intensity ${Math.round(savedIntensity * 100)}%, creativity ${Math.round(savedCreativity * 100)}%. Default game: ${view.profile.gameName ?? "none"}. Current stream: ${currentGame?.gameName ?? "none"}.`}
       />
       <Card id="session-override" className={styles.card}>
         <StatusBadge tone={override === null ? "neutral" : "warning"}>
@@ -1198,7 +1223,7 @@ function StreamSettingsPage({
         <h3>Session Override</h3>
         <p>
           {override === null
-            ? "This stream currently follows saved profile defaults."
+            ? "This stream's sidequest style currently follows saved profile defaults. The active game may still come from Twitch or Gameplay Capture."
             : `This stream uses ${effectivePreset?.name ?? "a temporary configuration"}: intensity ${Math.round(effectiveIntensity * 100)}%, creativity ${Math.round(effectiveCreativity * 100)}%.`}
         </p>
         <form
@@ -1317,13 +1342,15 @@ function TestLabPage({
   );
 }
 
-function PageBody({ page, view, readiness, pending, onCommand, onResetSession, commandFactory }: {
+function PageBody({ page, view, readiness, pending, onCommand, onResetSession, localProfile, onLocalProfileChange, commandFactory }: {
   readonly page: StudioProductPage;
   readonly view: StreamerViewModel | null;
   readonly readiness?: StreamerReadinessView | null;
   readonly pending: boolean;
   readonly onCommand?: (command: StreamerUiCommand) => void;
   readonly onResetSession?: (command: StreamerUiCommand | null) => void;
+  readonly localProfile?: StreamerProfile | null;
+  readonly onLocalProfileChange?: (profile: StreamerProfile) => void;
   readonly commandFactory: StreamerCommandFactory;
 }) {
   if (page === "home") {
@@ -1344,8 +1371,10 @@ function PageBody({ page, view, readiness, pending, onCommand, onResetSession, c
     return (
       <ProfilePage
         view={view}
+        localProfile={localProfile}
         pending={pending}
         onCommand={onCommand}
+        onLocalProfileChange={onLocalProfileChange}
         commandFactory={commandFactory}
       />
     );
@@ -1379,17 +1408,57 @@ export function StudioProductPageSurface({
   pendingCommandId = null,
   onCommand,
   onResetSession,
+  localProfile = null,
+  localProfileDiagnostic = null,
+  localProfileSyncState = "clean",
+  onLocalProfileChange,
+  onApplyLocalProfile,
+  onKeepCloudProfile,
+  localAccountDisplayName = null,
+  onLocalAccountSignOut,
   commandFactory = defaultStreamerCommandFactory,
   children,
 }: StudioProductPageSurfaceProps) {
   const copy = PAGE_COPY[page];
   const pending = pendingCommandId !== null;
+  const activeProfile = view?.profile ?? localProfile;
+  const twitchHealth = readiness?.services.find((service) => service.service === "twitch")?.health;
+  const captureHealth = readiness?.services.find((service) => service.service === "obs-capture")?.health;
+  const profileConnection = view?.profileConnection;
+  const accountLabel = profileConnection?.accountStatus === "twitch-verified"
+    ? "Twitch verified"
+    : profileConnection?.accountStatus === "diagnostic"
+      ? "Diagnostic session"
+    : view !== null && profileConnection === undefined
+      ? "Connection checking"
+    : localProfile !== null
+      ? "Local profile"
+      : "Not connected";
+  const twitchVerified = profileConnection?.accountStatus === "twitch-verified";
+  const inputLabel = twitchVerified && twitchHealth?.status === "ready" && captureHealth?.status === "ready"
+    ? "Twitch + gameplay live"
+    : twitchVerified && twitchHealth?.status === "ready"
+      ? "Capture waiting"
+      : captureHealth?.status === "ready"
+        ? "Gameplay live · Twitch waiting"
+      : "Inputs waiting";
+  const storageLabel = profileConnection?.persistenceStatus === "synced"
+    ? "Saved to account"
+    : profileConnection?.persistenceStatus === "temporary"
+      ? "Server memory only"
+      : profileConnection?.persistenceStatus === "unavailable"
+        ? "Account storage unavailable"
+      : localProfile !== null
+        ? "This device only"
+        : view !== null
+          ? "Storage checking"
+          : "Storage unavailable";
   return (
     <DesignSystemRoot className={styles.surface}>
       <aside className={styles.sidebar} aria-label="Studio navigation">
         <div className={styles.brand}>
           <strong>ChatXPT Studio</strong>
-          <small>{customerSafeLabel(view?.profile.displayName, "Streamer workspace")}</small>
+          <small>{customerSafeLabel(activeProfile?.displayName, "Streamer workspace")}</small>
         </div>
         <nav className={styles.nav}>
           {NAV_ITEMS.map((item) => (
@@ -1402,7 +1471,18 @@ export function StudioProductPageSurface({
             </a>
           ))}
         </nav>
-        <p>Unavailable controls stay visible only when ChatXPT can explain what is needed next.</p>
+        <section className={styles.connectionHealth} aria-label="Connection health">
+          <div><small>Account</small><strong>{accountLabel}</strong></div>
+          <div><small>Live inputs</small><strong>{inputLabel}</strong></div>
+          <div><small>Profile storage</small><strong>{storageLabel}</strong></div>
+          <p>{profileConnection?.message ?? (localProfile !== null ? "Local fallback · this device only" : "Connect Twitch to load an account profile.")}</p>
+        </section>
+        {localAccountDisplayName !== null ? (
+          <section className={styles.localAccount} aria-label="Local ChatXPT account">
+            <span><small>Local fallback</small><strong>{localAccountDisplayName}</strong></span>
+            <button type="button" onClick={onLocalAccountSignOut}>Sign out</button>
+          </section>
+        ) : null}
       </aside>
       <main className={styles.main}>
         <section className={styles.hero}>
@@ -1413,9 +1493,11 @@ export function StudioProductPageSurface({
           </div>
           <div className={styles.heroMeta}>
             <StatusBadge tone={readiness?.ready ? "success" : readiness ? "warning" : "neutral"}>
-              {customerSafeLabel(readiness?.label, readiness?.ready ? "Ready to start" : "Connect Studio")}
+              {view === null && localProfile !== null
+                ? "Local profile"
+                : customerSafeLabel(readiness?.label, readiness?.ready ? "Ready to start" : "Connect Studio")}
             </StatusBadge>
-            <small>{view?.profile.gameName ?? "No game selected"}</small>
+            <small>{view?.session.currentGame?.gameName ?? activeProfile?.gameName ?? "No game selected"}</small>
           </div>
         </section>
         {PAGE_SECTIONS[page] ? (
@@ -1426,6 +1508,21 @@ export function StudioProductPageSurface({
           </nav>
         ) : null}
         {commandMessage ? <Notice tone="warning" title="Studio status">{commandMessage}</Notice> : null}
+        {localProfileDiagnostic ? <Notice tone="warning" title="Local profile recovered">{localProfileDiagnostic}</Notice> : null}
+        {view !== null && localProfileSyncState !== "clean" ? (
+          <Notice
+            tone={localProfileSyncState === "conflict" ? "warning" : "info"}
+            title={localProfileSyncState === "conflict" ? "Choose which profile to keep" : "Local profile changes are ready"}
+          >
+            <p>{localProfileSyncState === "conflict"
+              ? "The account profile changed since this device last synced. ChatXPT will not merge safety or accessibility settings automatically."
+              : "This device has local profile changes based on the current account revision."}</p>
+            <div className={styles.actions}>
+              <button type="button" disabled={pending || onApplyLocalProfile === undefined} onClick={onApplyLocalProfile}>Use local defaults</button>
+              <button type="button" className={styles.secondaryButton} disabled={pending || onKeepCloudProfile === undefined} onClick={onKeepCloudProfile}>Use account defaults</button>
+            </div>
+          </Notice>
+        ) : null}
         {children ?? (
           <PageBody
             page={page}
@@ -1434,6 +1531,8 @@ export function StudioProductPageSurface({
             pending={pending}
             onCommand={onCommand}
             onResetSession={onResetSession}
+            localProfile={localProfile}
+            onLocalProfileChange={onLocalProfileChange}
             commandFactory={commandFactory}
           />
         )}

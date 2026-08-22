@@ -8,7 +8,11 @@ import {
   StatusBadge,
   type StatusTone,
 } from "../design-system";
-import type { StreamerReadinessView, StreamerViewModel } from "../core";
+import {
+  resolveCurrentStreamGame,
+  type StreamerReadinessView,
+  type StreamerViewModel,
+} from "../core";
 
 import styles from "./persistent-stream-overlay.module.css";
 
@@ -127,6 +131,7 @@ export function PersistentStreamOverlaySurface({
   const realtime = readiness?.services.find((service) => service.service === "realtime")?.health ??
     view.services.find((service) => service.service === "realtime");
   const cue = view.liveDirector?.cue ?? null;
+  const currentGame = resolveCurrentStreamGame(view.profile, view.session.currentGame);
 
   return (
     <DesignSystemRoot theme="dark" density="compact" className={styles.surface}>
@@ -134,7 +139,7 @@ export function PersistentStreamOverlaySurface({
         <header className={styles.header}>
           <div>
             <p className={styles.eyebrow}>Private Live Director</p>
-            <h1>{view.profile.gameName ?? view.profile.displayName}</h1>
+            <h1>{currentGame?.gameName ?? view.profile.displayName}</h1>
           </div>
           <StatusBadge tone={sessionTone(view.session.status)}>{titleCase(view.session.status)}</StatusBadge>
         </header>

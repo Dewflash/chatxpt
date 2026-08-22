@@ -121,7 +121,7 @@ The completed Minecraft/product and Live Director branches map into the accepted
 
 | Landed capability | Accepted interface | UI consequence |
 | --- | --- | --- |
-| Twitch-prefilled game and persistent Minecraft-aware profile | Ready-to-start Home; Profile & Defaults | Show the selected game and `Change current game` before start; use Profile & Defaults for the full saved editor. |
+| Twitch-prefilled current game and persistent Minecraft-aware default | Ready-to-start Home; Gameplay Capture; Profile & Defaults | Show the active game and `Change stream game` before start; use Gameplay Capture for the active stream and Profile & Defaults for the saved next-stream default. |
 | Readiness gate and session lifecycle | Home | Reuse Home for preparing, live, reconnecting, ended, and blocking connection failure. Do not add another mode page. |
 | Capture preferences and reconnect support | Gameplay Engine; Test Lab | Keep ordinary capture evidence in Game Capture and recovery/check actions in the existing capture sections. |
 | Saved defaults plus current-session overrides | Profile & Defaults; Stream Settings | Keep saved values and temporary stream changes separate; no Home editor expansion. |

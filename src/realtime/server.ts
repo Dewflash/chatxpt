@@ -28,6 +28,7 @@ export {
   SupabaseSessionHistoryReader,
   SupabaseSessionLifecycleStore,
   SupabaseSessionStateRepository,
+  SupabaseStreamerProfileRepository,
   SupabaseTwitchChannelSessionDirectory,
   SupabaseViewerRecoveryReader,
   createSupabasePersistenceRuntime,

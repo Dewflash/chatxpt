@@ -15,6 +15,16 @@ export const participationCapabilitiesSchema = z
 
 export const streamSessionStatusSchema = z.enum(["offline", "preparing", "live", "ended"]);
 
+export const streamGameSourceSchema = z.enum(["profile", "twitch", "streamer"]);
+
+export const streamSessionGameSchema = z
+  .object({
+    gameId: identifierSchema,
+    gameName: z.string().trim().min(1).max(120),
+    source: streamGameSourceSchema,
+  })
+  .strict();
+
 export const streamSessionSchema = z
   .object({
     sessionId: identifierSchema,
@@ -25,6 +35,7 @@ export const streamSessionSchema = z
     createdAt: timestampSchema,
     startedAt: timestampSchema.nullable(),
     endedAt: timestampSchema.nullable(),
+    currentGame: streamSessionGameSchema.nullable().optional(),
     capabilities: participationCapabilitiesSchema,
   })
   .strict()
@@ -52,5 +63,7 @@ export const platformEventSchema = z
   .strict();
 
 export type ParticipationCapabilities = z.infer<typeof participationCapabilitiesSchema>;
+export type StreamGameSource = z.infer<typeof streamGameSourceSchema>;
+export type StreamSessionGame = z.infer<typeof streamSessionGameSchema>;
 export type StreamSession = z.infer<typeof streamSessionSchema>;
 export type PlatformEvent = z.infer<typeof platformEventSchema>;

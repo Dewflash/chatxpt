@@ -71,8 +71,16 @@ describe("CanonicalViewProjector overlay up next", () => {
       ...projectorInput(),
       profile: {
         ...contractFixtureProfile,
-        gameId: "minecraft-java",
-        gameName: "Minecraft: Java Edition",
+        gameId: "brawl-stars",
+        gameName: "Brawl Stars",
+      },
+      session: {
+        ...contractFixtureSession,
+        currentGame: {
+          gameId: "minecraft-java",
+          gameName: "Minecraft: Java Edition",
+          source: "twitch" as const,
+        },
       },
       gameplay: {
         ...contractFixtureGameplaySnapshot,
@@ -110,5 +118,52 @@ describe("CanonicalViewProjector overlay up next", () => {
       expiresAt: intent.expiresAt,
     });
     expect(projected.overlay.upNext).not.toHaveProperty("desiredAudienceInvolvement");
+  });
+
+  it("treats universal Generic capture as compatible with explicit Generic stream context", () => {
+    const intent = contractFixtureLiveDirectorState.declaredIntent;
+    expect(intent.status).toBe("known");
+    if (intent.status !== "known") return;
+    const knownSignal = {
+      signalId: "fixture-generic-activity",
+      kind: "activity-intensity",
+      observation: {
+        status: "known" as const,
+        value: 0.64,
+        provenance: {
+          source: "test-fixture" as const,
+          method: "contract-fixture",
+          confidence: 0.72,
+          observedAt: contractFixtureEnvelope.occurredAt,
+          receivedAt: contractFixtureEnvelope.receivedAt,
+          evidenceClass: "fixture" as const,
+        },
+      },
+    };
+
+    const projected = new CanonicalViewProjector().project({
+      ...projectorInput(),
+      session: {
+        ...contractFixtureSession,
+        currentGame: {
+          gameId: "generic",
+          gameName: "Current Game",
+          source: "streamer" as const,
+        },
+      },
+      gameplay: {
+        ...contractFixtureGameplaySnapshot,
+        capabilities: {
+          ...contractFixtureGameplaySnapshot.capabilities,
+          gameId: null,
+        },
+        signals: [knownSignal],
+      },
+    });
+
+    expect(projected.overlay.upNext).toMatchObject({
+      label: "Up next",
+      title: intent.goal,
+    });
   });
 });

@@ -77,6 +77,7 @@ export class ServerCommandAuthorizer implements CommandAuthorizer {
         command.type === "system.quest-progress" ||
         command.type === "system.audience-snapshot-ready" ||
         command.type === "system.gameplay-snapshot-ready" ||
+        command.type === "system.current-game" ||
         command.type === "system.live-director-context-ready" ||
         command.type === "system.live-director-cue-ready"
         ? null

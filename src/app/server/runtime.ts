@@ -320,7 +320,11 @@ export class ChatXptServerRuntime {
       receivedAt: now,
       source: "studio" as const,
     };
-    const profile = resolveEffectiveStreamerProfile(state.profile, state.sessionOverride);
+    const profile = resolveEffectiveStreamerProfile(
+      state.profile,
+      state.sessionOverride,
+      state.session.currentGame,
+    );
     const fallbackProfile = profile.gameId === null
       ? { ...profile, gameId: "generic", gameName: "Current Game" }
       : profile;
@@ -514,7 +518,11 @@ export class ChatXptServerRuntime {
     );
     const effectiveState: AuthoritativeSessionState = {
       ...state,
-      profile: resolveEffectiveStreamerProfile(state.profile, state.sessionOverride),
+      profile: resolveEffectiveStreamerProfile(
+        state.profile,
+        state.sessionOverride,
+        state.session.currentGame,
+      ),
     };
     const result = await coordinator.run({
       state: effectiveState,

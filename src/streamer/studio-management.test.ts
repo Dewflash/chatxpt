@@ -150,8 +150,8 @@ describe("StudioManagementSurface", () => {
     const view = createFixtureUiGatewaySnapshot().views.streamer;
     const html = renderToStaticMarkup(h(StudioManagementSurface, { view }));
 
-    expect(html).toContain("List persistence uses the canonical profile settings command");
-    expect(html).toContain("their update command is not public yet");
+    expect(html).toContain("Profile &amp; Defaults owns full list editing");
+    expect(html).toContain("Profile &amp; Defaults owns saved game and accessibility changes.");
     expect(html).toContain("Studio will not imitate persistence in browser storage");
     expect(html).toContain("Profile actions are not mounted");
   });

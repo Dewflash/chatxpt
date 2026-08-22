@@ -15,15 +15,16 @@ import {
   type DesignSystemTheme,
   type StatusTone,
 } from "../design-system";
-import type {
-  QuestCandidate,
-  ServiceHealth,
-  StreamerQuestAction,
-  StreamerReadinessView,
-  StreamerSetupAction,
-  StreamerSetupService,
-  StreamerSetupServiceId,
-  StreamerViewModel,
+import {
+  resolveCurrentStreamGame,
+  type QuestCandidate,
+  type ServiceHealth,
+  type StreamerQuestAction,
+  type StreamerReadinessView,
+  type StreamerSetupAction,
+  type StreamerSetupService,
+  type StreamerSetupServiceId,
+  type StreamerViewModel,
 } from "../core";
 import {
   buildEmergencyClearCommand,
@@ -242,7 +243,7 @@ function SavedDefaultsEditor({
               <dd>{view.profile.restrictions.join(", ") || "Core safety policy only"}</dd>
             </div>
           </dl>
-          <p className={styles.contractNote}>List persistence uses the canonical profile settings command; full list editing remains unavailable in this pass.</p>
+          <p className={styles.contractNote}>Profile &amp; Defaults owns full list editing through the canonical profile settings command.</p>
         </SettingGroup>
 
         <SettingGroup title="Game & accessibility" badge="Saved · view only">
@@ -256,7 +257,7 @@ function SavedDefaultsEditor({
               <dd>{view.profile.accessibilityNeeds.join(", ") || "No saved preferences"}</dd>
             </div>
           </dl>
-          <p className={styles.contractNote}>These saved values are visible here; their update command is not public yet.</p>
+          <p className={styles.contractNote}>Profile &amp; Defaults owns saved game and accessibility changes.</p>
         </SettingGroup>
 
         <SettingGroup title="Voting" badge="Saved default">
@@ -822,7 +823,7 @@ export function StudioManagementSurface({
           </div>
           <Panel className={styles.heroGame}>
             <small>Selected game profile</small>
-            <strong>{view.profile.gameName ?? "No game selected"}</strong>
+            <strong>{resolveCurrentStreamGame(view.profile, view.session.currentGame)?.gameName ?? "No game selected"}</strong>
             <span>{view.gameplay ? titleCase(view.gameplay.capabilities.tier) : "Gameplay Activity unknown"}</span>
           </Panel>
         </header>

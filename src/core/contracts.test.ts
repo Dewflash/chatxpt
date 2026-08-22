@@ -486,6 +486,25 @@ describe("identity and command permissions", () => {
       }).success,
     ).toBe(true);
     expect(
+      streamerProfileSettingsCommandSchema.parse({
+        ...base,
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+      }).expectedProfileRevision,
+    ).toBeUndefined();
+    expect(
+      streamerProfileSettingsCommandSchema.parse({
+        ...base,
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+      }).gameApplication,
+    ).toBe("saved-only");
+    expect(
+      streamerProfileSettingsCommandSchema.safeParse({
+        ...base,
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+        gameApplication: "saved-and-current",
+      }).success,
+    ).toBe(false);
+    expect(
       commandEnvelopeSchema.safeParse({
         ...base,
         actor: { kind: "moderator", actorId: "fixture-moderator" },
@@ -509,6 +528,35 @@ describe("identity and command permissions", () => {
         rewards: undefined,
       }).success,
     ).toBe(false);
+  });
+
+  it("accepts source-specific current-stream game commands without profile fields", () => {
+    const base = {
+      contractVersion: CONTRACT_VERSION,
+      sessionId: "fixture-session",
+      questCycleId: "fixture-cycle",
+      commandId: "fixture-current-game",
+      correlationId: "fixture-current-game-correlation",
+      expectedRevision: 4,
+      issuedAt: 10,
+      game: { gameId: "generic", gameName: "Current Game" },
+    };
+
+    expect(commandEnvelopeSchema.safeParse({
+      ...base,
+      type: "streamer.current-game",
+      actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+    }).success).toBe(true);
+    expect(commandEnvelopeSchema.safeParse({
+      ...base,
+      type: "system.current-game",
+      actor: { kind: "system", actorId: "verified-twitch" },
+    }).success).toBe(true);
+    expect(commandEnvelopeSchema.safeParse({
+      ...base,
+      type: "system.current-game",
+      actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+    }).success).toBe(false);
   });
 
   it("authorises Live Director intent and cue command classes without client lifecycle authority", () => {

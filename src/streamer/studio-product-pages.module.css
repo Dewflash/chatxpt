@@ -8,6 +8,7 @@
 .sidebar {
   position: sticky;
   top: 0;
+  min-width: 0;
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -67,6 +68,64 @@
 .nav a:focus-visible {
   outline: none;
   box-shadow: var(--cx-focus-ring);
+}
+
+.connectionHealth {
+  display: grid;
+  gap: var(--cx-space-sm);
+  padding-block: var(--cx-space-md);
+  border-block: 1px solid var(--cx-color-border);
+}
+
+.connectionHealth div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--cx-space-sm);
+}
+
+.connectionHealth small {
+  color: var(--cx-color-text-muted);
+}
+
+.connectionHealth strong {
+  font-size: var(--cx-font-size-sm);
+  text-align: right;
+}
+
+.connectionHealth p {
+  margin: 0;
+  font-size: var(--cx-font-size-sm);
+  line-height: 1.45;
+}
+
+.localAccount {
+  display: grid;
+  gap: var(--cx-space-sm);
+}
+
+.localAccount span {
+  display: grid;
+  gap: var(--cx-space-xs);
+}
+
+.localAccount small {
+  color: var(--cx-color-text-muted);
+}
+
+.localAccount button {
+  min-height: 2.5rem;
+  border: 1px solid var(--cx-color-border);
+  border-radius: var(--cx-radius-md);
+  color: var(--cx-color-text);
+  background: transparent;
+  font-weight: var(--cx-font-weight-medium);
+  cursor: pointer;
+}
+
+.localAccount button:hover,
+.localAccount button:focus-visible {
+  border-color: var(--cx-color-primary);
 }
 
 .main {
@@ -1240,6 +1299,56 @@
 }
 
 @media (max-width: 600px) {
+  .sidebar {
+    width: 100%;
+    gap: var(--cx-space-md);
+    padding: var(--cx-space-md);
+    overflow: hidden;
+  }
+
+  .nav {
+    display: flex;
+    gap: var(--cx-space-sm);
+    overflow-x: auto;
+    padding-bottom: var(--cx-space-xs);
+    scroll-snap-type: x proximity;
+  }
+
+  .nav a {
+    min-width: max-content;
+    min-height: 2.5rem;
+    scroll-snap-align: start;
+  }
+
+  .connectionHealth {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--cx-space-md);
+  }
+
+  .connectionHealth div {
+    display: grid;
+    align-content: start;
+    justify-content: stretch;
+    gap: var(--cx-space-xs);
+  }
+
+  .connectionHealth strong {
+    text-align: left;
+  }
+
+  .connectionHealth p {
+    grid-column: 1 / -1;
+  }
+
+  .localAccount {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+
+  .localAccount button {
+    padding-inline: var(--cx-space-md);
+  }
+
   .main {
     gap: var(--cx-space-lg);
   }

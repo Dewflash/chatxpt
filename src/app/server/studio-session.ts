@@ -7,15 +7,19 @@ import { z } from "zod";
 import {
   CONTRACT_VERSION,
   authoritativeSessionStateSchema,
+  canonicalJsonStringify,
   commandEnvelopeSchema,
+  createDefaultStreamerProfile,
   identifierSchema,
   serviceHealthSchema,
   streamerReadinessViewSchema,
   streamerServiceCommandSchema,
   streamerViewModelSchema,
+  systemCurrentGameCommandSchema,
   type AuthoritativeSessionState,
   type ProjectionContextResolver,
   type StreamerReadinessView,
+  type StreamerProfileConnection,
   type StreamerViewModel,
 } from "@/core";
 import {
@@ -364,10 +368,57 @@ export class StudioSessionApplication {
         );
       }
       state = loaded;
+      if (
+        twitchVerified &&
+        parsed.data.gameId !== null &&
+        parsed.data.gameName !== null
+      ) {
+        state = await this.applyVerifiedTwitchCurrentGame(state, {
+          gameId: parsed.data.gameId,
+          gameName: parsed.data.gameName,
+        });
+      }
     } else {
       const createdAt = this.now();
       const sessionId = `session-${this.nextId()}`;
       const questCycleId = `cycle-${this.nextId()}`;
+      const defaults = createDefaultStreamerProfile({
+        profileId: `profile-${parsed.data.channelId}`,
+        streamerId: parsed.data.channelId,
+        displayName: parsed.data.displayName,
+        gameId: parsed.data.gameId,
+        gameName: parsed.data.gameName,
+      });
+      let profileResolution;
+      try {
+        profileResolution = twitchVerified
+          ? await this.persistence.profiles.getOrCreateForVerifiedIdentity({
+              provider: "twitch",
+              providerSubjectId: parsed.data.channelId,
+              displayName: parsed.data.displayName,
+              verifiedAt: createdAt,
+            }, defaults)
+          : await this.persistence.profiles.getOrCreateForDiagnostic(defaults, createdAt);
+      } catch {
+        throw new StudioSessionApplicationError(
+          "dependency-unavailable",
+          "The streamer profile could not be loaded safely",
+          true,
+        );
+      }
+      const currentGame = parsed.data.gameId !== null && parsed.data.gameName !== null
+        ? {
+            gameId: parsed.data.gameId,
+            gameName: parsed.data.gameName,
+            source: twitchVerified ? "twitch" as const : "streamer" as const,
+          }
+        : profileResolution.profile.gameId !== null && profileResolution.profile.gameName !== null
+          ? {
+              gameId: profileResolution.profile.gameId,
+              gameName: profileResolution.profile.gameName,
+              source: "profile" as const,
+            }
+          : null;
       const stateAtRevisionZero = authoritativeSessionStateSchema.parse({
         session: {
           sessionId,
@@ -378,6 +429,7 @@ export class StudioSessionApplication {
           createdAt,
           startedAt: null,
           endedAt: null,
+          currentGame,
           capabilities: {
             twitchExtension: twitchExtensionReady,
             hostedViewerBoard: true,
@@ -387,19 +439,7 @@ export class StudioSessionApplication {
             reactions: true,
           },
         },
-        profile: {
-          profileId: `profile-${parsed.data.channelId}`,
-          streamerId: parsed.data.channelId,
-          revision: 0,
-          displayName: parsed.data.displayName,
-          gameId: parsed.data.gameId,
-          gameName: parsed.data.gameName,
-          experience: { intensity: 0.5, creativity: 0.5 },
-          restrictions: [],
-          preferredQuestTypes: [],
-          forbiddenQuestTypes: [],
-          accessibilityNeeds: [],
-        },
+        profile: profileResolution.profile,
         services: this.initialServices(createdAt),
         gameplay: null,
         audience: null,
@@ -438,6 +478,64 @@ export class StudioSessionApplication {
     }
 
     return this.issueStudioGrant(state, twitchVerified);
+  }
+
+  private async applyVerifiedTwitchCurrentGame(
+    initialState: AuthoritativeSessionState,
+    game: { readonly gameId: string; readonly gameName: string },
+  ): Promise<AuthoritativeSessionState> {
+    let state = initialState;
+    const actor: VerifiedCommandActor = {
+      kind: "system",
+      actorId: "role1-verified-twitch-game",
+      expiresAt: null,
+      moderatorForBroadcasterIds: [],
+      voterKey: null,
+      participationModes: [],
+    };
+    const commandId = `twitch-current-game-${this.nextId()}`;
+    const correlationId = `twitch-current-game-correlation-${this.nextId()}`;
+    const maxRevisionAttempts = 20;
+    for (let attempt = 0; attempt < maxRevisionAttempts; attempt += 1) {
+      if (
+        state.session.currentGame?.gameId === game.gameId &&
+        state.session.currentGame.gameName === game.gameName
+      ) {
+        return state;
+      }
+      const result = await this.dependencies.runtime.execute(
+        systemCurrentGameCommandSchema.parse({
+          contractVersion: CONTRACT_VERSION,
+          sessionId: state.session.sessionId,
+          questCycleId: state.questCycle.envelope.questCycleId,
+          commandId,
+          correlationId,
+          expectedRevision: state.session.revision,
+          issuedAt: this.now(),
+          actor: { kind: actor.kind, actorId: actor.actorId },
+          type: "system.current-game",
+          game,
+        }),
+        actor,
+        new StudioProjectionContext(this.now),
+      );
+      if (result.ok) return result.receipt.state;
+      if (result.error.code !== "stale-revision" || attempt === maxRevisionAttempts - 1) {
+        throw commandError(result.error.code, result.error.message, result.error.retryable);
+      }
+      state = await this.loadSession(state.session.sessionId);
+      if (state.session.broadcasterId !== initialState.session.broadcasterId) {
+        throw new StudioSessionApplicationError(
+          "forbidden",
+          "Twitch game update no longer belongs to this broadcaster session",
+        );
+      }
+    }
+    throw new StudioSessionApplicationError(
+      "dependency-unavailable",
+      "Twitch game could not update while live inputs were changing",
+      true,
+    );
   }
 
   private async issueStudioGrant(
@@ -832,6 +930,7 @@ export class StudioSessionApplication {
       audience: state.audience,
       questCycle: state.questCycle,
       emergencyPaused: state.emergencyPaused,
+      profileConnection: await this.profileConnection(state, twitchVerified, at),
       ...(state.sessionOverride === undefined ? {} : { sessionOverride: state.sessionOverride }),
       ...(state.liveDirector === undefined ? {} : { liveDirector: state.liveDirector }),
     });
@@ -843,6 +942,60 @@ export class StudioSessionApplication {
           state.session.sessionId,
         ))?.roomCode ?? null,
     };
+  }
+
+  private async profileConnection(
+    state: AuthoritativeSessionState,
+    twitchVerified: boolean,
+    checkedAt: number,
+  ): Promise<StreamerProfileConnection> {
+    try {
+      const stored = await this.persistence.profiles.loadByStreamerId(state.profile.streamerId);
+      if (
+        stored === null ||
+        canonicalJsonStringify(stored.profile) !== canonicalJsonStringify(state.profile)
+      ) {
+        return {
+          accountStatus: twitchVerified ? "twitch-verified" : "diagnostic",
+          profileOrigin: this.persistence.mode,
+          persistenceStatus: "unavailable",
+          checkedAt,
+          lastPersistedAt: stored?.updatedAt ?? null,
+          message: "Profile storage does not match the active session. Reconnect before changing defaults.",
+        };
+      }
+      if (this.persistence.mode === "supabase") {
+        return {
+          accountStatus: twitchVerified ? "twitch-verified" : "diagnostic",
+          profileOrigin: "supabase",
+          persistenceStatus: "synced",
+          checkedAt,
+          lastPersistedAt: stored.updatedAt,
+          message: twitchVerified
+            ? "Twitch is verified and profile changes are saved to your account."
+            : "The diagnostic session is using an existing saved profile.",
+        };
+      }
+      return {
+        accountStatus: twitchVerified ? "twitch-verified" : "diagnostic",
+        profileOrigin: "memory",
+        persistenceStatus: "temporary",
+        checkedAt,
+        lastPersistedAt: stored.updatedAt,
+        message: twitchVerified
+          ? "Twitch is verified, but profile changes last only while this server is running."
+          : "This diagnostic profile lasts only while the local server is running.",
+      };
+    } catch {
+      return {
+        accountStatus: twitchVerified ? "twitch-verified" : "diagnostic",
+        profileOrigin: this.persistence.mode,
+        persistenceStatus: "unavailable",
+        checkedAt,
+        lastPersistedAt: null,
+        message: "Profile storage could not be checked. The live session can continue with its loaded settings.",
+      };
+    }
   }
 
   private async hydrateGameplay(

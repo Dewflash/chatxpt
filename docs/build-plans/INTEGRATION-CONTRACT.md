@@ -52,6 +52,8 @@ Names may be refined in R1-P02, but responsibilities and dependency direction ar
 
 Twitch `1`/`2`/`3` messages are parsed and authenticated by Role 1's Twitch adapter into the same normalised viewer-command path. Role 5 owns the instructions and counted-status presentation, not parsing or vote authority.
 
+`StreamerProfile` is the saved cross-session source. `StreamSession.currentGame` is the current-stream source and takes precedence only for live extraction, AI/quest context, and live presentation. Profile editors emit saved-only game changes. Calibrated Gameplay Capture choices explicitly request a saved-and-current change; Generic capture and verified Twitch category changes use current-only commands and preserve the saved default. Current-game changes pass through the quest engine so an in-flight proposal, vote, or quest is cancelled before its game context changes. No consumer may infer these distinctions independently.
+
 ## Canonical envelope and errors
 
 Every cross-role command/event/state message includes, where applicable:
@@ -70,6 +72,7 @@ correlationId
 
 - Time is expressed as UTC timestamps or epoch milliseconds. Countdown view models expose authoritative `startsAt`/`endsAt`; clients derive display time and never own the result.
 - Commands are idempotent by `commandId` and use `expectedRevision` when changing authoritative state.
+- Full profile writes also carry `expectedProfileRevision`; rebasing the session revision after another live command cannot authorise a stale browser to overwrite newer saved profile content.
 - Errors are typed and safe to display or map: validation, unauthenticated, forbidden, stale revision, duplicate, unavailable capability, expired, rate limited, dependency unavailable, and internal.
 - Provider/Twitch/Supabase payloads and raw UI component state never enter canonical domain contracts.
 

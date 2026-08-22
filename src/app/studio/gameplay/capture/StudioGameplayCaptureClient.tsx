@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import type { GameplaySnapshot, StreamerReadinessView, StreamerViewModel } from "@/core";
+import {
+  resolveCurrentStreamGame,
+  type GameplaySnapshot,
+  type StreamerReadinessView,
+  type StreamerViewModel,
+} from "@/core";
 import {
   buildMultiGameGameplaySnapshot,
   MultiGameVisionAnalyzer,
@@ -21,7 +26,8 @@ import {
   type ObsVirtualCameraFailureReason,
 } from "@/integrations";
 import {
-  buildProfileSettingsCommand,
+  buildCurrentGameProfileSettingsCommand,
+  buildCurrentStreamGameCommand,
   connectGameplayCapturePreview,
   describeSelectedGameplaySource,
   editableDefaultsFromView,
@@ -29,7 +35,7 @@ import {
 
 import styles from "./studio-gameplay-capture.module.css";
 
-type CaptureGame = "brawl-stars" | "minecraft" | "generic";
+export type CaptureGame = "brawl-stars" | "minecraft" | "generic";
 type CaptureSource = "screen-window" | "obs-virtual-camera";
 
 const CAPTURE_PREFERENCE_KEY = "chatxpt.studio.gameplayCapture.v1";
@@ -164,11 +170,15 @@ function customerSafeLabel(label: string | null | undefined, fallback: string): 
   return label;
 }
 
-function gameFromProfile(view: StreamerViewModel | null): CaptureGame {
-  const gameId = view?.profile.gameId?.toLowerCase() ?? "";
-  const gameName = view?.profile.gameName?.toLowerCase() ?? "";
+export function captureGameFromView(view: StreamerViewModel | null): CaptureGame {
+  const currentGame = view === null
+    ? null
+    : resolveCurrentStreamGame(view.profile, view.session.currentGame);
+  const gameId = currentGame?.gameId.toLowerCase() ?? "";
+  const gameName = currentGame?.gameName.toLowerCase() ?? "";
   if (gameId.includes("minecraft") || gameName.includes("minecraft")) return "minecraft";
   if (gameId.includes("brawl") || gameName.includes("brawl")) return "brawl-stars";
+  if (gameId === "generic") return "generic";
   // Vanilla Minecraft is the accepted calibrated MVP demonstration target.
   // Keep it as the visible ChatXPT default rather than silently trapping a
   // new capture in universal, stat-free Generic mode.
@@ -280,7 +290,7 @@ export function StudioGameplayCaptureClient() {
         setReadiness(payload.readiness);
         if (!capturePreferenceLoadedRef.current) {
           const savedPreference = readCapturePreference();
-          const platformGame = gameFromProfile(payload.view);
+          const platformGame = captureGameFromView(payload.view);
           capturePreferenceLoadedRef.current = true;
           setCapturePreference(savedPreference);
           setCaptureSource(savedPreference?.source ?? "screen-window");
@@ -392,21 +402,59 @@ export function StudioGameplayCaptureClient() {
 
     async function persistCaptureGame(): Promise<void> {
       const selectedGame = savedGameFor(game);
+      const currentGame = resolveCurrentStreamGame(
+        currentView.profile,
+        currentView.session.currentGame,
+      );
+      if (selectedGame === null) {
+        if (currentGame?.gameId === "generic" && currentGame.gameName === "Current Game") {
+          return;
+        }
+        setIngressStatus("Using Generic analysis for this stream; saved default unchanged");
+        const response = await fetch("/api/studio/commands", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "include",
+          cache: "no-store",
+          signal: controller.signal,
+          body: JSON.stringify(buildCurrentStreamGameCommand(currentView, {
+            gameId: "generic",
+            gameName: "Current Game",
+          })),
+        });
+        const payload = (await response.json()) as StudioSessionPayload;
+        if (!response.ok || !payload.ok || payload.view === undefined) {
+          throw new CaptureRequestError(
+            payload.error?.message ?? "ChatXPT could not apply the Generic stream profile.",
+            payload.error?.retryable === true || response.status >= 500 || response.status === 409,
+          );
+        }
+        currentView = payload.view;
+        setView(payload.view);
+        if (payload.readiness !== undefined) setReadiness(payload.readiness);
+        setIngressStatus(
+          selectedSource === "obs-virtual-camera"
+            ? "Generic stream profile is active; waiting for OBS Virtual Camera"
+            : "Generic stream profile is active; waiting for screen or window selection",
+        );
+        return;
+      }
       if (
-        selectedGame === null ||
         (currentView.profile.gameId === selectedGame.gameId &&
-          currentView.profile.gameName === selectedGame.gameName)
+          currentView.profile.gameName === selectedGame.gameName &&
+          currentGame?.gameId === selectedGame.gameId &&
+          currentGame.gameName === selectedGame.gameName)
       ) {
         return;
       }
-      setIngressStatus(`Saving ${selectedGame.gameName} as the current ChatXPT game`);
+      setIngressStatus(`Saving ${selectedGame.gameName} for this stream and future defaults`);
       const response = await fetch("/api/studio/commands", {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "include",
         cache: "no-store",
         signal: controller.signal,
-        body: JSON.stringify(buildProfileSettingsCommand(currentView, {
+        body: JSON.stringify(buildCurrentGameProfileSettingsCommand(currentView, {
           ...editableDefaultsFromView(currentView),
           gameId: selectedGame.gameId,
           gameName: selectedGame.gameName,
@@ -424,8 +472,8 @@ export function StudioGameplayCaptureClient() {
       if (payload.readiness !== undefined) setReadiness(payload.readiness);
       setIngressStatus(
         selectedSource === "obs-virtual-camera"
-          ? `${selectedGame.gameName} is saved; waiting for OBS Virtual Camera`
-          : `${selectedGame.gameName} is saved; waiting for screen or window selection`,
+          ? `${selectedGame.gameName} is active and saved; waiting for OBS Virtual Camera`
+          : `${selectedGame.gameName} is active and saved; waiting for screen or window selection`,
       );
     }
 
@@ -852,7 +900,7 @@ export function StudioGameplayCaptureClient() {
         <article className={styles.metric}><span>Snapshots accepted</span><strong>{acceptedSnapshots}</strong></article>
         <article className={styles.metric}><span>Frames analyzed</span><strong>{latest?.frameCount ?? 0}</strong></article>
         <article className={styles.metric}><span>Local analysis rate</span><strong>{latest?.analysisRateFps === null || latest === null ? "Starting" : `${latest.analysisRateFps.toFixed(1)} / sec`}</strong></article>
-        <article className={styles.metric}><span>Game Profile</span><strong>{latest?.gameProfile ?? (view?.profile.gameName ?? "Waiting")}</strong></article>
+        <article className={styles.metric}><span>Game Profile</span><strong>{latest?.gameProfile ?? (view === null ? "Waiting" : resolveCurrentStreamGame(view.profile, view.session.currentGame)?.gameName ?? "Waiting")}</strong></article>
         <article className={styles.metric}><span>Support tier</span><strong>{latest?.supportTier ?? "Waiting"}</strong></article>
         <article className={styles.metric}><span>Detected Game Facts</span><strong>{latest?.hudStatus ?? "Waiting"}</strong></article>
         <article className={styles.metric}><span>Gameplay Activity</span><strong>{latest === null ? "Unknown" : `${latest.gameplayActivity[0].toUpperCase()}${latest.gameplayActivity.slice(1)}`}</strong></article>

@@ -19,6 +19,18 @@ const gameplaySnapshotMigration = readFileSync(
   resolve(process.cwd(), "supabase/migrations/202608140001_current_gameplay_snapshots.sql"),
   "utf8",
 );
+const profileBootstrapMigration = readFileSync(
+  resolve(process.cwd(), "supabase/migrations/202608220001_profile_bootstrap_preservation.sql"),
+  "utf8",
+);
+const accountIdentityMigration = readFileSync(
+  resolve(process.cwd(), "supabase/migrations/202608220002_streamer_accounts_connected_identities.sql"),
+  "utf8",
+);
+const profilePersistenceDatabaseTest = readFileSync(
+  resolve(process.cwd(), "supabase/tests/database/profile_persistence.test.sql"),
+  "utf8",
+);
 const environmentExample = readFileSync(resolve(process.cwd(), ".env.example"), "utf8");
 
 describe("Supabase migration security regression", () => {
@@ -95,6 +107,37 @@ describe("Supabase migration security regression", () => {
     );
     expect(gameplaySnapshotMigration).not.toContain("update public.stream_sessions");
     expect(gameplaySnapshotMigration).not.toMatch(/grant .* to (anon|authenticated)/i);
+  });
+
+  it("prevents session bootstrap from replacing a saved profile", () => {
+    expect(profileBootstrapMigration).toContain("enforce_streamer_profile_revision");
+    expect(profileBootstrapMigration).toContain("profile-content-requires-new-revision");
+    expect(profileBootstrapMigration).toContain("profile-revision-must-advance-once");
+    expect(profileBootstrapMigration).toContain("profile-bootstrap-mismatch");
+    expect(profileBootstrapMigration).toContain("public.streamer_profiles.profile = excluded.profile");
+    expect(profileBootstrapMigration).not.toContain("profile = excluded.profile,");
+  });
+
+  it("adds private internal account ownership and verified Twitch identity resolution", () => {
+    expect(accountIdentityMigration).toContain("create table public.streamer_accounts");
+    expect(accountIdentityMigration).toContain("create table public.connected_identities");
+    expect(accountIdentityMigration).toContain("unique (provider, provider_subject_id)");
+    expect(accountIdentityMigration).toContain("streamer_profiles_account_id_fkey");
+    expect(accountIdentityMigration).toContain("streamer_profiles_json_revision_check");
+    expect(accountIdentityMigration).toContain("stream_sessions_account_id_fkey");
+    expect(accountIdentityMigration).toContain("create or replace function public.get_or_create_streamer_profile");
+    expect(accountIdentityMigration).toContain("pg_catalog.pg_advisory_xact_lock");
+    expect(accountIdentityMigration).toContain("to service_role");
+    expect(accountIdentityMigration).not.toMatch(/grant (insert|update|delete|all).* to (anon|authenticated)/i);
+    expect(accountIdentityMigration).not.toMatch(/oauth|access_token|refresh_token|password/i);
+  });
+
+  it("keeps an executable database regression for profile identity isolation", () => {
+    expect(profilePersistenceDatabaseTest).toContain("get_or_create_streamer_profile");
+    expect(profilePersistenceDatabaseTest).toContain("different Twitch identities resolve to different internal accounts");
+    expect(profilePersistenceDatabaseTest).toContain("each Twitch identity owns only its matching profile");
+    expect(profilePersistenceDatabaseTest).toContain("reconnecting the same Twitch identity returns the same internal account");
+    expect(profilePersistenceDatabaseTest).toContain("rollback;");
   });
 
   it("broadcasts only private role snapshots authorised by short-lived server grants", () => {
