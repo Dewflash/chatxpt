@@ -807,6 +807,48 @@ export function StudioGameplayCaptureClient() {
   }
 
   const detectorReadings = latest?.profileReadings ?? captureReadingsForSnapshot(game, null);
+  const captureStatsColumns = [
+    {
+      id: "connection",
+      label: "Connection",
+      stats: [
+        { label: "Capture health", value: captureHealthCopy(running, latest !== null, error, failureReason, captureSource) },
+        { label: "Studio connection", value: ingressStatus },
+        { label: "Support tier", value: latest?.supportTier ?? "Waiting" },
+      ],
+    },
+    {
+      id: "processing",
+      label: "Processing",
+      stats: [
+        { label: "Snapshots accepted", value: acceptedSnapshots },
+        { label: "Frames analysed", value: latest?.frameCount ?? 0 },
+        { label: "Local analysis rate", value: latest?.analysisRateFps === null || latest === null ? "Starting" : `${latest.analysisRateFps.toFixed(1)} / sec` },
+        { label: "Last observation", value: latest === null ? "-" : new Date(latest.capturedAt).toLocaleTimeString() },
+        { label: "Signal confidence", value: latest === null ? "-" : latest.confidence.toFixed(2) },
+      ],
+    },
+    {
+      id: "gameplay",
+      label: "Gameplay",
+      stats: [
+        { label: "Gameplay activity", value: latest === null ? "Unknown" : `${latest.gameplayActivity[0].toUpperCase()}${latest.gameplayActivity.slice(1)}` },
+        { label: "Detected game facts", value: latest?.hudStatus ?? "Waiting" },
+        { label: "Game profile", value: latest?.gameProfile ?? (view === null ? "Waiting" : resolveCurrentStreamGame(view.profile, view.session.currentGame)?.gameName ?? "Waiting") },
+        { label: "Confidence", value: latest?.confidenceLabel ?? "Unavailable" },
+      ],
+    },
+    {
+      id: "others",
+      label: "Others",
+      stats: [
+        { label: "Cadence", value: latest === null ? "Waiting" : `${latest.cadence} - ${latest.cadenceReason}` },
+        { label: "Capture source", value: previewConnected ? captureDeviceLabel ?? "Connected source" : running ? "Connecting" : "None" },
+        { label: "Analysis sample", value: latest?.sampleResolution ?? "Waiting" },
+        { label: "Unknown facts", value: latest?.unknownFactCount ?? "Waiting" },
+      ],
+    },
+  ] as const;
 
   return (
     <div className={styles.shell}>
@@ -961,24 +1003,27 @@ export function StudioGameplayCaptureClient() {
         </p>
         </section>
 
-        {previewConnected ? (
-          <>
-        <section className={styles.grid} aria-live="polite" aria-label="Gameplay Capture status">
-        <article className={styles.metric}><span>Capture Health</span><strong>{captureHealthCopy(running, latest !== null, error, failureReason, captureSource)}</strong></article>
-        <article className={styles.metric}><span>Studio connection</span><strong>{ingressStatus}</strong></article>
-        <article className={styles.metric}><span>Snapshots accepted</span><strong>{acceptedSnapshots}</strong></article>
-        <article className={styles.metric}><span>Frames analyzed</span><strong>{latest?.frameCount ?? 0}</strong></article>
-        <article className={styles.metric}><span>Local analysis rate</span><strong>{latest?.analysisRateFps === null || latest === null ? "Starting" : `${latest.analysisRateFps.toFixed(1)} / sec`}</strong></article>
-        <article className={styles.metric}><span>Game Profile</span><strong>{latest?.gameProfile ?? (view === null ? "Waiting" : resolveCurrentStreamGame(view.profile, view.session.currentGame)?.gameName ?? "Waiting")}</strong></article>
-        <article className={styles.metric}><span>Support tier</span><strong>{latest?.supportTier ?? "Waiting"}</strong></article>
-        <article className={styles.metric}><span>Detected Game Facts</span><strong>{latest?.hudStatus ?? "Waiting"}</strong></article>
-        <article className={styles.metric}><span>Gameplay Activity</span><strong>{latest === null ? "Unknown" : `${latest.gameplayActivity[0].toUpperCase()}${latest.gameplayActivity.slice(1)}`}</strong></article>
-        <article className={styles.metric}><span>Confidence</span><strong>{latest?.confidenceLabel ?? "Unavailable"}</strong></article>
-        <article className={styles.metric}><span>Signal Confidence</span><strong>{latest === null ? "-" : latest.confidence.toFixed(2)}</strong></article>
-        <article className={styles.metric}><span>Cadence</span><strong>{latest === null ? "Waiting" : `${latest.cadence} - ${latest.cadenceReason}`}</strong></article>
-        <article className={styles.metric}><span>Last observation</span><strong>{latest === null ? "-" : new Date(latest.capturedAt).toLocaleTimeString()}</strong></article>
+        <section className={`${styles.panel} ${styles.statsPanel}`} aria-live="polite" aria-labelledby="capture-stats-heading">
+          <h2 id="capture-stats-heading">Capture Stats</h2>
+          <div className={styles.statsColumns}>
+            {captureStatsColumns.map((column) => (
+              <section className={styles.statsColumn} key={column.id} aria-labelledby={`capture-stats-${column.id}`}>
+                <h3 id={`capture-stats-${column.id}`}>{column.label}</h3>
+                <dl>
+                  {column.stats.map((stat) => (
+                    <div key={stat.label}>
+                      <dt>{stat.label}</dt>
+                      <dd>{stat.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            ))}
+          </div>
         </section>
 
+        {previewConnected ? (
+          <>
         <section className={styles.panel}>
         <h2>Observed and unknown facts</h2>
         <p>
