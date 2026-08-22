@@ -40,6 +40,7 @@ export interface ChatFallbackInstructionsProps {
 export interface ObsQuestOverlaySurfaceProps {
   readonly view: OverlayViewModel | null;
   readonly now?: number;
+  readonly standby?: "connecting" | "offline";
 }
 
 function formatSeconds(seconds: number): string {
@@ -213,6 +214,8 @@ function phaseTitle(phase: ReturnType<typeof presentViewer>["phase"]): string {
       return "Voting unavailable";
     case "voting":
       return "Choose the sidequest";
+    case "selected":
+      return "Winning sidequest";
     case "active":
       return "Sidequest active";
     case "result":
@@ -253,11 +256,29 @@ function resultCopy(result: NonNullable<ReturnType<typeof presentViewer>["result
   }
 }
 
+function LivePulse({
+  context,
+  communityHype,
+}: {
+  readonly context: ReturnType<typeof presentViewer>["publicContext"];
+  readonly communityHype: number;
+}) {
+  if (context === null) return null;
+  return (
+    <div className={styles.livePulse} aria-label="Live stream context">
+      <span><b>Chat</b> {context.chatStatus}</span>
+      <span><b>Hype</b> {communityHype}</span>
+      {context.gameplayStatus ? <span><b>Game</b> {context.gameplayStatus}</span> : null}
+      {context.explainer ? <small>{context.explainer}</small> : null}
+    </div>
+  );
+}
+
 function optionRibbon(
   option: ViewerQuestOptionPresentation,
   selectedCandidateId: string | null,
 ) {
-  if (option.active) return "winner" as const;
+  if (option.active || option.selected) return "winner" as const;
   if (option.acceptedByViewer || option.candidateId === selectedCandidateId) {
     return "selected" as const;
   }
@@ -353,8 +374,11 @@ function ViewerShell({
     (option) => option.candidateId === selectedCandidateId,
   );
   const activeOption = presentation.options.find((option) => option.active);
+  const selectedWinner = presentation.options.find((option) => option.selected);
   const visibleOptions =
-    (presentation.phase === "active" || presentation.phase === "result") && activeOption
+    presentation.phase === "selected" && selectedWinner
+      ? [selectedWinner]
+      : (presentation.phase === "active" || presentation.phase === "result") && activeOption
       ? [activeOption]
       : presentation.phase === "result"
         ? []
@@ -385,6 +409,11 @@ function ViewerShell({
   const resultDetails = presentation.result ? resultCopy(presentation.result) : null;
   const voteStatus = (() => {
     if (presentation.phase === "active") return "Winner confirmed. The sidequest is now active.";
+    if (presentation.phase === "selected") {
+      return presentation.endsAt === null
+        ? "Winner confirmed. Waiting for the streamer to start the sidequest."
+        : "Winner confirmed. The sidequest starts automatically after the reveal.";
+    }
     if (presentation.phase === "result") return "The authoritative sidequest result is shown above.";
     if (presentation.phase === "cooldown") return "The next vote opens after the official cooldown.";
     if (waitingForResult) return "Awaiting the official result.";
@@ -469,6 +498,11 @@ function ViewerShell({
             </Notice>
           ) : null}
 
+          <LivePulse
+            context={presentation.publicContext}
+            communityHype={presentation.communityHype}
+          />
+
           {visibleOptions.length === 0 && presentation.result === null ? (
             <Notice title={phaseTitle(presentation.phase)} className={styles.notice}>
               No vote is open right now.
@@ -487,7 +521,7 @@ function ViewerShell({
                     selectedCandidateId={effectiveSelectedCandidateId}
                     pending={option.candidateId === pendingCandidateId}
                     canSelect={canSelect}
-                    revealWinner={presentation.phase === "active" && option.active}
+                    revealWinner={(presentation.phase === "active" && option.active) || option.selected}
                     onSelectCandidate={onSelectCandidate}
                   />
                 );
@@ -571,6 +605,7 @@ export function ChatFallbackInstructions({ view, now }: ChatFallbackInstructions
   const available = presentation.participationMode === "twitch-chat";
   const voting = available && presentation.phase === "voting" && presentation.options.length === 3;
   const activeOption = presentation.options.find((option) => option.active);
+  const selectedWinner = presentation.options.find((option) => option.selected);
   const waitingForResult =
     available &&
     awaitingOfficialResult(
@@ -584,6 +619,7 @@ export function ChatFallbackInstructions({ view, now }: ChatFallbackInstructions
   const title = (() => {
     if (!available) return "Chat voting inactive";
     if (waitingForResult) return "Awaiting the official result";
+    if (presentation.phase === "selected") return "Winning sidequest";
     if (presentation.phase === "active") return "Sidequest active";
     if (presentation.phase === "result" && resultDetails) return resultDetails.title;
     if (presentation.phase === "cooldown") return "Next vote soon";
@@ -611,6 +647,10 @@ export function ChatFallbackInstructions({ view, now }: ChatFallbackInstructions
             {connectionRecoveryCopy(presentation.connection.status)}
           </Notice>
         ) : null}
+        <LivePulse
+          context={presentation.publicContext}
+          communityHype={presentation.communityHype}
+        />
         {voting && !waitingForResult ? (
           <ol className={styles.chatList}>
             {presentation.options.map((option, index) => (
@@ -625,6 +665,12 @@ export function ChatFallbackInstructions({ view, now }: ChatFallbackInstructions
         ) : waitingForResult ? (
           <Notice title="Server confirmation pending" tone="info" politeness="polite">
             The broadcast overlay will show the winner, tie resolution, or no-vote outcome.
+          </Notice>
+        ) : presentation.phase === "selected" && selectedWinner ? (
+          <Notice title={selectedWinner.title} tone="info" politeness="polite">
+            {presentation.endsAt === null
+              ? "The vote winner is waiting for streamer approval."
+              : "The vote winner will start automatically after the reveal."}
           </Notice>
         ) : presentation.phase === "active" && activeOption ? (
           <Notice title={activeOption.title} tone="success" politeness="polite">
@@ -650,7 +696,35 @@ export function ChatFallbackInstructions({ view, now }: ChatFallbackInstructions
   );
 }
 
-export function ObsQuestOverlaySurface({ view, now }: ObsQuestOverlaySurfaceProps) {
+function overlayStateExplanation(
+  phase: ReturnType<typeof presentOverlay>["phase"],
+  recovering: boolean,
+): string {
+  if (recovering) {
+    return "ChatXPT is reconnecting. The last safe sidequest state remains visible until the current state returns.";
+  }
+  switch (phase) {
+    case "voting":
+      return "Viewers are choosing between three safe, validated sidequests.";
+    case "selected":
+      return "The vote winner is confirmed and is waiting to start.";
+    case "active":
+      return "This is the current active sidequest for the stream.";
+    case "result":
+      return "The sidequest has ended and its official result is shown.";
+    case "cooldown":
+      return "ChatXPT is waiting before opening another sidequest vote.";
+    case "inactive":
+    case "loading":
+      return "No sidequest is active. ChatXPT is waiting for a safe moment to open voting.";
+  }
+}
+
+export function ObsQuestOverlaySurface({
+  view,
+  now,
+  standby = "connecting",
+}: ObsQuestOverlaySurfaceProps) {
   const presentation = presentOverlay(view);
   const remaining = formatRemaining(presentation.endsAt, now);
   const waitingForResult =
@@ -672,20 +746,45 @@ export function ObsQuestOverlaySurface({ view, now }: ObsQuestOverlaySurfaceProp
     (presentation.phase === "inactive" || presentation.phase === "loading") &&
     !recovering
   ) {
+    const offline = view === null && standby === "offline";
     return (
       <DesignSystemRoot theme="dark" density="compact" className={styles.overlay}>
         <Card className={styles.overlayCard}>
           <div className={styles.shell}>
             <header className={styles.header}>
               <div className={styles.titleBlock}>
-                <p className={styles.eyebrow}>ChatXPT Sidequests</p>
-                <h2 className={styles.title}>Sidequest pending</h2>
+                <p className={styles.eyebrow}>ChatXPT Broadcast Overlay</p>
+                <h2 className={styles.title}>
+                  {offline
+                    ? "Overlay connected"
+                    : view === null
+                      ? "Connecting overlay"
+                      : "Sidequest pending"}
+                </h2>
               </div>
-              <StatusBadge tone="neutral">Waiting</StatusBadge>
+              <StatusBadge tone={offline ? "success" : "neutral"}>
+                {offline ? "Stream offline" : view === null ? "Connecting" : "Waiting"}
+              </StatusBadge>
             </header>
             <p className={styles.statusLine}>
-              Waiting for the next safe, validated sidequest and viewer vote.
+              {offline
+                ? "The permanent Browser Source is ready and will switch to live quest status when your next ChatXPT stream starts."
+                : view === null
+                  ? "Checking this permanent Browser Source connection."
+                  : "Waiting for the next safe, validated sidequest and viewer vote."}
             </p>
+            <div className={styles.overlayUpNext} aria-label="Overlay state explanation">
+              <span>What this means</span>
+              <small>
+                {offline
+                  ? "There is no active ChatXPT stream session, so no quest or vote is shown yet."
+                  : overlayStateExplanation(presentation.phase, false)}
+              </small>
+            </div>
+            <LivePulse
+              context={presentation.publicContext}
+              communityHype={presentation.communityHype}
+            />
           </div>
         </Card>
       </DesignSystemRoot>
@@ -709,6 +808,8 @@ export function ObsQuestOverlaySurface({ view, now }: ObsQuestOverlaySurfaceProp
                   ? waitingForResult
                     ? "Awaiting the official result"
                     : "Vote now"
+                  : presentation.phase === "selected"
+                    ? presentation.selectedQuest?.title ?? "Winner selected"
                   : presentation.phase === "cooldown"
                     ? "Next vote soon"
                     : presentation.activeQuest?.title ?? resultDetails?.title ?? "Overlay reconnecting"}
@@ -726,6 +827,10 @@ export function ObsQuestOverlaySurface({ view, now }: ObsQuestOverlaySurfaceProp
               {overlayRecoveryCopy(presentation.connection?.status)}
             </p>
           ) : null}
+          <div className={styles.overlayUpNext} aria-label="Overlay state explanation">
+            <span>What this means</span>
+            <small>{overlayStateExplanation(presentation.phase, recovering)}</small>
+          </div>
           {visibleUpNext ? (
             <div className={styles.overlayUpNext} aria-label="Public up next">
               <span>{visibleUpNext.label}</span>
@@ -733,6 +838,10 @@ export function ObsQuestOverlaySurface({ view, now }: ObsQuestOverlaySurfaceProp
               <small>{visibleUpNext.detail}</small>
             </div>
           ) : null}
+          <LivePulse
+            context={presentation.publicContext}
+            communityHype={presentation.communityHype}
+          />
           {presentation.phase === "voting" ? (
             <ol className={styles.overlayVotingList} aria-label="Authoritative vote tally">
               {presentation.options.map((option, index) => (
@@ -745,6 +854,12 @@ export function ObsQuestOverlaySurface({ view, now }: ObsQuestOverlaySurfaceProp
                 </li>
               ))}
             </ol>
+          ) : presentation.selectedQuest ? (
+            <p className={styles.instruction}>
+              {presentation.selectedQuest.instruction} {presentation.endsAt === null
+                ? "Waiting for streamer approval."
+                : "Starting automatically after the winner reveal."}
+            </p>
           ) : presentation.activeQuest ? (
             <p className={styles.instruction}>{presentation.activeQuest.instruction}</p>
           ) : null}

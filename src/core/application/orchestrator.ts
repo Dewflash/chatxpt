@@ -9,6 +9,7 @@ import {
   overlayViewModelSchema,
   publicQuestCycleStateSchema,
   questCycleStateSchema,
+  resolveEffectiveStreamerProfile,
   questEngineEventDraftSchema,
   questEngineEventSchema,
   serviceHealthSchema,
@@ -251,6 +252,19 @@ function authoritativeProfileSettingsUpdate(
   const votingChangeCount = Object.keys(command.voting ?? {}).length;
   const rewardChangeCount = Object.keys(command.rewards ?? {}).length;
   const revision = current.session.revision + 1;
+  const selectedPresetId =
+    command.selectedPresetId === undefined
+      ? current.profile.selectedPresetId
+      : command.selectedPresetId;
+  const streamPresets = command.streamPresets ?? current.profile.streamPresets.map((preset) =>
+    preset.presetId === selectedPresetId
+      ? {
+          ...preset,
+          voting: { ...preset.voting, ...command.voting },
+          rewards: { ...preset.rewards, ...command.rewards },
+        }
+      : preset,
+  );
   const profile = streamerProfileSchema.safeParse({
     ...current.profile,
     revision: current.profile.revision + 1,
@@ -265,11 +279,8 @@ function authoritativeProfileSettingsUpdate(
     forbiddenQuestTypes: command.forbiddenQuestTypes ?? current.profile.forbiddenQuestTypes,
     accessibilityNeeds: command.accessibilityNeeds ?? current.profile.accessibilityNeeds,
     keywordWatchlist: command.keywordWatchlist ?? current.profile.keywordWatchlist,
-    streamPresets: command.streamPresets ?? current.profile.streamPresets,
-    selectedPresetId:
-      command.selectedPresetId === undefined
-        ? current.profile.selectedPresetId
-        : command.selectedPresetId,
+    streamPresets,
+    selectedPresetId,
     voting: {
       ...current.profile.voting,
       ...command.voting,
@@ -1169,6 +1180,7 @@ export class ChatXptOrchestrator {
             currentState: current.questCycle,
             command,
             candidateBatch,
+            profile: resolveEffectiveStreamerProfile(current.profile, current.sessionOverride),
             acceptedVoteTally,
             voteCloseValidationContext,
             questProgressValidationContext,

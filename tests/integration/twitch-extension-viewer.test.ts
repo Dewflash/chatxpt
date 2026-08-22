@@ -135,6 +135,15 @@ describe("authenticated Twitch Extension viewer application", () => {
     expect(anotherViewer.questCycle.voteTallies).toEqual([]);
 
     now += 30_000;
+    const selected = await application.readViewer(`Bearer ${signedToken(now, "Uviewer-one")}`);
+    expect(selected).toMatchObject({
+      questCycle: {
+        status: "selected",
+        activeCandidateId: "candidate-two",
+        progress: null,
+      },
+    });
+    now += 10_000;
     const active = await application.readViewer(`Bearer ${signedToken(now, "Uviewer-one")}`);
     expect(active).toMatchObject({
       questCycle: {

@@ -183,8 +183,10 @@ export class ChatXptServerRuntime {
       const questCycleId = cycle.envelope.questCycleId;
       const due =
         questCycleId !== null &&
-        ((cycle.status === "active" && cycle.endsAt !== null && cycle.endsAt <= now) ||
-          terminalQuestStatuses.has(cycle.status) ||
+        (((cycle.status === "selected" || cycle.status === "active") &&
+          cycle.endsAt !== null && cycle.endsAt <= now) ||
+          (terminalQuestStatuses.has(cycle.status) &&
+            (cycle.endsAt === null || cycle.endsAt <= now)) ||
           (cycle.status === "cooldown" && cycle.endsAt !== null && cycle.endsAt <= now));
       if (!due || questCycleId === null) return state;
 

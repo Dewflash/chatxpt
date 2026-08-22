@@ -261,6 +261,40 @@ function SavedDefaultsEditor({
 
         <SettingGroup title="Voting" badge="Saved default">
           <label className={styles.selectField}>
+            <span>Voting window</span>
+            <select
+              value={String(draft.voting.voteDurationSeconds)}
+              disabled={!editable || pending}
+              onChange={(event) => setDraft((current) => ({
+                ...current,
+                voting: {
+                  ...current.voting,
+                  voteDurationSeconds: Number(event.currentTarget.value) as 30 | 60,
+                },
+              }))}
+            >
+              <option value="30">30 seconds</option>
+              <option value="60">60 seconds</option>
+            </select>
+          </label>
+          <label className={styles.selectField}>
+            <span>After viewers choose a winner</span>
+            <select
+              value={draft.voting.winnerActivationMode}
+              disabled={!editable || pending}
+              onChange={(event) => setDraft((current) => ({
+                ...current,
+                voting: {
+                  ...current.voting,
+                  winnerActivationMode: event.currentTarget.value as typeof current.voting.winnerActivationMode,
+                },
+              }))}
+            >
+              <option value="automatic">Show winner for 10 seconds, then start</option>
+              <option value="streamer-approval">Wait for streamer approval</option>
+            </select>
+          </label>
+          <label className={styles.selectField}>
             <span>Vote visibility</span>
             <select
               value={draft.voting.voteVisibility}
@@ -284,9 +318,9 @@ function SavedDefaultsEditor({
                 voting: { ...current.voting, showCountdown: event.currentTarget.checked },
               }))}
             />
-            <span>Show the official 30-second countdown</span>
+            <span>Show the official voting countdown</span>
           </label>
-          <p className={styles.contractNote}>One accepted vote per viewer; vote changes stay off for this MVP.</p>
+          <p className={styles.contractNote}>The winner is always shown before activation. One accepted vote per viewer; vote changes stay off for this MVP.</p>
         </SettingGroup>
 
         <SettingGroup title="Rewards" badge="Saved default">
@@ -654,6 +688,14 @@ function QuestManagement({
           Studio will wait for ChatXPT instead of creating local sidequest choices.
         </Notice>
       )}
+
+      {cycle.status === "selected" ? (
+        <Notice title="Audience winner selected" tone="info" politeness="polite">
+          {cycle.endsAt === null
+            ? "Review the winning option, then choose Start when you are ready."
+            : "The winning option will start automatically after its 10-second reveal."}
+        </Notice>
+      ) : null}
 
       {cycle.progress ? (
         <Progress

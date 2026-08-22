@@ -1,7 +1,9 @@
 /** Role 3 public boundary for pure quest decisions and canonical lifecycle state. */
 export {
   createDefaultQuestEngine,
+  DEFAULT_RESULT_DISPLAY_MILLISECONDS,
   DEFAULT_VOTING_MILLISECONDS,
+  DEFAULT_WINNER_DISPLAY_MILLISECONDS,
   DefaultQuestEngine,
 } from "./engine";
 export {

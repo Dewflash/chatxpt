@@ -19,7 +19,9 @@ import {
 } from "../core";
 import {
   AUTOMATIC_PROGRESS_MINIMUM_CONFIDENCE,
+  DEFAULT_RESULT_DISPLAY_MILLISECONDS,
   DEFAULT_VOTING_MILLISECONDS,
+  DEFAULT_WINNER_DISPLAY_MILLISECONDS,
   DefaultQuestEngine,
   MAXIMUM_SIGNAL_AGE_MILLISECONDS,
   createDefaultQuestEngine,
@@ -414,6 +416,42 @@ describe("DefaultQuestEngine", () => {
     });
   });
 
+  it("uses the saved 60-second voting window", () => {
+    const proposed = questCycleStateSchema.parse({
+      ...role3FixtureIdleState,
+      status: "proposed",
+      options: role3FixtureCandidateBatch.candidates,
+      availableStreamerActions: ["approve", "reject", "skip", "emergency-pause"],
+    });
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        currentState: proposed,
+        command: role3StreamerCommand("approve"),
+        candidateBatch: null,
+        profile: streamerProfileSchema.parse({
+          ...voteCloseProfile,
+          voting: {
+            ...voteCloseProfile.voting,
+            voteDurationSeconds: 60,
+          },
+        }),
+        now: ROLE_3_FIXTURE_TIME + 1_000,
+      }),
+    );
+
+    expect(result.nextState).toMatchObject({
+      status: "voting",
+      startsAt: ROLE_3_FIXTURE_TIME + 1_000,
+      endsAt: ROLE_3_FIXTURE_TIME + 61_000,
+    });
+    expect(result.events).toEqual([
+      {
+        eventType: "quest-cycle.voting-started",
+        attributes: { voteDurationSeconds: 60 },
+      },
+    ]);
+  });
+
   it("rejects votes at or after the authoritative voting deadline", () => {
     const voting = questCycleStateSchema.parse({
       ...role3FixtureIdleState,
@@ -437,11 +475,11 @@ describe("DefaultQuestEngine", () => {
     expect(result).toMatchObject({ ok: false, error: { code: "expired" } });
   });
 
-  it("activates the authoritative majority winner after the voting deadline", () => {
+  it("reveals the authoritative majority winner before automatic activation", () => {
     const result = decision(new DefaultQuestEngine().decide(voteCloseInput([1, 4, 2])));
 
     expect(result.nextState).toMatchObject({
-      status: "active",
+      status: "selected",
       activeCandidateId: "role-3-candidate-2",
       voteTallies: [
         { candidateId: "role-3-candidate-1", votes: 1 },
@@ -449,21 +487,109 @@ describe("DefaultQuestEngine", () => {
         { candidateId: "role-3-candidate-3", votes: 2 },
       ],
       startsAt: ROLE_3_FIXTURE_TIME + DEFAULT_VOTING_MILLISECONDS,
-      endsAt: ROLE_3_FIXTURE_TIME + DEFAULT_VOTING_MILLISECONDS + 45_000,
-      progress: { value: 0, method: "unknown" },
+      endsAt:
+        ROLE_3_FIXTURE_TIME +
+        DEFAULT_VOTING_MILLISECONDS +
+        DEFAULT_WINNER_DISPLAY_MILLISECONDS,
+      progress: null,
     });
     expect(result.events).toEqual([
       {
-        eventType: "quest-cycle.activated",
+        eventType: "quest-cycle.winner-selected",
         attributes: {
           candidateId: "role-3-candidate-2",
           winningVotes: 4,
           acceptedVoteCount: 7,
           tiedCandidateCount: 1,
           tieBreakUsed: false,
+          activationMode: "automatic",
+          winnerDisplayEndsAt:
+            ROLE_3_FIXTURE_TIME +
+            DEFAULT_VOTING_MILLISECONDS +
+            DEFAULT_WINNER_DISPLAY_MILLISECONDS,
         },
       },
     ]);
+  });
+
+  it("activates the selected winner after the automatic reveal window", () => {
+    const engine = new DefaultQuestEngine();
+    const selected = decision(engine.decide(voteCloseInput([1, 4, 2]))).nextState;
+    const activationAt = selected.endsAt ?? 0;
+    const early = decision(
+      engine.decide({
+        currentState: selected,
+        command: tickCommand(),
+        candidateBatch: null,
+        now: activationAt - 1,
+      }),
+    );
+    expect(early.nextState).toEqual(selected);
+
+    const activated = decision(
+      engine.decide({
+        currentState: selected,
+        command: tickCommand(),
+        candidateBatch: null,
+        now: activationAt,
+      }),
+    );
+    expect(activated.nextState).toMatchObject({
+      status: "active",
+      activeCandidateId: "role-3-candidate-2",
+      startsAt: activationAt,
+      endsAt: activationAt + 45_000,
+      progress: { value: 0, method: "unknown" },
+    });
+    expect(activated.events).toEqual([
+      {
+        eventType: "quest-cycle.activated",
+        attributes: { candidateId: "role-3-candidate-2" },
+      },
+    ]);
+  });
+
+  it("holds the selected winner for explicit streamer approval when configured", () => {
+    const base = voteCloseInput([1, 4, 2]);
+    const selected = decision(
+      new DefaultQuestEngine().decide({
+        ...base,
+        voteCloseValidationContext: {
+          ...base.voteCloseValidationContext!,
+          profile: streamerProfileSchema.parse({
+            ...voteCloseProfile,
+            voting: {
+              ...voteCloseProfile.voting,
+              winnerActivationMode: "streamer-approval",
+            },
+          }),
+        },
+      }),
+    ).nextState;
+
+    expect(selected).toMatchObject({
+      status: "selected",
+      activeCandidateId: "role-3-candidate-2",
+      endsAt: null,
+      availableStreamerActions: ["start", "cancel", "skip", "emergency-pause"],
+    });
+
+    const activated = decision(
+      new DefaultQuestEngine().decide({
+        currentState: selected,
+        command: role3StreamerCommand("start", {
+          candidateId: "role-3-candidate-2",
+        }),
+        candidateBatch: null,
+        now: base.now + 12_000,
+      }),
+    );
+    expect(activated.nextState).toMatchObject({
+      status: "active",
+      activeCandidateId: "role-3-candidate-2",
+      startsAt: base.now + 12_000,
+      endsAt: base.now + 57_000,
+    });
   });
 
   it("breaks a top-count tie deterministically from neutral cycle identifiers", () => {
@@ -474,7 +600,7 @@ describe("DefaultQuestEngine", () => {
     expect(first.nextState.activeCandidateId).toBe(second.nextState.activeCandidateId);
     expect(first.nextState.activeCandidateId).toBe("role-3-candidate-1");
     expect(first.events[0]).toMatchObject({
-      eventType: "quest-cycle.activated",
+      eventType: "quest-cycle.winner-selected",
       attributes: { tiedCandidateCount: 2, tieBreakUsed: true },
     });
   });
@@ -741,11 +867,11 @@ describe("DefaultQuestEngine", () => {
       }),
     );
 
-    expect(result.nextState.status).toBe("active");
+    expect(result.nextState.status).toBe("selected");
     expect(result.nextState.activeCandidateId).toBe("role-3-candidate-1");
   });
 
-  it("persists the winning candidate predicate into active quest authority", () => {
+  it("persists the winning candidate predicate when the selected winner activates", () => {
     const completionRule = predicateCompletionRule();
     const options = role3FixtureCandidateBatch.candidates.map((candidate, index) => ({
       ...candidate,
@@ -766,7 +892,16 @@ describe("DefaultQuestEngine", () => {
       },
     };
 
-    const result = decision(new DefaultQuestEngine().decide(input));
+    const engine = new DefaultQuestEngine();
+    const selected = decision(engine.decide(input)).nextState;
+    const result = decision(
+      engine.decide({
+        currentState: selected,
+        command: tickCommand(),
+        candidateBatch: null,
+        now: selected.endsAt ?? input.now,
+      }),
+    );
 
     expect(result.nextState).toMatchObject({
       status: "active",
@@ -799,7 +934,7 @@ describe("DefaultQuestEngine", () => {
     expect(ended.events[0]).toMatchObject({
       attributes: { reasonCode: "session-not-live", sessionStatus: "ended" },
     });
-    expect(disconnectedAudience.nextState.status).toBe("active");
+    expect(disconnectedAudience.nextState.status).toBe("selected");
   });
 
   it("accepts canonical session-scoped gameplay and audience snapshots at vote close", () => {
@@ -838,8 +973,8 @@ describe("DefaultQuestEngine", () => {
       }),
     );
 
-    expect(withGameplay.nextState.status).toBe("active");
-    expect(withAudience.nextState.status).toBe("active");
+    expect(withGameplay.nextState.status).toBe("selected");
+    expect(withAudience.nextState.status).toBe("selected");
   });
 
   it("still rejects a non-null snapshot cycle belonging to another quest", () => {
@@ -1429,7 +1564,9 @@ describe("DefaultQuestEngine", () => {
     expect(result.nextState).toMatchObject({
       status: "expired",
       availableStreamerActions: [],
-      endsAt: ROLE_3_FIXTURE_TIME + 60_000,
+      startsAt: ROLE_3_FIXTURE_TIME,
+      endsAt:
+        ROLE_3_FIXTURE_TIME + 60_000 + DEFAULT_RESULT_DISPLAY_MILLISECONDS,
       progress: { value: 0.5, method: "manual" },
       completionRule: null,
       result: {
@@ -1468,7 +1605,10 @@ describe("DefaultQuestEngine", () => {
         currentState: expired,
         command: tickCommand(),
         candidateBatch: null,
-        now: ROLE_3_FIXTURE_TIME + 60_001,
+        now:
+          ROLE_3_FIXTURE_TIME +
+          60_000 +
+          DEFAULT_RESULT_DISPLAY_MILLISECONDS,
       }),
     );
 

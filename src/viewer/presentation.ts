@@ -20,6 +20,7 @@ export type ViewerSurfacePhase =
   | "unavailable"
   | "waiting"
   | "voting"
+  | "selected"
   | "active"
   | "result"
   | "cooldown";
@@ -28,6 +29,7 @@ export type OverlaySurfacePhase =
   | "loading"
   | "inactive"
   | "voting"
+  | "selected"
   | "active"
   | "result"
   | "cooldown";
@@ -42,6 +44,7 @@ export interface ViewerQuestOptionPresentation {
   /** Null means the authoritative snapshot did not supply a tally. */
   readonly votes: number | null;
   readonly acceptedByViewer: boolean;
+  readonly selected: boolean;
   readonly active: boolean;
 }
 
@@ -66,6 +69,7 @@ export interface ViewerPresentation {
   readonly connection: ViewerViewModel["connection"] | null;
   readonly options: readonly ViewerQuestOptionPresentation[];
   readonly acceptedCandidateId: string | null;
+  readonly selectedCandidateId: string | null;
   readonly activeCandidateId: string | null;
   readonly canVote: boolean;
   readonly canReact: boolean;
@@ -76,6 +80,7 @@ export interface ViewerPresentation {
   readonly sessionPoints: number;
   /** The canonical contract has no accepted scale, so this is never a percentage. */
   readonly communityHype: number;
+  readonly publicContext: ViewerViewModel["publicContext"];
 }
 
 export interface OverlayPresentation {
@@ -86,12 +91,14 @@ export interface OverlayPresentation {
   readonly connection: OverlayViewModel["connection"] | null;
   readonly upNext: OverlayViewModel["upNext"] | null;
   readonly options: readonly ViewerQuestOptionPresentation[];
+  readonly selectedQuest: ViewerQuestOptionPresentation | null;
   readonly activeQuest: ViewerQuestOptionPresentation | null;
   readonly startsAt: number | null;
   readonly endsAt: number | null;
   readonly progress: QuestProgressPresentation | null;
   readonly result: QuestResultPresentation | null;
   readonly communityHype: number;
+  readonly publicContext: OverlayViewModel["publicContext"];
 }
 
 const terminalQuestStatuses = new Set([
@@ -107,6 +114,7 @@ function viewerPhase(view: ViewerViewModel): ViewerSurfacePhase {
   if (view.session.status === "ended") return "ended";
   if (view.participationMode === "unavailable") return "unavailable";
   if (view.questCycle.status === "voting") return "voting";
+  if (view.questCycle.status === "selected") return "selected";
   if (view.questCycle.status === "active") return "active";
   if (terminalQuestStatuses.has(view.questCycle.status)) return "result";
   if (view.questCycle.status === "cooldown") return "cooldown";
@@ -115,6 +123,7 @@ function viewerPhase(view: ViewerViewModel): ViewerSurfacePhase {
 
 function overlayPhase(view: OverlayViewModel): OverlaySurfacePhase {
   if (view.questCycle.status === "voting") return "voting";
+  if (view.questCycle.status === "selected") return "selected";
   if (view.questCycle.status === "active") return "active";
   if (terminalQuestStatuses.has(view.questCycle.status)) return "result";
   if (view.questCycle.status === "cooldown") return "cooldown";
@@ -162,7 +171,12 @@ function optionPresentations(
     rewardPoints: candidate.rewardPoints,
     votes: revealTallies ? (tallies.get(candidate.candidateId) ?? null) : null,
     acceptedByViewer: candidate.candidateId === acceptedCandidateId,
-    active: candidate.candidateId === questCycle.activeCandidateId,
+    selected:
+      questCycle.status === "selected" &&
+      candidate.candidateId === questCycle.activeCandidateId,
+    active:
+      questCycle.status === "active" &&
+      candidate.candidateId === questCycle.activeCandidateId,
   }));
 }
 
@@ -176,6 +190,7 @@ export function presentViewer(view: ViewerViewModel | null): ViewerPresentation 
       connection: null,
       options: [],
       acceptedCandidateId: null,
+      selectedCandidateId: null,
       activeCandidateId: null,
       canVote: false,
       canReact: false,
@@ -185,13 +200,14 @@ export function presentViewer(view: ViewerViewModel | null): ViewerPresentation 
       result: null,
       sessionPoints: 0,
       communityHype: 0,
+      publicContext: null,
     };
   }
 
   const phase = viewerPhase(view);
   const connectionReady = view.connection.status === "ready";
   const revealTallies =
-    view.acceptedCandidateId !== null || phase === "active" || phase === "result";
+    view.acceptedCandidateId !== null || phase === "selected" || phase === "active" || phase === "result";
 
   return {
     phase,
@@ -201,6 +217,7 @@ export function presentViewer(view: ViewerViewModel | null): ViewerPresentation 
     connection: view.connection,
     options: optionPresentations(view.questCycle, view.acceptedCandidateId, revealTallies),
     acceptedCandidateId: view.acceptedCandidateId,
+    selectedCandidateId: phase === "selected" ? view.questCycle.activeCandidateId : null,
     activeCandidateId: view.questCycle.activeCandidateId,
     canVote: phase === "voting" && view.canVote && connectionReady,
     canReact: view.canReact && connectionReady,
@@ -210,6 +227,7 @@ export function presentViewer(view: ViewerViewModel | null): ViewerPresentation 
     result: resultPresentation(view.questCycle.result),
     sessionPoints: view.sessionPoints,
     communityHype: view.communityHype,
+    publicContext: view.publicContext,
   };
 }
 
@@ -223,12 +241,14 @@ export function presentOverlay(view: OverlayViewModel | null): OverlayPresentati
       connection: null,
       upNext: null,
       options: [],
+      selectedQuest: null,
       activeQuest: null,
       startsAt: null,
       endsAt: null,
       progress: null,
       result: null,
       communityHype: 0,
+      publicContext: null,
     };
   }
 
@@ -242,13 +262,19 @@ export function presentOverlay(view: OverlayViewModel | null): OverlayPresentati
     connection: view.connection,
     upNext: view.upNext,
     options,
+    selectedQuest:
+      view.questCycle.status === "selected"
+        ? options.find((candidate) => candidate.candidateId === view.questCycle.activeCandidateId) ?? null
+        : null,
     activeQuest:
-      options.find((candidate) => candidate.candidateId === view.questCycle.activeCandidateId) ??
-      null,
+      view.questCycle.status === "active"
+        ? options.find((candidate) => candidate.candidateId === view.questCycle.activeCandidateId) ?? null
+        : null,
     startsAt: view.questCycle.startsAt,
     endsAt: view.questCycle.endsAt,
     progress: progressPresentation(view.questCycle.progress),
     result: resultPresentation(view.questCycle.result),
     communityHype: view.communityHype,
+    publicContext: view.publicContext,
   };
 }

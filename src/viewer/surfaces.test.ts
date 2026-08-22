@@ -363,11 +363,25 @@ describe("Role 5 viewer surfaces", () => {
 });
 
 describe("Role 5 OBS overlay surface", () => {
+  it("proves the permanent Browser Source is connected while the stream is offline", () => {
+    const html = renderToStaticMarkup(
+      h(ObsQuestOverlaySurface, { view: null, standby: "offline" }),
+    );
+
+    expect(html).toContain("Overlay connected");
+    expect(html).toContain("Stream offline");
+    expect(html).toContain("permanent Browser Source is ready");
+    expect(html).toContain("There is no active ChatXPT stream session");
+    expect(html).not.toContain("Sidequest pending");
+  });
+
   it("shows a pending sidequest state while inactive", () => {
     const html = renderToStaticMarkup(h(ObsQuestOverlaySurface, { view: contractFixtureOverlayView }));
 
     expect(html).toContain("Sidequest pending");
     expect(html).toContain("Waiting for the next safe, validated sidequest and viewer vote.");
+    expect(html).toContain("What this means");
+    expect(html).toContain("No sidequest is active");
     expect(html).not.toContain("Overlay connected");
   });
 
@@ -406,6 +420,7 @@ describe("Role 5 OBS overlay surface", () => {
     expect(html).toContain("45s left");
     expect(html).toContain("Progress");
     expect(html).toContain("Live game progress");
+    expect(html).toContain("This is the current active sidequest for the stream.");
     expect(html).not.toContain("<button");
   });
 
@@ -425,6 +440,7 @@ describe("Role 5 OBS overlay surface", () => {
     expect(html).toContain(options[1].title);
     expect(html).toContain(options[2].title);
     expect(html).toContain("2 votes");
+    expect(html).toContain("Viewers are choosing between three safe, validated sidequests.");
     expect(html).not.toContain("<button");
   });
 

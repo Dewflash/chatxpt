@@ -10,13 +10,17 @@ import {
   identifierSchema,
   overlayViewModelSchema,
   serviceHealthSchema,
+  streamerViewModelSchema,
   systemVoteCloseCommandSchema,
   type AuthoritativeSessionState,
   type OverlayViewModel,
   type ProjectionContextResolver,
+  type StreamerViewModel,
 } from "@/core";
 import {
+  createLiveDirectorDockDescriptor,
   createObsBrowserSourceDescriptor,
+  type LiveDirectorDockDescriptor,
   type ObsBrowserSourceDescriptor,
 } from "@/integrations";
 import {
@@ -67,6 +71,10 @@ export interface ObsOverlayApplicationDependencies {
 
 export interface ObsOverlayGrantResult {
   readonly descriptor: ObsBrowserSourceDescriptor;
+}
+
+export interface LiveDirectorDockGrantResult {
+  readonly descriptor: LiveDirectorDockDescriptor;
 }
 
 function authError(caught: unknown): ObsOverlayApplicationError {
@@ -161,6 +169,63 @@ export class ObsOverlayApplication {
     }
   }
 
+  async issueLiveDirectorInstallation(
+    broadcasterId: string,
+    baseUrl: string,
+    input: unknown,
+  ): Promise<LiveDirectorDockGrantResult> {
+    const parsedBroadcasterId = identifierSchema.safeParse(broadcasterId);
+    const parsed = installationRequestSchema.safeParse(input);
+    if (!parsedBroadcasterId.success || !parsed.success) {
+      throw new ObsOverlayApplicationError("validation", "Live Director Dock setup is invalid");
+    }
+    const record = await this.persistence.twitchChannelSessions.findTwitchChannelSession(
+      parsedBroadcasterId.data,
+    );
+    if (record === null) {
+      throw new ObsOverlayApplicationError(
+        "session-not-found",
+        "Start the ChatXPT broadcaster session before installing the Live Director Dock",
+        true,
+      );
+    }
+    const state = await this.loadSession(record.sessionId);
+    if (state.session.status !== "preparing" && state.session.status !== "live") {
+      throw new ObsOverlayApplicationError(
+        "session-inactive",
+        "Live Director Dock grants require an active broadcaster session",
+      );
+    }
+    let token: string;
+    try {
+      token = this.grants.issue({
+        version: 3,
+        grantId: `live-director-installation-${this.nextId()}`,
+        broadcasterId: state.session.broadcasterId,
+        surface: "live-director",
+        issuedAt: this.now(),
+      });
+    } catch (caught) {
+      throw authError(caught);
+    }
+    try {
+      return {
+        descriptor: createLiveDirectorDockDescriptor({
+          baseUrl,
+          broadcasterId: state.session.broadcasterId,
+          accessToken: token,
+          width: parsed.data.width,
+          height: parsed.data.height,
+        }),
+      };
+    } catch (caught) {
+      throw new ObsOverlayApplicationError(
+        "validation",
+        caught instanceof Error ? caught.message : "Live Director Dock URL is invalid",
+      );
+    }
+  }
+
   async read(
     authorizationHeader: string | null,
     requested: {
@@ -188,6 +253,12 @@ export class ObsOverlayApplication {
       }
       state = await this.loadSession(grant.sessionId);
     } else {
+      if (grant.version === 3 && grant.surface !== "broadcast-overlay") {
+        throw new ObsOverlayApplicationError(
+          "forbidden",
+          "Private Live Director grants cannot read the public broadcast overlay",
+        );
+      }
       const parsedBroadcasterId = identifierSchema.safeParse(requested.broadcasterId);
       if (!parsedBroadcasterId.success || parsedBroadcasterId.data !== grant.broadcasterId) {
         throw new ObsOverlayApplicationError(
@@ -249,8 +320,89 @@ export class ObsOverlayApplication {
         retryable: false,
       }),
       sessionOverride: state.sessionOverride,
+      liveDirector: state.liveDirector,
     });
     return overlayViewModelSchema.parse(projected.overlay);
+  }
+
+  async readLiveDirector(
+    authorizationHeader: string | null,
+    broadcasterId: string | null,
+  ): Promise<StreamerViewModel> {
+    let grant;
+    try {
+      grant = this.grants.verify(readObsOverlayBearerToken(authorizationHeader), this.now());
+    } catch (caught) {
+      throw authError(caught);
+    }
+    const parsedBroadcasterId = identifierSchema.safeParse(broadcasterId);
+    if (
+      grant.version !== 3 ||
+      grant.surface !== "live-director" ||
+      !parsedBroadcasterId.success ||
+      parsedBroadcasterId.data !== grant.broadcasterId
+    ) {
+      throw new ObsOverlayApplicationError(
+        "forbidden",
+        "Live Director Dock access does not belong to this broadcaster",
+      );
+    }
+    const record = await this.persistence.twitchChannelSessions.findTwitchChannelSession(
+      grant.broadcasterId,
+    );
+    if (record === null) {
+      throw new ObsOverlayApplicationError(
+        "session-not-found",
+        "Waiting for this broadcaster's next ChatXPT session",
+        true,
+      );
+    }
+    let state = await this.loadSession(record.sessionId);
+    if (state.session.broadcasterId !== grant.broadcasterId) {
+      throw new ObsOverlayApplicationError(
+        "forbidden",
+        "Live Director Dock grant no longer belongs to this broadcaster",
+      );
+    }
+    state = await this.closeVoteIfDue(state);
+    const now = this.now();
+    const projected = new CanonicalViewProjector().project({
+      envelope: {
+        contractVersion: CONTRACT_VERSION,
+        sessionId: state.session.sessionId,
+        questCycleId: state.questCycle.envelope.questCycleId,
+        messageId: `live-director-view-${this.nextId()}`,
+        correlationId: `live-director-read-${this.nextId()}`,
+        revision: state.session.revision,
+        occurredAt: now,
+        receivedAt: now,
+        source: "studio",
+        evidenceClass: state.questCycle.envelope.evidenceClass,
+      },
+      session: state.session,
+      profile: state.profile,
+      services: state.services,
+      gameplay: state.gameplay,
+      audience: state.audience,
+      questCycle: state.questCycle,
+      emergencyPaused: state.emergencyPaused,
+      participationMode: "unavailable",
+      capabilities: state.session.capabilities,
+      viewerId: null,
+      sessionPoints: 0,
+      communityHype: state.communityHype,
+      acceptedCandidateId: null,
+      connection: serviceHealthSchema.parse({
+        service: "realtime",
+        status: "ready",
+        checkedAt: now,
+        message: "Private Live Director state is current",
+        retryable: false,
+      }),
+      sessionOverride: state.sessionOverride,
+      liveDirector: state.liveDirector,
+    });
+    return streamerViewModelSchema.parse(projected.streamer);
   }
 
   private async loadSession(sessionId: string): Promise<AuthoritativeSessionState> {
