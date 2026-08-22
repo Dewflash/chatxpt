@@ -69,11 +69,13 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("What your stream sees");
     expect(html).toContain("Viewer Voting");
     expect(html).toContain("Broadcast Overlay");
+    expect(html).toContain('aria-label="Stream setup"');
     expect(html).toContain("Live Director</span><span");
     expect(html).toContain("<h3>Twitch</h3><span");
     expect(html).toContain("<h3>Game Capture</h3><span");
     expect(html).toContain("<h3>Viewer Voting</h3><span");
     expect(html).toContain("<h3>Broadcast Overlay</h3><span");
+    expect(html.match(/homeSetupAction/g)).toHaveLength(4);
     expect(html).not.toContain("fixture");
     expect(html).not.toContain("Fixture");
     expect(html).not.toContain("tester");
@@ -186,6 +188,41 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("This device only");
   });
 
+  it("shows the effective quest activation mode on Home before the stream is live", () => {
+    const local = seedLocalFallbackProfile("Local Streamer", 100);
+    const automaticProfile = {
+      ...local.profile,
+      streamPresets: local.profile.streamPresets.map((preset) => preset.presetId === local.profile.selectedPresetId
+        ? { ...preset, voting: { ...preset.voting, winnerActivationMode: "automatic" as const } }
+        : preset),
+    };
+    const automaticHtml = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "home",
+      view: null,
+      readiness: null,
+      localProfile: automaticProfile,
+    }));
+    const base = createFixtureUiGatewaySnapshot().views.streamer;
+    const manualView = {
+      ...base,
+      session: { ...base.session, status: "preparing" as const },
+      profile: {
+        ...base.profile,
+        streamPresets: base.profile.streamPresets.map((preset) => preset.presetId === base.profile.selectedPresetId
+          ? { ...preset, voting: { ...preset.voting, winnerActivationMode: "streamer-approval" as const } }
+          : preset),
+      },
+    };
+    const manualHtml = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "home",
+      view: manualView,
+      readiness: contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"],
+    }));
+
+    expect(automaticHtml).toContain("<dt>Approval</dt><dd>Automatic</dd>");
+    expect(manualHtml).toContain("<dt>Approval</dt><dd>Manual</dd>");
+  });
+
   it("shows the local account inside Studio navigation instead of floating over content", () => {
     const local = seedLocalFallbackProfile("Local Streamer", 100);
     const html = renderToStaticMarkup(h(StudioProductPageSurface, {
@@ -223,6 +260,29 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("Default game: Brawl Stars");
     expect(html).toContain("Current stream: Minecraft Java Edition");
     expect(html).toContain("active game may still come from Twitch or Gameplay Capture");
+  });
+
+  it("keeps Stream Settings status in each segment header", () => {
+    const base = createFixtureUiGatewaySnapshot().views.streamer;
+    const view = {
+      ...base,
+      sessionOverride: {
+        appliedAt: 1_787_459_200_000,
+        presetId: "chill",
+        experiencePatch: { intensity: 0.4 },
+      },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "stream-settings",
+      view,
+    }));
+    const savedSource = html.slice(html.indexOf('id="saved-source"'), html.indexOf('id="session-override"'));
+    const sessionOverride = html.slice(html.indexOf('id="session-override"'), html.indexOf('id="reset-to-saved"'));
+    const resetSaved = html.slice(html.indexOf('id="reset-to-saved"'));
+
+    expect(savedSource.indexOf("Saved Source")).toBeLessThan(savedSource.indexOf("Saved defaults"));
+    expect(sessionOverride.indexOf("Session Override")).toBeLessThan(sessionOverride.indexOf("Override active"));
+    expect(resetSaved.indexOf("Reset to Saved")).toBeLessThan(resetSaved.indexOf("Override active"));
   });
 
   it("reports account, Twitch lifecycle, and profile persistence health independently", () => {

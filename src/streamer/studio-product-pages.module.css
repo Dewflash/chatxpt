@@ -319,6 +319,32 @@
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
 }
 
+.homeSetupGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.homeSetupCard {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.homeSetupCard .statusTitle {
+  min-height: 3rem;
+  align-items: flex-start;
+}
+
+.homeSetupCard p {
+  margin: 0;
+}
+
+.homeSetupAction {
+  align-self: end;
+}
+
+.homeSetupAction > * {
+  width: 100%;
+}
+
 .card {
   display: grid;
   align-content: start;
@@ -988,6 +1014,26 @@
   min-width: 0;
 }
 
+.settingsWorkspace {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  grid-template-areas:
+    "saved-source session-override"
+    "reset-saved session-override";
+  align-items: stretch;
+}
+
+.savedSourceCard {
+  grid-area: saved-source;
+}
+
+.sessionOverrideCard {
+  grid-area: session-override;
+}
+
+.resetSavedCard {
+  grid-area: reset-saved;
+}
+
 .engineNow {
   padding: var(--cx-space-lg);
 }
@@ -1651,6 +1697,18 @@
     grid-template-columns: 1fr;
   }
 
+  .homeSetupGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settingsWorkspace {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "saved-source"
+      "session-override"
+      "reset-saved";
+  }
+
   .captureBrief,
   .engineStats,
   .analyticsGrid,
@@ -1751,6 +1809,10 @@
   .presetRules,
   .defaultGameRow,
   .testGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .homeSetupGrid {
     grid-template-columns: 1fr;
   }
 

@@ -424,9 +424,24 @@ function chatAnalyticsPresentation(
   };
 }
 
-function activePreset(view: StreamerViewModel | null): StreamPreset | null {
-  if (view === null) return null;
-  return resolveSelectedStreamPreset(view.profile, view.sessionOverride);
+function activePreset(
+  view: StreamerViewModel | null,
+  localProfile: StreamerProfile | null = null,
+): StreamPreset | null {
+  const profile = view?.profile ?? localProfile;
+  if (profile === null) return null;
+  return resolveSelectedStreamPreset(profile, view?.sessionOverride ?? null);
+}
+
+function questActivationModeLabel(
+  view: StreamerViewModel | null,
+  localProfile: StreamerProfile | null = null,
+): "Automatic" | "Manual" {
+  const profile = view?.profile ?? localProfile;
+  const mode = activePreset(view, localProfile)?.voting.winnerActivationMode ??
+    profile?.voting.winnerActivationMode ??
+    "automatic";
+  return mode === "automatic" ? "Automatic" : "Manual";
 }
 
 function HealthStrip({ view, readiness }: {
@@ -470,42 +485,50 @@ function HealthStrip({ view, readiness }: {
         nextStep: "Set up overlay",
       };
   return (
-    <CardGrid className={styles.grid}>
-      <Card className={styles.card}>
+    <CardGrid className={styles.homeSetupGrid} aria-label="Stream setup">
+      <Card className={`${styles.card} ${styles.homeSetupCard}`}>
         <div className={styles.statusTitle}>
           <h3>Twitch</h3>
           <StatusBadge tone={twitch.tone}>{twitch.badge}</StatusBadge>
         </div>
         <p>{twitch.detail}</p>
-        {twitch.state === "available"
-          ? <AvailabilityAction availability={twitch} />
-          : <a href="/api/twitch/oauth/start">Connect Twitch</a>}
+        <div className={`${styles.actions} ${styles.homeSetupAction}`}>
+          {twitch.state === "available"
+            ? <AvailabilityAction availability={twitch} />
+            : <a href="/api/twitch/oauth/start">Connect Twitch</a>}
+        </div>
       </Card>
-      <Card className={styles.card}>
+      <Card className={`${styles.card} ${styles.homeSetupCard}`}>
         <div className={styles.statusTitle}>
           <h3>Game Capture</h3>
           <StatusBadge tone={obs.tone}>{obs.badge}</StatusBadge>
         </div>
         <p>{obs.detail}</p>
-        {obs.state === "available"
-          ? <AvailabilityAction availability={obs} />
-          : <a href="/studio/gameplay">{obs.nextStep}</a>}
+        <div className={`${styles.actions} ${styles.homeSetupAction}`}>
+          {obs.state === "available"
+            ? <AvailabilityAction availability={obs} />
+            : <a href="/studio/gameplay">{obs.nextStep}</a>}
+        </div>
       </Card>
-      <Card className={styles.card}>
+      <Card className={`${styles.card} ${styles.homeSetupCard}`}>
         <div className={styles.statusTitle}>
           <h3>Viewer Voting</h3>
           <StatusBadge tone={voting.tone}>{voting.badge}</StatusBadge>
         </div>
         <p>{voting.detail}</p>
-        <AvailabilityAction availability={voting} />
+        <div className={`${styles.actions} ${styles.homeSetupAction}`}>
+          <AvailabilityAction availability={voting} />
+        </div>
       </Card>
-      <Card className={styles.card}>
+      <Card className={`${styles.card} ${styles.homeSetupCard}`}>
         <div className={styles.statusTitle}>
           <h3>Broadcast Overlay</h3>
           <StatusBadge tone={overlay.tone}>{overlay.badge}</StatusBadge>
         </div>
         <p>{overlay.detail}</p>
-        <AvailabilityAction availability={overlay} />
+        <div className={`${styles.actions} ${styles.homeSetupAction}`}>
+          <AvailabilityAction availability={overlay} />
+        </div>
       </Card>
     </CardGrid>
   );
@@ -596,12 +619,14 @@ function HomeControlButton({
 function HomeStatePanel({
   view,
   readiness,
+  localProfile,
   pending,
   onCommand,
   commandFactory,
 }: {
   readonly view: StreamerViewModel | null;
   readonly readiness?: StreamerReadinessView | null;
+  readonly localProfile: StreamerProfile | null;
   readonly pending: boolean;
   readonly onCommand?: (command: StreamerUiCommand) => void;
   readonly commandFactory: StreamerCommandFactory;
@@ -610,7 +635,8 @@ function HomeStatePanel({
   const copy = homeCopy(mode, readiness);
   const session = serviceById(readiness, "session");
   const canEnd = view !== null && actionAllowed(session, "end-session") && onCommand !== undefined;
-  const preset = activePreset(view);
+  const preset = activePreset(view, localProfile);
+  const questActivationMode = questActivationModeLabel(view, localProfile);
 
   return (
     <section className={styles.readyHero} data-mode={mode} aria-labelledby="home-state-heading">
@@ -662,7 +688,7 @@ function HomeStatePanel({
         </div>
         <div>
           <dt>Approval</dt>
-          <dd>Manual</dd>
+          <dd>{questActivationMode}</dd>
         </div>
         <div>
           <dt>Voting</dt>
@@ -675,6 +701,7 @@ function HomeStatePanel({
 
 function HomeQuestSummary({ view }: { readonly view: StreamerViewModel }) {
   const cycle = view.questCycle;
+  const questActivationMode = questActivationModeLabel(view);
   const totalVotes = cycle.voteTallies.reduce((sum, tally) => sum + tally.votes, 0);
   const ranked = cycle.options
     .map((option) => ({
@@ -711,7 +738,7 @@ function HomeQuestSummary({ view }: { readonly view: StreamerViewModel }) {
       )}
       <div className={styles.cardFooter}>
         <span>{cycle.options.length === 3 ? `${totalVotes} votes · 3 safe options` : "No official vote is open"}</span>
-        <span>Manual approval</span>
+        <span>{questActivationMode} mode</span>
       </div>
     </article>
   );
@@ -805,6 +832,7 @@ function LiveHomeDashboard({ view, readiness, pending, onCommand, commandFactory
 }) {
   const gameplay = summarizeGameplayHealth(view.gameplay);
   const preset = activePreset(view);
+  const questActivationMode = questActivationModeLabel(view);
   const sessionService = serviceById(readiness, "session");
   const canEnd = actionAllowed(sessionService, "end-session") && onCommand !== undefined;
   const knownFacts = view.gameplay?.signals.filter((signal) => signal.observation.status === "known").length ?? 0;
@@ -833,15 +861,16 @@ function LiveHomeDashboard({ view, readiness, pending, onCommand, commandFactory
         <div className={styles.engagementGrid}><HomeQuestSummary view={view} /><HomeChatSummary view={view} readiness={readiness} /></div>
       </section>
       <HomeSurfacePreview view={view} />
-      <a className={styles.settingsSummary} href="/studio/stream-settings"><span><small>This stream</small><strong>{preset?.name ?? "Saved defaults"}</strong></span><span>{Math.round((resolveEffectiveStreamerProfile(view.profile, view.sessionOverride, view.session.currentGame).experience.intensity ?? 0.5) * 100)}% intensity · Viewer voting {view.session.capabilities.twitchExtension ? "on" : "using fallback"} · Manual approval</span></a>
+      <a className={styles.settingsSummary} href="/studio/stream-settings"><span><small>This stream</small><strong>{preset?.name ?? "Saved defaults"}</strong></span><span>{Math.round((resolveEffectiveStreamerProfile(view.profile, view.sessionOverride, view.session.currentGame).experience.intensity ?? 0.5) * 100)}% intensity · Viewer voting {view.session.capabilities.twitchExtension ? "on" : "using fallback"} · {questActivationMode} mode</span></a>
       <HealthStrip view={view} readiness={readiness} />
     </div>
   );
 }
 
-function HomePage({ view, readiness, pending, onCommand, commandFactory }: {
+function HomePage({ view, readiness, localProfile, pending, onCommand, commandFactory }: {
   readonly view: StreamerViewModel | null;
   readonly readiness?: StreamerReadinessView | null;
+  readonly localProfile: StreamerProfile | null;
   readonly pending: boolean;
   readonly onCommand?: (command: StreamerUiCommand) => void;
   readonly commandFactory: StreamerCommandFactory;
@@ -855,6 +884,7 @@ function HomePage({ view, readiness, pending, onCommand, commandFactory }: {
       <HomeStatePanel
         view={view}
         readiness={readiness}
+        localProfile={localProfile}
         pending={pending}
         onCommand={onCommand}
         commandFactory={commandFactory}
@@ -1452,17 +1482,26 @@ function StreamSettingsPage({
   const effectiveCreativity = effectiveProfile?.experience.creativity ?? savedCreativity;
   return (
     <div className={styles.settingsWorkspace}>
-      <PageSectionCard
-        title="Saved Source"
-        badge={view === null ? "Waiting" : "Saved defaults"}
-        badgeTone={view === null ? "neutral" : "info"}
-        detail={view === null ? "Start a session to see current-stream settings." : `${savedPreset?.name ?? "Saved defaults"}: intensity ${Math.round(savedIntensity * 100)}%, creativity ${Math.round(savedCreativity * 100)}%. Default game: ${view.profile.gameName ?? "none"}. Current stream: ${currentGame?.gameName ?? "none"}.`}
-      />
-      <Card id="session-override" className={styles.card}>
-        <StatusBadge tone={override === null ? "neutral" : "warning"}>
-          {override === null ? "Using defaults" : "Temporary override"}
-        </StatusBadge>
-        <h3>Session Override</h3>
+      <Card id="saved-source" className={`${styles.card} ${styles.savedSourceCard}`}>
+        <div className={styles.statusTitle}>
+          <h3>Saved Source</h3>
+          <StatusBadge tone={view === null ? "neutral" : "info"}>
+            {view === null ? "Waiting" : "Saved defaults"}
+          </StatusBadge>
+        </div>
+        <p>
+          {view === null
+            ? "Start a session to see current-stream settings."
+            : `${savedPreset?.name ?? "Saved defaults"}: intensity ${Math.round(savedIntensity * 100)}%, creativity ${Math.round(savedCreativity * 100)}%. Default game: ${view.profile.gameName ?? "none"}. Current stream: ${currentGame?.gameName ?? "none"}.`}
+        </p>
+      </Card>
+      <Card id="session-override" className={`${styles.card} ${styles.sessionOverrideCard}`}>
+        <div className={styles.statusTitle}>
+          <h3>Session Override</h3>
+          <StatusBadge tone={override === null ? "neutral" : "warning"}>
+            {override === null ? "Using defaults" : "Override active"}
+          </StatusBadge>
+        </div>
         <p>
           {override === null
             ? "This stream's sidequest style currently follows saved profile defaults. The active game may still come from Twitch or Gameplay Capture."
@@ -1501,11 +1540,13 @@ function StreamSettingsPage({
           </button>
         </form>
       </Card>
-      <Card id="reset-to-saved" className={styles.card}>
-        <StatusBadge tone={override === null ? "neutral" : "info"}>
-          {override === null ? "No override" : "Reset available"}
-        </StatusBadge>
-        <h3>Reset to Saved</h3>
+      <Card id="reset-to-saved" className={`${styles.card} ${styles.resetSavedCard}`}>
+        <div className={styles.statusTitle}>
+          <h3>Reset to Saved</h3>
+          <StatusBadge tone={override === null ? "neutral" : "info"}>
+            {override === null ? "Using defaults" : "Override active"}
+          </StatusBadge>
+        </div>
         <p>
           {override === null
             ? "No temporary override is active for this stream."
@@ -1600,6 +1641,7 @@ function PageBody({ page, view, readiness, pending, onCommand, onResetSession, l
       <HomePage
         view={view}
         readiness={readiness}
+        localProfile={localProfile ?? null}
         pending={pending}
         onCommand={onCommand}
         commandFactory={commandFactory}
