@@ -559,14 +559,41 @@ export class StudioSessionApplication {
     if (!parsedCommand.success) {
       throw new StudioSessionApplicationError("validation", "Studio command is invalid");
     }
-    this.assertCommandIdentity(parsedCommand.data, authorized);
-    const result = await this.dependencies.runtime.execute(
-      parsedCommand.data,
-      authorized.actor,
-      new StudioProjectionContext(this.now),
-    );
-    if (!result.ok) {
-      throw commandError(result.error.code, result.error.message, result.error.retryable);
+    this.assertCommandActor(parsedCommand.data, authorized);
+    let currentState = authorized.state;
+    let result;
+    // Live capture can advance the shared authoritative revision several times
+    // while a broadcaster command is in flight. Rebase the already-authenticated
+    // command in a bounded loop so gameplay telemetry cannot starve Studio controls.
+    const maxRevisionAttempts = 20;
+    for (let attempt = 0; attempt < maxRevisionAttempts; attempt += 1) {
+      const rebasedCommand = {
+        ...parsedCommand.data,
+        expectedRevision: currentState.session.revision,
+      };
+      result = await this.dependencies.runtime.execute(
+        rebasedCommand,
+        authorized.actor,
+        new StudioProjectionContext(this.now),
+      );
+      if (result.ok) break;
+      if (result.error.code !== "stale-revision" || attempt === maxRevisionAttempts - 1) {
+        throw commandError(result.error.code, result.error.message, result.error.retryable);
+      }
+      currentState = await this.loadSession(currentState.session.sessionId);
+      if (currentState.session.broadcasterId !== authorized.state.session.broadcasterId) {
+        throw new StudioSessionApplicationError(
+          "forbidden",
+          "Studio grant no longer owns this session",
+        );
+      }
+    }
+    if (result === undefined || !result.ok) {
+      throw new StudioSessionApplicationError(
+        "dependency-unavailable",
+        "Studio could not commit the command while live gameplay was updating",
+        true,
+      );
     }
     const state = result.receipt.state;
     let message =
@@ -604,6 +631,19 @@ export class StudioSessionApplication {
     }
     if (command.expectedRevision !== authorized.state.session.revision) {
       throw new StudioSessionApplicationError("stale-revision", "Studio state changed; refresh before retrying", true);
+    }
+  }
+
+  private assertCommandActor(
+    command: { readonly sessionId: string; readonly actor: { readonly kind: string; readonly actorId: string | null } },
+    authorized: AuthorizedStudioSession,
+  ): void {
+    if (
+      command.sessionId !== authorized.state.session.sessionId ||
+      command.actor.kind !== "broadcaster" ||
+      command.actor.actorId !== authorized.state.session.broadcasterId
+    ) {
+      throw new StudioSessionApplicationError("forbidden", "Command does not belong to this broadcaster session");
     }
   }
 

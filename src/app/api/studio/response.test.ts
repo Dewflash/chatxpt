@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   isAllowedStudioCorsOrigin,
   studioCorsHeaders,
+  studioErrorResponse,
   studioPreflightResponse,
 } from "./response";
 
@@ -51,5 +52,20 @@ describe("Studio Twitch Asset Hosting CORS", () => {
     expect(headers.get("access-control-allow-credentials")).toBeNull();
     expect(denied.status).toBe(403);
     expect(denied.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  it("preserves typed Studio errors across development hot reload boundaries", async () => {
+    const staleError = Object.assign(new Error("Studio state changed; refresh before retrying"), {
+      code: "stale-revision",
+      retryable: true,
+    });
+
+    const response = studioErrorResponse(staleError);
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      error: { code: "stale-revision", retryable: true },
+    });
   });
 });

@@ -69,7 +69,8 @@ describe("local Twitch authorization storage", () => {
     const encrypted = JSON.parse(await readFile(context.filePath, "utf8")) as {
       ciphertext: string;
     };
-    encrypted.ciphertext = `${encrypted.ciphertext.slice(0, -1)}A`;
+    const replacement = encrypted.ciphertext.startsWith("A") ? "B" : "A";
+    encrypted.ciphertext = `${replacement}${encrypted.ciphertext.slice(1)}`;
     await writeFile(context.filePath, JSON.stringify(encrypted), "utf8");
 
     await expect(context.store.read("broadcaster-1"))

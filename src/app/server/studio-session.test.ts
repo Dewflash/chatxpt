@@ -350,6 +350,38 @@ describe("StudioSessionApplication", () => {
     expect(restored.view.profile.keywordWatchlist).toEqual(["diamonds", "food supplies"]);
   });
 
+  it("rebases an authenticated Studio command while live inputs advance the session revision", async () => {
+    const context = application();
+    const started = await context.application.start(SETUP_KEY, {
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    });
+    await ingestGameplaySnapshot(context, started);
+    const staleCommand = streamerProfileSettingsCommandSchema.parse({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: started.view.session.sessionId,
+      questCycleId: null,
+      commandId: "profile-command-after-live-input",
+      correlationId: "profile-command-after-live-input",
+      expectedRevision: started.view.session.revision,
+      issuedAt: NOW,
+      actor: { kind: "broadcaster", actorId: "channel-1" },
+      type: "streamer.profile-settings",
+      experiencePatch: { intensity: 0.6 },
+      keywordWatchlist: ["diamonds"],
+      streamPresets: started.view.profile.streamPresets,
+      selectedPresetId: "chill",
+    });
+
+    const result = await context.application.execute(started.grant, null, staleCommand);
+
+    expect(result.outcome).toBe("committed");
+    expect(result.view.profile.experience.intensity).toBe(0.6);
+    expect(result.view.session.revision).toBeGreaterThan(started.view.session.revision);
+  });
+
   it("persists private declared intent through the same broadcaster-authorised command path", async () => {
     const context = application();
     const started = await context.application.start(SETUP_KEY, {

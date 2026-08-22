@@ -35,6 +35,15 @@ const statuses: Record<ObsOverlayApplicationErrorCode, number> = {
   "dependency-unavailable": 503,
 };
 
+function isObsOverlayApplicationError(caught: unknown): caught is ObsOverlayApplicationError {
+  if (caught instanceof ObsOverlayApplicationError) return true;
+  if (!(caught instanceof Error)) return false;
+  const candidate = caught as Error & { code?: unknown; retryable?: unknown };
+  return typeof candidate.code === "string" &&
+    Object.prototype.hasOwnProperty.call(statuses, candidate.code) &&
+    typeof candidate.retryable === "boolean";
+}
+
 export function obsOverlayErrorResponse(caught: unknown) {
   if (caught instanceof BoundedJsonError) {
     return NextResponse.json(
@@ -49,7 +58,7 @@ export function obsOverlayErrorResponse(caught: unknown) {
       { status: caught.kind === "too-large" ? 413 : 400, headers: obsOverlayHeaders },
     );
   }
-  if (caught instanceof ObsOverlayApplicationError) {
+  if (isObsOverlayApplicationError(caught)) {
     return NextResponse.json(
       { ok: false, error: { code: caught.code, message: caught.message, retryable: caught.retryable } },
       { status: statuses[caught.code], headers: obsOverlayHeaders },

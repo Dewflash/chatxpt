@@ -804,22 +804,36 @@ describe("DefaultQuestEngine", () => {
 
   it("accepts canonical session-scoped gameplay and audience snapshots at vote close", () => {
     const gameplayInput = voteCloseInput([2, 1, 0]);
+    const gameplayFromEarlierRevision = gameplaySnapshotSchema.parse({
+      ...sessionScopedGameplay,
+      envelope: {
+        ...sessionScopedGameplay.envelope,
+        revision: gameplayInput.currentState.envelope.revision + 7,
+      },
+    });
     const withGameplay = decision(
       new DefaultQuestEngine().decide({
         ...gameplayInput,
         voteCloseValidationContext: {
           ...gameplayInput.voteCloseValidationContext!,
-          gameplay: sessionScopedGameplay,
+          gameplay: gameplayFromEarlierRevision,
         },
       }),
     );
     const audienceInput = voteCloseInput([2, 1, 0]);
+    const audienceFromEarlierRevision = audienceSnapshotSchema.parse({
+      ...sessionScopedAudience,
+      envelope: {
+        ...sessionScopedAudience.envelope,
+        revision: audienceInput.currentState.envelope.revision + 11,
+      },
+    });
     const withAudience = decision(
       new DefaultQuestEngine().decide({
         ...audienceInput,
         voteCloseValidationContext: {
           ...audienceInput.voteCloseValidationContext!,
-          audience: sessionScopedAudience,
+          audience: audienceFromEarlierRevision,
         },
       }),
     );
@@ -845,6 +859,46 @@ describe("DefaultQuestEngine", () => {
     });
 
     expect(result).toMatchObject({ ok: false, error: { code: "validation" } });
+  });
+
+  it("still rejects close-time snapshots from another session or evidence class", () => {
+    const sessionInput = voteCloseInput([2, 1, 0]);
+    const wrongSession = new DefaultQuestEngine().decide({
+      ...sessionInput,
+      voteCloseValidationContext: {
+        ...sessionInput.voteCloseValidationContext!,
+        gameplay: gameplaySnapshotSchema.parse({
+          ...sessionScopedGameplay,
+          envelope: {
+            ...sessionScopedGameplay.envelope,
+            sessionId: "another-session",
+          },
+        }),
+      },
+    });
+    const evidenceInput = voteCloseInput([2, 1, 0]);
+    const wrongEvidence = new DefaultQuestEngine().decide({
+      ...evidenceInput,
+      voteCloseValidationContext: {
+        ...evidenceInput.voteCloseValidationContext!,
+        audience: audienceSnapshotSchema.parse({
+          ...sessionScopedAudience,
+          envelope: {
+            ...sessionScopedAudience.envelope,
+            source: "twitch",
+            evidenceClass: "live",
+          },
+        }),
+      },
+    });
+
+    expect(wrongSession).toMatchObject({ ok: false, error: { code: "validation" } });
+    const rejectedEvidence = decision(wrongEvidence);
+    expect(rejectedEvidence.nextState.status).toBe("cancelled");
+    expect(rejectedEvidence.events[0]).toMatchObject({
+      eventType: "quest-cycle.vote-closed-no-activation",
+      attributes: { reasonCode: "winner-invalid", validationCodes: "malformed" },
+    });
   });
 
   it("applies terminal outcomes to an authoritative active-state fixture", () => {

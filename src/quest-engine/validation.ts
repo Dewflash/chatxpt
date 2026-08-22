@@ -490,6 +490,7 @@ export function validateCandidateAtVoteClose(
             ...context.gameplay.envelope,
             questCycleId:
               context.gameplay.envelope.questCycleId ?? currentState.data.envelope.questCycleId,
+            revision: envelope.revision,
           },
         },
   );
@@ -506,6 +507,7 @@ export function validateCandidateAtVoteClose(
             ...context.audience.envelope,
             questCycleId:
               context.audience.envelope.questCycleId ?? currentState.data.envelope.questCycleId,
+            revision: envelope.revision,
           },
         },
   );
@@ -514,7 +516,13 @@ export function validateCandidateAtVoteClose(
     gameplay: gameplay.success ? gameplay.data : null,
     audience: audience.success ? audience.data : null,
   });
-  if (!gameplay.success || !audience.success || !intelligence.success) {
+  if (
+    !gameplay.success ||
+    !audience.success ||
+    !intelligence.success ||
+    gameplay.data.envelope.evidenceClass !== envelope.evidenceClass ||
+    audience.data.envelope.evidenceClass !== envelope.evidenceClass
+  ) {
     return {
       accepted: false,
       candidate: candidate.data,

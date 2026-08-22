@@ -12,7 +12,9 @@ export {
 export {
   BrowserMediaFrameSource,
   MediaStreamVideoFrameCapture,
+  ObsVirtualCameraError,
   findObsVirtualCameraDevice,
+  obsVirtualCameraFailureReason,
   requestObsVirtualCameraStream,
 } from "./obs/browser-frame-source";
 export {
@@ -26,6 +28,7 @@ export type {
   BrowserFrameCapture,
   BrowserMediaFrameSourceOptions,
   MediaStreamVideoFrameCaptureOptions,
+  ObsVirtualCameraFailureReason,
   ObsVirtualCameraRequestOptions,
 } from "./obs/browser-frame-source";
 export type {

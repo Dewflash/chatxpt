@@ -14,7 +14,9 @@ import {
 import {
   BrowserMediaFrameSource,
   MediaStreamVideoFrameCapture,
+  obsVirtualCameraFailureReason,
   requestObsVirtualCameraStream,
+  type ObsVirtualCameraFailureReason,
 } from "@/integrations";
 
 import styles from "./studio-gameplay-capture.module.css";
@@ -77,6 +79,20 @@ function captureError(caught: unknown): string {
     return "Camera access is blocked. Allow camera access for this browser, then retry.";
   }
   return caught instanceof Error ? caught.message : "Gameplay Capture could not start.";
+}
+
+function captureHealthCopy(
+  running: boolean,
+  hasObservation: boolean,
+  error: string | null,
+  failureReason: ObsVirtualCameraFailureReason | null,
+): string {
+  if (running) return hasObservation ? "Observed" : "Starting";
+  if (error === null) return "Unavailable";
+  if (failureReason === "permission-denied") return "Permission denied";
+  if (failureReason === "not-found") return "Camera not found";
+  if (failureReason === "device-unavailable") return "Camera unavailable";
+  return "Unavailable";
 }
 
 function isCaptureGame(value: unknown): value is CaptureGame {
@@ -156,6 +172,7 @@ export function StudioGameplayCaptureClient() {
   const [latest, setLatest] = useState<LatestCapture | null>(null);
   const [capturePreference, setCapturePreference] = useState<CapturePreference | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [failureReason, setFailureReason] = useState<ObsVirtualCameraFailureReason | null>(null);
   const [ingressStatus, setIngressStatus] = useState("Waiting for Studio session");
   const [acceptedSnapshots, setAcceptedSnapshots] = useState(0);
   const controllerRef = useRef<AbortController | null>(null);
@@ -243,6 +260,7 @@ export function StudioGameplayCaptureClient() {
     const controller = new AbortController();
     controllerRef.current = controller;
     setError(null);
+    setFailureReason(null);
     setLatest(null);
     setAcceptedSnapshots(0);
     setRunning(true);
@@ -400,6 +418,7 @@ export function StudioGameplayCaptureClient() {
       }
     } catch (caught) {
       if (!controller.signal.aborted) {
+        setFailureReason(obsVirtualCameraFailureReason(caught));
         setError(captureError(caught));
         for (const track of mediaStream?.getTracks() ?? []) track.stop();
       }
@@ -469,7 +488,7 @@ export function StudioGameplayCaptureClient() {
       </section>
 
       <section className={styles.grid} aria-live="polite" aria-label="Gameplay Capture status">
-        <article className={styles.metric}><span>Capture Health</span><strong>{running ? (latest === null ? "Starting" : "Observed") : error === null ? "Unavailable" : "Permission denied"}</strong></article>
+        <article className={styles.metric}><span>Capture Health</span><strong>{captureHealthCopy(running, latest !== null, error, failureReason)}</strong></article>
         <article className={styles.metric}><span>Studio connection</span><strong>{ingressStatus}</strong></article>
         <article className={styles.metric}><span>Snapshots accepted</span><strong>{acceptedSnapshots}</strong></article>
         <article className={styles.metric}><span>Frames analyzed</span><strong>{latest?.frameCount ?? 0}</strong></article>

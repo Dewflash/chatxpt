@@ -13,7 +13,9 @@ import {
 import {
   BrowserMediaFrameSource,
   MediaStreamVideoFrameCapture,
+  obsVirtualCameraFailureReason,
   requestObsVirtualCameraStream,
+  type ObsVirtualCameraFailureReason,
 } from "@/integrations";
 
 import styles from "./page.module.css";
@@ -58,9 +60,23 @@ interface GameplayIngressPayload {
 
 function diagnosticError(caught: unknown): string {
   if (caught instanceof DOMException && caught.name === "NotAllowedError") {
-    return "Camera access is blocked by macOS. Allow camera access for the browser running this diagnostic, then retry.";
+    return "Camera access is blocked. Allow camera access for the browser running this diagnostic, then retry.";
   }
   return caught instanceof Error ? caught.message : "OBS extraction diagnostic failed.";
+}
+
+function captureHealthCopy(
+  running: boolean,
+  hasObservation: boolean,
+  error: string | null,
+  failureReason: ObsVirtualCameraFailureReason | null,
+): string {
+  if (running) return hasObservation ? "Observed" : "Starting";
+  if (error === null) return "Unavailable";
+  if (failureReason === "permission-denied") return "Permission denied";
+  if (failureReason === "not-found") return "Camera not found";
+  if (failureReason === "device-unavailable") return "Camera unavailable";
+  return "Unavailable";
 }
 
 function liveDirectorStatusCopy(payload: GameplayIngressPayload): string {
@@ -97,6 +113,7 @@ export function GameplayExtractionDiagnostic({ initialSessionId = "" }: { readon
   const [running, setRunning] = useState(false);
   const [latest, setLatest] = useState<LatestDiagnostic | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [failureReason, setFailureReason] = useState<ObsVirtualCameraFailureReason | null>(null);
   const [sessionId, setSessionId] = useState(initialSessionId);
   const [ingressStatus, setIngressStatus] = useState("Diagnostic only");
   const [liveDirectorStatus, setLiveDirectorStatus] = useState("Not connected");
@@ -123,6 +140,7 @@ export function GameplayExtractionDiagnostic({ initialSessionId = "" }: { readon
     const controller = new AbortController();
     controllerRef.current = controller;
     setError(null);
+    setFailureReason(null);
     setLatest(null);
     setAcceptedSnapshots(0);
     setLiveDirectorStatus(requestedSessionId.length > 0 ? "Waiting for accepted facts" : "Diagnostic only");
@@ -266,6 +284,7 @@ export function GameplayExtractionDiagnostic({ initialSessionId = "" }: { readon
       }
     } catch (caught) {
       if (!controller.signal.aborted) {
+        setFailureReason(obsVirtualCameraFailureReason(caught));
         setError(diagnosticError(caught));
         for (const track of mediaStream?.getTracks() ?? []) track.stop();
       }
@@ -328,7 +347,7 @@ export function GameplayExtractionDiagnostic({ initialSessionId = "" }: { readon
       {error !== null ? <p className={styles.error} role="alert">{error}</p> : null}
 
       <section className={styles.grid} aria-live="polite" aria-label="Extraction status">
-        <article className={styles.metric}><span>Capture Health</span><strong>{running ? (latest === null ? "Starting" : "Observed") : error === null ? "Unavailable" : "Permission denied"}</strong></article>
+        <article className={styles.metric}><span>Capture Health</span><strong>{captureHealthCopy(running, latest !== null, error, failureReason)}</strong></article>
         <article className={styles.metric}><span>Core ingress</span><strong>{ingressStatus}</strong></article>
         <article className={styles.metric}><span>Live Director</span><strong>{liveDirectorStatus}</strong></article>
         <article className={styles.metric}><span>Snapshots accepted</span><strong>{acceptedSnapshots}</strong></article>

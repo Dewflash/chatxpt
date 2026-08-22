@@ -108,6 +108,17 @@ const statuses: Record<StudioSessionApplicationErrorCode, number> = {
   internal: 500,
 };
 
+function isStudioSessionApplicationError(
+  caught: unknown,
+): caught is StudioSessionApplicationError {
+  if (caught instanceof StudioSessionApplicationError) return true;
+  if (!(caught instanceof Error)) return false;
+  const candidate = caught as Error & { code?: unknown; retryable?: unknown };
+  return typeof candidate.code === "string" &&
+    Object.prototype.hasOwnProperty.call(statuses, candidate.code) &&
+    typeof candidate.retryable === "boolean";
+}
+
 export function studioErrorResponse(caught: unknown, headers: HeadersInit = studioHeaders) {
   if (caught instanceof BoundedJsonError) {
     return NextResponse.json(
@@ -122,7 +133,7 @@ export function studioErrorResponse(caught: unknown, headers: HeadersInit = stud
       { status: caught.kind === "too-large" ? 413 : 400, headers },
     );
   }
-  if (caught instanceof StudioSessionApplicationError) {
+  if (isStudioSessionApplicationError(caught)) {
     return NextResponse.json(
       {
         ok: false,

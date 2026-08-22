@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   BrowserMediaFrameSource,
+  ObsVirtualCameraError,
   findObsVirtualCameraDevice,
+  obsVirtualCameraFailureReason,
   requestObsVirtualCameraStream,
   type BrowserFrameCapture,
 } from "./browser-frame-source";
@@ -122,15 +124,57 @@ describe("OBS browser frame source", () => {
     ] satisfies MediaDeviceInfo[];
     let stopped = 0;
 
-    await expect(requestObsVirtualCameraStream({
+    const result = requestObsVirtualCameraStream({
       mediaDevices: {
         enumerateDevices: async () => devices,
         getUserMedia: async () => ({
           getTracks: () => [{ stop: () => { stopped += 1; } }],
         } as unknown as MediaStream),
       },
-    })).rejects.toThrow("OBS Virtual Camera was not found");
+    });
+    await expect(result).rejects.toMatchObject({
+      reason: "not-found",
+    });
+    await expect(result).rejects.toThrow("fully restart the browser");
     expect(stopped).toBe(1);
+  });
+
+  it("stops the provisional stream when device re-enumeration fails", async () => {
+    let enumerations = 0;
+    let stopped = 0;
+
+    const result = requestObsVirtualCameraStream({
+      mediaDevices: {
+        enumerateDevices: async () => {
+          enumerations += 1;
+          if (enumerations === 1) return [];
+          throw Object.assign(new Error("device enumeration failed"), { name: "NotReadableError" });
+        },
+        getUserMedia: async () => ({
+          getTracks: () => [{ stop: () => { stopped += 1; } }],
+        } as unknown as MediaStream),
+      },
+    });
+
+    await expect(result).rejects.toMatchObject({ reason: "device-unavailable" });
+    expect(stopped).toBe(1);
+  });
+
+  it("classifies cross-realm browser camera errors without platform-specific copy", async () => {
+    const denied = Object.assign(new Error("denied"), { name: "NotAllowedError" });
+    const result = requestObsVirtualCameraStream({
+      mediaDevices: {
+        enumerateDevices: async () => [],
+        getUserMedia: async () => { throw denied; },
+      },
+    });
+
+    await expect(result).rejects.toBeInstanceOf(ObsVirtualCameraError);
+    await expect(result).rejects.toMatchObject({
+      reason: "permission-denied",
+      message: "Camera access is blocked. Allow camera access for this browser, then retry.",
+    });
+    expect(obsVirtualCameraFailureReason(denied)).toBe("permission-denied");
   });
 
   it("emits canonical ephemeral frame observations and releases captured images", async () => {

@@ -114,6 +114,9 @@ describe("ObsOverlayApplication", () => {
 
   it("rejects a wrong setup key and a cross-session read", async () => {
     const { overlay, started } = await context();
+    await expect(overlay.read(null, started.view.session.sessionId)).rejects.toMatchObject({
+      code: "unauthenticated",
+    } satisfies Partial<ObsOverlayApplicationError>);
     await expect(
       overlay.issueGrant("wrong", "https://chatxpt.example", {
         sessionId: started.view.session.sessionId,

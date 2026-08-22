@@ -1,0 +1,9 @@
+# Recover the real Twitch, gameplay, and voting rehearsal
+
+- **Type:** Fixed
+- **Role:** Role 1
+- **Issue/PR:** pending
+- **Summary:** Gameplay Capture now explains camera failures and recovers resources; stale Studio commands rebase safely while capture is advancing authority; development HMR no longer hides typed Studio/overlay errors; and vote-close revalidation accepts current-envelope gameplay and audience evidence without weakening explicit cycle checks.
+- **Integration impact:** Additive OBS browser-adapter failure reasons affect Role 1 and Role 2 consumers. The Studio runtime keeps broadcaster identity checks while retrying current revisions. Role 3 close-time validation rebases only revision metadata and fills null session-scoped cycle IDs; wrong session, evidence class, or explicit non-null cycle still fails closed.
+- **Verification:** Focused OBS, Studio, API response, quest-engine, scheduler, orchestrator, and encrypted-store tests pass; a real local Twitch stream delivered online/offline events and privacy-safe chat aggregates; authenticated OBS Virtual Camera Minecraft snapshots produced exactly three deterministic fallback quests; one hosted-board vote was accepted. `npm.cmd run check` passes with 102 test files / 801 tests, the production build, and the built-client secret scan.
+- **Reality status:** The Twitch stream, EventSub activity, chat aggregate, OBS Virtual Camera gameplay, authoritative Studio session, and hosted-board vote were real and memory-backed locally. The first live vote close exposed the fixed revision mismatch; the post-fix rehearsal closed with zero votes, so a real winner activation remains unproven. Twitch panel installation/JWT voting, two-viewer parity, Supabase Cloud, Vercel, and an actual OBS Browser Source render remain unverified.

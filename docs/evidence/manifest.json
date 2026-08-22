@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-08-19",
+  "updatedAt": "2026-08-22",
   "resources": [
     {
       "id": "twitch-broadcaster",
@@ -698,6 +698,134 @@
         "This is fixture-only local browser evidence, not a Twitch-issued broadcaster JWT, real OBS Custom Dock, public OBS Browser Source, Supabase Cloud realtime, Vercel, real gameplay extraction, or a provider call.",
         "The screenshots prove rendering and zero horizontal overflow at the measured widths; they do not prove real keyboard, screen-reader, Twitch-host, reconnect, or multi-device operation.",
         "Turn into vote records the Role 3 conversion request but does not publish candidates until the separate exactly-three conversion pass lands; no engagement or solution-fit effect is claimed."
+      ]
+    },
+    {
+      "id": "E-20260822-R1-001",
+      "capturedAt": "2026-08-22T15:15:54+08:00",
+      "owner": { "role": "role-1", "github": "Dewflash" },
+      "reviewer": { "role": "role-1", "github": "Dewflash" },
+      "evidenceClass": "unverified",
+      "result": "partial",
+      "claim": "A local Chrome diagnostic consumed exact OBS Virtual Camera output carrying team-owned Minecraft gameplay and continuously advanced the real browser frame analyzer beyond 187 frames while unsupported calibrated facts remained unknown.",
+      "resourceIds": ["obs-gameplay-machine"],
+      "surfaces": [
+        {
+          "name": "Gameplay Capture diagnostic",
+          "deviceClass": "desktop",
+          "viewport": null
+        }
+      ],
+      "source": {
+        "gitCommit": "effcab5",
+        "branch": "main",
+        "prNumber": null
+      },
+      "authoritativeState": {
+        "sessionRef": null,
+        "questCycleRef": null,
+        "revision": null
+      },
+      "inputs": [
+        {
+          "kind": "unverified",
+          "description": "Real local Minecraft Java output captured by OBS 32.2.2 Game Capture and exposed through the exact OBS Virtual Camera device to Chrome; no raw frame or account identity was retained."
+        }
+      ],
+      "commands": [
+        "Start OBS Virtual Camera with the team-owned Minecraft scene active",
+        "Open the local Gameplay Capture diagnostic in Chrome, select the Minecraft profile, allow camera access, and start the diagnostic",
+        "Observe Capture Health as Observed and Frames analyzed advance from 13 to more than 187",
+        "npm.cmd test -- src/integrations/obs/browser-frame-source.test.ts",
+        "npm.cmd run check"
+      ],
+      "artifacts": [
+        {
+          "storage": "local-only",
+          "reference": "local-artifact:codex-runtime-transcript-20260822-obs-diagnostic",
+          "mediaType": "text/plain",
+          "privacyReviewed": true,
+          "sha256": null
+        }
+      ],
+      "limitations": [
+        "The run used the diagnostic-only route with no authoritative session id, so zero normalized snapshots entered Core and this is not golden-workflow evidence.",
+        "The source included an uncommitted local recovery diff based on effcab5; repeat from an immutable revision before promoting this evidence to real.",
+        "The quiet universal observation and modified-or-unknown HUD status do not prove calibrated Minecraft facts, movement classification accuracy, Twitch activity, Supabase Cloud, viewer participation, or OBS Browser Source output."
+      ]
+    },
+    {
+      "id": "E-20260822-R1-002",
+      "capturedAt": "2026-08-22T17:15:48+08:00",
+      "owner": { "role": "role-1", "github": "Dewflash" },
+      "reviewer": { "role": "role-1", "github": "Dewflash" },
+      "evidenceClass": "real",
+      "result": "partial",
+      "claim": "A real local Twitch stream, Twitch chat activity, OBS Virtual Camera gameplay, authoritative Studio session, and hosted-board vote crossed the canonical memory-backed runtime with truthful fallback and offline handling.",
+      "resourceIds": ["twitch-broadcaster", "obs-gameplay-machine", "streamer-desktop-browser"],
+      "surfaces": [
+        {
+          "name": "ChatXPT Studio live rehearsal",
+          "deviceClass": "desktop",
+          "viewport": null
+        },
+        {
+          "name": "Hosted Quest Board fallback",
+          "deviceClass": "desktop",
+          "viewport": null
+        },
+        {
+          "name": "Twitch developer Local Test registration",
+          "deviceClass": "desktop",
+          "viewport": null
+        }
+      ],
+      "source": {
+        "gitCommit": "effcab5",
+        "branch": "main",
+        "prNumber": null
+      },
+      "authoritativeState": {
+        "sessionRef": "local-live-rehearsal-session",
+        "questCycleRef": "local-live-rehearsal-cycle",
+        "revision": null
+      },
+      "inputs": [
+        {
+          "kind": "real",
+          "description": "A team-controlled public Twitch broadcast delivered stream lifecycle and authorised chat events; only privacy-safe aggregate activity was inspected or retained."
+        },
+        {
+          "kind": "real",
+          "description": "Team-owned Minecraft output entered Chrome through OBS Virtual Camera and the authenticated gameplay-ingress boundary; no raw frame was retained."
+        },
+        {
+          "kind": "memory",
+          "description": "Authoritative session, quest-cycle, vote, and role projections used the production-shaped process-memory repository rather than Supabase Cloud."
+        }
+      ],
+      "commands": [
+        "Run npm.cmd run dev:twitch over trusted local HTTPS and connect the team-controlled Twitch broadcaster through Studio OAuth",
+        "Start and stop a public Twitch stream; observe Studio transition to live and back to Waiting for Twitch stream",
+        "Run persistent Gameplay Capture with OBS Virtual Camera and Minecraft selected; observe accepted authenticated snapshots and exactly three deterministic fallback quests",
+        "Submit one anonymous hosted-board vote and observe authoritative acknowledgement; send ordinary Twitch chat and observe only aggregate activity",
+        "Register ChatXPT Sidequests 0.0.1 in Twitch Local Test with viewer.html, config.html, and live-config.html paths",
+        "Run npm.cmd run check: 102 test files / 801 tests, production build, role boundaries, evidence validation, repository hygiene, and built-client secret scan pass"
+      ],
+      "artifacts": [
+        {
+          "storage": "local-only",
+          "reference": "local-artifact:codex-runtime-transcript-20260822-live-rehearsal",
+          "mediaType": "text/plain",
+          "privacyReviewed": true,
+          "sha256": null
+        }
+      ],
+      "limitations": [
+        "The first real vote close exposed a nested-revision validation defect that is now covered by focused automated tests; the post-fix live cycle had zero votes, so real winner activation and progress/result remain unproven.",
+        "The Twitch Extension exists in Local Test but was not installed on-channel, did not issue a real viewer JWT, and did not cast a real in-panel vote; mobile still needs an approved public privacy-policy URL.",
+        "This run used one hosted-board viewer and process memory. It does not prove two-viewer parity, Supabase Cloud realtime/recovery, Vercel, provider output, or an actual OBS Browser Source render.",
+        "The source included an uncommitted local recovery diff based on effcab5; repeat from an immutable revision before treating this as submission-grade golden-workflow evidence."
       ]
     }
   ]
