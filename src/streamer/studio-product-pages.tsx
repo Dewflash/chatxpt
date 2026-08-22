@@ -1708,20 +1708,20 @@ export function StudioProductPageSurface({
             <strong>ChatXPT</strong>
             <h1>{pageLabel}</h1>
           </div>
+          <dl className={styles.integrationSummary} aria-label="Studio connection status">
+            <div>
+              <dt>Twitch</dt>
+              <dd data-state={twitchLifecycle.toLowerCase().replace(/\s+/gu, "-")}>{twitchLifecycle}</dd>
+            </div>
+            <div>
+              <dt>Game Capture</dt>
+              <dd>{captureSource}</dd>
+            </div>
+          </dl>
           <div className={styles.accountSummary}>
             <span>Account</span>
             <strong>{customerSafeLabel(activeProfile?.displayName, "Not connected")}</strong>
             <small>{accountLabel} · {storageLabel}</small>
-            <dl>
-              <div>
-                <dt>Twitch</dt>
-                <dd data-state={twitchLifecycle.toLowerCase().replace(/\s+/gu, "-")}>{twitchLifecycle}</dd>
-              </div>
-              <div>
-                <dt>Game Capture</dt>
-                <dd>{captureSource}</dd>
-              </div>
-            </dl>
           </div>
         </section>
         {PAGE_SECTIONS[page] ? (

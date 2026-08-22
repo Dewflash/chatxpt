@@ -138,9 +138,9 @@
 }
 
 .studioHeader {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: flex-start;
-  justify-content: space-between;
   gap: var(--cx-space-xl);
   padding-bottom: var(--cx-space-lg);
   border-bottom: 1px solid var(--cx-color-border);
@@ -160,6 +160,49 @@
   text-transform: uppercase;
 }
 
+.integrationSummary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  margin: 0;
+  text-align: center;
+}
+
+.integrationSummary div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.integrationSummary dt,
+.integrationSummary dd {
+  margin: 0;
+}
+
+.integrationSummary dt {
+  color: var(--cx-color-text-muted);
+  font-size: 0.72rem;
+  font-weight: var(--cx-font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.integrationSummary dd {
+  font-weight: var(--cx-font-weight-semibold);
+}
+
+.integrationSummary dd[data-state="live"] {
+  color: var(--cx-color-success);
+}
+
+.integrationSummary dd[data-state="preparing"] {
+  color: var(--cx-color-warning);
+}
+
+.integrationSummary dd[data-state="disconnected"] {
+  color: var(--cx-color-danger);
+}
+
 .pageIdentity h1 {
   font-size: 1.6rem;
   line-height: 1.15;
@@ -168,6 +211,7 @@
 .accountSummary {
   width: min(100%, 19rem);
   display: grid;
+  justify-self: end;
   justify-items: end;
   gap: 0.2rem;
   text-align: right;
@@ -175,46 +219,6 @@
 
 .accountSummary > small {
   color: var(--cx-color-text-muted);
-}
-
-.accountSummary dl {
-  width: 100%;
-  display: grid;
-  gap: 0.3rem;
-  margin: var(--cx-space-sm) 0 0;
-}
-
-.accountSummary dl div {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--cx-space-lg);
-}
-
-.accountSummary dt,
-.accountSummary dd {
-  margin: 0;
-}
-
-.accountSummary dt {
-  color: var(--cx-color-text-muted);
-  font-size: var(--cx-font-size-sm);
-}
-
-.accountSummary dd {
-  font-weight: var(--cx-font-weight-semibold);
-}
-
-.accountSummary dd[data-state="live"] {
-  color: var(--cx-color-success);
-}
-
-.accountSummary dd[data-state="preparing"] {
-  color: var(--cx-color-warning);
-}
-
-.accountSummary dd[data-state="disconnected"] {
-  color: var(--cx-color-danger);
 }
 
 .sectionNav {
@@ -1500,12 +1504,17 @@
   }
 
   .studioHeader {
-    align-items: start;
-    flex-direction: column;
+    grid-template-columns: 1fr;
+  }
+
+  .integrationSummary {
+    justify-content: flex-start;
+    text-align: left;
   }
 
   .accountSummary {
     width: 100%;
+    justify-self: start;
     justify-items: start;
     text-align: left;
   }

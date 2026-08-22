@@ -117,18 +117,24 @@ describe("StudioProductPageSurface", () => {
     expect(html).not.toContain("scheduled for");
   });
 
-  it("places the shared account header and divider before page section controls", () => {
+  it("centers connection status separately from the right-aligned account before page controls", () => {
     const html = renderToStaticMarkup(h(StudioProductPageSurface, {
       page: "live-analytics",
       view: createFixtureUiGatewaySnapshot().views.streamer,
       readiness: twitchVerifiedReadiness(),
     }));
     const pageHeader = html.indexOf("<h1>Live Analytics</h1>");
+    const connectionStatus = html.indexOf('aria-label="Studio connection status"');
+    const twitch = html.indexOf("<dt>Twitch</dt>", connectionStatus);
+    const capture = html.indexOf("<dt>Game Capture</dt>", connectionStatus);
     const account = html.indexOf(">Account<");
     const sectionControls = html.indexOf('aria-label="Live Analytics sections"');
 
     expect(pageHeader).toBeGreaterThan(-1);
-    expect(account).toBeGreaterThan(pageHeader);
+    expect(connectionStatus).toBeGreaterThan(pageHeader);
+    expect(twitch).toBeGreaterThan(connectionStatus);
+    expect(capture).toBeGreaterThan(twitch);
+    expect(account).toBeGreaterThan(capture);
     expect(sectionControls).toBeGreaterThan(account);
     expect(html).not.toContain("Understand audience activity during this stream.");
   });
