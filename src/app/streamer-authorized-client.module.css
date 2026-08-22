@@ -144,6 +144,11 @@
 .integrationSetup button:disabled { opacity: .58; cursor: wait; }
 .descriptor { padding: 12px; border: 1px solid rgba(215, 255, 82, .24); border-radius: 10px; background: rgba(215, 255, 82, .05); }
 .descriptor small { color: #aaa2bd; line-height: 1.45; }
+.descriptorActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.descriptorActions a,
+.descriptorActions button { display: grid; min-height: 40px; place-items: center; text-align: center; }
+.descriptorActions a { padding: 9px 12px; border: 1px solid #d7ff52; border-radius: 8px; color: #0c0912; background: #d7ff52; text-decoration: none; }
+.descriptorActions button { color: #d7ff52; background: transparent; }
 .setupError { color: #ff887d !important; }
 .copyMessage { color: #d7ff52 !important; }
 
@@ -159,4 +164,5 @@
   .bootstrap { padding: 14px; }
   .bootstrapCard { padding: 20px; }
   .integrationSetup { width: min(100% - 28px, 1420px); grid-template-columns: 1fr; }
+  .descriptorActions { grid-template-columns: 1fr; }
 }

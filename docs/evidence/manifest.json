@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "updatedAt": "2026-08-22",
+  "updatedAt": "2026-08-23",
   "resources": [
     {
       "id": "twitch-broadcaster",
@@ -1021,6 +1021,61 @@
         "Two accepted candidates carried non-blocking quality-warning confidence notices; no candidate carried a rejection issue.",
         "This isolated provider-only diagnostic did not exercise production fallback, Role 1 runtime publication, viewer voting, or overlay output.",
         "This used local Brawl Stars recording replay with no audience sample. It does not prove Minecraft calibration, OBS Virtual Camera ingestion, Twitch activity, or the end-to-end golden workflow."
+      ]
+    },
+    {
+      "id": "E-20260823-R1-001",
+      "capturedAt": "2026-08-23T00:33:10+08:00",
+      "owner": { "role": "role-1", "github": "Dewflash" },
+      "reviewer": null,
+      "evidenceClass": "unverified",
+      "result": "partial",
+      "claim": "Agent-run local macOS source and packaged-app smoke runs created a visible always-on-top Desktop Live Director window and exercised click-through, hide/show, OS secure storage, and one-time deep-link parsing without printing the private grant.",
+      "resourceIds": [],
+      "surfaces": [
+        {
+          "name": "Desktop Live Director macOS companion",
+          "deviceClass": "desktop",
+          "viewport": "420x760"
+        }
+      ],
+      "source": {
+        "gitCommit": "c3a504b",
+        "branch": "codex/desktop-live-director",
+        "prNumber": null
+      },
+      "authoritativeState": {
+        "sessionRef": null,
+        "questCycleRef": null,
+        "revision": null
+      },
+      "inputs": [
+        {
+          "kind": "unverified",
+          "description": "Local macOS Electron source and ad-hoc-signed package runs without a real Twitch broadcaster or active session. Linking used fixture credentials against an unavailable localhost port."
+        }
+      ],
+      "commands": [
+        "npm run check",
+        "npm audit --audit-level=high",
+        "npm run desktop:live-director:smoke",
+        "npm run desktop:package:mac",
+        "Launch the packaged Electron executable with --smoke-test and an encoded chatxpt:// fixture link",
+        "Verify the packaged bundle with codesign --verify --deep --strict"
+      ],
+      "artifacts": [
+        {
+          "storage": "local-only",
+          "reference": "local-artifact:codex-runtime-transcript-20260823-desktop-live-director",
+          "mediaType": "text/plain",
+          "privacyReviewed": true,
+          "sha256": null
+        }
+      ],
+      "limitations": [
+        "The run used a local feature branch based on c3a504b and has not been reviewed by the project owner, so it remains unverified evidence.",
+        "It does not prove one-time linking from the owner's real Studio/Twitch broadcaster, active-session data, saved placement across a manual restart, Minecraft focus behavior, or OBS capture exclusion.",
+        "The macOS bundle is ad-hoc signed for local use; Apple Developer ID signing, notarisation, hosted distribution, Windows packaging, and auto-update remain unproven."
       ]
     }
   ]

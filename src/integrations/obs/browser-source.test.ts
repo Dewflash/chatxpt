@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  createLiveDirectorDesktopLinkUrl,
   createLiveDirectorDockDescriptor,
   createObsBrowserSourceDescriptor,
   parseObsBrowserSourceRequest,
@@ -74,6 +75,20 @@ describe("OBS browser source descriptor", () => {
     expect(url.searchParams.has("directorAccessToken")).toBe(false);
     expect(new URLSearchParams(url.hash.slice(1)).get("directorAccessToken"))
       .toBe("fixture-director-token-0001");
+
+    const desktopLink = new URL(createLiveDirectorDesktopLinkUrl(descriptor.url));
+    expect(desktopLink.protocol).toBe("chatxpt:");
+    expect(desktopLink.hostname).toBe("link");
+    expect(desktopLink.searchParams.get("url")).toBe(descriptor.url);
+  });
+
+  it("rejects unsafe or unrelated Desktop Live Director links", () => {
+    expect(() => createLiveDirectorDesktopLinkUrl(
+      "http://chatxpt.example/live-director-overlay?broadcasterId=fixture#directorAccessToken=fixture-director-token-0001",
+    )).toThrow("HTTPS");
+    expect(() => createLiveDirectorDesktopLinkUrl(
+      "https://chatxpt.example/obs-overlay?broadcasterId=fixture#directorAccessToken=fixture-director-token-0001",
+    )).toThrow("private overlay surface");
   });
 
   it("redacts the overlay access token before logging or documentation", () => {

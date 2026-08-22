@@ -24,6 +24,7 @@ export {
   OBS_BROWSER_SOURCE_DEFAULT_WIDTH,
   LIVE_DIRECTOR_DOCK_DEFAULT_HEIGHT,
   LIVE_DIRECTOR_DOCK_DEFAULT_WIDTH,
+  createLiveDirectorDesktopLinkUrl,
   createLiveDirectorDockDescriptor,
   createObsBrowserSourceDescriptor,
   parseObsBrowserSourceRequest,

@@ -24,6 +24,7 @@ This document is the source for submission disclosures. It describes what is cur
 | `eslint` / `eslint-config-next` | `package.json` / `package-lock.json` | Linting | `npm run lint`. |
 | `vitest` | `package.json` / `package-lock.json` | Unit, contract, and integration tests | `npm test` and focused role suites. |
 | `supabase` | `package.json` / `package-lock.json` | Local database workflow and migration checks | Requires a Docker-compatible runtime for local DB execution; static checks are not cloud evidence. |
+| `electron` | `package.json` / `package-lock.json` | Desktop Live Director runtime and local macOS packaging source | Included only in the separately launched/packaged private desktop companion; it is not shipped in the Next.js browser bundle. Source and ad-hoc-signed local package smoke evidence is not Apple notarisation, Windows packaging, or owner broadcaster-link evidence. |
 | `@types/node` / `@types/react` / `@types/react-dom` | `package.json` / `package-lock.json` | TypeScript compile-time declarations | `npm run typecheck`. |
 | Node.js | `.nvmrc`, `package.json` engines | Runtime for scripts, checks, and Next.js | Clean-clone/setup evidence must record the actual installed version. |
 

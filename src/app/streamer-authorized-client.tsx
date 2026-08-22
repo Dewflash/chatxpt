@@ -9,6 +9,7 @@ import {
 } from "@/core";
 import { connectRealtimeSnapshot } from "@/app/realtime-snapshot-client";
 import { StudioGameplayCaptureClient } from "@/app/studio/gameplay/capture/StudioGameplayCaptureClient";
+import { createLiveDirectorDesktopLinkUrl } from "@/integrations";
 import {
   PersistentStreamOverlaySurface,
   StudioManagementSurface,
@@ -292,7 +293,6 @@ function StudioCaptureAndOverlaySetup() {
 
   async function generateDirectorDock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
     setDirectorPending(true);
     setDirectorError(null);
     setDirectorCopyMessage(null);
@@ -301,10 +301,7 @@ function StudioCaptureAndOverlaySetup() {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          width: Number(data.get("directorWidth")),
-          height: Number(data.get("directorHeight")),
-        }),
+        body: JSON.stringify({}),
       });
       const payload = (await response.json()) as ObsDescriptorPayload;
       if (!response.ok || !payload.ok || payload.descriptor === undefined) {
@@ -374,28 +371,28 @@ function StudioCaptureAndOverlaySetup() {
       </section>
       <section>
         <p className={styles.setupEyebrow}>Private streamer display</p>
-        <h2>Permanent Live Director Dock</h2>
+        <h2>Desktop Live Director</h2>
         <p>
-          Add this private URL once in OBS under Docks → Custom Browser Docks. OBS saves it, and
-          ChatXPT follows this broadcaster into every future session without another login or setup key.
+          Link the desktop companion once for a small private window that stays above your game.
+          ChatXPT then follows this broadcaster into every future session without another login or setup key.
         </p>
         <form onSubmit={generateDirectorDock}>
-          <div className={styles.dimensionRow}>
-            <label>Width<input name="directorWidth" type="number" defaultValue="420" min="280" max="1920" required /></label>
-            <label>Height<input name="directorHeight" type="number" defaultValue="900" min="400" max="2160" required /></label>
-          </div>
-          <button type="submit" disabled={directorPending}>{directorPending ? "Creating…" : "Get permanent Live Director URL"}</button>
+          <button type="submit" disabled={directorPending}>{directorPending ? "Creating…" : "Create permanent Live Director link"}</button>
         </form>
         {directorDescriptor !== undefined ? (
           <div className={styles.descriptor}>
             <label>
-              Private Live Director Dock URL
-              <input value={directorDescriptor.url} readOnly aria-label="Private Live Director Dock URL" />
+              Private Live Director link
+              <input value={directorDescriptor.url} readOnly aria-label="Private Live Director link" />
             </label>
-            <button type="button" onClick={() => void copyDirectorUrl()}>Copy URL</button>
+            <div className={styles.descriptorActions}>
+              <a href={createLiveDirectorDesktopLinkUrl(directorDescriptor.url)}>Open Desktop Companion</a>
+              <button type="button" onClick={() => void copyDirectorUrl()}>Copy for manual linking</button>
+            </div>
             <small>
               {directorDescriptor.width}×{directorDescriptor.height}; private; read-only; reusable across streams.
-              If this private URL is exposed, rotate the server overlay secret and generate a replacement.
+              The same link remains available as an OBS Custom Dock fallback. If it is exposed, rotate the
+              server overlay secret and generate a replacement.
             </small>
           </div>
         ) : null}

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:" />
+    <title>ChatXPT Live Director</title>
+    <link rel="stylesheet" href="setup.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">Private streamer companion</p>
+        <h1>ChatXPT Live Director</h1>
+        <p class="lede">Keep stream context and sidequest status visible above your game without placing it in the broadcast.</p>
+      </header>
+
+      <section class="status-card" aria-live="polite">
+        <span id="status-pill" class="pill">Checking</span>
+        <strong id="status-title">Checking this computer</strong>
+        <p id="status-detail">Loading your secure link and display preferences.</p>
+      </section>
+
+      <section class="card">
+        <h2>Link this computer once</h2>
+        <p>In ChatXPT Studio, create the permanent private Live Director link and choose <strong>Open Desktop Companion</strong>. You can also paste that link below.</p>
+        <form id="link-form">
+          <label for="director-url">Private Live Director link</label>
+          <input id="director-url" name="directorUrl" type="password" autocomplete="off" spellcheck="false" placeholder="https://…/live-director-overlay?…" />
+          <button type="submit">Link Live Director</button>
+        </form>
+        <div class="button-row">
+          <button id="open-studio" class="secondary" type="button">Open ChatXPT Studio</button>
+          <button id="retry" class="secondary" type="button">Retry connection</button>
+        </div>
+        <p id="action-error" class="error" role="alert" hidden></p>
+      </section>
+
+      <section class="card preferences">
+        <h2>Window behavior</h2>
+        <label class="toggle"><input id="always-on-top" type="checkbox" /> <span><strong>Always on top</strong><small>Keep this small window above Minecraft and other apps.</small></span></label>
+        <label class="toggle"><input id="all-workspaces" type="checkbox" /> <span><strong>Show on every desktop</strong><small>Keep the companion available when switching macOS Spaces.</small></span></label>
+        <label class="toggle"><input id="auto-launch" type="checkbox" /> <span><strong>Open when I sign in</strong><small id="auto-launch-detail">Available after installing the packaged app.</small></span></label>
+        <label for="opacity">Opacity <output id="opacity-value">96%</output></label>
+        <input id="opacity" type="range" min="70" max="100" step="5" value="96" />
+      </section>
+
+      <section class="shortcut-card">
+        <strong>While playing</strong>
+        <p><kbd>⌘⇧L</kbd> toggles click-through. <kbd>⌘⇧H</kbd> hides or restores the window. The Window menu provides the same controls.</p>
+      </section>
+
+      <footer>
+        <button id="unlink" class="danger" type="button">Unlink this computer</button>
+        <small>The private grant is encrypted with the operating system secure storage and never written to disk as plain text.</small>
+      </footer>
+    </main>
+    <script src="setup.js"></script>
+  </body>
+</html>

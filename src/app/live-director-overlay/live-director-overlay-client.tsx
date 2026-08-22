@@ -13,31 +13,71 @@ interface LiveDirectorPayload {
   readonly error?: { readonly code?: string; readonly message?: string };
 }
 
+export interface DesktopLiveDirectorBridge {
+  getDirectorAuth(): Promise<{
+    readonly broadcasterId: string | null;
+    readonly accessToken: string | null;
+  } | null>;
+}
+
+export async function resolveLiveDirectorClientAuth(
+  href: string,
+  desktopBridge?: DesktopLiveDirectorBridge,
+): Promise<{ readonly broadcasterId: string; readonly accessToken: string } | null> {
+  const url = new URL(href);
+  const fragment = new URLSearchParams(url.hash.replace(/^#/, ""));
+  let broadcasterId = url.searchParams.get("broadcasterId");
+  let accessToken = fragment.get("directorAccessToken");
+  if ((accessToken === null || accessToken.length < 16) && desktopBridge !== undefined) {
+    const desktopAuth = await desktopBridge.getDirectorAuth();
+    broadcasterId = desktopAuth?.broadcasterId ?? broadcasterId;
+    accessToken = desktopAuth?.accessToken ?? accessToken;
+  }
+  if (
+    broadcasterId === null ||
+    broadcasterId.length === 0 ||
+    accessToken === null ||
+    accessToken.length < 16
+  ) {
+    return null;
+  }
+  return { broadcasterId, accessToken };
+}
+
+declare global {
+  interface Window {
+    chatxptDesktop?: DesktopLiveDirectorBridge;
+  }
+}
+
 export function LiveDirectorOverlayClient() {
   const [view, setView] = useState<StreamerViewModel | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const tokenRef = useRef<string | null>(null);
   const broadcasterIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     document.documentElement.dataset.surface = "live-director-overlay";
-    const url = new URL(window.location.href);
-    const broadcasterId = url.searchParams.get("broadcasterId");
-    const fragment = new URLSearchParams(url.hash.replace(/^#/, ""));
-    const token = fragment.get("directorAccessToken");
-    if (token === null || token.length < 16 || broadcasterId === null || broadcasterId.length === 0) {
-      const notice = window.setTimeout(
-        () => setError("This Live Director Dock URL is incomplete. Copy the permanent private URL from ChatXPT Studio."),
-        0,
-      );
-      return () => {
-        window.clearTimeout(notice);
-        delete document.documentElement.dataset.surface;
-      };
-    }
-    tokenRef.current = token;
-    broadcasterIdRef.current = broadcasterId;
+    let cancelled = false;
+    const initialise = async () => {
+      try {
+        const auth = await resolveLiveDirectorClientAuth(window.location.href, window.chatxptDesktop);
+        if (cancelled) return;
+        if (auth === null) {
+          setError("This Live Director link is incomplete. Create the permanent private link in ChatXPT Studio.");
+          return;
+        }
+        tokenRef.current = auth.accessToken;
+        broadcasterIdRef.current = auth.broadcasterId;
+        setAuthReady(true);
+      } catch {
+        if (!cancelled) setError("The desktop Live Director could not unlock its private link.");
+      }
+    };
+    void initialise();
     return () => {
+      cancelled = true;
       tokenRef.current = null;
       broadcasterIdRef.current = null;
       delete document.documentElement.dataset.surface;
@@ -45,6 +85,7 @@ export function LiveDirectorOverlayClient() {
   }, []);
 
   useEffect(() => {
+    if (!authReady) return;
     let stopped = false;
     let controller: AbortController | null = null;
     let refreshing = false;
@@ -94,7 +135,7 @@ export function LiveDirectorOverlayClient() {
       window.clearTimeout(initial);
       window.clearInterval(interval);
     };
-  }, []);
+  }, [authReady]);
 
   return (
     <main className={styles.root}>

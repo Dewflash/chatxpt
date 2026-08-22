@@ -22,6 +22,7 @@ Supporting product, evidence, slide, and recording documents are linked later, b
 - Node.js 20.9 or newer; Node.js 22 is recommended.
 - npm, using the committed `package-lock.json`.
 - A current desktop browser.
+- macOS for the current packaged Desktop Live Director build; the source runtime uses Electron and remains portable.
 - OBS Studio for the broadcast-overlay workflow.
 - A Twitch developer account and locally installed Extension only when testing inside Twitch.
 - A Docker-compatible runtime only when running the optional local Supabase stack.
@@ -86,6 +87,25 @@ Legacy Supabase projects may use the aliases documented in [.env.example](.env.e
 | Hosted Quest Board fallback | `http://localhost:3000/quest-board/<roomCode>` | ChatXPT-hosted participation fallback when an Extension is unavailable. |
 | UI diagnostics | [http://localhost:3000/diagnostics/ui-harness](http://localhost:3000/diagnostics/ui-harness) | Clearly labelled fixture/diagnostic states for local testing, not live evidence. |
 | OBS extraction diagnostic | [http://localhost:3000/diagnostics/gameplay-extraction](http://localhost:3000/diagnostics/gameplay-extraction) | Local OBS Virtual Camera connection, exact-device selection, and bounded multi-game analysis. It never creates submission evidence automatically. |
+
+### Desktop Live Director
+
+Start the web application, then launch the private desktop companion in a second terminal:
+
+```bash
+npm run dev:twitch
+npm run desktop:live-director
+```
+
+In Studio, create the permanent private Live Director link and choose **Open Desktop Companion**. The companion stores that broadcaster link through operating-system encryption, remains above ordinary game windows, and resolves later ChatXPT sessions automatically. `Command/Ctrl + Shift + L` toggles click-through; `Command/Ctrl + Shift + H` hides or restores it.
+
+To create the local macOS app bundle:
+
+```bash
+npm run desktop:package:mac
+```
+
+The output is `dist/live-director/ChatXPT Live Director.app`. It is ad-hoc signed for local testing, not Developer ID signed or notarised for public distribution. Complete setup, OBS privacy guidance, and fallback instructions are in [the Live Director integration guide](docs/integrations/LIVE_DIRECTOR_PRIVATE_DOCK.md).
 
 ### OBS browser-source setup
 

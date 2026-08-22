@@ -113,6 +113,23 @@ export function createLiveDirectorDockDescriptor(
   });
 }
 
+export function createLiveDirectorDesktopLinkUrl(input: string | URL): string {
+  const directorUrl = typeof input === "string" ? new URL(input) : new URL(input.toString());
+  if (directorUrl.protocol !== "https:" && directorUrl.hostname !== "localhost") {
+    throw new Error("Live Director Desktop link must use HTTPS outside localhost");
+  }
+  if (directorUrl.pathname !== "/live-director-overlay") {
+    throw new Error("Live Director Desktop link must target the private overlay surface");
+  }
+  identifierSchema.parse(directorUrl.searchParams.get("broadcasterId"));
+  const fragment = new URLSearchParams(directorUrl.hash.replace(/^#/, ""));
+  overlayAccessTokenSchema.parse(fragment.get("directorAccessToken"));
+
+  const desktopLink = new URL("chatxpt://link");
+  desktopLink.searchParams.set("url", directorUrl.toString());
+  return desktopLink.toString();
+}
+
 export function parseObsBrowserSourceRequest(input: string | URL): ObsBrowserSourceRequest {
   const url = typeof input === "string" ? new URL(input) : input;
   const fragment = new URLSearchParams(url.hash.replace(/^#/, ""));

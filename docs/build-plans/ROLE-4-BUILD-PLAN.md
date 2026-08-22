@@ -56,6 +56,7 @@ Role 2 maintains this baseline plan. Role 4's settled answers are recorded in `d
 - Session preparation/start/end controls supplied by Role 1.
 - Proposed-quest review and authoritative approve/reject/start/pause/cancel/skip/succeed/fail/emergency-pause controls.
 - Compact Twitch Config and Live Config surfaces.
+- Private Desktop Live Director companion using the existing authorised, read-only Live Director projection.
 - Responsive, keyboard, reduced-motion, failure, reconnect, and consumer-contract evidence.
 
 ### P1 after the P0 integration exit
@@ -73,7 +74,7 @@ Role 2 maintains this baseline plan. Role 4's settled answers are recorded in `d
 - YouTube, Discord, or other non-Twitch adapters or platform-specific behaviour.
 - Direct Supabase access, client-owned persistence, permission checks, or session authority.
 - Quest intervention, validation, timing, voting, winner, progress, reward, or lifecycle calculations.
-- OBS WebSocket automation, a desktop companion, public developer API/SDK, billing, or persistent reward economy.
+- OBS WebSocket automation, game-process injection, public developer API/SDK, billing, or persistent reward economy.
 - Simulated signals presented as real capture or live intelligence.
 
 ## Surface responsibilities
@@ -103,6 +104,10 @@ Live Config is a compact dashboard companion:
 - Approved quick intensity adjustment and vote visibility after UI-X03 is accepted.
 - Emergency pause that remains prominent and keyboard accessible when Role 3 permits it.
 - A clear path back to Studio for setup, detailed settings, history, testing, and recovery.
+
+### Desktop Live Director Companion
+
+The companion is a private streamer-only delivery surface for the existing Live Director projection. Studio creates its permanent broadcaster link once. The installed companion stores that link through operating-system secure storage, resolves the current session on later launches, remains above ordinary game windows, and offers click-through plus hide/show recovery controls. It does not own commands, state, persistence, gameplay capture, or quest logic, and it is never the public OBS overlay.
 
 Twitch currently describes Config as infrequent setup in a dynamically sized iframe up to 1100px wide and Live Config as stream-time dashboard control that may pop out. Role 1 owns Extension registration and hosting; Role 4 must keep both modules fluid and CSP-compatible. See [Twitch Extension life cycle](https://dev.twitch.tv/docs/extensions/life-cycle) and [Extensions reference](https://dev.twitch.tv/docs/extensions/reference/).
 
