@@ -204,17 +204,17 @@ ChatXPT does not host livestream video. Twitch remains the video and channel sur
 
 Role 1 maintains shared contracts and orchestration. Role 2 is responsible for input analysis and candidate generation. Role 3 remains the deterministic runtime authority over quest validity and lifecycle. Roles 4 and 5 lead the streamer and viewer experiences. These labels define module responsibility, not edit permission: under D-071 any contributor may implement across roles, while public ports still prevent one module from importing another module's private implementation.
 
-### Current runnable path versus production-shaped path
+### Current product path versus evidence boundary
 
-The repository intentionally distinguishes what can be shown locally today from what is implemented as a production boundary:
+The runnable app now centres on the canonical Studio/orchestrator path. Legacy prototype APIs may remain available only as diagnostics and are not the product flow.
 
-| Capability | Current runnable local behaviour | Production-shaped direction / evidence boundary |
+| Capability | Current product path | Evidence boundary |
 | --- | --- | --- |
-| Quest generation | `/api/sidequests` validates input and returns three credential-free algorithmic options. The optional model path requires both explicit enablement and a server key; failure still falls back algorithmically. | Role 2 now exposes a canonical structured-output strategy over normalized gameplay, audience, and profile context. Role 3 remains the deterministic validation/replacement authority. No external model is required for the judged MVP. |
-| Viewer participation | Studio stages a local diagnostic cycle; `/viewer.html` accepts only verified Twitch Extension JWTs and routes votes through the canonical revisioned memory ledger with private acknowledgement/recovery. | Supabase adapters implement the same channel lookup, vote ledger, and private recovery boundaries. Real Twitch/Supabase evidence is claimed only after a recorded external run. |
-| Overlay state | The local overlay uses same-origin state, `BroadcastChannel`, and `/api/overlay-state` so Studio and OBS can reflect vote/quest changes. | OBS remains an output adapter driven by sanitised `OverlayViewModel` state from the orchestrator. |
-| Persistence and realtime | Blank Supabase configuration selects the credential-free memory runtime. | Role 1 includes Supabase-backed repository/realtime adapters and schema/RLS checks. A real cloud run is only claimed when recorded in `docs/evidence/manifest.json`. |
-| Gameplay understanding | The Studio can expose local screen-capture-derived activity signals and clearly labelled manual/diagnostic context where used. Unknown facts remain unknown. | Role 2's extraction boundary supports real OBS Virtual Camera frames, lightweight motion/visual algorithms, bounded OCR, timestamps, confidence, and provenance. A fixture is never presented as live extraction evidence. |
+| Quest generation | Role 2 generation is composed server-side through `src/ai/server.ts`, then Role 3 validates or replaces candidates before any official vote opens. The approved provider path is opt-in; missing credentials, timeout, refusal, malformed output, rate limit, or outage returns to the credential-free algorithmic route. | No provider call, model quality claim, or real-input candidate claim is made without a matching evidence-manifest entry. |
+| Viewer participation | Twitch Extension is primary, hosted Quest Board is the first fallback, and Twitch chat `1`/`2`/`3` is the final fallback. All routes map to canonical viewer commands and the shared private vote ledger. | Direct browser access to Extension HTML cannot vote. Real Twitch/Supabase proof is claimed only after a recorded external run. |
+| OBS overlay state | Studio issues a session-scoped `/obs-overlay` browser-source URL backed by `/api/obs/overlay/state` and the sanitised `OverlayViewModel`. | The overlay is read-only broadcast output. OBS Browser Source evidence is claimed only when recorded with the real scene/source. |
+| Persistence and realtime | Blank Supabase configuration selects the credential-free memory runtime. Supabase adapters implement the accepted persistence/realtime boundary. | A real cloud run is claimed only when recorded in `docs/evidence/manifest.json`. |
+| Gameplay understanding | Studio Gameplay Capture uses OBS Virtual Camera/browser capture, normalised snapshots, confidence, freshness, and explicit `unknown` states. | Raw frames remain ephemeral. A fixture is never presented as live extraction evidence. |
 | Twitch Extension | Local/Hosted Test paths, HS256 JWT verification, channel/session mapping, anonymous and opaque-viewer participation, token refresh, canonical vote handling, private recovery, and the Role 5 viewer surface are implemented. | Public release, Twitch-side Local/Hosted Test success, and real-channel evidence still require external configuration and recorded proof. |
 
 ### State, safety, and failure handling
@@ -235,16 +235,14 @@ ChatXPT uses two different kinds of instructions: runtime quest-generation polic
 
 ### Runtime quest-generation instructions
 
-The submitted judged path remains credential-free and algorithmic. It does not require a model prompt. The repository also includes an explicitly enabled, server-only controlled provider path for owner-authorised evaluation.
+ChatXPT can run without an AI-provider key through the mandatory credential-free algorithmic path. D-072 also permits one explicitly enabled, server-side OpenAI `gpt-5.6-terra` path when a team-owned credited key is available. Every provider or algorithmic batch still passes through deterministic Role 3 validation before reaching a streamer, viewer, or overlay.
 
 | File | Role | Important constraints |
 | --- | --- | --- |
-| `src/lib/openai-engine.ts` | Legacy optional server-side model adapter | Requests exactly three structured quests; infers only a broad game family; avoids invented HUD/game facts; requires distinct play patterns, short readable wording, measurable completion, and safe boundaries; validates against a strict JSON schema. |
 | `.codex/skills/chatxpt-prototype/references/quest-policy.md` | Human-readable quest policy | Defines three distinct options, signal-aware adaptation, rejection conditions, and producer approval. |
 | `src/ai/algorithmic-candidates.ts` | Accepted credential-free Role 2 strategy | Produces exactly three game-neutral candidates, filters stale/low-confidence signals, avoids recent duplicate titles, records source signal IDs, confidence, method, and generation time. |
 | `src/ai/openai-candidate-strategy.ts` | Canonical controlled provider strategy | Sends only normalized snapshots/profile preferences, excludes streamer identity and raw chat, requires exactly three strict drafts, and rejects invented signal citations. |
 | `src/ai/server.ts` | Server-only provider composition | Requires explicit enablement and a server credential, applies a bounded timeout, and retains automatic algorithmic fallback. |
-| `src/lib/mock-engine.ts` | Legacy local `/api/sidequests` fallback | Supplies the currently mounted credential-free local candidate route. Despite the filename, its response is labelled `algorithmic`; fixtures remain separate from live evidence. |
 | `src/quest-engine/validation.ts` | Deterministic authority after generation | Validates candidate safety and quality before a candidate can enter the quest lifecycle. |
 | `src/ai/PROVIDER_EVALUATION.md` | Provider integration evaluation | Compares latency, privacy, cost, structured output, and reliability without declaring a provider live. |
 | `src/quest-engine/PROVIDER_QUALITY_RUBRIC.md` | Provider quest-quality evaluation | Defines quest quality and engine-fit criteria for any future controlled model evaluation. |

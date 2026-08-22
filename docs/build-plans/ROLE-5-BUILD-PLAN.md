@@ -123,7 +123,7 @@ Required upstream seams UI-X05 through UI-X08, UI-X10, and the early Role 4 desi
 
 ## Phase 0 / R5-P01: Feasibility review and implementation baseline
 
-**Deadline:** 3 August 2026
+**Historical target:** 3 August 2026
 
 **Outcome:** Role 5 confirms the plan can be implemented across Twitch, hosted fallback, chat fallback, and OBS without inventing authority.
 
@@ -157,9 +157,9 @@ Codex first prepares the technical feasibility review itself, then uses these as
 
 ## Phase 1 / R5-P02: Public viewer boundary, design-system consumption, and harness
 
-**Deadline:** 4 August 2026, 18:00 SGT
+**Historical target:** 4 August 2026, 18:00 SGT
 
-**Design-system dependency:** Role 4 minimum handoff by 4 August 2026, 12:00 SGT
+**Historical design-system dependency target:** Role 4 minimum handoff by 4 August 2026, 12:00 SGT
 
 **Integration wave:** Wave 1 — Boundaries
 
@@ -193,7 +193,7 @@ Codex first prepares the technical feasibility review itself, then uses these as
 
 ## Phase 2 / R5-P03: Primary Twitch Extension vote-to-result flow
 
-**Deadline:** 5 August 2026, 18:00 SGT
+**Historical target:** 5 August 2026, 18:00 SGT
 
 **Integration wave:** Wave 2 — Core
 
@@ -241,7 +241,7 @@ Codex first prepares the technical feasibility review itself, then uses these as
 
 ## Phase 3 / R5-P04: Hosted fallback, chat fallback, and OBS overlay
 
-**Deadline:** 6 August 2026, 18:00 SGT
+**Historical target:** 6 August 2026, 18:00 SGT
 
 **Integration wave:** Wave 3 — Behaviour
 
@@ -292,9 +292,9 @@ All `r5.mode.*`, `r5.board.room-error-set.v1`, `r5.chat.acknowledgement-set.v1`,
 
 ## Phase 4 / R5-P05: P0 multi-client integration, resilience, and evidence
 
-**Functional exit:** 7 August 2026, 12:00 SGT
+**Historical functional target:** 7 August 2026, 12:00 SGT
 
-**Evidence exit:** 7 August 2026, 18:00 SGT
+**Historical evidence target:** 7 August 2026, 18:00 SGT
 
 **Integration wave:** Wave 4 — Product
 
@@ -327,7 +327,7 @@ All `r5.mode.*`, `r5.board.room-error-set.v1`, `r5.chat.acknowledgement-set.v1`,
 
 ## Phase 5 / R5-P06: Optional P1 refinement after P0 passes
 
-**Cutoff:** 7 August 2026, 18:00 SGT
+**Historical cutoff target:** 7 August 2026, 18:00 SGT
 
 This phase starts after Phase 4 stability and Extension-performance evidence pass. No role-owner approval gate applies; the contributor must preserve the golden workflow and deconflict shared changes with Role 1.
 

@@ -4,13 +4,13 @@
 
 **Implementers:** Role 4 (`JYL1m`) and Role 5 (`drdexe`)
 
-**Status:** Accepted after Role 4 and Role 5 consolidated feasibility reviews; no scope revision was required
+**Status:** Accepted historical UI dependency baseline; current product completion follows `INTEGRATED-PRODUCT-COMPLETION-PLAN.md` and `APP_STATE_SINGLE_SOURCE_OF_TRUTH.md`
 
 **Approved Role 2 decisions:** D2-01, D2-02, D2-03, and D2-03A on 3 August 2026
 
 **Acceptance record:** Role 4's review was accepted through issue #15 and PR #30 on 4 August 2026. Role 2 [accepted Role 5's review and settled UX baseline](https://github.com/Dewflash/chatxpt/issues/16#issuecomment-5189664413) on 5 August 2026. All reported upstream gaps remain assigned to UI-X01 through UI-X10 with fixture, disabled, or unavailable interim paths. Backend and lifecycle authority stay outside UI modules, but any contributor may implement those responsibilities in their corresponding directories.
 
-This matrix is authoritative for the dependencies shared by `ROLE-4-BUILD-PLAN.md` and `ROLE-5-BUILD-PLAN.md`. The two plans remain standalone implementation guides. This file prevents their route, fixture, contract, and deadline assumptions from drifting.
+This matrix remains the shared dependency baseline for `ROLE-4-BUILD-PLAN.md` and `ROLE-5-BUILD-PLAN.md`. The two plans remain standalone implementation guides. When this file conflicts with later accepted route/status guidance, the integrated completion plan and root decisions win.
 
 ## Execution rule
 
@@ -20,20 +20,15 @@ This matrix is authoritative for the dependencies shared by `ROLE-4-BUILD-PLAN.m
 - Role 4 publishes the minimum design-system handoff during its Phase 1. Role 5 begins its Phase 1 consumption after that handoff and does not wait for the complete Studio.
 - Fixtures are for tests, diagnostics, and offline reproducibility only. They are never presented as live Twitch, extraction, AI, realtime, or multi-device evidence.
 
-## Synchronised delivery calendar
+## Current coordination checkpoint
 
-All deadlines use Singapore time and inherit the integration exits in `docs/build-plans/README.md`.
+The dated August delivery table has been removed from active guidance. Current Role 4/5 coordination focuses on one canonical demo flow:
 
-| Deadline | Role 4 exit | Role 5 exit | Shared integration exit |
+| Area | Role 4 focus | Role 5 focus | Shared integration exit |
 | --- | --- | --- | --- |
-| 3 Aug | Consolidated feasibility review returned | Consolidated feasibility review returned | Role 2 revises once, records plan baseline, and notifies Role 1 |
-| 4 Aug, 12:00 | Minimum `@/design-system` handoff published | Public prop/fixture work may begin before noon; design-system consumption begins after the handoff | Role 5 is unblocked without waiting for complete Studio |
-| 4 Aug, 18:00 | Public streamer entry and minimum design-system contract pass consumer checks | Public viewer/overlay entries consume the accepted design-system contract and pass consumer checks | Boundary wave is reviewable against canonical fixtures on current `main` |
-| 5 Aug, 18:00 | Studio setup, profile/preferences, readiness, and health work against accepted seams | Twitch viewer voting and active-quest flow work against accepted seams | Each UI subsystem is demonstrable independently without invented authority |
-| 6 Aug, 18:00 | Studio live controls and Twitch Config/Live Config are connected | Hosted board, chat instructions, and OBS overlay are connected | Real Role 2/3 state can traverse the Role 1 harness into both UI roles |
-| 7 Aug, 12:00 | Setup-to-live-control path is integrated | Extension/fallback/overlay vote-to-result path is integrated | One streamer, two viewers, and OBS display the same session/cycle revision |
-| 7 Aug, 18:00 | P0 evidence checkpoint; only approved P1 work that cannot destabilise P0 may remain | P0 evidence checkpoint; only approved P1 work that cannot destabilise P0 may remain | Target for complete P0 integration and evidence; only the project owner may call a freeze |
-| 8 Aug | Support Role 1 rehearsal/evidence fixes | Support Role 1 rehearsal/evidence fixes | Golden workflow, failure matrix, recording, and disclosure |
+| Studio and readiness | `/studio`, settings, Game Capture status, Live Director, and recovery actions use the authoritative `StreamerViewModel` and command gateway. | Viewer and overlay surfaces consume the same session/cycle lifecycle without inventing readiness or winner state. | Studio, viewer paths, fallbacks, and OBS show the same session/cycle revision. |
+| Participation | Studio surfaces show Twitch, hosted-board, and chat-fallback availability without exposing parsing or vote authority. | Twitch Extension primary, hosted Quest Board fallback, and Twitch chat `1`/`2`/`3` copy stay consistent. | Every vote path maps to canonical viewer commands, including duplicate/stale/reconnect states. |
+| Broadcast output | Studio issues the authenticated browser-source setup and explains status/recovery. | `/obs-overlay` renders the read-only `OverlayViewModel` with no commands or private reasoning. | OBS output matches the authoritative vote/active/result state. |
 
 ## Shared dependency and handoff table
 
@@ -66,7 +61,7 @@ These are requested mounts. Role 1 maintains and deconflicts `src/app/`, Twitch 
 | Twitch viewer Extension | Role 5, `@/viewer` | Twitch Extension Viewer Path backed by a thin Role 1 entry | `ViewerViewModel` and Twitch context/identity mapped by Role 1 | `ViewerVoteCommand` and `ViewerReactionCommand` | R5 Phase 2 |
 | Hosted Quest Board | Role 5, `@/viewer` | `/quest-board/[roomCode]` plus Role 1-authorised direct-link/share data | `ViewerViewModel`, room/access/share result | Same canonical viewer commands | R5 Phase 3 |
 | Twitch-chat fallback instructions | Role 5, `@/viewer` | Copy/template module consumed by Role 1's Twitch adapter and mounted in safe UI surfaces | Participation mode/capability plus counted-status response | No chat parsing or sending; Role 1 maps real chat to viewer commands and owns outbound delivery | R5 Phase 3 |
-| OBS browser overlay | Role 5, `@/viewer` | `/overlay` using a Role 1-issued session-bound read grant | `OverlayViewModel` | None; strictly read-only | R5 Phase 3 |
+| OBS browser overlay | Role 5, `@/viewer` | `/obs-overlay` using a Role 1-issued session-bound read grant | `OverlayViewModel` | None; strictly read-only | R5 Phase 3 |
 
 Exact Extension view types and asset paths remain Role 1 decision D1-08. OBS capture/session behaviour remains D1-09. Secure hosted/overlay/per-viewer grant transport is tracked by UI-X08/UI-X10 and the accepted D-041 permission classes. The requested UI module boundaries must remain stable if a thin mount path changes.
 

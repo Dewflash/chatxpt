@@ -1,6 +1,6 @@
 # Stale Content Cleanup Register
 
-**Status:** Pending cleanup pass.
+**Status:** Markdown guidance cleanup started; source-route cleanup still pending.
 **Created:** 22 August 2026.
 **Owner:** Role 1 deconflicts; any contributor may implement under D-071/D-076.
 
@@ -32,12 +32,14 @@ Anything that still presents the old local prototype, old dates, old route names
 
 | File | Current stale content | Required cleanup |
 | --- | --- | --- |
-| `docs/build-plans/README.md` | The five-day delivery calendar still lists 3-9 August deadlines as live planning text. | Remove the calendar or replace it with current post-finalist integration guidance. Keep the integration-wave principles if still useful. |
-| `docs/TEAM_CONTEXT.md` | It still says the Drive submission deadline is 21 August 2026 and includes the old 6 August Twitch Extension fallback trigger as if it were still pending. | Rewrite as current handoff state: deadline passed, implementation/evidence continues, Extension readiness must be reported truthfully, hosted board and Twitch chat fallback remain required. |
-| `docs/build-plans/ROLE-4-5-DELIVERY-MATRIX.md` | OBS browser overlay mount says `/overlay`; current canonical broadcast surface is `/obs-overlay`. | Update to `/obs-overlay`, or delete the matrix if the current Role 4/5 plans fully supersede it. |
-| `docs/build-plans/INTEGRATED-PRODUCT-COMPLETION-PLAN.md` | It says `/` redirects to `/studio` only after canonical parity, but the current app route already redirects `/` to `/studio`. | Rewrite the fixed decision and any phase notes that describe `/` as still legacy. |
-| `README.md` | The runnable-path table still foregrounds `/api/sidequests`, `/api/overlay-state`, `src/lib/openai-engine.ts`, and `src/lib/mock-engine.ts` as current local behaviour. It also says the submitted judged path remains credential-free and algorithmic, which now needs to be worded as mandatory fallback rather than the only approved path. | Rewrite around the canonical orchestrator, `src/ai/server.ts`, Role 3 validation, `/obs-overlay`, and mandatory algorithmic fallback. Move legacy API/file mentions to diagnostic-only or remove them once source cleanup lands. |
-| `src/streamer/README.md` | It still foregrounds the older setup shell and says readiness/commands are not provided by the module, while Studio now has broader product pages and command wiring. | Rewrite after the Studio product surface settles, or delete if it duplicates the route/module docs. |
+| `docs/build-plans/README.md` | The five-day delivery calendar listed 3-9 August deadlines as live planning text. | Cleaned: replaced with current cleanup/completion focus. |
+| `docs/TEAM_CONTEXT.md` | It said the Drive submission deadline was upcoming and included the old 6 August Twitch Extension fallback trigger as pending. | Cleaned: rewritten as current post-deadline handoff with truthful Extension/hosted/chat fallback status. |
+| `docs/build-plans/ROLE-4-5-DELIVERY-MATRIX.md` | OBS browser overlay mount said `/overlay`; the dated delivery table read like active guidance. | Cleaned: `/obs-overlay` is canonical and old dates are replaced with current coordination checkpoints. |
+| `docs/build-plans/INTEGRATED-PRODUCT-COMPLETION-PLAN.md` | It said `/` redirects to `/studio` only after canonical parity, but the app already redirects `/` to `/studio`. | Cleaned: updated to current route reality and diagnostic-only legacy wording. |
+| `README.md` | The runnable-path table foregrounded `/api/sidequests`, `/api/overlay-state`, `src/lib/openai-engine.ts`, and `src/lib/mock-engine.ts` as current local behaviour. It also said the submitted judged path remained credential-free and algorithmic, which needed to be worded as mandatory fallback rather than the only approved path. | Cleaned: rewritten around canonical orchestration, `/obs-overlay`, Role 3 validation, optional approved provider path, and mandatory algorithmic fallback. |
+| `src/streamer/README.md` | It foregrounded the older setup shell and said readiness/commands were not provided by the module, while Studio now has broader product pages and command wiring. | Cleaned: rewritten around current Studio product surfaces and the single source of truth for state/commands. |
+| `docs/build-plans/ROLE-4-BUILD-PLAN.md` and `docs/build-plans/ROLE-5-BUILD-PLAN.md` | Old phase dates used `Deadline`, `Functional exit`, `Evidence exit`, and `Cutoff` labels. | Cleaned: converted old labels to historical targets while preserving the plan phases. |
+| `docs/PROJECT_TODO.md` | The finalist Drive deadline entry was phrased like an active upcoming gate. | Cleaned: marked as historical context. |
 
 ## Source Routes And Components To Clean After Feature Parity
 
@@ -66,7 +68,7 @@ Anything that still presents the old local prototype, old dates, old route names
 
 ## Acceptance Evidence
 
-- `rg '/overlay|/api/sidequests|/api/overlay-state|demo-participation|src/lib/mock-engine|src/lib/openai-engine|3 Aug|4 Aug|5 Aug|6 Aug|7 Aug|8 Aug|9 Aug' docs README.md src` returns only diagnostic, historical, or decision-history references.
+- `rg '/overlay|/api/sidequests|/api/overlay-state|demo-participation|src/lib/mock-engine|src/lib/openai-engine|3 Aug|4 Aug|5 Aug|6 Aug|7 Aug|8 Aug|9 Aug' docs README.md src` returns only diagnostic, historical, cleanup-register, or decision-history references.
 - `/obs-overlay` remains the only documented product OBS browser-source route.
 - The app still preserves Twitch Extension primary voting, hosted Quest Board fallback, and Twitch chat `1`/`2`/`3` fallback.
 - Markdown that cannot be made current is deleted rather than archived in-place as active guidance.

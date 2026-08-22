@@ -37,7 +37,7 @@ Role 2 maintains this baseline plan. Role 4's settled answers are recorded in `d
 
 - A new streamer can connect the accepted Twitch test setup, configure OBS Virtual Camera, save a persistent profile, understand readiness, and start a session without hidden manual state.
 - A returning streamer can reuse saved settings instead of repeating onboarding.
-- Studio exposes game, personality/tone, creativity/intensity, safety, restrictions, preferred/forbidden quest types, accessibility, and accepted voting/reward preferences without exposing raw provider/model selection.
+- Studio exposes game, personality/tone, creativity/intensity, safety, restrictions, preferred/forbidden quest types, accessibility, accepted voting/reward preferences, and the display-only AI model choice set without exposing API keys or operational provider switching.
 - Studio distinguishes fresh real signals, low-confidence/unknown/stale signals, free-AI, algorithmic, deterministic fallback, fixture-only diagnostics, and not-implemented states.
 - Twitch Config handles infrequent installation/setup; Twitch Live Config handles compact stream-time status and permitted quest controls without duplicating Studio.
 - Every streamer action is enabled only from authoritative capability/allowed-action data and is sent through Role 1 with command ID and expected revision.
@@ -67,7 +67,7 @@ Role 2 maintains this baseline plan. Role 4's settled answers are recorded in `d
 
 ### Explicitly excluded
 
-- Provider/model pickers as normal streamer controls.
+- Operational provider/model pickers as normal streamer controls. A display-only Studio selector may show the approved model as selected and future model choices as disabled `Coming soon` options.
 - YouTube, Discord, or other non-Twitch adapters or platform-specific behaviour.
 - Direct Supabase access, client-owned persistence, permission checks, or session authority.
 - Quest intervention, validation, timing, voting, winner, progress, reward, or lifecycle calculations.
@@ -118,7 +118,7 @@ Required upstream seams UI-X01 through UI-X06 and UI-X09 are defined in the shar
 
 ## Phase 0 / R4-P01: Feasibility review and implementation baseline
 
-**Deadline:** 3 August 2026
+**Historical target:** 3 August 2026
 
 **Outcome:** Role 4 confirms that the plan can be implemented without silently inventing contracts or scope.
 
@@ -152,9 +152,9 @@ Codex first prepares the technical feasibility review itself, then uses these as
 
 ## Phase 1 / R4-P02: Public UI boundary and shared design foundation
 
-**Deadline:** 4 August 2026, 18:00 SGT
+**Historical target:** 4 August 2026, 18:00 SGT
 
-**Early Role 5 handoff:** 4 August 2026, 12:00 SGT
+**Historical Role 5 handoff target:** 4 August 2026, 12:00 SGT
 
 **Integration wave:** Wave 1 — Boundaries
 
@@ -188,7 +188,7 @@ Codex first prepares the technical feasibility review itself, then uses these as
 
 ## Phase 2 / R4-P03: Studio setup, persistence, intelligence, and readiness
 
-**Deadline:** 5 August 2026, 18:00 SGT
+**Historical target:** 5 August 2026, 18:00 SGT
 
 **Integration wave:** Wave 2 — Core
 
@@ -246,7 +246,7 @@ Codex first prepares the technical feasibility review itself, then uses these as
 
 ## Phase 3 / R4-P04: Studio live controls and Twitch Config/Live Config
 
-**Deadline:** 6 August 2026, 18:00 SGT
+**Historical target:** 6 August 2026, 18:00 SGT
 
 **Integration wave:** Wave 3 — Behaviour
 
@@ -286,9 +286,9 @@ All `r4.quest.*`, `r4.error.command-set.v1`, `r4.realtime.reconnecting.v1`, and 
 
 ## Phase 4 / R4-P05: P0 integration, resilience, and evidence
 
-**Functional exit:** 7 August 2026, 12:00 SGT
+**Historical functional target:** 7 August 2026, 12:00 SGT
 
-**Evidence exit:** 7 August 2026, 18:00 SGT
+**Historical evidence target:** 7 August 2026, 18:00 SGT
 
 **Integration wave:** Wave 4 — Product
 
@@ -318,7 +318,7 @@ All `r4.quest.*`, `r4.error.command-set.v1`, `r4.realtime.reconnecting.v1`, and 
 
 ## Phase 5 / R4-P06: Optional P1 refinement after P0 passes
 
-**Cutoff:** 7 August 2026, 18:00 SGT
+**Historical cutoff target:** 7 August 2026, 18:00 SGT
 
 This phase starts after Phase 4 stability evidence passes. No role-owner approval gate applies; the contributor must preserve the golden workflow and deconflict shared changes with Role 1.
 

@@ -21,7 +21,7 @@ const requiredPageSections: Readonly<Record<StudioProductPage, readonly string[]
   gameplay: ["Overview", "Game Capture", "Understanding", "Health &amp; Recovery"],
   "live-analytics": ["Overview", "Activity", "Topics", "Session History"],
   "live-quests": ["Now", "Recommendations", "Why", "Voting", "Results"],
-  profile: ["Personality", "Stream Presets", "Safety", "Accessibility"],
+  profile: ["Personality", "AI Model", "Stream Presets", "Safety", "Accessibility"],
   "stream-settings": ["Saved Source", "Session Override", "Reset to Saved"],
   "test-lab": ["Clean Start Reset", "Sample / Live Source", "Capture Controls", "Observed / Unknown", "Recovery"],
 };
@@ -257,5 +257,26 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("Change current game");
     expect(html).toContain("Waiting for Twitch stream");
     expect(html).not.toContain("Start ChatXPT");
+  });
+
+  it("shows a display-only AI model selector with future options disabled", () => {
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "profile",
+      view: createFixtureUiGatewaySnapshot().views.streamer,
+      readiness: contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"],
+    }));
+
+    expect(html).toContain("Choose the sidequest brain");
+    expect(html).toContain("GPT-5.6 Terra");
+    expect(html).toContain("Selected");
+    expect(html).toContain("Fast Director");
+    expect(html).toContain("Vision Director");
+    expect(html).toContain("Private Local Model");
+    expect(html.match(/Coming soon/gu)).toHaveLength(3);
+    expect(html).toMatch(/disabled=""><span><strong>Fast Director/u);
+    expect(html).toMatch(/disabled=""><span><strong>Vision Director/u);
+    expect(html).toMatch(/disabled=""><span><strong>Private Local Model/u);
+    expect(html).toContain("Model switching is a display choice");
+    expect(html).not.toContain("API key");
   });
 });

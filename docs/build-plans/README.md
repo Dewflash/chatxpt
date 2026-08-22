@@ -94,22 +94,14 @@ Internal decisions do not require Role 1 approval. Product direction, architectu
 | 4: Product | Integrate Roles 4/5 and realtime clients | Fix intelligence failures from real runs | Fix engine failures from real runs | Golden workflow works across two viewers and OBS |
 | 5: Owner-called freeze | Evidence, deployment, and—after an explicit product-readiness declaration—deck, video, and submission | Evaluation evidence and declared limitations | Lifecycle/safety evidence and declared limitations | No unverified feature claims remain |
 
-## Five-day delivery calendar
+## Current cleanup and completion focus
 
-Dates are Singapore time. These are integration deadlines, not permission for one role to absorb another role's component decisions.
+The original five-day proposal calendar is complete historical context and is no longer active planning guidance. Current work follows the integrated completion plan, the single-source-of-truth hardening note, and the stale-content cleanup register:
 
-| Deadline | Required exit |
-| --- | --- |
-| 3 Aug | Role 1-3 plans are authoritative; Role 2 sends synchronised Role 4/5 plans for feasibility review; Role 3 starts boundary fixtures; Role 1 starts Twitch/OBS/Supabase/Vercel feasibility spikes. |
-| 4 Aug, 18:00 | Contract/orchestrator skeleton and route/public-entry scaffolding are reviewable; producer/consumer contract tests pass; ownership migration continues behind those boundaries. |
-| 5 Aug, 18:00 | Supabase/Vercel and capture boundaries exist; Role 2 demonstrates real-frame extraction; Role 3 demonstrates lifecycle, validation, and fallback independently. |
-| 6 Aug, 18:00 | Real Role 2 outputs drive Role 3; Twitch/OBS integration and voting/activation/progress paths are connected. |
-| 7 Aug, 12:00 | Roles 4/5 are integrated; one-streamer/two-viewer golden workflow and failure matrix are testable. |
-| 7 Aug, 18:00 | Target for a complete P0 integration and evidence checkpoint. This is not an automatic freeze; only the project owner may call one. |
-| 8 Aug | Continue full integration and real evidence capture. Rehearsal, deck, video, and final narrative work begin only after the project owner declares the product ready. |
-| 9 Aug | Clean-clone check, deployed-link check, repository access, immutable package, and submission confirmation. |
-
-If a deadline slips, the role owner immediately reports the failed exit signal, evidence, smallest recovery scope, and decisions needed. Role 1 reprioritises; nobody silently lowers the real-data or safety standard.
+- finish the owner-testable Twitch/OBS demo flow from `/studio` through viewer participation and `/obs-overlay`;
+- keep Twitch Extension primary, hosted Quest Board fallback, and Twitch chat `1`/`2`/`3` fallback intact;
+- remove or relabel old local prototype routes only after the canonical paths have focused test coverage;
+- report every unverified Twitch, OBS, Supabase, provider, or multi-viewer claim as open evidence rather than product completion.
 
 ## Integration evidence rule
 

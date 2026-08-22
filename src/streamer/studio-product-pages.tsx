@@ -108,10 +108,37 @@ const PAGE_SECTIONS: Readonly<Partial<Record<StudioProductPage, readonly string[
   gameplay: ["Overview", "Game Capture", "Understanding", "Health & Recovery"],
   "live-analytics": ["Overview", "Activity", "Topics", "Session History"],
   "live-quests": ["Now", "Recommendations", "Voting", "Results"],
-  profile: ["Personality", "Stream Presets", "Safety", "Accessibility"],
+  profile: ["Personality", "AI Model", "Stream Presets", "Safety", "Accessibility"],
   "stream-settings": ["Saved Source", "Session Override", "Reset to Saved"],
   "test-lab": ["Clean Start Reset", "Sample / Live Source", "Capture Controls", "Observed / Unknown", "Recovery"],
 };
+
+const AI_MODEL_CHOICES: readonly {
+  readonly name: string;
+  readonly status: "Selected" | "Coming soon";
+  readonly detail: string;
+}[] = [
+  {
+    name: "GPT-5.6 Terra",
+    status: "Selected",
+    detail: "Current sidequest reasoning model when Enhanced AI is available.",
+  },
+  {
+    name: "Fast Director",
+    status: "Coming soon",
+    detail: "Lower-latency model option for rapid stream moments.",
+  },
+  {
+    name: "Vision Director",
+    status: "Coming soon",
+    detail: "Future model option for richer game-aware interpretation.",
+  },
+  {
+    name: "Private Local Model",
+    status: "Coming soon",
+    detail: "Future private model option for offline-friendly sessions.",
+  },
+];
 
 function titleCase(value: string): string {
   return value
@@ -1037,6 +1064,44 @@ function ProfilePage({
             {pending ? "Saving..." : "Save current game"}
           </button>
         </form>
+      </Card>
+
+      <Card id="ai-model" className={styles.aiModelPanel}>
+        <div className={styles.panelHeading}>
+          <div>
+            <span className={styles.sectionLabel}>AI Model</span>
+            <h2>Choose the sidequest brain</h2>
+          </div>
+          <StatusBadge tone="info">Server controlled</StatusBadge>
+        </div>
+        <p>
+          The active model is selected for this build. Future model choices are shown here now,
+          and unlock after ChatXPT supports them safely.
+        </p>
+        <div className={styles.modelGrid}>
+          {AI_MODEL_CHOICES.map((model) => {
+            const selected = model.status === "Selected";
+            return (
+              <button
+                key={model.name}
+                type="button"
+                className={selected ? styles.modelOptionSelected : styles.modelOption}
+                aria-pressed={selected}
+                disabled={!selected}
+              >
+                <span>
+                  <strong>{model.name}</strong>
+                  <small>{model.detail}</small>
+                </span>
+                <StatusBadge tone={selected ? "success" : "neutral"}>{model.status}</StatusBadge>
+              </button>
+            );
+          })}
+        </div>
+        <small className={styles.muted}>
+          Model switching is a display choice until ChatXPT enables another server-side option.
+          Algorithmic fallback remains available when Enhanced AI is unavailable.
+        </small>
       </Card>
 
       <div id="stream-presets" className={styles.presetWorkspace}>

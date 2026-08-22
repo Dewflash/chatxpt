@@ -2,9 +2,9 @@
 
 This is the short, current handoff for all five contributors and their ChatGPT/Codex agents. Root `AGENTS.md` defines authority, `docs/DECISIONS.md` records durable product decisions, `docs/PROJECT_TODO.md` tracks cross-project outcomes, and each role's guide, TODO, and execution plan define its work.
 
-## Finalist schedule authority
+## Finalist schedule status
 
-ChatXPT is a Top 10 finalist. `docs/submission/FINALS-2026.md` records the non-sensitive finalist deadlines, 10-minute pitch plus 5-minute Q&A format, deliverables, judging weights, and presentation-day requirements from Garena's 14 August finalist email. The final Drive submission is due **21 August 2026 at 3 PM SGT** and becomes immutable after submission. Mentoring credentials and participant-registration links remain local/private and must not be committed.
+ChatXPT is a Top 10 finalist. `docs/submission/FINALS-2026.md` records the non-sensitive finalist schedule, 10-minute pitch plus 5-minute Q&A format, deliverables, judging weights, and presentation-day requirements from Garena's 14 August finalist email. The final Drive submission deadline was **21 August 2026 at 3 PM SGT**. Current repository work continues on truthful demo readiness, implementation cleanup, evidence capture, and follow-up fixes. Mentoring credentials and participant-registration links remain local/private and must not be committed.
 
 ## Current product baseline
 
@@ -17,11 +17,11 @@ ChatXPT is a Top 10 finalist. `docs/submission/FINALS-2026.md` records the non-s
 - Game support is tiered: universal broad visual signals, calibrated HUD facts for configured games, and future official telemetry. Capabilities/unknown are explicit.
 - Vanilla Minecraft is the calibrated real-gameplay demonstration target under D-072 without narrowing the game-neutral product. Modded, hidden-HUD, and unrecognised variants retain universal action/quiet/transition intelligence while unsupported calibrated facts remain `unknown`. Brawl Stars remains evaluation evidence only.
 - D-072 permits server-side OpenAI `gpt-5.6-terra` with an eligible team-owned credited key, bounded normalised context, an 8-second timeout, strict exactly-three validation, and mandatory algorithmic fallback. Role 2 owns extraction, behavioural intelligence, provider adapters, algorithmic candidates, and model-ready context. Role 3 owns quest-engine behaviour, quest-domain AI instructions, validation, lifecycle, activation, and safety enforcement.
-- Twitch Extension Local/Hosted Test remains the target primary viewer proof. If it is not end to end by 6 August 2026 at 12:00 SGT, the real Twitch demonstration uses the hosted board and Twitch-chat voting fallbacks without misrepresenting Extension readiness.
+- Twitch Extension Local/Hosted Test remains the target primary viewer proof when it is actually verified. Until then, the real Twitch demonstration uses the hosted board and Twitch-chat `1`/`2`/`3` fallbacks without misrepresenting Extension readiness.
 - Viewer participation rate is the principal impact metric; quest completion, setup time, response latency, and fallback/reconnect success are supporting measures.
 - D-075 activates the narrow Live Director audience-to-sidequest hypothesis in ten isolated passes: five Role 1 authority/delivery/integration passes and five Role 3 deterministic cue/quest passes. P0 keeps declared intent, private source-labelled context/pointer/cue, exactly-three conversion, Extension Vote/Active/Result, compressed OBS payoff, and Live Config pop-out/OBS Dock delivery. Catch-up and Session Brief are P1 experiments; broad coaching/chat/cohost/analytics/native-desktop/extra-OBS scope is excluded.
 - D-080 keeps the core game-neutral while requiring game-aware quest copy from provider, algorithmic, and deterministic fallback sources. D-081 adds consent-gated browser speech transcription as reviewable streamer-declared context only; ChatXPT retains no raw microphone audio and does not promise verbatim accuracy.
-- The immutable finalist Drive submission deadline is 21 August 2026 at 3 PM SGT under `docs/submission/FINALS-2026.md`, superseding the earlier 9 August proposal schedule. There is no automatic feature freeze: only the project owner may call it. Final deck/video/demo-narrative assembly is deferred until the project owner declares the product ready, while implementation, integration, and evidence collection continue.
+- The 21 August 2026 Drive deadline superseded the earlier 9 August proposal schedule. There is no automatic feature freeze: only the project owner may call it. Implementation, integration, evidence collection, and cleanup continue under the accepted product boundaries.
 
 ## Authority and owners
 

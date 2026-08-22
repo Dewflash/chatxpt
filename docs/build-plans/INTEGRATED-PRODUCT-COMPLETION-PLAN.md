@@ -30,7 +30,7 @@ The implementation must not reopen these choices unless the owner explicitly cha
 
 - Twitch is the only supported MVP platform. Other platforms may appear only as unavailable `Coming Soon` options.
 - ChatXPT Studio is the complete streamer product. Twitch Live Config is its compact stream-time companion.
-- `/studio` becomes the authenticated product Home. `/` redirects there only after canonical parity; the legacy Control Room then moves behind diagnostics.
+- `/studio` is the authenticated product Home. `/` now redirects there; the legacy Control Room remains only behind diagnostics.
 - `Start Stream` starts the ChatXPT session after readiness passes. It does not start OBS or make Twitch go live.
 - ChatXPT blocks start when ChatXPT, Twitch, or Game Capture is unavailable. Viewer Voting and Broadcast Overlay may warn without blocking only when an accepted fallback remains usable.
 - Game Capture uses one-time OBS Virtual Camera setup and browser permission, then reconnects automatically when the browser permits it. Studio must remain open for browser capture in this MVP.
@@ -186,7 +186,7 @@ Implementation begins only after the owner accepts the snapshot gate. Each slice
 - Remove diagnostic badges, revision labels, role/contract language, and `Not live workflow evidence` from customer surfaces.
 - Unmount the deferred microphone/transcript controls and remove audio from snapshots and completion claims. Preserve or delete dormant source only in a separately reviewed cleanup; it must not ship mounted.
 - Centralise capability availability so disabled UI cannot accidentally dispatch commands.
-- Keep `/` on the legacy Control Room until ICP-08 parity; do not delete it.
+- Keep `/` routed to `/studio`; legacy Control Room access, if retained, must stay behind diagnostics and must not be documented as the product path.
 
 **Primary responsibility areas:** `src/streamer/`, `src/design-system/`, thin `src/app/studio/` routes, Core view availability fields.
 
@@ -324,7 +324,7 @@ Implementation begins only after the owner accepts the snapshot gate. Each slice
 - Keep the existing privacy-safe history read model compatible, but defer the dedicated post-stream analytics/history UI and completion claim.
 - Complete product recovery actions for Twitch, Game Capture, Viewer Voting, Broadcast Overlay, realtime, token expiry, session expiry, and dependency outage.
 - Run the canonical seven-step workflow twice without manual repair.
-- After parity, redirect `/` to `/studio` and move the legacy Control Room and legacy sidequest path behind protected diagnostics without deleting functionality.
+- Keep `/` redirected to `/studio` and keep any legacy Control Room or sidequest path behind protected diagnostics without documenting it as product functionality.
 
 **Primary responsibility areas:** `src/streamer/`, diagnostics routes, history reader/persistence, app routing, integration tests.
 
@@ -402,7 +402,7 @@ Connect Twitch
 | Starting OBS or Twitch broadcasting from ChatXPT | Out of current scope; `Start Stream` starts ChatXPT only. |
 | YouTube, Discord, or other platform adapters | Coming Soon only until Twitch is complete. |
 | Persistent cross-stream viewer economy or profiling | Excluded; points/hype remain session-scoped. |
-| Provider/model picker | Excluded from normal streamer controls. |
+| Operational provider/model picker | Excluded from normal streamer controls. A display-only selector may show the approved model and disabled `Coming soon` choices only when it does not change runtime provider configuration. |
 | Raw-chat panel, usernames, or persistent raw messages | Excluded by privacy policy. |
 | Generic growth analytics or causal retention claims | Excluded. |
 | Automatic quest activation without streamer approval | Disabled for the current MVP; Role 3 may enable it only after the accepted safety and integration evidence gates pass. |

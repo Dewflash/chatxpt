@@ -31,4 +31,4 @@ This file tracks cross-project outcomes only. Any contributor may update the aff
 - Dated build-plan milestones remain integration targets and do not freeze work automatically.
 - Only the project owner may call the contract/feature freeze.
 - Deck, video, and final demo-narrative assembly begin only after the project owner declares the product ready.
-- **21 August 2026, 3 PM SGT:** immutable finalist Drive submission deadline under `docs/submission/FINALS-2026.md`; this supersedes the earlier 9 August proposal schedule.
+- **21 August 2026, 3 PM SGT:** immutable finalist Drive submission deadline under `docs/submission/FINALS-2026.md`; this superseded the earlier 9 August proposal schedule and is now historical context.

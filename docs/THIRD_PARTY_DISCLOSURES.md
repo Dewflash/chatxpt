@@ -52,7 +52,7 @@ This document is the source for submission disclosures. It describes what is cur
 - Public developer API, SDK, partner portal, billing, purchases, Bits monetisation, wagering, or persistent reward economy.
 - Official game telemetry integrations.
 - Arbitrary third-party stream analysis.
-- A provider/model picker for normal streamers.
+- Operational provider/model switching for normal streamers. Studio may show disabled future model choices, but only the approved server model can run in the current MVP.
 
 ## Submission Claim Rules
 

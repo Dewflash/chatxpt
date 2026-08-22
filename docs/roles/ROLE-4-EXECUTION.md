@@ -95,6 +95,7 @@ Codex uses the current phase's open decisions as starting points, then adds only
 | D4-67 | Equal Game Capture blocks | Present the eight primary Game Capture processing/evidence metrics as equal-sized blocks. Keep advanced diagnostics separate and secondary. | Accepted by owner | 2026-08-20 |
 | D4-68 | Rebased capability coverage | Preserve the accepted Studio information architecture while accounting for landed backend features: Ready Home exposes correction of the Twitch-prefilled game before start; preparing, reconnecting, and ended reuse Home with state-specific copy and recovery; OBS may show one sanitised `Up next`; session overrides stay in Stream Settings; Live Director proposal conversion stays in Live Quests and runs once per cue. | Accepted by owner direction | 2026-08-20 |
 | D4-69 | Post-stream scope | Defer the dedicated post-stream analytics and history product until the owner discusses it separately. Keep current-session aggregate Live Analytics, terminal quest state, rewards, and reconnect recovery in the finals implementation pass, and do not claim the deferred product is complete. | Deferred by owner | 2026-08-20 |
+| D4-70 | AI model display | Show a Studio AI model selector for product clarity: `GPT-5.6 Terra` is selected for the current build, future model choices are visible but disabled as `Coming soon`, and no streamer-facing control changes server provider configuration or bypasses algorithmic fallback. | Accepted by owner direction | 2026-08-22 |
 
 ## Pass record
 
