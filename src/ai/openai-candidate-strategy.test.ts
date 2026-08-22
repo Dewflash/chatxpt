@@ -14,7 +14,7 @@ import {
   type StructuredCandidateTransport,
 } from "./openai-candidate-strategy";
 import { ProviderGenerationError } from "./provider-fallback";
-import { createConfiguredCandidateProvider } from "./server";
+import { createConfiguredCandidateProvider, parseOpenAIResponse } from "./server";
 
 async function candidateInput(): Promise<CandidateInput> {
   const gameplay = {
@@ -46,7 +46,8 @@ async function candidateInput(): Promise<CandidateInput> {
     intelligence,
     profile: contractFixtureProfile,
     recentQuestTitles: ["Previous Fixture Quest"],
-    activeChatXptQuest: null,
+    streamerGoal: "Reach the next safe shelter",
+    activeChatXptQuest: "Keep Moving: Reach the next checkpoint safely.",
   };
 }
 
@@ -185,12 +186,17 @@ describe("OpenAI-compatible candidate strategy", () => {
       generation.method === "ai-provider" && generation.provider === "openai/fixture-model",
     )).toBe(true);
     expect(candidates[0].sourceSignalIds).toEqual([signalId]);
-    const context = JSON.parse(requests[0].input) as Record<string, unknown>;
+    const context = JSON.parse(requests[0].input) as {
+      streamer: { goal: string | null };
+      activeChatXptQuest: string | null;
+    } & Record<string, unknown>;
     expect(context).toHaveProperty("game");
     expect(context).toHaveProperty("gameState");
     expect(context).toHaveProperty("gameplaySignals");
     expect(context).toHaveProperty("audience");
     expect(context).toHaveProperty("streamer");
+    expect(context.streamer.goal).toBe(input.streamerGoal);
+    expect(context.activeChatXptQuest).toBe(input.activeChatXptQuest);
     expect(JSON.stringify(context)).not.toContain(contractFixtureProfile.streamerId);
     expect(JSON.stringify(context)).not.toContain(contractFixtureProfile.displayName);
     expect(JSON.stringify(requests[0])).not.toMatch(/api[_-]?key/i);
@@ -209,6 +215,22 @@ describe("OpenAI-compatible candidate strategy", () => {
     await expect(strategy.generate(await candidateInput())).rejects.toMatchObject({
       reason: "malformed",
     });
+  });
+
+  it("rejects duplicate signal citations instead of inflating candidate confidence", async () => {
+    const input = await candidateInput();
+    const signalId = knownSignalId(input);
+    const output = JSON.parse(validOutput(signalId)) as {
+      candidates: Array<{ sourceSignalIds: string[] }>;
+    };
+    output.candidates[0].sourceSignalIds = [signalId, signalId];
+    const strategy = createOpenAICandidateStrategy({
+      providerId: "openai/fixture-model",
+      model: "fixture-model",
+      transport: { generate: async () => ({ outputText: JSON.stringify(output) }) },
+    });
+
+    await expect(strategy.generate(input)).rejects.toMatchObject({ reason: "malformed" });
   });
 
   it.each([
@@ -357,7 +379,7 @@ describe("OpenAI-compatible candidate strategy", () => {
     expect(context.gameState.unknownGenericFacts).toEqual(
       expect.arrayContaining(["environment", "objectiveState", "matchTimer"]),
     );
-    expect(context.minecraft.streamerIntent).toEqual({ streamerGoal: null });
+    expect(context.minecraft.streamerIntent).toEqual({ streamerGoal: input.streamerGoal });
     expect(context.minecraft.activeChatXptQuest).toBe("Recover Before Mining: Stay safe until health is stable.");
     expect(context.minecraft.gameFacts.healthHearts).toMatchObject({
       status: "known",
@@ -457,9 +479,13 @@ describe("OpenAI-compatible candidate strategy", () => {
         supportedGenericFacts: string[];
         unknownGenericFacts: string[];
       };
+      streamer: { goal: string | null };
+      activeChatXptQuest: string | null;
       minecraft?: unknown;
     };
     expect(context.minecraft).toBeUndefined();
+    expect(context.streamer.goal).toBe(input.streamerGoal);
+    expect(context.activeChatXptQuest).toBe(input.activeChatXptQuest);
     expect(context.gameState.gameSpecificContext).toBe("brawl-stars");
     expect(context.gameState.facts.objectiveState).toMatchObject({
       status: "known",
@@ -508,6 +534,36 @@ describe("OpenAI-compatible candidate strategy", () => {
       transport: { generate: async () => ({ outputText: "not-json" }) },
     });
     await expect(malformed.generate(input)).rejects.toBeInstanceOf(ProviderGenerationError);
+  });
+});
+
+describe("OpenAI Responses API parsing", () => {
+  it("detects a nested refusal without retaining refusal text", () => {
+    expect(
+      parseOpenAIResponse({
+        output_text: "",
+        output: [
+          {
+            type: "message",
+            content: [{ type: "refusal" }],
+          },
+        ],
+      }),
+    ).toEqual({ outputText: null, refused: true });
+  });
+
+  it("passes structured output through when the response contains no refusal", () => {
+    expect(
+      parseOpenAIResponse({
+        output_text: "{\"candidates\":[]}",
+        output: [
+          {
+            type: "message",
+            content: [{ type: "output_text" }],
+          },
+        ],
+      }),
+    ).toEqual({ outputText: "{\"candidates\":[]}" });
   });
 });
 

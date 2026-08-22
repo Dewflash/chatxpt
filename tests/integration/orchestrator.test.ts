@@ -23,6 +23,7 @@ import {
   type QuestEngineResult,
   type StatePublisher,
   type GameplaySnapshot,
+  type CandidateInput,
   type CandidateProvider,
 } from "../../src/core";
 import {
@@ -912,9 +913,11 @@ describe("Role 1 application orchestrator", () => {
     const repository = new FixtureSessionStateRepository([state]);
     const publisher = new RecordingFixturePublisher();
     let providerCalls = 0;
+    const providerInputs: CandidateInput[] = [];
     const unavailableProvider: CandidateProvider = {
-      async generate() {
+      async generate(input) {
         providerCalls += 1;
+        providerInputs.push(structuredClone(input));
         throw new Error("Fixture provider unavailable");
       },
     };
@@ -978,6 +981,11 @@ describe("Role 1 application orchestrator", () => {
     if (stale.ok) return;
     expect(stale.error.code).toBe("stale-revision");
     expect(providerCalls).toBe(1);
+    expect(providerInputs[0]?.streamerGoal).toBe(
+      contractFixtureLiveDirectorState.declaredIntent.status === "known"
+        ? contractFixtureLiveDirectorState.declaredIntent.goal
+        : null,
+    );
     expect(engine.calls).toBe(0);
     expect(publisher.published).toHaveLength(1);
     expect((await repository.load(state.session.sessionId))?.questCycle.options).toHaveLength(3);

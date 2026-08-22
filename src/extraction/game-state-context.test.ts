@@ -45,6 +45,7 @@ function input(gameplay: GameplaySnapshot, gameId: string | null, gameName: stri
       gameName,
     }),
     recentQuestTitles: [],
+    streamerGoal: null,
     activeChatXptQuest: null,
   };
 }

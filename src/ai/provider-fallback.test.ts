@@ -34,6 +34,7 @@ async function candidateInput(): Promise<CandidateInput> {
     intelligence,
     profile: contractFixtureProfile,
     recentQuestTitles: [],
+    streamerGoal: null,
     activeChatXptQuest: null,
   };
 }

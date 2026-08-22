@@ -8,6 +8,7 @@ import { createAlgorithmicCandidateStrategy } from "./algorithmic-candidates";
 import {
   createOpenAICandidateStrategy,
   type StructuredCandidateTransport,
+  type StructuredCandidateTransportResponse,
 } from "./openai-candidate-strategy";
 import {
   createProviderFallbackGenerationStrategy,
@@ -35,6 +36,27 @@ export interface ConfiguredCandidateProviderOptions {
   readonly environment?: Record<string, string | undefined>;
   readonly transport?: StructuredCandidateTransport;
   readonly observe?: (observation: ProviderAttemptObservation) => void;
+}
+
+interface OpenAIResponseShape {
+  readonly output_text: string | null;
+  readonly output: readonly {
+    readonly type: string;
+    readonly content?: readonly { readonly type: string }[];
+  }[];
+}
+
+/** Converts the Responses API shape without retaining refusal or provider text. */
+export function parseOpenAIResponse(
+  response: OpenAIResponseShape,
+): StructuredCandidateTransportResponse {
+  const refused = response.output.some(
+    (item) => item.type === "message" && item.content?.some((part) => part.type === "refusal"),
+  );
+  return {
+    outputText: response.output_text || null,
+    ...(refused ? { refused: true } : {}),
+  };
 }
 
 function createOpenAITransport(input: {
@@ -66,7 +88,7 @@ function createOpenAITransport(input: {
         },
         { signal: request.signal },
       );
-      return { outputText: response.output_text || null };
+      return parseOpenAIResponse(response);
     },
   };
 }
