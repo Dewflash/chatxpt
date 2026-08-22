@@ -778,10 +778,20 @@
           "name": "Twitch developer Local Test registration",
           "deviceClass": "desktop",
           "viewport": null
+        },
+        {
+          "name": "Installed Twitch Local Test channel panel",
+          "deviceClass": "desktop",
+          "viewport": null
+        },
+        {
+          "name": "OBS Browser Source canonical result render",
+          "deviceClass": "desktop",
+          "viewport": null
         }
       ],
       "source": {
-        "gitCommit": "effcab5",
+        "gitCommit": "e8c5266",
         "branch": "main",
         "prNumber": null
       },
@@ -802,6 +812,10 @@
         {
           "kind": "memory",
           "description": "Authoritative session, quest-cycle, vote, and role projections used the production-shaped process-memory repository rather than Supabase Cloud."
+        },
+        {
+          "kind": "fixture",
+          "description": "A separate local diagnostic cycle used exactly three labelled game-neutral fixtures and two locally signed fake Twitch viewer identities; these were not Twitch-issued identities or live gameplay evidence."
         }
       ],
       "commands": [
@@ -810,7 +824,10 @@
         "Run persistent Gameplay Capture with OBS Virtual Camera and Minecraft selected; observe accepted authenticated snapshots and exactly three deterministic fallback quests",
         "Submit one anonymous hosted-board vote and observe authoritative acknowledgement; send ordinary Twitch chat and observe only aggregate activity",
         "Register ChatXPT Sidequests 0.0.1 in Twitch Local Test with viewer.html, config.html, and live-config.html paths",
-        "Run npm.cmd run check: 102 test files / 801 tests, production build, role boundaries, evidence validation, repository hygiene, and built-client secret scan pass"
+        "Install and activate ChatXPT Sidequests 0.0.1 in Twitch channel panel slot 1",
+        "Run the local diagnostic Extension path with two isolated signed fake viewers; observe two committed votes, one duplicate acknowledgement, automatic Caster Mode activation, 50 percent progress, success, and 150 awarded points",
+        "Use an authenticated temporary OBS Browser Source to render the completed canonical diagnostic result, then remove the temporary source and verify the permanent signed source is unchanged",
+        "Run npm.cmd run check after rebasing e8c5266: 107 test files / 843 tests, production build, role boundaries, evidence validation, repository hygiene, and built-client secret scan pass"
       ],
       "artifacts": [
         {
@@ -823,9 +840,9 @@
       ],
       "limitations": [
         "The first real vote close exposed a nested-revision validation defect that is now covered by focused automated tests; the post-fix live cycle had zero votes, so real winner activation and progress/result remain unproven.",
-        "The Twitch Extension exists in Local Test but was not installed on-channel, did not issue a real viewer JWT, and did not cast a real in-panel vote; mobile still needs an approved public privacy-policy URL.",
-        "This run used one hosted-board viewer and process memory. It does not prove two-viewer parity, Supabase Cloud realtime/recovery, Vercel, provider output, or an actual OBS Browser Source render.",
-        "The source included an uncommitted local recovery diff based on effcab5; repeat from an immutable revision before treating this as submission-grade golden-workflow evidence."
+        "The Twitch Extension is installed and active in Local Test, but it did not issue a real viewer JWT or cast a real in-panel vote; mobile still needs an approved public privacy-policy URL.",
+        "Two-viewer winner, progress, result, and non-idle OBS proof used locally signed diagnostic identities and game-neutral fixtures. It does not upgrade those steps to real Twitch identity or real live-input evidence.",
+        "This run used process memory. It does not prove Supabase Cloud realtime/recovery, Vercel, provider output, deployment durability, or multi-instance consistency."
       ]
     }
   ]
