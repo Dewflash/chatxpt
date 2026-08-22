@@ -143,6 +143,23 @@ function uniformlyDimmed(frame: SampledPixelFrame, factor: number): SampledPixel
   return { width: frame.width, height: frame.height, rgba };
 }
 
+function brightSnowGameplayFrame(): SampledPixelFrame {
+  const frame = frameFromPixel((x, y) => {
+    if (y < 14) return [165, 205, 245];
+    const snow = 232 + ((x * 3 + y * 5) % 23);
+    return [snow, Math.min(255, snow + 3), Math.min(255, snow + 5)];
+  });
+  // A dark horizon and normal lower HUD add real gameplay structure without a
+  // centered grey container panel.
+  paintBox(frame, { x: 0, y: 0.25, width: 1, height: 0.04 }, (x) =>
+    x % 7 === 0 ? [55, 75, 45] : [105, 90, 70],
+  );
+  paintBox(frame, { x: 0.28, y: 0.78, width: 0.44, height: 0.12 }, (x, y) =>
+    x % 6 === 0 || y % 6 === 0 ? [35, 35, 35] : [120, 120, 110],
+  );
+  return frame;
+}
+
 describe("Minecraft menu-state detector", () => {
   it("detects a generic container without inventing its exact inventory/crafting/furnace subtype", () => {
     expect(detectMinecraftMenuState(inventoryFrame())).toMatchObject({
@@ -223,5 +240,9 @@ describe("Minecraft menu-state detector", () => {
       return [value, (value * 3 + 17) % 256, (value * 5 + 31) % 256];
     });
     expect(detectMinecraftMenuState(noisy)).toMatchObject({ status: "unknown" });
+  });
+
+  it("does not classify a bright snowy gameplay scene as a container", () => {
+    expect(detectMinecraftMenuState(brightSnowGameplayFrame())).toMatchObject({ status: "unknown" });
   });
 });

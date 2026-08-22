@@ -475,9 +475,15 @@ export class ChatXptServerRuntime {
       state.audience !== null &&
       state.audience.envelope.sessionId === envelope.sessionId &&
       state.audience.envelope.questCycleId === envelope.questCycleId &&
-      state.audience.envelope.revision === envelope.revision &&
       state.audience.envelope.evidenceClass === envelope.evidenceClass
-        ? state.audience
+        ? {
+            ...state.audience,
+            // Gameplay ingress advances the authoritative revision much more
+            // frequently than the 30-second audience window. Re-envelope the
+            // same-cycle aggregate for composition while preserving each
+            // signal's original observation time, expiry, and confidence.
+            envelope,
+          }
         : {
             envelope,
             sampleSize: 0,

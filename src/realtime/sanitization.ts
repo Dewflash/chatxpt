@@ -1,6 +1,7 @@
 import {
   canonicalJsonStringify,
   overlayViewModelSchema,
+  publicQuestCycleStateSchema,
   streamerViewModelSchema,
   viewerViewModelSchema,
   type RoleViewModels,
@@ -11,11 +12,12 @@ export function sanitizeRoleViewsForBroadcast(views: RoleViewModels): RoleViewMo
   const streamer = streamerViewModelSchema.parse(views.streamer);
   const viewer = viewerViewModelSchema.parse(views.viewer);
   const overlay = overlayViewModelSchema.parse(views.overlay);
+  const publicStreamerQuestCycle = publicQuestCycleStateSchema.parse(streamer.questCycle);
   if (
     canonicalJsonStringify(streamer.session) !== canonicalJsonStringify(viewer.session) ||
     canonicalJsonStringify(streamer.session) !== canonicalJsonStringify(overlay.session) ||
-    canonicalJsonStringify(streamer.questCycle) !== canonicalJsonStringify(viewer.questCycle) ||
-    canonicalJsonStringify(streamer.questCycle) !== canonicalJsonStringify(overlay.questCycle)
+    canonicalJsonStringify(publicStreamerQuestCycle) !== canonicalJsonStringify(viewer.questCycle) ||
+    canonicalJsonStringify(publicStreamerQuestCycle) !== canonicalJsonStringify(overlay.questCycle)
   ) {
     throw new Error("Role snapshots disagree on authoritative session state");
   }

@@ -12,6 +12,9 @@ interface HostedResponse {
   readonly error?: { readonly code?: string; readonly message?: string; readonly retryable?: boolean };
 }
 
+/** Keeps memory-mode boards responsive even when private Realtime is unavailable. */
+export const HOSTED_BOARD_RECOVERY_POLL_INTERVAL_MS = 1_500;
+
 function responseError(payload: HostedResponse, fallback: string): DomainError {
   const rawCode = payload.error?.code;
   const code = [
@@ -115,7 +118,10 @@ export function HostedBoardClient({ roomCode }: { readonly roomCode: string }) {
       }
     };
     void open();
-    const interval = window.setInterval(() => void refresh(controller.signal), 10_000);
+    const interval = window.setInterval(
+      () => void refresh(controller.signal),
+      HOSTED_BOARD_RECOVERY_POLL_INTERVAL_MS,
+    );
     return () => {
       stopped = true;
       accessReady.current = false;

@@ -12,7 +12,13 @@ export interface MinecraftSceneFacts {
   readonly damageCauseHint: MinecraftHudFact<"mob" | "fire" | "drowning" | "lava">;
 }
 
-export type MinecraftSceneEnvironment = "field" | "forest" | "water" | "sand" | "building";
+export type MinecraftSceneEnvironment =
+  | "field"
+  | "forest"
+  | "water"
+  | "sand"
+  | "building"
+  | "lava-or-fire-nearby";
 
 function clampUnit(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -71,15 +77,19 @@ function environmentFact(features: readonly RegionVisualFeatures[]): MinecraftHu
   const centerNeutral = center?.neutralPixelRatio ?? 0;
   const lowerNeutral = lower?.neutralPixelRatio ?? 0;
 
-  // Sky occupies the upper band, so blue there is deliberately excluded from
-  // water classification. Water must cover both the play area and its lower
-  // foreground, as it does while swimming or looking at nearby water.
-  const waterScore = centerBlue * 0.55 + lowerBlue * 0.45;
-  if (centerBlue >= 0.12 && lowerBlue >= 0.2 && waterScore >= 0.18) {
+  // Blue coverage alone cannot distinguish water/rain from a blue-tinted
+  // night, snow shadow, or shader. Water remains unknown here; the independent
+  // air-bubble/submersion detector can establish it with HUD evidence.
+  const blueScore = centerBlue * 0.55 + lowerBlue * 0.45;
+  const lavaScore = Math.max(
+    lower === undefined ? 0 : lower.warmPixelRatio * 0.65 + lower.redPixelRatio * 0.35,
+    center === undefined ? 0 : center.warmPixelRatio * 0.55 + center.redPixelRatio * 0.45,
+  );
+  if (lavaScore >= 0.22 && (lower?.warmPixelRatio ?? 0) >= 0.24) {
     return knownSceneFact(
-      "water",
-      Math.min(0.92, 0.76 + waterScore * 0.3),
-      "Blue coverage spans the central gameplay area and lower foreground; upper-screen sky alone cannot trigger water.",
+      "lava-or-fire-nearby",
+      Math.min(0.9, 0.72 + lavaScore),
+      "Large warm/red bright regions suggest nearby lava or fire; do not infer exact block or damage without corroboration.",
       sceneIds,
     );
   }
@@ -139,8 +149,8 @@ function environmentFact(features: readonly RegionVisualFeatures[]): MinecraftHu
   }
 
   return unknownSceneFact(
-    "Scene pixels do not meet the supported field, forest, water, sand, or building rules.",
-    Math.max(waterScore, greenScore, sandScore, buildingScore),
+    "Scene pixels do not meet the supported field, forest, sand, building, or lava/fire rules; water requires independent HUD evidence.",
+    Math.max(blueScore, lavaScore, greenScore, sandScore, buildingScore),
     sceneIds,
   );
 }

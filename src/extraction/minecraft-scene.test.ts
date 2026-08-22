@@ -31,14 +31,36 @@ function paint(
 }
 
 describe("Minecraft scene facts", () => {
-  it("detects water when blue covers the central and lower gameplay area", () => {
+  it("keeps a blue water-like scene unknown without independent HUD evidence", () => {
     const sample = frame(100, 60, [40, 130, 220, 255]);
+    for (let stripe = 0; stripe < 25; stripe += 2) {
+      paint(sample, { left: stripe * 4, top: 0, right: stripe * 4 + 2, bottom: 60 }, [20, 75, 165, 255]);
+    }
 
     const facts = detectMinecraftSceneFacts(sample);
 
-    expect(facts.biomeOrEnvironment).toMatchObject({ status: "known", value: "water" });
+    expect(facts.biomeOrEnvironment).toMatchObject({ status: "unknown", value: null });
     expect(facts.damageCauseHint).toMatchObject({ status: "unknown", value: null });
     expect(facts.visibleHostile).toMatchObject({ status: "unknown", value: null });
+  });
+
+  it("keeps a flat blue night-like scene unknown without water texture", () => {
+    const facts = detectMinecraftSceneFacts(frame(100, 60, [72, 82, 132, 255]));
+
+    expect(facts.biomeOrEnvironment).toMatchObject({ status: "unknown", value: null });
+  });
+
+  it("detects lava-like environmental risk", () => {
+    const sample = frame(100, 60, [30, 25, 20, 255]);
+    paint(sample, { left: 0, top: 34, right: 100, bottom: 60 }, [240, 92, 18, 255]);
+
+    const facts = detectMinecraftSceneFacts(sample);
+
+    expect(facts.biomeOrEnvironment).toMatchObject({
+      status: "known",
+      value: "lava-or-fire-nearby",
+    });
+    expect(facts.damageCauseHint).toMatchObject({ status: "unknown", value: null });
   });
 
   it("does not mistake blue sky above green ground for water", () => {

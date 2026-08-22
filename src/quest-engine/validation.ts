@@ -244,7 +244,7 @@ function fallbackLibraryFor(game: SelectedGame): readonly FallbackDefinition[] {
       durationSeconds: 60,
       difficulty: "easy",
       rewardPoints: 100,
-      rationale: rationale("lowers risk when chat pressure is negative"),
+      rationale: rationale("creates a constructive commentary moment"),
     },
   ];
 }
@@ -723,9 +723,11 @@ function fallbackCandidate(definition: FallbackDefinition, input: CandidateAssem
 }
 
 function explicitlyNamesGame(candidate: QuestCandidate, game: SelectedGame): boolean {
-  return `${candidate.title} ${candidate.instruction}`
-    .toLocaleLowerCase()
-    .includes(game.name.toLocaleLowerCase());
+  const text = `${candidate.title} ${candidate.instruction}`.toLocaleLowerCase();
+  if (text.includes(game.name.toLocaleLowerCase())) return true;
+  // Twitch/profile display names may include the Java Edition variant while
+  // safe game-aware quest copy uses the established Minecraft product name.
+  return game.isMinecraft && /\bminecraft\b/u.test(text);
 }
 
 export class DefaultCandidateAssembler {

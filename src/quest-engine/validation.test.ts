@@ -655,6 +655,17 @@ describe("DefaultCandidateAssembler", () => {
     expect(first).toEqual(replay);
   });
 
+  it("never gives an evidence-free fallback a negative-chat rationale", () => {
+    const candidates = Array.from({ length: 100 }, (_, index) =>
+      new DefaultCandidateAssembler().assemble(assemblyInput({ candidates: [], seed: `fallback-rationale-${index}` })),
+    ).flatMap((result) => result.ok ? result.batch.candidates : []);
+    const positive = candidates.find(({ title }) => title === "Positive Commentary");
+
+    expect(positive).toBeDefined();
+    expect(positive?.sourceSignalIds).toEqual([]);
+    expect(positive?.rationale).not.toContain("negative");
+  });
+
   it("uses history-sensitive fallbacks and reports exhaustion rather than weakening rules", () => {
     const fallbackTitles = [
       "Plan Out Loud",
