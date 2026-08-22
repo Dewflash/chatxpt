@@ -78,7 +78,7 @@ describe("captureReadingsForSnapshot", () => {
 
     expect(readings).toContainEqual(expect.objectContaining({ label: "Health", value: "8", category: "condition" }));
     expect(readings).toContainEqual(expect.objectContaining({ label: "Hunger", value: "7", category: "condition" }));
-    expect(readings).toContainEqual(expect.objectContaining({ label: "Day / night", value: "Coming soon", category: "environment" }));
+    expect(readings.some(({ label }) => label === "Day / night")).toBe(false);
     expect(readings).toContainEqual(expect.objectContaining({ label: "Scene / environment", value: "grassy-overworld", category: "environment" }));
     expect(readings).toContainEqual(expect.objectContaining({ label: "Screen state", category: "others" }));
     expect(readings.some(({ label }) => label === "Match active")).toBe(false);
@@ -89,22 +89,29 @@ describe("captureReadingsForSnapshot", () => {
 
     expect(readings).toContainEqual(expect.objectContaining({ label: "HUD layout", value: "standard-like", category: "others" }));
     expect(readings).toContainEqual(expect.objectContaining({ label: "Match active", value: "true", category: "condition" }));
-    expect(readings).toContainEqual(expect.objectContaining({ label: "Player health", value: "Coming soon", category: "condition" }));
-    expect(readings).toContainEqual(expect.objectContaining({ label: "Arena / map", value: "Coming soon", category: "environment" }));
+    expect(readings.some(({ label }) => label === "Player health")).toBe(false);
+    expect(readings.some(({ label }) => label === "Arena / map")).toBe(false);
     expect(readings.some(({ label }) => label === "Health")).toBe(false);
   });
 
-  it("keeps Generic analysis honest while preserving the same four categories", () => {
+  it("keeps Generic analysis honest without planned detector reads", () => {
     const readings = captureReadingsForSnapshot("generic", snapshot);
 
     expect(new Set(readings.map(({ category }) => category))).toEqual(new Set([
-      "condition",
       "activity",
       "environment",
       "others",
     ]));
-    expect(readings).toContainEqual(expect.objectContaining({ label: "Player condition", value: "Coming soon" }));
+    expect(readings.some(({ label }) => label === "Player condition")).toBe(false);
     expect(readings).toContainEqual(expect.objectContaining({ label: "Activity intensity", value: "0.42" }));
     expect(readings).toContainEqual(expect.objectContaining({ label: "Visual state", value: "stable" }));
+    expect(readings.some(({ value }) => value === "Coming soon")).toBe(false);
+  });
+
+  it("shows a neutral dash for every supported read before a feed is captured", () => {
+    const readings = captureReadingsForSnapshot("minecraft", null);
+
+    expect(readings.length).toBeGreaterThan(0);
+    expect(readings.every(({ value }) => value === "—")).toBe(true);
   });
 });

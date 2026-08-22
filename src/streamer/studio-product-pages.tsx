@@ -1714,7 +1714,7 @@ export function StudioProductPageSurface({
           </section>
         ) : null}
       </aside>
-      <main className={`${styles.main} ${page === "live-analytics" ? styles.analyticsMain : ""}`}>
+      <main className={`${styles.main} ${page === "live-analytics" ? styles.analyticsMain : ""} ${page === "gameplay" ? styles.gameplayMain : ""}`}>
         <section className={styles.studioHeader}>
           <div className={styles.pageIdentity}>
             <strong>ChatXPT</strong>

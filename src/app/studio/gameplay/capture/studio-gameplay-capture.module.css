@@ -99,7 +99,9 @@
 .proofColumn dl > div {
   min-width: 0;
   display: grid;
-  gap: 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: baseline;
+  gap: 12px;
   padding: 10px 0;
   border-top: 1px solid rgba(126, 231, 194, 0.14);
 }
@@ -117,11 +119,8 @@
 .proofColumn dd {
   color: #f3fff9;
   font-weight: 800;
+  text-align: right;
   overflow-wrap: anywhere;
-}
-
-.proofColumn [data-availability="coming-soon"] dd {
-  color: #f3ca72;
 }
 
 .detectorReason {

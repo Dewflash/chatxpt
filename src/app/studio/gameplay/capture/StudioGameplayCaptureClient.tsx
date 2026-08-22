@@ -97,7 +97,7 @@ export interface CaptureReading {
   readonly label: string;
   readonly value: string;
   readonly category: CaptureReadingCategory;
-  readonly availability: "supported" | "coming-soon";
+  readonly availability: "supported";
 }
 
 export type CaptureReadingCategory = "condition" | "activity" | "environment" | "others";
@@ -273,7 +273,6 @@ const CAPTURE_READING_DEFINITIONS: Readonly<Record<CaptureGame, readonly Omit<Ca
     { signalId: "minecraft-movement", label: "Movement", category: "activity", availability: "supported" },
     { signalId: "minecraft-combat", label: "Combat", category: "activity", availability: "supported" },
     { signalId: "minecraft-eating", label: "Eating", category: "activity", availability: "supported" },
-    { signalId: "minecraft-time-of-day", label: "Day / night", category: "environment", availability: "coming-soon" },
     { signalId: "minecraft-environment", label: "Land / water", category: "environment", availability: "supported" },
     { signalId: "minecraft-biome-environment", label: "Scene / environment", category: "environment", availability: "supported" },
     { signalId: "minecraft-screen", label: "Screen state", category: "others", availability: "supported" },
@@ -281,26 +280,16 @@ const CAPTURE_READING_DEFINITIONS: Readonly<Record<CaptureGame, readonly Omit<Ca
   ],
   "brawl-stars": [
     { signalId: "brawl-match-active", label: "Match active", category: "condition", availability: "supported" },
-    { signalId: "brawl-player-health", label: "Player health", category: "condition", availability: "coming-soon" },
-    { signalId: "brawl-player-life", label: "Alive / eliminated", category: "condition", availability: "coming-soon" },
     { signalId: "game-vision-activity", label: "Activity intensity", category: "activity", availability: "supported" },
     { signalId: "game-global-motion-pattern", label: "Global motion", category: "activity", availability: "supported" },
-    { signalId: "brawl-combat-state", label: "Combat state", category: "activity", availability: "coming-soon" },
-    { signalId: "brawl-arena-map", label: "Arena / map", category: "environment", availability: "coming-soon" },
     { signalId: "game-scene-transition", label: "Scene transition", category: "environment", availability: "supported" },
-    { signalId: "brawl-match-mode", label: "Match mode", category: "environment", availability: "coming-soon" },
     { signalId: "brawl-hud-layout", label: "HUD layout", category: "others", availability: "supported" },
     { signalId: "game-vision-state", label: "Visual state", category: "others", availability: "supported" },
   ],
   generic: [
-    { signalId: "generic-player-condition", label: "Player condition", category: "condition", availability: "coming-soon" },
-    { signalId: "generic-player-life", label: "Alive / eliminated", category: "condition", availability: "coming-soon" },
     { signalId: "game-vision-activity", label: "Activity intensity", category: "activity", availability: "supported" },
     { signalId: "game-global-motion-pattern", label: "Global motion", category: "activity", availability: "supported" },
-    { signalId: "generic-action-type", label: "Action type", category: "activity", availability: "coming-soon" },
-    { signalId: "generic-time-of-day", label: "Day / night", category: "environment", availability: "coming-soon" },
     { signalId: "game-scene-transition", label: "Scene transition", category: "environment", availability: "supported" },
-    { signalId: "generic-environment", label: "Environment type", category: "environment", availability: "coming-soon" },
     { signalId: "game-vision-state", label: "Visual state", category: "others", availability: "supported" },
   ],
 };
@@ -311,12 +300,7 @@ export function captureReadingsForSnapshot(
 ): readonly CaptureReading[] {
   return CAPTURE_READING_DEFINITIONS[game].map((reading) => ({
     ...reading,
-    value:
-      reading.availability === "coming-soon"
-        ? "Coming soon"
-        : snapshot === null
-          ? "Waiting"
-          : signalValue(snapshot, reading.signalId),
+    value: snapshot === null ? "—" : signalValue(snapshot, reading.signalId),
   }));
 }
 
@@ -879,9 +863,13 @@ export function StudioGameplayCaptureClient() {
               <h2 id="proof-heading">Live Detector Proof</h2>
             </div>
             <p>
-              {latest === null
-                ? "Waiting for a captured feed. Planned reads remain marked Coming soon."
-                : `${latest.frameCount} frames analysed locally at ${latest.analysisRateFps?.toFixed(1) ?? "starting"} frames/sec.`}
+              {!previewConnected
+                ? running
+                  ? "Connecting gameplay feed…"
+                  : "Connect a gameplay feed first."
+                : latest === null
+                  ? "Feed connected · analysing the first frame."
+                  : `Feed connected · ${latest.frameCount} frames analysed locally at ${latest.analysisRateFps?.toFixed(1) ?? "starting"} frames/sec.`}
             </p>
           </div>
           <div className={styles.proofColumns}>
@@ -901,15 +889,15 @@ export function StudioGameplayCaptureClient() {
                     <>
                       <div>
                         <dt>HUD detector</dt>
-                        <dd>{latest?.hudStatus ?? "Waiting"}</dd>
+                        <dd>{latest?.hudStatus ?? "—"}</dd>
                       </div>
                       <div>
                         <dt>Analysis sample</dt>
-                        <dd>{latest?.sampleResolution ?? "Waiting"}</dd>
+                        <dd>{latest?.sampleResolution ?? "—"}</dd>
                       </div>
                       <div>
                         <dt>Unknown facts</dt>
-                        <dd>{latest?.unknownFactCount ?? "Waiting"}</dd>
+                        <dd>{latest?.unknownFactCount ?? "—"}</dd>
                       </div>
                     </>
                   ) : null}
@@ -921,7 +909,7 @@ export function StudioGameplayCaptureClient() {
           {game === "minecraft" ? (
             <details>
               <summary>HUD anchor confidence</summary>
-              <p>{latest?.hudAnchorScores ?? "Waiting for the first analysed frame."}</p>
+              <p>{latest?.hudAnchorScores ?? "—"}</p>
             </details>
           ) : null}
         </section>

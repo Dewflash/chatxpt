@@ -137,6 +137,10 @@
   scroll-margin-top: 1.25rem;
 }
 
+.gameplayMain {
+  gap: var(--cx-space-xl);
+}
+
 .studioHeader {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);

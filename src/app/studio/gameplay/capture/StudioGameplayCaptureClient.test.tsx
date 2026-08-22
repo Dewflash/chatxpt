@@ -14,8 +14,12 @@ describe("StudioGameplayCaptureClient recovery navigation", () => {
     expect(html).toContain('id="proof-activity"');
     expect(html).toContain('id="proof-environment"');
     expect(html).toContain('id="proof-others"');
-    expect(html).toContain("Player condition");
-    expect(html).toContain("Coming soon");
+    expect(html).toContain("Activity intensity");
+    expect(html).toContain("Connect a gameplay feed first.");
+    expect(html).toContain("<dt>Activity intensity</dt><dd>—</dd>");
+    expect(html).not.toContain("Waiting for a captured feed");
+    expect(html).not.toContain("Planned reads");
+    expect(html).not.toContain("Coming soon");
     expect(html).toContain("Stream Capture");
     expect(html).toContain("Stream Capture instructions");
     expect(html).toContain('role="tooltip"');
