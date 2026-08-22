@@ -268,6 +268,11 @@ describe("HostedBoardApplication", () => {
     current.setNow(NOW + 163_000);
     const idle = await current.runtime.advanceQuestLifecycleIfDue(succeeded.receipt.state);
     expect(idle.questCycle.status).toBe("idle");
+    await expect(current.hosted.read(opened.token)).resolves.toMatchObject({
+      canVote: false,
+      acceptedCandidateId: null,
+      questCycle: { status: "idle", options: [] },
+    });
 
     const secondCycle = await openVotingCycle(current, "second");
     expect(secondCycle.state.questCycle.envelope.questCycleId).not.toBe(

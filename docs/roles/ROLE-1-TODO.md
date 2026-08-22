@@ -98,7 +98,7 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 - `codex/role-1-viewer-recovery` adds the UI-X10 server-side `ViewerRecoveryReader` seam for session-scoped accepted-vote reconnect.
 - Memory and Supabase readers return only the requesting viewer's accepted candidate/source/time plus their persisted non-zero session points; community hype remains shared aggregate state.
 - Hosted-board discovery, signed Twitch-chat voting, ordinary-chat aggregate analysis, and authorised reactions/rewards are source-wired. Outbound chat announcements and real Twitch/Supabase multi-client delivery evidence remain open under R1-016.
-- The 23 August local Twitch/OBS rehearsal exposed quest-cycle identity reuse after cooldown: an anonymous viewer's accepted vote from the previous cycle could make the next hosted-board tally unavailable. The orchestrator now assigns a fresh authoritative cycle identity to every new proposal, and a two-cycle regression proves that the same private viewer can vote again without leaking or colliding with the prior receipt.
+- The 23 August local Twitch/OBS rehearsal exposed quest-cycle identity reuse after cooldown: an anonymous viewer's accepted vote from the previous cycle could make hosted-board reads unavailable during idle and the next cycle. The orchestrator now rolls authority when cooldown completes, and a two-cycle regression proves that the same private viewer can read the idle gap and vote again without leaking or colliding with the prior receipt.
 
 ## Historical finals Twitch viewer override (14 August 2026; superseded by D-071)
 

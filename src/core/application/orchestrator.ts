@@ -162,8 +162,7 @@ function authoritativeDecision(
 
   const revision = current.session.revision + 1;
   const startsNewQuestCycle =
-    parsedDecision.data.status === "proposed" &&
-    (current.questCycle.status === "idle" || current.questCycle.status === "evaluating");
+    parsedDecision.data.status === "idle" && current.questCycle.status !== "idle";
   const questCycleId = startsNewQuestCycle
     ? `cycle-${acceptedAt}-${revision}`
     : parsedDecision.data.envelope.questCycleId;
