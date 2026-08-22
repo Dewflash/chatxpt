@@ -109,8 +109,18 @@ function scorePauseOverlay(input: {
     input.lower.edgeDensity < 0.015
       ? 0.8
       : 0;
+  const scaledBrightButtons =
+    input.center.edgeDensity >= 0.05 &&
+    input.center.brightPixelRatio >= 0.12 &&
+    input.center.horizontalRepeatScore >= 0.9 &&
+    input.lower.edgeDensity < 0.02
+      ? 0.82
+      : 0;
   const quietLowerHud = input.lower.edgeDensity < 0.08 ? 0.16 : 0;
-  return Math.min(1, Math.max(verticalButtons, vanillaDarkButtons) + quietLowerHud);
+  return Math.min(
+    1,
+    Math.max(verticalButtons, vanillaDarkButtons, scaledBrightButtons) + quietLowerHud,
+  );
 }
 
 function scoreDeathOverlay(input: {
@@ -158,6 +168,24 @@ export function detectMinecraftMenuState(frame: SampledPixelFrame): MinecraftHud
   const pauseScore = scorePauseOverlay({ center, lower });
   const deathScore = scoreDeathOverlay({ full, lower, title: deathTitle, buttons: deathButtons });
 
+  if (deathScore >= 0.68) {
+    return knownMenuState(
+      "death",
+      deathScore,
+      "A red-tinted Minecraft death screen with centered title and respawn controls was detected.",
+      [full.regionId, deathTitle.regionId, deathButtons.regionId],
+    );
+  }
+
+  if (pauseScore >= 0.78) {
+    return knownMenuState(
+      "pause",
+      pauseScore,
+      "A centered Minecraft-like pause menu structure was detected.",
+      [center.regionId],
+    );
+  }
+
   if (centerPanelScore >= 0.88) {
     return knownMenuState(
       "container",
@@ -173,24 +201,6 @@ export function detectMinecraftMenuState(frame: SampledPixelFrame): MinecraftHud
       sleepScore,
       "A dark Minecraft-like sleep overlay with lower-screen controls was detected.",
       [full.regionId, lower.regionId, bedButton.regionId],
-    );
-  }
-
-  if (deathScore >= 0.68) {
-    return knownMenuState(
-      "death",
-      deathScore,
-      "A red-tinted Minecraft death screen with centered title and respawn controls was detected.",
-      [full.regionId, deathTitle.regionId, deathButtons.regionId],
-    );
-  }
-
-  if (pauseScore >= 0.78 && centerPanelScore < 0.88) {
-    return knownMenuState(
-      "pause",
-      pauseScore,
-      "A centered Minecraft-like pause menu structure was detected.",
-      [center.regionId],
     );
   }
 

@@ -77,6 +77,12 @@ function pauseFrame(): SampledPixelFrame {
   return frame;
 }
 
+function highDetailPauseFrame(): SampledPixelFrame {
+  const frame = inventoryFrame();
+  paintBox(frame, { x: 0.2, y: 0.68, width: 0.6, height: 0.22 }, () => [18, 18, 18]);
+  return frame;
+}
+
 function deathFrame(): SampledPixelFrame {
   const frame = frameFromPixel((x, y) => {
     const red = 80 + ((x + y) % 30);
@@ -110,6 +116,13 @@ describe("Minecraft menu-state detector", () => {
 
   it("detects the vanilla dark-button pause layout without requiring a bright panel", () => {
     expect(detectMinecraftMenuState(pauseFrame())).toMatchObject({
+      status: "known",
+      value: "pause",
+    });
+  });
+
+  it("prefers a pause layout over a generic centered panel when both scores are high", () => {
+    expect(detectMinecraftMenuState(highDetailPauseFrame())).toMatchObject({
       status: "known",
       value: "pause",
     });
