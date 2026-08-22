@@ -194,7 +194,8 @@ function knownSignalIds(input: CandidateInput): ReadonlyMap<string, readonly str
       if (
         ageMs < 0 ||
         ageMs > maximumAgeMs ||
-        signal.observation.provenance.confidence < ROLE3_COMPATIBLE_MINIMUM_SIGNAL_CONFIDENCE
+        signal.observation.provenance.confidence < ROLE3_COMPATIBLE_MINIMUM_SIGNAL_CONFIDENCE ||
+        !signalSupportsTemplate(signal.kind, signal.observation.value)
       ) {
         continue;
       }
@@ -202,6 +203,23 @@ function knownSignalIds(input: CandidateInput): ReadonlyMap<string, readonly str
     }
   }
   return byKind;
+}
+
+function signalSupportsTemplate(kind: string, value: string | number | boolean): boolean {
+  switch (kind) {
+    case "audience-negative-pressure":
+    case "audience-repeated-requests":
+    case "audience-chat-vote-messages":
+      return typeof value === "number" && value > 0;
+    case "audience-energy":
+      return typeof value === "number" && value >= 0.45;
+    case "audience-intent":
+      return typeof value === "string" && ["requesting", "cheering", "concerned"].includes(value);
+    case "activity-intensity":
+      return typeof value === "number" && value >= 0.15;
+    default:
+      return true;
+  }
 }
 
 function sourceSignalIds(
@@ -230,8 +248,16 @@ export function createAlgorithmicCandidateStrategy(): CandidateGenerationStrateg
       const recentTitles = new Set(input.recentQuestTitles.map(normaliseTitle));
       const availableSignals = knownSignalIds(input);
       const rotated = rotate(algorithmicTemplates, hash(`${seed}:${game.name}`));
-      const preferred = rotated.filter((template) => !recentTitles.has(normaliseTitle(template.title)));
-      const selected = [...preferred, ...rotated].filter(
+      const ranked = rotated
+        .map((template, index) => ({
+          template,
+          index,
+          supportCount: sourceSignalIds(template, availableSignals).length,
+        }))
+        .sort((left, right) => right.supportCount - left.supportCount || left.index - right.index)
+        .map(({ template }) => template);
+      const preferred = ranked.filter((template) => !recentTitles.has(normaliseTitle(template.title)));
+      const selected = [...preferred, ...ranked].filter(
         (template, index, candidates) =>
           candidates.findIndex((candidate) => candidate.key === template.key) === index,
       ).slice(0, 3);

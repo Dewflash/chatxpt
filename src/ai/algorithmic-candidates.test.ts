@@ -37,32 +37,46 @@ function audienceWithKnownSignal(options: {
   readonly confidence: number;
   readonly observedAt: number;
 }): AudienceSnapshot {
+  return audienceWithKnownSignals([{
+    signalId: options.signalId,
+    kind: "audience-energy",
+    value: 0.9,
+    confidence: options.confidence,
+    observedAt: options.observedAt,
+  }]);
+}
+
+function audienceWithKnownSignals(signals: readonly {
+  readonly signalId: string;
+  readonly kind: string;
+  readonly value: string | number | boolean;
+  readonly confidence?: number;
+  readonly observedAt?: number;
+}[]): AudienceSnapshot {
   return intelligenceSnapshotSchema.parse({
     envelope: {
       ...contractFixtureEnvelope,
-      messageId: `algorithmic-intelligence-${options.signalId}`,
+      messageId: `algorithmic-intelligence-${signals.map(({ signalId }) => signalId).join("-")}`,
     },
     gameplay: contractFixtureGameplaySnapshot,
     audience: {
       ...contractFixtureAudienceSnapshot,
-      signals: [
-        {
-          signalId: options.signalId,
-          kind: "audience-energy",
-          observation: {
-            status: "known",
-            value: 0.9,
-            provenance: {
-              source: "algorithm",
-              method: "fixture-audience-pipeline",
-              confidence: options.confidence,
-              observedAt: options.observedAt,
-              receivedAt: options.observedAt,
-              evidenceClass: "fixture",
-            },
+      signals: signals.map((signal) => ({
+        signalId: signal.signalId,
+        kind: signal.kind,
+        observation: {
+          status: "known" as const,
+          value: signal.value,
+          provenance: {
+            source: "algorithm" as const,
+            method: "fixture-audience-pipeline",
+            confidence: signal.confidence ?? 0.9,
+            observedAt: signal.observedAt ?? contractFixtureEnvelope.occurredAt,
+            receivedAt: signal.observedAt ?? contractFixtureEnvelope.receivedAt,
+            evidenceClass: "fixture" as const,
           },
         },
-      ],
+      })),
     },
   }).audience;
 }
@@ -218,6 +232,73 @@ describe("algorithmic candidate strategy", () => {
       ),
     ).toBe(true);
     expect(JSON.stringify(batch)).not.toContain("requesting quest please");
+  });
+
+  it("promotes templates supported by meaningful chat requests", async () => {
+    const provider = createValidatingCandidateProvider(createAlgorithmicCandidateStrategy());
+    const batch = await provider.generate({
+      envelope: contractFixtureCandidateBatch.envelope,
+      intelligence: await fixtureIntelligence(audienceWithKnownSignals([
+        { signalId: "audience-intent-requesting", kind: "audience-intent", value: "requesting" },
+        { signalId: "audience-repeated-requests-two", kind: "audience-repeated-requests", value: 2 },
+      ])),
+      profile: minecraftProfile,
+      recentQuestTitles: [],
+      streamerGoal: null,
+      activeChatXptQuest: null,
+    });
+
+    expect(batch.candidates[0]).toMatchObject({
+      title: "Plan Out Loud",
+      sourceSignalIds: expect.arrayContaining([
+        "audience-intent-requesting",
+        "audience-repeated-requests-two",
+      ]),
+    });
+  });
+
+  it("promotes calm options when chat pressure is actually present", async () => {
+    const provider = createValidatingCandidateProvider(createAlgorithmicCandidateStrategy());
+    const batch = await provider.generate({
+      envelope: contractFixtureCandidateBatch.envelope,
+      intelligence: await fixtureIntelligence(audienceWithKnownSignals([
+        { signalId: "audience-negative-pressure-two", kind: "audience-negative-pressure", value: 2 },
+      ])),
+      profile: minecraftProfile,
+      recentQuestTitles: [],
+      streamerGoal: null,
+      activeChatXptQuest: null,
+    });
+
+    expect(batch.candidates.map(({ title }) => title)).toEqual(
+      expect.arrayContaining(["Calm Focus", "Positive Commentary"]),
+    );
+    expect(batch.candidates
+      .filter(({ title }) => title === "Calm Focus" || title === "Positive Commentary")
+      .every(({ sourceSignalIds }) => sourceSignalIds.includes("audience-negative-pressure-two")))
+      .toBe(true);
+  });
+
+  it("does not cite zero-valued audience pressure or requests", async () => {
+    const provider = createValidatingCandidateProvider(createAlgorithmicCandidateStrategy());
+    const batch = await provider.generate({
+      envelope: contractFixtureCandidateBatch.envelope,
+      intelligence: await fixtureIntelligence(audienceWithKnownSignals([
+        { signalId: "audience-negative-pressure-zero", kind: "audience-negative-pressure", value: 0 },
+        { signalId: "audience-repeated-requests-zero", kind: "audience-repeated-requests", value: 0 },
+      ])),
+      profile: minecraftProfile,
+      recentQuestTitles: [],
+      streamerGoal: null,
+      activeChatXptQuest: null,
+    });
+
+    expect(batch.candidates.flatMap(({ sourceSignalIds }) => sourceSignalIds)).not.toEqual(
+      expect.arrayContaining([
+        "audience-negative-pressure-zero",
+        "audience-repeated-requests-zero",
+      ]),
+    );
   });
 
   it("omits known low-confidence signal IDs that Role 3 would reject", async () => {
