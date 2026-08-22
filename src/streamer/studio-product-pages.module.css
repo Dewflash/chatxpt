@@ -129,16 +129,12 @@
   min-width: 0;
   display: grid;
   align-content: start;
-  gap: clamp(1.5rem, 3vw, 3rem);
-  padding: clamp(1rem, 3vw, 3rem);
+  gap: clamp(1rem, 1.5vw, 1.5rem);
+  padding: clamp(1rem, 2vw, 2rem) clamp(1rem, 3vw, 3rem);
 }
 
 .main :global([id]) {
   scroll-margin-top: 1.25rem;
-}
-
-.gameplayMain {
-  gap: var(--cx-space-xl);
 }
 
 .studioHeader {
