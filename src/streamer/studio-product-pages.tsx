@@ -1537,22 +1537,14 @@ function ProfilePage({
       </article>
 
       <Card id="safety-accessibility" className={styles.globalBoundaries}>
-        <div><StatusBadge tone={profile === null ? "neutral" : "success"}>{profile === null ? "Waiting" : "Global boundaries"}</StatusBadge><h3>Safety & Accessibility</h3><p>These boundaries apply to every preset and cannot be weakened by a live override.</p></div>
-        <label className={styles.compactField}>
-          Safety limits
-          <textarea key={listToText(profile?.restrictions ?? []) || "loading-restrictions"} form="profile-lists-form" name="restrictions" defaultValue={listToText(profile?.restrictions ?? [])} disabled={!canEdit} />
-        </label>
-        <label className={styles.compactField}>
-          Preferred sidequests
-          <textarea key={listToText(profile?.preferredQuestTypes ?? []) || "loading-preferred"} form="profile-lists-form" name="preferredQuestTypes" defaultValue={listToText(profile?.preferredQuestTypes ?? [])} disabled={!canEdit} />
-        </label>
-        <label className={styles.compactField}>
-          Forbidden sidequests
-          <textarea key={listToText(profile?.forbiddenQuestTypes ?? []) || "loading-forbidden"} form="profile-lists-form" name="forbiddenQuestTypes" defaultValue={listToText(profile?.forbiddenQuestTypes ?? [])} disabled={!canEdit} />
-        </label>
+        <div className={styles.globalBoundariesHeader}>
+          <div><h3>Safety & Accessibility</h3><p>These boundaries apply to every preset and cannot be weakened by a live override.</p></div>
+          <StatusBadge tone={profile === null ? "neutral" : "success"}>{profile === null ? "Waiting" : "Global boundaries"}</StatusBadge>
+        </div>
         <form
           id="profile-lists-form"
-          className={styles.profileForm}
+          className={`${styles.profileForm} ${styles.globalBoundariesForm}`}
+          data-boundary-layout="paired"
           onSubmit={(event) => {
             event.preventDefault();
             if (saved === null) return;
@@ -1567,15 +1559,27 @@ function ProfilePage({
             });
           }}
         >
-          <label id="accessibility" className={styles.compactField}>
+          <label className={styles.compactField} data-boundary-field="safety">
+            Safety limits
+            <textarea key={listToText(profile?.restrictions ?? []) || "loading-restrictions"} name="restrictions" defaultValue={listToText(profile?.restrictions ?? [])} disabled={!canEdit} />
+          </label>
+          <label id="accessibility" className={styles.compactField} data-boundary-field="accessibility">
             Accessibility needs
             <textarea key={listToText(profile?.accessibilityNeeds ?? []) || "loading-accessibility"} name="accessibilityNeeds" defaultValue={listToText(profile?.accessibilityNeeds ?? [])} disabled={!canEdit} />
           </label>
-          <label className={styles.compactField} id="watchlist">
+          <label className={styles.compactField} data-boundary-field="preferred">
+            Preferred sidequests
+            <textarea key={listToText(profile?.preferredQuestTypes ?? []) || "loading-preferred"} name="preferredQuestTypes" defaultValue={listToText(profile?.preferredQuestTypes ?? [])} disabled={!canEdit} />
+          </label>
+          <label className={styles.compactField} data-boundary-field="forbidden">
+            Forbidden sidequests
+            <textarea key={listToText(profile?.forbiddenQuestTypes ?? []) || "loading-forbidden"} name="forbiddenQuestTypes" defaultValue={listToText(profile?.forbiddenQuestTypes ?? [])} disabled={!canEdit} />
+          </label>
+          <label className={`${styles.compactField} ${styles.globalBoundaryWatchlist}`} id="watchlist" data-boundary-field="watchlist">
             Keyword watchlist
             <textarea key={listToText(profile?.keywordWatchlist ?? []) || "loading-watchlist"} name="keywordWatchlist" defaultValue={listToText(profile?.keywordWatchlist ?? [])} disabled={!canEdit} />
           </label>
-          <button type="submit" disabled={!canEdit}>
+          <button className={styles.globalBoundarySave} type="submit" disabled={!canEdit}>
             {pending ? "Saving..." : "Save global boundaries"}
           </button>
         </form>

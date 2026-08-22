@@ -231,6 +231,12 @@ describe("StudioProductPageSurface", () => {
     const communityPanel = html.slice(html.indexOf('id="community"'), html.indexOf('id="safety-accessibility"'));
     expect(communityPanel).not.toContain("Viewer-led choices");
     expect(communityPanel).not.toContain("Preset description");
+    const boundariesPanel = html.slice(html.indexOf('id="safety-accessibility"'));
+    expect(boundariesPanel).toContain('data-boundary-layout="paired"');
+    expect(boundariesPanel).toMatch(/Safety &amp; Accessibility<\/h3>.*Global boundaries/su);
+    expect(boundariesPanel).toMatch(/data-boundary-field="safety".*data-boundary-field="accessibility"/su);
+    expect(boundariesPanel).toMatch(/data-boundary-field="preferred".*data-boundary-field="forbidden"/su);
+    expect(boundariesPanel).toContain('data-boundary-field="watchlist"');
     expect(html).toContain("Saved on device");
     expect(html).toContain("Local profile");
     expect(html).toContain("This device only");

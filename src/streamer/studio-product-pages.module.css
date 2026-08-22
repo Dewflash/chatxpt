@@ -1767,8 +1767,42 @@
 
 .globalBoundaries {
   display: grid;
-  grid-template-columns: minmax(14rem, 0.65fr) minmax(0, 1.35fr);
   gap: var(--cx-space-lg);
+}
+
+.globalBoundariesHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--cx-space-lg);
+}
+
+.globalBoundariesHeader > div {
+  min-width: 0;
+}
+
+.globalBoundariesHeader h3 {
+  margin: 0;
+}
+
+.globalBoundariesHeader p {
+  max-width: 42rem;
+  margin-bottom: 0;
+}
+
+.globalBoundariesForm {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--cx-space-lg);
+}
+
+.globalBoundariesForm textarea {
+  min-height: 9rem;
+}
+
+.globalBoundaryWatchlist,
+.globalBoundarySave {
+  grid-column: 1 / -1;
 }
 
 .compactField select {
@@ -1847,6 +1881,15 @@
   .profileWorkspace,
   .globalBoundaries {
     grid-template-columns: 1fr;
+  }
+
+  .globalBoundariesForm {
+    grid-template-columns: 1fr;
+  }
+
+  .globalBoundaryWatchlist,
+  .globalBoundarySave {
+    grid-column: auto;
   }
 
   .homeSetupGrid {
