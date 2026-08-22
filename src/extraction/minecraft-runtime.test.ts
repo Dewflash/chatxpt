@@ -27,7 +27,7 @@ function unknown<T extends string | number | boolean>(reason: string): Minecraft
   };
 }
 
-function unknownMenu(): MinecraftHudFact<"inventory" | "crafting" | "sleeping" | "pause" | "none"> {
+function unknownMenu(): MinecraftHudFact<"inventory" | "crafting" | "container" | "sleeping" | "pause" | "death" | "none"> {
   return unknown("menu unknown");
 }
 
@@ -46,6 +46,8 @@ function hud(
     facts: {
       healthHearts: fact(healthHearts),
       hungerShanks: fact(8),
+      airBubbles: unknown<number>("air unsupported"),
+      submerged: unknown<boolean>("submersion unsupported"),
       armorPoints: unknown<number>("armor unsupported"),
       hotbarVisible: {
         status: "known",
@@ -198,5 +200,21 @@ describe("Minecraft runtime fact derivation", () => {
     expect(facts.menuState).toMatchObject({ status: "known", value: "sleeping" });
     expect(facts.activity).toMatchObject({ status: "known", value: "sleeping" });
     expect(facts.recentDamage).toMatchObject({ status: "unknown", value: null });
+  });
+
+  it("gates health deltas while a generic container screen is open", () => {
+    const facts = deriveMinecraftRuntimeFacts({
+      previousHud: hud(10),
+      hud: hud(7),
+      menuState: fact("container", 0.88),
+      interpretation: interpretation("mixed-local-action"),
+      sceneFacts: sceneFacts({ hostile: "zombie", damageCause: "mob" }),
+    });
+
+    expect(facts.menuState).toMatchObject({ status: "known", value: "container" });
+    expect(facts.activity).toMatchObject({ status: "known", value: "inventory" });
+    expect(facts.recentDamage).toMatchObject({ status: "unknown", value: null });
+    expect(facts.danger).toMatchObject({ status: "unknown", value: null });
+    expect(facts.visibleHostile).toMatchObject({ status: "unknown", value: null });
   });
 });

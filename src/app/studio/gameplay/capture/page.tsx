@@ -1,8 +1,8 @@
-import { StudioGameplayCaptureClient } from "./StudioGameplayCaptureClient";
+import { redirect } from "next/navigation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default function StudioGameplayCapturePage() {
-  return <StudioGameplayCaptureClient />;
+  redirect("/studio/gameplay");
 }

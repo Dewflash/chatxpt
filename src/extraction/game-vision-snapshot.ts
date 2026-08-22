@@ -31,7 +31,12 @@ function group(
   signalId: string,
   kind: string,
   fallbackProvenance: SignalProvenance,
-  observed: { readonly value: string | number | boolean; readonly confidence: number } | null,
+  observed: {
+    readonly value: string | number | boolean;
+    readonly confidence: number;
+    readonly observedAt?: number;
+    readonly expiresAt?: number;
+  } | null,
 ): SignalCandidateGroup {
   return {
     signalId,
@@ -43,8 +48,12 @@ function group(
         : [{
             state: "observed",
             value: observed.value,
-            expiresAt: fallbackProvenance.observedAt + SIGNAL_FRESHNESS_MS,
-            provenance: { ...fallbackProvenance, confidence: observed.confidence },
+            expiresAt: observed.expiresAt ?? (observed.observedAt ?? fallbackProvenance.observedAt) + SIGNAL_FRESHNESS_MS,
+            provenance: {
+              ...fallbackProvenance,
+              confidence: observed.confidence,
+              observedAt: observed.observedAt ?? fallbackProvenance.observedAt,
+            },
           }],
   };
 }
@@ -55,9 +64,19 @@ function isConfirmedMinecraftHud(status: MinecraftHudFingerprint["status"] | und
 
 function minecraftHudFactObservation<T extends string | number | boolean>(
   fact: MinecraftHudFact<T> | undefined,
-): { readonly value: T; readonly confidence: number } | null {
+): {
+  readonly value: T;
+  readonly confidence: number;
+  readonly observedAt?: number;
+  readonly expiresAt?: number;
+} | null {
   return fact?.status === "known" && fact.value !== null
-    ? { value: fact.value, confidence: fact.confidence }
+    ? {
+        value: fact.value,
+        confidence: fact.confidence,
+        ...(fact.observedAt === undefined ? {} : { observedAt: fact.observedAt }),
+        ...(fact.expiresAt === undefined ? {} : { expiresAt: fact.expiresAt }),
+      }
     : null;
 }
 
@@ -164,6 +183,18 @@ export function buildMultiGameGameplaySnapshot(input: {
         minecraftHudFactObservation(minecraftHud?.facts.hungerShanks),
       ),
       group(
+        "minecraft-air-bubbles",
+        "minecraft-air-bubbles",
+        factProvenance,
+        minecraftHudFactObservation(minecraftHud?.facts.airBubbles),
+      ),
+      group(
+        "minecraft-submerged",
+        "minecraft-submerged",
+        factProvenance,
+        minecraftHudFactObservation(minecraftHud?.facts.submerged),
+      ),
+      group(
         "minecraft-armor-points",
         "minecraft-armor-points",
         factProvenance,
@@ -222,6 +253,54 @@ export function buildMultiGameGameplaySnapshot(input: {
         "minecraft-biome-environment",
         factProvenance,
         minecraftHudFactObservation(input.assessment.minecraftRuntimeFacts?.biomeOrEnvironment),
+      ),
+      group(
+        "minecraft-movement",
+        "minecraft-movement",
+        factProvenance,
+        minecraftHudFactObservation(input.assessment.minecraftBasicStateFacts?.movement),
+      ),
+      group(
+        "minecraft-turning",
+        "minecraft-turning",
+        factProvenance,
+        minecraftHudFactObservation(input.assessment.minecraftBasicStateFacts?.turning),
+      ),
+      group(
+        "minecraft-combat",
+        "minecraft-combat",
+        factProvenance,
+        minecraftHudFactObservation(input.assessment.minecraftBasicStateFacts?.combat),
+      ),
+      group(
+        "minecraft-eating",
+        "minecraft-eating",
+        factProvenance,
+        minecraftHudFactObservation(input.assessment.minecraftBasicStateFacts?.eating),
+      ),
+      group(
+        "minecraft-health-trend",
+        "minecraft-health-trend",
+        factProvenance,
+        minecraftHudFactObservation(input.assessment.minecraftBasicStateFacts?.healthTrend),
+      ),
+      group(
+        "minecraft-screen",
+        "minecraft-screen",
+        factProvenance,
+        minecraftHudFactObservation(input.assessment.minecraftBasicStateFacts?.screen),
+      ),
+      group(
+        "minecraft-environment",
+        "minecraft-environment",
+        factProvenance,
+        minecraftHudFactObservation(input.assessment.minecraftBasicStateFacts?.environment),
+      ),
+      group(
+        "minecraft-life",
+        "minecraft-life",
+        factProvenance,
+        minecraftHudFactObservation(input.assessment.minecraftBasicStateFacts?.life),
       ),
     );
   }

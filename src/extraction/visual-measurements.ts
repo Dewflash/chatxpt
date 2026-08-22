@@ -9,14 +9,28 @@ export interface PixelSampleSize {
   readonly height: number;
 }
 
+export interface PixelSampleRect extends PixelSampleSize {
+  readonly x: number;
+  readonly y: number;
+}
+
+export interface FramePixelSampleRequest extends PixelSampleSize {
+  /** Intrinsic capture dimensions used to avoid non-uniform scaling. */
+  readonly sourceWidth?: number;
+  readonly sourceHeight?: number;
+  readonly fit?: "stretch" | "contain";
+}
+
 export interface SampledPixelFrame extends PixelSampleSize {
   readonly rgba: Uint8ClampedArray;
+  /** Non-letterboxed pixels when the sampler used `fit: "contain"`. */
+  readonly contentRect?: PixelSampleRect;
 }
 
 export interface FramePixelSampler {
   sample(
     image: CanvasImageSource,
-    size: PixelSampleSize,
+    size: FramePixelSampleRequest,
     signal?: AbortSignal,
   ): Promise<SampledPixelFrame> | SampledPixelFrame;
 }
@@ -43,7 +57,12 @@ export interface VisualMeasurementOptions extends PixelSampleSize {
   readonly now?: () => number;
 }
 
-const MAX_SAMPLE_PIXELS = 16_384;
+const MAX_VISUAL_MEASUREMENT_SAMPLE_PIXELS = 16_384;
+
+// The calibrated Minecraft path retains at most one 640x360 RGBA sample
+// (under 1 MiB). Keep the browser sampler aligned with the multi-game
+// analyzer so a valid bounded request is not rejected before analysis.
+export const MAX_BROWSER_CANVAS_SAMPLE_PIXELS = 262_144;
 
 function throwIfAborted(signal?: AbortSignal): void {
   if (!signal?.aborted) return;
@@ -59,15 +78,18 @@ function assertUnitInterval(name: string, value: number): void {
   }
 }
 
-function assertSampleSize(size: PixelSampleSize): void {
+function assertSampleSize(
+  size: PixelSampleSize,
+  maxPixels = MAX_VISUAL_MEASUREMENT_SAMPLE_PIXELS,
+): void {
   if (!Number.isInteger(size.width) || size.width <= 0) {
     throw new RangeError("sample width must be a positive integer");
   }
   if (!Number.isInteger(size.height) || size.height <= 0) {
     throw new RangeError("sample height must be a positive integer");
   }
-  if (size.width * size.height > MAX_SAMPLE_PIXELS) {
-    throw new RangeError(`sample size must not exceed ${MAX_SAMPLE_PIXELS} pixels`);
+  if (size.width * size.height > maxPixels) {
+    throw new RangeError(`sample size must not exceed ${maxPixels} pixels`);
   }
 }
 
@@ -83,7 +105,91 @@ function copyAndValidateSample(
   if (!(sample.rgba instanceof Uint8ClampedArray) || sample.rgba.length !== expectedBytes) {
     throw new RangeError(`pixel sampler must return exactly ${expectedBytes} RGBA bytes`);
   }
-  return { width: sample.width, height: sample.height, rgba: new Uint8ClampedArray(sample.rgba) };
+  return {
+    width: sample.width,
+    height: sample.height,
+    rgba: new Uint8ClampedArray(sample.rgba),
+    ...(sample.contentRect === undefined ? {} : { contentRect: sample.contentRect }),
+  };
+}
+
+function containedContentRect(request: FramePixelSampleRequest): PixelSampleRect | null {
+  if (request.fit !== "contain") return null;
+  const sourceWidth = request.sourceWidth;
+  const sourceHeight = request.sourceHeight;
+  if (
+    !Number.isFinite(sourceWidth) ||
+    !Number.isFinite(sourceHeight) ||
+    sourceWidth === undefined ||
+    sourceHeight === undefined ||
+    sourceWidth <= 0 ||
+    sourceHeight <= 0
+  ) {
+    throw new RangeError("contain sampling requires positive source dimensions");
+  }
+  const scale = Math.min(request.width / sourceWidth, request.height / sourceHeight);
+  const width = Math.max(1, Math.min(request.width, Math.round(sourceWidth * scale)));
+  const height = Math.max(1, Math.min(request.height, Math.round(sourceHeight * scale)));
+  return {
+    x: Math.floor((request.width - width) / 2),
+    y: Math.floor((request.height - height) / 2),
+    width,
+    height,
+  };
+}
+
+function drawSample(
+  context: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D,
+  image: CanvasImageSource,
+  request: FramePixelSampleRequest,
+  contentRect: PixelSampleRect | null,
+): void {
+  if (contentRect === null) {
+    context.drawImage(image, 0, 0, request.width, request.height);
+    return;
+  }
+  context.clearRect(0, 0, request.width, request.height);
+  context.drawImage(
+    image,
+    0,
+    0,
+    request.sourceWidth as number,
+    request.sourceHeight as number,
+    contentRect.x,
+    contentRect.y,
+    contentRect.width,
+    contentRect.height,
+  );
+}
+
+/** Removes sampler-added letterboxing while retaining the undistorted content. */
+export function cropSampledPixelFrameToContent(frame: SampledPixelFrame): SampledPixelFrame {
+  const rect = frame.contentRect;
+  if (rect === undefined) return frame;
+  if (
+    !Number.isInteger(rect.x) ||
+    !Number.isInteger(rect.y) ||
+    !Number.isInteger(rect.width) ||
+    !Number.isInteger(rect.height) ||
+    rect.x < 0 ||
+    rect.y < 0 ||
+    rect.width <= 0 ||
+    rect.height <= 0 ||
+    rect.x + rect.width > frame.width ||
+    rect.y + rect.height > frame.height
+  ) {
+    throw new RangeError("sample contentRect must be contained by the sampled frame");
+  }
+  if (rect.x === 0 && rect.y === 0 && rect.width === frame.width && rect.height === frame.height) {
+    return { width: frame.width, height: frame.height, rgba: new Uint8ClampedArray(frame.rgba) };
+  }
+  const rgba = new Uint8ClampedArray(rect.width * rect.height * 4);
+  for (let row = 0; row < rect.height; row += 1) {
+    const sourceStart = ((rect.y + row) * frame.width + rect.x) * 4;
+    const sourceEnd = sourceStart + rect.width * 4;
+    rgba.set(frame.rgba.subarray(sourceStart, sourceEnd), row * rect.width * 4);
+  }
+  return { width: rect.width, height: rect.height, rgba };
 }
 
 function normalizedLuma(rgba: Uint8ClampedArray, offset: number): number {
@@ -200,16 +306,22 @@ export function createBrowserCanvasPixelSampler(): FramePixelSampler {
   return {
     sample(image, size, signal) {
       throwIfAborted(signal);
-      assertSampleSize(size);
+      assertSampleSize(size, MAX_BROWSER_CANVAS_SAMPLE_PIXELS);
 
       if (typeof OffscreenCanvas === "function") {
         const canvas = new OffscreenCanvas(size.width, size.height);
         const context = canvas.getContext("2d", { willReadFrequently: true });
         if (context === null) throw canvasUnavailable();
-        context.drawImage(image, 0, 0, size.width, size.height);
+        const contentRect = containedContentRect(size);
+        drawSample(context, image, size, contentRect);
         const pixels = context.getImageData(0, 0, size.width, size.height).data;
         throwIfAborted(signal);
-        return { ...size, rgba: new Uint8ClampedArray(pixels) };
+        return {
+          width: size.width,
+          height: size.height,
+          rgba: new Uint8ClampedArray(pixels),
+          ...(contentRect === null ? {} : { contentRect }),
+        };
       }
 
       if (typeof document !== "undefined") {
@@ -218,10 +330,16 @@ export function createBrowserCanvasPixelSampler(): FramePixelSampler {
         canvas.height = size.height;
         const context = canvas.getContext("2d", { willReadFrequently: true });
         if (context === null) throw canvasUnavailable();
-        context.drawImage(image, 0, 0, size.width, size.height);
+        const contentRect = containedContentRect(size);
+        drawSample(context, image, size, contentRect);
         const pixels = context.getImageData(0, 0, size.width, size.height).data;
         throwIfAborted(signal);
-        return { ...size, rgba: new Uint8ClampedArray(pixels) };
+        return {
+          width: size.width,
+          height: size.height,
+          rgba: new Uint8ClampedArray(pixels),
+          ...(contentRect === null ? {} : { contentRect }),
+        };
       }
 
       throw canvasUnavailable();

@@ -53,7 +53,6 @@ export interface StudioProductPageSurfaceProps {
   readonly onResetSession?: (command: StreamerUiCommand | null) => void;
   readonly commandFactory?: StreamerCommandFactory;
   readonly children?: ReactNode;
-  readonly navigationTarget?: "_self" | "_blank";
 }
 
 const NAV_ITEMS: readonly { readonly page: StudioProductPage; readonly href: string; readonly label: string }[] = [
@@ -307,7 +306,7 @@ function HealthStrip({ view, readiness }: {
         <p>{obs.detail}</p>
         {obs.state === "available"
           ? <AvailabilityAction availability={obs} />
-          : <a href="/studio/gameplay/capture" target="_blank" rel="noreferrer">{obs.nextStep}</a>}
+          : <a href="/studio/gameplay">{obs.nextStep}</a>}
       </Card>
       <Card className={styles.card}>
         <StatusBadge tone={voting.tone}>{voting.badge}</StatusBadge>
@@ -756,7 +755,7 @@ function GameplayPage({
           <div className={styles.captureMetrics} aria-label="Game capture processing metrics">
             {primaryMetrics.map((metric) => <span key={metric.label}><small>{metric.label}</small><b>{metric.value}</b><em>{metric.detail}</em></span>)}
           </div>
-          <div className={styles.actions}><a href="/studio/gameplay/capture" target="_blank" rel="noreferrer">{capture.state === "available" ? "Open capture controls" : "Connect or recover capture"}</a></div>
+          <div className={styles.actions}><a href="/studio/gameplay">{capture.state === "available" ? "Open capture controls" : "Connect or recover capture"}</a></div>
           <details className={styles.diagnostics}><summary>Advanced diagnostics</summary><p>Support tier: {snapshot === null ? "Unknown" : titleCase(snapshot.capabilities.tier)}. Capture method: {customerSafeLabel(snapshot?.capabilities.adapterId, "Universal visual path")}. Lower-level transport details remain secondary to the trusted facts below.</p></details>
         </article>
 
@@ -772,7 +771,7 @@ function GameplayPage({
           <div className={styles.understandingNote}><strong>Quest-safe interpretation</strong><small>Known facts may shape a quest. Inferred facts stay labelled. Unknown, stale, conflicting, or unsupported facts never become a precise claim.</small></div>
         </article>
       </div>
-      <PageSectionCard title="Health & Recovery" badge={capture.state === "available" ? "Ready" : "Needs attention"} badgeTone={capture.tone} detail={capture.detail}><div className={styles.actions}><a href="/studio/gameplay/capture" target="_blank" rel="noreferrer">Open Game Capture recovery</a><AvailabilityAction availability={capture} /></div></PageSectionCard>
+      <PageSectionCard title="Health & Recovery" badge={capture.state === "available" ? "Ready" : "Needs attention"} badgeTone={capture.tone} detail={capture.detail}><div className={styles.actions}><a href="/studio/gameplay">Open Game Capture recovery</a><AvailabilityAction availability={capture} /></div></PageSectionCard>
     </div>
   );
 }
@@ -1299,12 +1298,12 @@ function TestLabPage({
       </article>
       <Notice tone="warning" title="Sample checks stay separate from live state">A sample never becomes the judged live gameplay or Twitch evidence. Live checks use the current authorised session and are labelled separately.</Notice>
       <div className={styles.testGrid}>
-        <article><span className={styles.testIcon}>01</span><strong>Game Capture</strong><p>Select the gameplay screen or window in a persistent capture tab while you move through Studio.</p><StatusBadge tone={capture.tone}>{capture.badge}</StatusBadge><a href="/studio/gameplay/capture" target="_blank" rel="noreferrer">Run live capture check</a></article>
+        <article><span className={styles.testIcon}>01</span><strong>Game Capture</strong><p>Open Gameplay Engine and select the gameplay screen or window in that same Studio page.</p><StatusBadge tone={capture.tone}>{capture.badge}</StatusBadge><a href="/studio/gameplay">Run live capture check</a></article>
         <article id="viewer-voting-check"><span className={styles.testIcon}>02</span><strong>Viewer Voting</strong><p>Open the installed panel from the Twitch channel. A direct browser tab cannot create a Twitch viewer identity.</p><StatusBadge tone={voting.tone}>{voting.badge}</StatusBadge><span className={styles.disabledAction}>Test through Twitch Local or Hosted Test</span></article>
         <article><span className={styles.testIcon}>03</span><strong>Broadcast Overlay</strong><p>Check voting, active quest, result, reconnect, and sanitised Up next output.</p><StatusBadge tone={view?.session.status === "live" ? "success" : "neutral"}>{view?.session.status === "live" ? "Session live" : "Waiting for live session"}</StatusBadge><a href="#broadcast-output-setup">Generate below</a></article>
       </div>
       <PageSectionCard title="Sample / Live Source" badge={view?.gameplay?.envelope.evidenceClass === "live" ? "Live source" : "No live source"} badgeTone={view?.gameplay?.envelope.evidenceClass === "live" ? "success" : "neutral"} detail={view?.gameplay?.envelope.evidenceClass === "live" ? "The current gameplay snapshot came from the live capture boundary." : "No sample is presented as a live gameplay snapshot."} />
-      <PageSectionCard title="Capture Controls" badge={capture.badge} badgeTone={capture.tone} detail={capture.detail}><div className={styles.actions}><a href="/studio/gameplay/capture" target="_blank" rel="noreferrer">Open persistent capture tab</a></div></PageSectionCard>
+      <PageSectionCard title="Capture Controls" badge={capture.badge} badgeTone={capture.tone} detail={capture.detail}><div className={styles.actions}><a href="/studio/gameplay">Open Gameplay Engine</a></div></PageSectionCard>
       <PageSectionCard title="Observed / Unknown" badge={view?.gameplay === null || view === null ? "Waiting" : "Current snapshot"} badgeTone={view?.gameplay === null || view === null ? "neutral" : "info"} detail={view?.gameplay === null || view === null ? "Observed and unknown facts appear after a trusted capture check." : `${view.gameplay.signals.filter((signal) => signal.observation.status === "known").length} observed and ${view.gameplay.signals.filter((signal) => signal.observation.status !== "known").length} unknown, stale, or unavailable facts.`} />
       <PageSectionCard title="Recovery" badge={capture.state === "available" && voting.state === "available" ? "Ready" : "Action available"} badgeTone={capture.state === "available" && voting.state === "available" ? "success" : "warning"} detail="Use the source-specific action above for camera permission, device loss, Twitch authorization, or viewer-state recovery." />
     </div>
@@ -1375,7 +1374,6 @@ export function StudioProductPageSurface({
   onResetSession,
   commandFactory = defaultStreamerCommandFactory,
   children,
-  navigationTarget = "_self",
 }: StudioProductPageSurfaceProps) {
   const copy = PAGE_COPY[page];
   const pending = pendingCommandId !== null;
@@ -1392,8 +1390,6 @@ export function StudioProductPageSurface({
               key={item.page}
               href={item.href}
               aria-current={item.page === page ? "page" : undefined}
-              target={navigationTarget === "_blank" ? "_blank" : undefined}
-              rel={navigationTarget === "_blank" ? "noreferrer" : undefined}
             >
               {item.label}
             </a>

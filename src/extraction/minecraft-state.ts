@@ -70,6 +70,8 @@ export const minecraftGameFactsSchema = z
     hudLayout: minecraftFactSchema,
     healthHearts: minecraftFactSchema,
     hungerShanks: minecraftFactSchema,
+    airBubbles: minecraftFactSchema,
+    submerged: minecraftFactSchema,
     armorPoints: minecraftFactSchema,
     hotbarVisible: minecraftFactSchema,
     selectedHotbarCategory: minecraftFactSchema,
@@ -80,6 +82,14 @@ export const minecraftGameFactsSchema = z
     likelyDamageCause: minecraftFactSchema,
     visibleHostile: minecraftFactSchema,
     biomeOrEnvironment: minecraftFactSchema,
+    movement: minecraftFactSchema,
+    turning: minecraftFactSchema,
+    combat: minecraftFactSchema,
+    eating: minecraftFactSchema,
+    healthTrend: minecraftFactSchema,
+    screen: minecraftFactSchema,
+    environment: minecraftFactSchema,
+    life: minecraftFactSchema,
   })
   .strict();
 

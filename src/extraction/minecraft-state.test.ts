@@ -77,6 +77,8 @@ describe("Minecraft state schema", () => {
       hudLayout: knownMinecraftFact("vanilla-like", { observedAt: NOW, method: "hud", confidence: 0.91 }),
       healthHearts: knownMinecraftFact(10, { observedAt: NOW, method: "hud", confidence: 0.9 }),
       hungerShanks: knownMinecraftFact(8, { observedAt: NOW, method: "hud", confidence: 0.85 }),
+      airBubbles: unknown("Air bubbles are not confirmed."),
+      submerged: unknown("Submersion is not confirmed."),
       armorPoints: unknown("Armor is not parsed."),
       hotbarVisible: knownMinecraftFact(true, { observedAt: NOW, method: "hud", confidence: 0.88 }),
       selectedHotbarCategory: unknown("Selected slot category is not parsed."),
@@ -87,6 +89,14 @@ describe("Minecraft state schema", () => {
       likelyDamageCause: unknown("Damage cause is not classified."),
       visibleHostile: unknown("Hostiles are not detected."),
       biomeOrEnvironment: unknown("Biome is not classified."),
+      movement: unknown("Movement is not classified."),
+      turning: unknown("Turning is not classified."),
+      combat: unknown("Combat is not classified."),
+      eating: unknown("Eating is not classified."),
+      healthTrend: unknown("Health trend is not classified."),
+      screen: unknown("Screen state is not classified."),
+      environment: unknown("Land versus water is not classified."),
+      life: unknown("Life state is not classified."),
     });
 
     expect(minecraftSupportedFacts(facts)).toEqual([

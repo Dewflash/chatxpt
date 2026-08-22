@@ -271,13 +271,13 @@ function exceptionName(caught: unknown): string | null {
 
 export interface MediaStreamVideoFrameCaptureOptions {
   readonly document?: Document;
+  /** Reuse the operator-visible preview so displayed and sampled pixels match. */
+  readonly video?: HTMLVideoElement;
   readonly stopStreamOnEnd?: boolean;
 }
 
 export class MediaStreamVideoFrameCapture implements BrowserFrameCapture {
   private video: HTMLVideoElement | null = null;
-  private canvas: HTMLCanvasElement | null = null;
-  private context: CanvasRenderingContext2D | null = null;
 
   constructor(
     private readonly stream: MediaStream,
@@ -285,58 +285,36 @@ export class MediaStreamVideoFrameCapture implements BrowserFrameCapture {
   ) {}
 
   get width(): number {
-    return this.video?.videoWidth || this.canvas?.width || 1;
+    return this.video?.videoWidth || 1;
   }
 
   get height(): number {
-    return this.video?.videoHeight || this.canvas?.height || 1;
+    return this.video?.videoHeight || 1;
   }
 
   async start(): Promise<void> {
     const documentRef = this.options.document ?? globalThis.document;
-    if (documentRef === undefined) {
-      throw new Error("A browser document is required for frame capture");
-    }
-
-    const video = documentRef.createElement("video");
+    const video = this.options.video ?? documentRef?.createElement("video");
+    if (video === undefined) throw new Error("A browser video element is required for frame capture");
     video.muted = true;
+    video.autoplay = true;
     video.playsInline = true;
-    video.srcObject = this.stream;
+    if (video.srcObject !== this.stream) video.srcObject = this.stream;
     await video.play();
 
-    const canvas = documentRef.createElement("canvas");
-    const width = video.videoWidth || 1;
-    const height = video.videoHeight || 1;
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext("2d");
-    if (context === null) {
-      throw new Error("Canvas 2D context is unavailable");
-    }
-
     this.video = video;
-    this.canvas = canvas;
-    this.context = context;
   }
 
   captureFrame(): CanvasImageSource {
-    if (this.video === null || this.canvas === null || this.context === null) {
+    if (this.video === null) {
       throw new Error("Frame capture has not started");
     }
-
-    const width = this.video.videoWidth || this.canvas.width || 1;
-    const height = this.video.videoHeight || this.canvas.height || 1;
-    if (this.canvas.width !== width) this.canvas.width = width;
-    if (this.canvas.height !== height) this.canvas.height = height;
-    this.context.drawImage(this.video, 0, 0, width, height);
-    return this.canvas;
+    return this.video;
   }
 
   stop(): void {
     this.video?.pause();
     this.video = null;
-    this.context = null;
-    this.canvas = null;
     if (this.options.stopStreamOnEnd === true) {
       for (const track of this.stream.getTracks()) {
         track.stop();

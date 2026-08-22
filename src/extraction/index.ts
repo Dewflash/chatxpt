@@ -29,13 +29,18 @@ export type {
 } from "./evidence-catalog";
 export {
   createBrowserCanvasPixelSampler,
+  cropSampledPixelFrameToContent,
   measurePixelChange,
   streamVisualFrameMeasurements,
 } from "./visual-measurements";
+export { MinecraftObservationTracker } from "./minecraft-observation-tracker";
+export type { MinecraftObservationTrackerOptions } from "./minecraft-observation-tracker";
 export type {
   FramePixelSampler,
+  FramePixelSampleRequest,
   PixelChangeMeasurement,
   PixelSampleSize,
+  PixelSampleRect,
   SampledPixelFrame,
   VisualFrameMeasurement,
   VisualMeasurementOptions,
@@ -155,6 +160,9 @@ export {
   genericGameStateContextSchema,
 } from "./game-state-context";
 export { detectMinecraftMenuState } from "./minecraft-menu";
+export { measureMinecraftActionVisuals } from "./minecraft-action-visual";
+export { MinecraftBasicStateTracker } from "./minecraft-basic-state";
+export { measureMinecraftCameraMotion } from "./minecraft-camera-motion";
 export { deriveMinecraftRuntimeFacts } from "./minecraft-runtime";
 export { detectMinecraftSceneFacts } from "./minecraft-scene";
 export type {
@@ -171,6 +179,17 @@ export type {
   MinecraftIntentContext,
 } from "./minecraft-state";
 export type { MinecraftMenuState } from "./minecraft-menu";
+export type { MinecraftActionVisualMeasurement } from "./minecraft-action-visual";
+export type {
+  MinecraftBasicStateFacts,
+  MinecraftCombatState,
+  MinecraftEnvironmentState,
+  MinecraftHealthTrend,
+  MinecraftLifeState,
+  MinecraftMovementState,
+  MinecraftScreenState,
+} from "./minecraft-basic-state";
+export type { MinecraftCameraMotionMeasurement } from "./minecraft-camera-motion";
 export type { MinecraftRuntimeFacts } from "./minecraft-runtime";
 export type { MinecraftSceneFacts } from "./minecraft-scene";
 export {

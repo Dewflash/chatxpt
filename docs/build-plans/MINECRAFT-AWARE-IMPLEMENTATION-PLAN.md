@@ -6,6 +6,8 @@
 **Integration responsibilities:** Role 1 gameplay ingress/runtime, Role 3 deterministic validation, Role 4/5 truthful display if surfaced
 **Primary demo target:** Vanilla Minecraft Java Survival, default HUD
 
+**Current detector/evidence execution addendum:** `docs/build-plans/MINECRAFT-OBS-OCR-STATE-TRACKING-PLAN.md`. For the current real-recording pass, that addendum operationalises and supersedes this plan's detector/runtime Phases 2 through 5 and real-input evidence Phase 9. This parent plan remains authoritative for schema, AI context, Role 3 validation, privacy, and truthful disclosure.
+
 ## Goal
 
 Upgrade ChatXPT from layout-level Minecraft awareness to an evidence-gated Minecraft-aware engine that can:

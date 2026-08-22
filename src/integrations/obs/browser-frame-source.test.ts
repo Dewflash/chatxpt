@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   BrowserMediaFrameSource,
+  MediaStreamVideoFrameCapture,
   ObsVirtualCameraError,
   findObsVirtualCameraDevice,
   obsVirtualCameraFailureReason,
@@ -11,6 +12,35 @@ import {
 } from "./browser-frame-source";
 
 describe("OBS browser frame source", () => {
+  it("samples the same video element shown in the operator preview", async () => {
+    const stream = { getTracks: () => [] } as unknown as MediaStream;
+    const play = vi.fn(async () => undefined);
+    const preview = {
+      muted: false,
+      autoplay: false,
+      playsInline: false,
+      srcObject: stream,
+      videoWidth: 1280,
+      videoHeight: 720,
+      play,
+      pause: vi.fn(),
+    } as unknown as HTMLVideoElement;
+    const documentRef = {
+      createElement: vi.fn(),
+    } as unknown as Document;
+    const capture = new MediaStreamVideoFrameCapture(stream, {
+      document: documentRef,
+      video: preview,
+    });
+
+    await capture.start();
+    expect(capture.width).toBe(1280);
+    expect(capture.height).toBe(720);
+    expect(capture.captureFrame()).toBe(preview);
+    expect(play).toHaveBeenCalledOnce();
+    expect(documentRef.createElement).not.toHaveBeenCalled();
+  });
+
   it("opens the browser-native display picker for a selected screen or window", async () => {
     const stream = { getTracks: () => [] } as unknown as MediaStream;
     let requested: DisplayMediaStreamOptions | undefined;

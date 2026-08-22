@@ -18,6 +18,16 @@ import {
   type MinecraftHudFact,
   type MinecraftHudFingerprint,
 } from "./minecraft-hud";
+import {
+  MinecraftBasicStateTracker,
+  type MinecraftBasicStateFacts,
+} from "./minecraft-basic-state";
+import { measureMinecraftActionVisuals } from "./minecraft-action-visual";
+import {
+  measureMinecraftCameraMotion,
+  type MinecraftCameraMotionMeasurement,
+} from "./minecraft-camera-motion";
+import { MinecraftObservationTracker } from "./minecraft-observation-tracker";
 import { detectMinecraftMenuState } from "./minecraft-menu";
 import {
   deriveMinecraftRuntimeFacts,
@@ -37,7 +47,12 @@ import {
   type FrameSource,
   type GameplayFrameObservation,
 } from "../core";
-import type { FramePixelSampler, SampledPixelFrame } from "./visual-measurements";
+import {
+  MAX_BROWSER_CANVAS_SAMPLE_PIXELS,
+  cropSampledPixelFrameToContent,
+  type FramePixelSampler,
+  type SampledPixelFrame,
+} from "./visual-measurements";
 
 export interface GameVisionExplanation {
   readonly code: string;
@@ -56,6 +71,8 @@ export interface MultiGameVisionAssessment {
   readonly brawlHud: BrawlHudFingerprint | null;
   readonly minecraftHud: MinecraftHudFingerprint | null;
   readonly minecraftRuntimeFacts: MinecraftRuntimeFacts | null;
+  readonly minecraftCameraMotion: MinecraftCameraMotionMeasurement | null;
+  readonly minecraftBasicStateFacts: MinecraftBasicStateFacts | null;
   readonly sampling: AdaptiveSamplingDecision;
   readonly explanations: readonly GameVisionExplanation[];
 }
@@ -92,7 +109,7 @@ export interface MultiGameVisionStreamOptions {
 // 160x90 ceiling. This still bounds retained browser analysis to one
 // 640x360 RGBA sample (under 1 MiB) while preserving enough icon structure
 // for real HUD calibration.
-const MAX_RETAINED_SAMPLE_PIXELS = 262_144;
+const MAX_RETAINED_SAMPLE_PIXELS = MAX_BROWSER_CANVAS_SAMPLE_PIXELS;
 const MINECRAFT_TEMPORAL_CONFIRMATION_WINDOW_MS = 3_000;
 
 function copyFrame(frame: SampledPixelFrame): SampledPixelFrame {
@@ -180,80 +197,25 @@ function unknownHudFact<T extends string | number | boolean>(
   return { status: "unknown", value: null, confidence: 0, reason, sourceRegionIds: [] };
 }
 
-function unconfirmedMinecraftHud(raw: MinecraftHudFingerprint): MinecraftHudFingerprint {
+function suppressMinecraftHudForOverlay(
+  raw: MinecraftHudFingerprint,
+  overlay: MinecraftHudFact<string>,
+): MinecraftHudFingerprint {
+  const reason = `HUD facts are gated while the Minecraft ${overlay.value ?? "menu"} overlay is open.`;
   return {
     ...raw,
-    status: "candidate-unconfirmed",
+    status: "modified-or-unknown",
     supportedSignals: raw.supportedSignals.filter((signal) => signal !== "minecraft-hud-layout"),
     facts: {
-      healthHearts: unknownHudFact("A Minecraft-like health band requires temporal confirmation."),
-      hungerShanks: unknownHudFact("A Minecraft-like hunger band requires temporal confirmation."),
-      armorPoints: unknownHudFact("Armor is not parsed by the current Minecraft HUD detector."),
-      hotbarVisible: unknownHudFact("A Minecraft-like hotbar requires temporal confirmation."),
-      selectedHotbarCategory: unknownHudFact("Selected hotbar item category is not parsed by the current detector."),
+      healthHearts: unknownHudFact(reason),
+      hungerShanks: unknownHudFact(reason),
+      airBubbles: unknownHudFact(reason),
+      submerged: unknownHudFact(reason),
+      armorPoints: unknownHudFact(reason),
+      hotbarVisible: unknownHudFact(reason),
+      selectedHotbarCategory: unknownHudFact(reason),
     },
-    reasons: [
-      "A Minecraft-like HUD candidate was observed but requires temporal confirmation.",
-      "Minecraft-specific facts remain unknown until another recent fingerprint agrees.",
-    ],
-  };
-}
-
-function temporallyConfirmedHudFact<T extends string | number | boolean>(
-  current: MinecraftHudFact<T>,
-  previous: MinecraftHudFact<T> | undefined,
-  label: string,
-): MinecraftHudFact<T> {
-  if (current.status !== "known") return current;
-  if (
-    previous?.status === "known" &&
-    previous.value === current.value
-  ) {
-    return {
-      ...current,
-      confidence: Math.min(current.confidence, previous.confidence),
-      reason: `${label} was confirmed by two matching recent Minecraft HUD observations.`,
-      sourceRegionIds: [...new Set([...previous.sourceRegionIds, ...current.sourceRegionIds])],
-    };
-  }
-  return unknownHudFact(
-    `${label} requires two matching recent Minecraft HUD observations.`,
-  );
-}
-
-function temporallyConfirmedMinecraftHud(
-  current: MinecraftHudFingerprint,
-  previous: MinecraftHudFingerprint | null,
-): MinecraftHudFingerprint {
-  return {
-    ...current,
-    facts: {
-      healthHearts: temporallyConfirmedHudFact(
-        current.facts.healthHearts,
-        previous?.facts.healthHearts,
-        "Minecraft health",
-      ),
-      hungerShanks: temporallyConfirmedHudFact(
-        current.facts.hungerShanks,
-        previous?.facts.hungerShanks,
-        "Minecraft hunger",
-      ),
-      armorPoints: temporallyConfirmedHudFact(
-        current.facts.armorPoints,
-        previous?.facts.armorPoints,
-        "Minecraft armor",
-      ),
-      hotbarVisible: temporallyConfirmedHudFact(
-        current.facts.hotbarVisible,
-        previous?.facts.hotbarVisible,
-        "Minecraft hotbar visibility",
-      ),
-      selectedHotbarCategory: temporallyConfirmedHudFact(
-        current.facts.selectedHotbarCategory,
-        previous?.facts.selectedHotbarCategory,
-        "Minecraft selected hotbar category",
-      ),
-    },
+    reasons: [reason, "The last stable HUD may be retained only until its original evidence expires."],
   };
 }
 
@@ -262,6 +224,8 @@ function supportedMinecraftSignals(hud: MinecraftHudFingerprint | null): readonl
   const signals = ["minecraft-hud-layout"];
   if (hud.facts.healthHearts.status === "known") signals.push("minecraft-health-hearts");
   if (hud.facts.hungerShanks.status === "known") signals.push("minecraft-hunger-shanks");
+  if (hud.facts.airBubbles.status === "known") signals.push("minecraft-air-bubbles");
+  if (hud.facts.submerged.status === "known") signals.push("minecraft-submerged");
   if (hud.facts.armorPoints.status === "known") signals.push("minecraft-armor-points");
   if (hud.facts.hotbarVisible.status === "known") signals.push("minecraft-hotbar-visible");
   if (hud.facts.selectedHotbarCategory.status === "known") {
@@ -283,6 +247,20 @@ function supportedMinecraftRuntimeSignals(facts: MinecraftRuntimeFacts | null): 
   return signals;
 }
 
+function supportedMinecraftBasicStateSignals(facts: MinecraftBasicStateFacts | null): readonly string[] {
+  if (facts === null) return [];
+  const signals: string[] = [];
+  if (facts.movement.status === "known") signals.push("minecraft-movement");
+  if (facts.turning.status === "known") signals.push("minecraft-turning");
+  if (facts.combat.status === "known") signals.push("minecraft-combat");
+  if (facts.eating.status === "known") signals.push("minecraft-eating");
+  if (facts.healthTrend.status === "known") signals.push("minecraft-health-trend");
+  if (facts.screen.status === "known") signals.push("minecraft-screen");
+  if (facts.environment.status === "known") signals.push("minecraft-environment");
+  if (facts.life.status === "known") signals.push("minecraft-life");
+  return signals;
+}
+
 /**
  * Stateful, bounded analyser over downsampled pixels. It retains only the
  * previous bounded sample and a privacy-safe numeric motion window; raw OBS
@@ -298,8 +276,9 @@ export class MultiGameVisionAnalyzer {
   private previousProfileId: string | null = null;
   private previousCalibrationConfirmed: boolean | null = null;
   private brawlHudHistory: BrawlHudFingerprint["status"][] = [];
-  private previousRawMinecraftHud: MinecraftHudFingerprint | null = null;
-  private previousRawMinecraftHudAt: number | null = null;
+  private readonly minecraftTracker = new MinecraftObservationTracker();
+  private readonly minecraftBasicStateTracker = new MinecraftBasicStateTracker();
+  private previousMinecraftLocatedRegions: MinecraftHudFingerprint["locatedRegions"] | undefined;
   private previousMinecraftHud: MinecraftHudFingerprint | null = null;
   private previousMinecraftHudAt: number | null = null;
   private history: TimedSpatialMotion[] = [];
@@ -322,8 +301,9 @@ export class MultiGameVisionAnalyzer {
     this.previousProfileId = null;
     this.previousCalibrationConfirmed = null;
     this.brawlHudHistory = [];
-    this.previousRawMinecraftHud = null;
-    this.previousRawMinecraftHudAt = null;
+    this.minecraftTracker.reset();
+    this.minecraftBasicStateTracker.reset();
+    this.previousMinecraftLocatedRegions = undefined;
     this.previousMinecraftHud = null;
     this.previousMinecraftHudAt = null;
     this.history = [];
@@ -343,7 +323,7 @@ export class MultiGameVisionAnalyzer {
     if (this.lastObservedAt !== null && input.observedAt <= this.lastObservedAt) {
       throw new RangeError("vision frame timestamps must be strictly increasing");
     }
-    const frame = copyFrame(input.frame);
+    const frame = copyFrame(cropSampledPixelFrameToContent(input.frame));
     const resolved = this.registry.resolve(input.selection);
     const dimensionsChanged =
       this.previous !== null &&
@@ -355,8 +335,9 @@ export class MultiGameVisionAnalyzer {
       this.samplingState = initialAdaptiveSamplingState;
       this.previousCalibrationConfirmed = null;
       this.brawlHudHistory = [];
-      this.previousRawMinecraftHud = null;
-      this.previousRawMinecraftHudAt = null;
+      this.minecraftTracker.reset();
+      this.minecraftBasicStateTracker.reset();
+      this.previousMinecraftLocatedRegions = undefined;
       this.previousMinecraftHud = null;
       this.previousMinecraftHudAt = null;
     }
@@ -386,29 +367,32 @@ export class MultiGameVisionAnalyzer {
             ],
           }
         : rawBrawlHud;
-    const rawMinecraftHud =
+    const minecraftMenuState =
+      resolved.profile.gameId === "minecraft"
+        ? detectMinecraftMenuState(frame)
+        : null;
+    const menuOverlayOpen =
+      minecraftMenuState?.status === "known" &&
+      minecraftMenuState.value !== null &&
+      minecraftMenuState.value !== "none";
+    const detectedMinecraftHud =
       resolved.profile.gameId === "minecraft"
         ? fingerprintMinecraftHud(
             frame,
             resolved.profile,
-            this.previousRawMinecraftHud?.locatedRegions,
+            this.previousMinecraftLocatedRegions,
           )
         : null;
+    const rawMinecraftHud = detectedMinecraftHud === null
+      ? null
+      : menuOverlayOpen
+        ? suppressMinecraftHudForOverlay(detectedMinecraftHud, minecraftMenuState)
+        : detectedMinecraftHud;
+    const minecraftHud = rawMinecraftHud === null
+      ? null
+      : this.minecraftTracker.observe(rawMinecraftHud, input.observedAt);
     const minecraftCalibrationConfirmed =
-      rawMinecraftHud !== null &&
-      isMinecraftConfirmedStatus(rawMinecraftHud.status) &&
-      this.previousRawMinecraftHud !== null &&
-      isMinecraftConfirmedStatus(this.previousRawMinecraftHud.status) &&
-      this.previousRawMinecraftHudAt !== null &&
-      input.observedAt - this.previousRawMinecraftHudAt <= MINECRAFT_TEMPORAL_CONFIRMATION_WINDOW_MS;
-    const minecraftHud =
-      rawMinecraftHud !== null &&
-      isMinecraftConfirmedStatus(rawMinecraftHud.status) &&
-      !minecraftCalibrationConfirmed
-        ? unconfirmedMinecraftHud(rawMinecraftHud)
-        : rawMinecraftHud !== null && minecraftCalibrationConfirmed
-          ? temporallyConfirmedMinecraftHud(rawMinecraftHud, this.previousRawMinecraftHud)
-          : rawMinecraftHud;
+      minecraftHud !== null && isMinecraftConfirmedStatus(minecraftHud.status);
     const calibrationConfirmed = brawlCalibrationConfirmed || minecraftCalibrationConfirmed;
     if (
       this.previousCalibrationConfirmed !== null &&
@@ -417,6 +401,7 @@ export class MultiGameVisionAnalyzer {
       this.previous = null;
       this.history = [];
       this.samplingState = initialAdaptiveSamplingState;
+      this.minecraftBasicStateTracker.reset();
     }
     const excludedRegions = calibrationConfirmed
       ? resolved.profile.regions.filter(({ purpose }) => purpose === "motion-exclusion")
@@ -428,6 +413,14 @@ export class MultiGameVisionAnalyzer {
             ...this.motionOptions,
             excludedRegions,
           });
+    const minecraftCameraMotion =
+      resolved.profile.gameId === "minecraft" && this.previous !== null
+        ? measureMinecraftCameraMotion(this.previous, frame)
+        : null;
+    const minecraftActionVisuals =
+      resolved.profile.gameId === "minecraft" && this.previous !== null && !menuOverlayOpen
+        ? measureMinecraftActionVisuals(this.previous, frame)
+        : null;
     if (motion !== null) {
       this.history.push({ observedAt: input.observedAt, measurement: motion });
       this.history = this.history
@@ -438,12 +431,8 @@ export class MultiGameVisionAnalyzer {
       motion === null
         ? bootstrapInterpretation(input.observedAt)
         : interpretMotionWindow(this.history, this.interpretationPolicy);
-    const minecraftMenuState =
-      resolved.profile.gameId === "minecraft"
-        ? detectMinecraftMenuState(frame)
-        : null;
     const minecraftSceneFacts =
-      resolved.profile.gameId === "minecraft" && minecraftCalibrationConfirmed
+      resolved.profile.gameId === "minecraft" && minecraftCalibrationConfirmed && !menuOverlayOpen
         ? detectMinecraftSceneFacts(frame)
         : null;
     const minecraftRuntimeFacts =
@@ -454,6 +443,17 @@ export class MultiGameVisionAnalyzer {
             menuState: minecraftMenuState ?? unknownHudFact("Minecraft menu state is unavailable."),
             interpretation,
             sceneFacts: minecraftSceneFacts,
+          })
+        : null;
+    const minecraftBasicStateFacts =
+      resolved.profile.gameId === "minecraft" && minecraftRuntimeFacts !== null
+        ? this.minecraftBasicStateTracker.observe({
+            observedAt: input.observedAt,
+            cameraMotion: minecraftCameraMotion,
+            actionVisuals: minecraftActionVisuals,
+            menuState: minecraftMenuState ?? unknownHudFact("Minecraft menu state is unavailable."),
+            hud: minecraftHud,
+            runtimeFacts: minecraftRuntimeFacts,
           })
         : null;
     const supportedSignals = [...new Set([
@@ -468,6 +468,9 @@ export class MultiGameVisionAnalyzer {
         (signal) => !resolved.profile.universalSignals.includes(signal),
       ),
       ...supportedMinecraftRuntimeSignals(minecraftRuntimeFacts).filter(
+        (signal) => !resolved.profile.universalSignals.includes(signal),
+      ),
+      ...supportedMinecraftBasicStateSignals(minecraftBasicStateFacts).filter(
         (signal) => !resolved.profile.universalSignals.includes(signal),
       ),
     ])];
@@ -488,11 +491,13 @@ export class MultiGameVisionAnalyzer {
     this.previous = frame;
     this.previousProfileId = resolved.profile.profileId;
     this.previousCalibrationConfirmed = calibrationConfirmed;
-    this.previousRawMinecraftHud =
-      rawMinecraftHud !== null && isMinecraftConfirmedStatus(rawMinecraftHud.status)
-        ? rawMinecraftHud
-        : null;
-    this.previousRawMinecraftHudAt = this.previousRawMinecraftHud === null ? null : input.observedAt;
+    if (
+      detectedMinecraftHud?.locatedRegions !== undefined &&
+      isMinecraftConfirmedStatus(detectedMinecraftHud.status) &&
+      !menuOverlayOpen
+    ) {
+      this.previousMinecraftLocatedRegions = detectedMinecraftHud.locatedRegions;
+    }
     if (
       minecraftHud !== null &&
       isMinecraftConfirmedStatus(minecraftHud.status) &&
@@ -522,6 +527,8 @@ export class MultiGameVisionAnalyzer {
       brawlHud,
       minecraftHud,
       minecraftRuntimeFacts,
+      minecraftCameraMotion,
+      minecraftBasicStateFacts,
       sampling,
       explanations: explanationsFor({ resolved, interpretation, brawlHud, hud: minecraftHud }),
     };
@@ -554,7 +561,13 @@ export async function* streamMultiGameVisionAssessments(
         if (signal?.aborted) break;
         const sampled = await options.sampler.sample(
           ephemeral.image,
-          { width: options.sampleWidth, height: options.sampleHeight },
+          {
+            width: options.sampleWidth,
+            height: options.sampleHeight,
+            sourceWidth: frame.width,
+            sourceHeight: frame.height,
+            fit: "contain",
+          },
           signal,
         );
         if (signal?.aborted) break;

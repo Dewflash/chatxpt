@@ -53,19 +53,17 @@ describe("StudioProductPageSurface", () => {
     expect(html).not.toContain("Role ");
   });
 
-  it("can keep a persistent capture surface open while Studio navigation opens separately", () => {
+  it("keeps Gameplay Engine and Studio navigation in the same tab", () => {
     const html = renderToStaticMarkup(h(StudioProductPageSurface, {
       page: "gameplay",
       view: null,
       readiness: null,
-      navigationTarget: "_blank",
-      children: h("p", null, "Persistent capture controls"),
+      children: h("p", null, "Gameplay connection controls"),
     }));
 
-    expect(html).toContain("Persistent capture controls");
+    expect(html).toContain("Gameplay connection controls");
     expect(html).toContain('href="/studio/gameplay"');
-    expect(html).toContain('target="_blank"');
-    expect(html).toContain('rel="noreferrer"');
+    expect(html).not.toContain('target="_blank"');
   });
 
   it.each(pages)("renders %s without a loaded session and keeps controls unavailable", (page) => {
@@ -201,7 +199,8 @@ describe("StudioProductPageSurface", () => {
       readiness: contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"],
     }));
 
-    expect(html).toContain("/studio/gameplay/capture");
+    expect(html).toContain('href="/studio/gameplay"');
+    expect(html).not.toContain("/studio/gameplay/capture");
     expect(html).not.toContain("/diagnostics/gameplay-extraction");
   });
 
@@ -217,7 +216,7 @@ describe("StudioProductPageSurface", () => {
 
     expect(html).toContain("Resolve the highlighted setup blocker so ChatXPT can monitor the stream.");
     expect(html).toContain("Waiting for Twitch stream");
-    expect(html).toContain('href="/studio/gameplay/capture"');
+    expect(html).toContain('href="/studio/gameplay"');
     expect(html).toContain("Allow camera");
     expect(html).not.toContain("<button");
   });

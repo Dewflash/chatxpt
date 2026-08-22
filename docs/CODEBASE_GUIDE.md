@@ -145,7 +145,7 @@ This path is **mounted and useful**, but it is not the final composition. Candid
 
 `/obs-overlay` mounts Role 5's canonical transparent overlay. Studio issues a short-lived, session-bound setup URL whose signed access token is carried in the URL fragment rather than the query string. The client moves it into an `Authorization` header, and the read-only state endpoint projects committed overlay state. An overlay read also asks the trusted scheduler path to close a due vote, so chat-only participation does not require a viewer browser to own the timer.
 
-`/studio/gameplay/capture` is the production OBS Virtual Camera controller. It samples frames locally, derives universal activity/capture-health observations plus calibrated facts when supported, and submits only normalised snapshots through a Studio-authorised session grant. Raw frames stay in the browser. `/diagnostics/gameplay-extraction` remains the separate diagnostic path.
+`/studio/gameplay` is the canonical Gameplay Engine and production capture controller. The same Studio page offers OBS Virtual Camera or direct screen/window selection, samples frames locally, displays live detector proof, derives universal activity/capture-health observations plus calibrated facts when supported, and submits only normalised snapshots through a Studio-authorised session grant. Raw frames stay in the browser. The legacy `/studio/gameplay/capture` route redirects here; `/diagnostics/gameplay-extraction` remains the separate diagnostic path.
 
 `/diagnostics/ui-harness` remains fixture-only. Real Twitch Local/Hosted Test, EventSub delivery, OBS capture, Supabase Cloud, and Vercel claims still require external configuration and recorded evidence.
 
@@ -272,7 +272,7 @@ The following tables cover files that define architecture, runtime behaviour, co
 | File | What it does |
 | --- | --- |
 | `src/integrations/index.ts` | Public integration entrypoint. |
-| `src/integrations/obs/browser-frame-source.ts` | Browser `FrameSource` that selects an OBS Virtual Camera with `getUserMedia`, draws sampled video frames to a canvas, emits canonical frame observations, and exposes cleanup hooks. |
+| `src/integrations/obs/browser-frame-source.ts` | Browser `FrameSource` that accepts direct screen/window capture or selects OBS Virtual Camera, samples the same video element shown in Gameplay Engine, draws ephemeral frames to a canvas, emits canonical observations, and exposes cleanup hooks. |
 | `src/integrations/obs/browser-source.ts` | Creates a read-only OBS Browser Source descriptor whose access grant is placed in the URL fragment, not a server-visible query. It does not control OBS itself. |
 | `src/integrations/obs/overlay-auth.ts` | Signs and verifies short-lived HMAC grants scoped to one broadcaster session and OBS read-only access. |
 | `src/integrations/obs/gameplay-ingress-auth.ts` | Signs and verifies separate short-lived grants for normalised Gameplay Capture writes. Overlay and gameplay capabilities are not interchangeable. |

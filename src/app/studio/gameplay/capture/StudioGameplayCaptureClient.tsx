@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { GameplaySnapshot, StreamerReadinessView, StreamerViewModel } from "@/core";
 import {
@@ -22,8 +22,9 @@ import {
 } from "@/integrations";
 import {
   buildProfileSettingsCommand,
+  connectGameplayCapturePreview,
+  describeSelectedGameplaySource,
   editableDefaultsFromView,
-  StudioProductPageSurface,
 } from "@/streamer";
 
 import styles from "./studio-gameplay-capture.module.css";
@@ -81,6 +82,14 @@ interface LatestCapture {
   readonly health: string;
   readonly hunger: string;
   readonly recentDamage: string;
+  readonly movement: string;
+  readonly turning: string;
+  readonly combat: string;
+  readonly eating: string;
+  readonly healthTrend: string;
+  readonly screen: string;
+  readonly environment: string;
+  readonly life: string;
 }
 
 interface CapturePreference {
@@ -237,6 +246,7 @@ export function StudioGameplayCaptureClient() {
   const [game, setGame] = useState<CaptureGame>("generic");
   const [captureSource, setCaptureSource] = useState<CaptureSource>("screen-window");
   const [running, setRunning] = useState(false);
+  const [previewConnected, setPreviewConnected] = useState(false);
   const [latest, setLatest] = useState<LatestCapture | null>(null);
   const [capturePreference, setCapturePreference] = useState<CapturePreference | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -245,7 +255,6 @@ export function StudioGameplayCaptureClient() {
   const [captureDeviceLabel, setCaptureDeviceLabel] = useState<string | null>(null);
   const [acceptedSnapshots, setAcceptedSnapshots] = useState(0);
   const controllerRef = useRef<AbortController | null>(null);
-  const formRef = useRef<HTMLFormElement | null>(null);
   const previewRef = useRef<HTMLVideoElement | null>(null);
   const capturePreferenceLoadedRef = useRef(false);
 
@@ -310,6 +319,7 @@ export function StudioGameplayCaptureClient() {
       previewRef.current.srcObject = null;
     }
     setCaptureDeviceLabel(null);
+    setPreviewConnected(false);
     setRunning(false);
   }
 
@@ -330,18 +340,18 @@ export function StudioGameplayCaptureClient() {
     writeCapturePreference(next);
   }
 
-  async function start(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (running || view === null) return;
+  async function start(selectedSource: CaptureSource) {
+    if (running || controllerRef.current !== null || view === null) return;
+    setCaptureSource(selectedSource);
     let currentView = view;
     const captureProfile = selectionFor(game);
-    const selectedSource = captureSource;
     const controller = new AbortController();
     controllerRef.current = controller;
     setError(null);
     setFailureReason(null);
     setLatest(null);
     setAcceptedSnapshots(0);
+    setPreviewConnected(false);
     setRunning(true);
     let mediaStream: MediaStream | null = null;
     let ingressGrant: { token: string; expiresAt: number } | null = null;
@@ -428,11 +438,22 @@ export function StudioGameplayCaptureClient() {
         ? await requestObsVirtualCameraStream()
         : await requestBrowserDisplayCaptureStream();
       const videoTrack = mediaStream.getVideoTracks()[0] ?? null;
-      setCaptureDeviceLabel(
-        videoTrack?.label || (selectedSource === "obs-virtual-camera"
-          ? "OBS Virtual Camera"
-          : "Selected screen or window"),
-      );
+      if (videoTrack === null) {
+        throw new CaptureRequestError(
+          "The selected source did not provide a video feed. Select the gameplay screen again.",
+          false,
+        );
+      }
+      const preview = previewRef.current;
+      if (preview === null) {
+        throw new CaptureRequestError(
+          "ChatXPT could not open the selected-feed preview. Reload Gameplay Engine and try again.",
+          true,
+        );
+      }
+      await connectGameplayCapturePreview(preview, mediaStream);
+      setCaptureDeviceLabel(describeSelectedGameplaySource(videoTrack, selectedSource));
+      setPreviewConnected(true);
       setIngressStatus(
         captureProfile.requestedGameId === null
           ? `${selectedSource === "obs-virtual-camera" ? "OBS Virtual Camera" : "Selected-screen"} capture started with the Generic activity profile`
@@ -452,15 +473,11 @@ export function StudioGameplayCaptureClient() {
         );
         controller.abort();
       }, { once: true });
-      if (previewRef.current !== null) {
-        previewRef.current.srcObject = mediaStream;
-        void previewRef.current.play().catch(() => {
-          // The analyser owns its own muted video element, so a blocked visual
-          // preview never interrupts the actual capture path.
-        });
-      }
       rememberCapturePreference({ game, source: selectedSource, connected: true });
-      const capture = new MediaStreamVideoFrameCapture(mediaStream, { stopStreamOnEnd: true });
+      const capture = new MediaStreamVideoFrameCapture(mediaStream, {
+        stopStreamOnEnd: true,
+        video: preview,
+      });
       const source = new BrowserMediaFrameSource({
         sessionId: currentView.session.sessionId,
         correlationId: `studio-gameplay-capture-${Date.now()}`,
@@ -536,6 +553,7 @@ export function StudioGameplayCaptureClient() {
       });
       let frameCount = 0;
       const recentAnalysisTimes: number[] = [];
+      setIngressStatus("Preview is live; sampling the first frame locally");
       try {
         for await (const output of streamMultiGameVisionAssessments(source, {
           sampler: createBrowserCanvasPixelSampler(),
@@ -628,6 +646,14 @@ export function StudioGameplayCaptureClient() {
             health: signalValue(builtSnapshot, "minecraft-health-hearts"),
             hunger: signalValue(builtSnapshot, "minecraft-hunger-shanks"),
             recentDamage: signalValue(builtSnapshot, "minecraft-recent-damage"),
+            movement: signalValue(builtSnapshot, "minecraft-movement"),
+            turning: signalValue(builtSnapshot, "minecraft-turning"),
+            combat: signalValue(builtSnapshot, "minecraft-combat"),
+            eating: signalValue(builtSnapshot, "minecraft-eating"),
+            healthTrend: signalValue(builtSnapshot, "minecraft-health-trend"),
+            screen: signalValue(builtSnapshot, "minecraft-screen"),
+            environment: signalValue(builtSnapshot, "minecraft-environment"),
+            life: signalValue(builtSnapshot, "minecraft-life"),
           });
           snapshotDelivery.push(snapshot);
         }
@@ -651,18 +677,13 @@ export function StudioGameplayCaptureClient() {
         previewRef.current.srcObject = null;
       }
       setCaptureDeviceLabel(null);
+      setPreviewConnected(false);
       setRunning(false);
     }
   }
 
   return (
-    <StudioProductPageSurface
-      page="gameplay"
-      view={view}
-      readiness={readiness}
-      navigationTarget="_blank"
-    >
-      <div className={styles.shell}>
+    <div className={styles.shell}>
         <section className={styles.intro}>
           <p className={styles.eyebrow}>Gameplay Capture</p>
           <p>
@@ -683,50 +704,48 @@ export function StudioGameplayCaptureClient() {
               ? <>Start Virtual Camera in OBS, then click <strong>Connect OBS Virtual Camera</strong>.</>
               : <>Click <strong>Select Screen or Window</strong> and choose the gameplay feed.</>}
           </li>
-          <li>Keep this capture tab open while you play.</li>
+          <li>Keep this Gameplay Engine page open while you play.</li>
         </ol>
-        <div className={styles.preview} data-active={running ? "true" : "false"}>
-          <video ref={previewRef} muted playsInline aria-label="Exact gameplay feed watched by ChatXPT" />
-          <div>
-            <span>Exact feed ChatXPT is watching</span>
+        <div className={styles.preview} data-active={previewConnected ? "true" : "false"}>
+          <video
+            ref={previewRef}
+            muted
+            autoPlay
+            playsInline
+            suppressHydrationWarning
+            aria-label="Exact gameplay feed watched by ChatXPT"
+          />
+          <div aria-live="polite">
+            <span>Current selected source</span>
             <strong>
-              {running
-                ? captureDeviceLabel ?? (captureSource === "obs-virtual-camera" ? "OBS Virtual Camera" : "Selected screen or window")
+              {previewConnected
+                ? captureDeviceLabel
+                : running
+                  ? captureSource === "obs-virtual-camera"
+                    ? "Connecting to OBS Virtual Camera…"
+                    : "Waiting for your screen or window selection…"
                 : captureSource === "obs-virtual-camera"
-                  ? "Not watching — connect OBS Virtual Camera"
-                  : "Not watching — select a screen or window"}
+                  ? "None selected — connect OBS Virtual Camera"
+                  : "None selected — select a screen or window"}
             </strong>
             <small>
-              {running
+              {previewConnected
                 ? latest === null
-                  ? "Gameplay feed connected; waiting for the first analysed frame"
+                  ? "Preview is live; waiting for the first analysed frame"
                   : `Live heartbeat: frame ${latest.frameCount} analysed at ${new Date(latest.capturedAt).toLocaleTimeString()}`
-                : "This preview and frame heartbeat must keep moving while you play."}
+                : running
+                  ? "ChatXPT will not start analysis until this exact preview is live."
+                  : "After you connect, this preview shows the exact feed ChatXPT analyzes."}
             </small>
           </div>
         </div>
-        <form ref={formRef} onSubmit={(event) => void start(event)}>
+        <form onSubmit={(event) => event.preventDefault()}>
           <label className={styles.field}>
             Current Studio session
             <input
               value={view?.session.sessionId ?? (sessionError === null ? "Loading Studio session" : "Studio session unavailable — retrying")}
               readOnly
             />
-          </label>
-          <label className={styles.field}>
-            Capture source
-            <select
-              value={captureSource}
-              disabled={running || view === null}
-              onChange={(event) => {
-                const nextSource = event.target.value as CaptureSource;
-                setCaptureSource(nextSource);
-                rememberCapturePreference({ game, source: nextSource, connected: false });
-              }}
-            >
-              <option value="screen-window">Screen or Window picker — select the gameplay feed directly</option>
-              <option value="obs-virtual-camera">OBS Virtual Camera — use the active OBS scene</option>
-            </select>
           </label>
           <label className={styles.field}>
             Game profile
@@ -744,16 +763,35 @@ export function StudioGameplayCaptureClient() {
               <option value="generic">Generic - universal visual signals only</option>
             </select>
           </label>
-          <div className={styles.actions}>
-            <button type="submit" disabled={running || view === null}>
+          <fieldset className={styles.sourcePicker}>
+            <legend>Choose how ChatXPT watches your game</legend>
+            <div>
+              <button
+                type="button"
+                disabled={running || view === null}
+                onClick={() => void start("screen-window")}
+              >
+                <strong>Select Screen or Window</strong>
+                <span>Open the browser picker and choose the gameplay feed.</span>
+              </button>
+              <button
+                type="button"
+                disabled={running || view === null}
+                onClick={() => void start("obs-virtual-camera")}
+              >
+                <strong>Connect OBS Virtual Camera</strong>
+                <span>Analyze the active scene sent by OBS Virtual Camera.</span>
+              </button>
+            </div>
+            <small>
               {running
-                ? "Watching selected feed"
-                : captureSource === "obs-virtual-camera"
-                  ? "Connect OBS Virtual Camera"
-                  : "Select Screen or Window"}
-            </button>
+                ? "Stop the current capture before switching sources."
+                : "Both choices use the same local gameplay analysis engine."}
+            </small>
+          </fieldset>
+          <div className={styles.actions}>
             <button type="button" disabled={!running} onClick={stop}>Stop</button>
-            <a href="/studio/gameplay" target="_blank" rel="noreferrer">Open Gameplay Engine in another tab</a>
+            <a href="/studio">Back to Studio home</a>
           </div>
         </form>
         <p className={styles.boundary}>
@@ -761,8 +799,8 @@ export function StudioGameplayCaptureClient() {
           game facts as unknown instead of guessing.
         </p>
         <p className={styles.keepOpen}>
-          Keep this capture tab open while you play. Studio pages can stay open in another tab; closing
-          or navigating away from this tab stops access to the selected gameplay feed.
+          Keep this Gameplay Engine page open while you play. Navigating away stops access to the
+          selected gameplay feed, and returning here lets you reconnect it.
         </p>
         <p className={styles.boundary}>
           {capturePreference?.lastConnectedAt === null || capturePreference === null
@@ -771,6 +809,8 @@ export function StudioGameplayCaptureClient() {
         </p>
         </section>
 
+        {previewConnected ? (
+          <>
         <section className={styles.proofPanel} aria-live="polite" aria-labelledby="proof-heading">
         <div>
           <p className={styles.eyebrow}>Live detector proof</p>
@@ -785,6 +825,14 @@ export function StudioGameplayCaptureClient() {
           <span><small>Health hearts</small><strong>{latest?.health ?? "Waiting"}</strong></span>
           <span><small>Hunger shanks</small><strong>{latest?.hunger ?? "Waiting"}</strong></span>
           <span><small>Recent damage</small><strong>{latest?.recentDamage ?? "Waiting"}</strong></span>
+          <span><small>Movement</small><strong>{latest?.movement ?? "Waiting"}</strong></span>
+          <span><small>Turning</small><strong>{latest?.turning ?? "Waiting"}</strong></span>
+          <span><small>Combat</small><strong>{latest?.combat ?? "Waiting"}</strong></span>
+          <span><small>Eating</small><strong>{latest?.eating ?? "Waiting"}</strong></span>
+          <span><small>Health trend</small><strong>{latest?.healthTrend ?? "Waiting"}</strong></span>
+          <span><small>Screen state</small><strong>{latest?.screen ?? "Waiting"}</strong></span>
+          <span><small>Land / water</small><strong>{latest?.environment ?? "Waiting"}</strong></span>
+          <span><small>Alive / dead</small><strong>{latest?.life ?? "Waiting"}</strong></span>
           <span><small>HUD detector</small><strong>{latest?.hudStatus ?? "Waiting"}</strong></span>
           <span><small>Analysis sample</small><strong>{latest?.sampleResolution ?? "Waiting"}</strong></span>
           <span><small>Unknown facts</small><strong>{latest?.unknownFactCount ?? "Waiting"}</strong></span>
@@ -836,7 +884,8 @@ export function StudioGameplayCaptureClient() {
             : "Resolve any setup blockers in Studio before starting the full workflow."}
         </p>
         </section>
-      </div>
-    </StudioProductPageSurface>
+          </>
+        ) : null}
+    </div>
   );
 }

@@ -108,6 +108,8 @@ export const minecraftJavaGameProfile = gameCalibrationProfileSchema.parse({
     "minecraft-hud-layout",
     "minecraft-health-hearts",
     "minecraft-hunger-shanks",
+    "minecraft-air-bubbles",
+    "minecraft-submerged",
     "minecraft-armor-points",
     "minecraft-hotbar-visible",
     "minecraft-selected-hotbar-category",

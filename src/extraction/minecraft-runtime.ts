@@ -87,6 +87,17 @@ function damageFact(input: {
       input.hud.facts.healthHearts.sourceRegionIds,
     );
   }
+  if (
+    input.hud.facts.healthHearts.observedAt !== undefined &&
+    input.previousHud?.facts.healthHearts.observedAt !== undefined &&
+    input.hud.facts.healthHearts.observedAt <= input.previousHud.facts.healthHearts.observedAt
+  ) {
+    return unknownRuntimeFact(
+      "The stable health value was carried forward while a changed reading is reconfirmed; no damage claim is emitted yet.",
+      input.hud.facts.healthHearts.confidence,
+      healthSources(input.hud, input.previousHud),
+    );
+  }
   const confidence = Math.min(input.hud.facts.healthHearts.confidence, input.previousHud?.facts.healthHearts.confidence ?? 0);
   const sourceRegionIds = healthSources(input.hud, input.previousHud);
   if (previousHealth - currentHealth >= 1) {
@@ -214,6 +225,14 @@ function activityFromKnownMenu(
       menuState.sourceRegionIds,
     );
   }
+  if (menuState.value === "container") {
+    return knownRuntimeFact(
+      "inventory",
+      menuState.confidence,
+      "A Minecraft container screen is open; exact inventory, crafting, or furnace activity remains unknown.",
+      menuState.sourceRegionIds,
+    );
+  }
   return null;
 }
 
@@ -300,6 +319,22 @@ export function deriveMinecraftRuntimeFacts(input: {
   readonly interpretation: MotionInterpretation;
   readonly sceneFacts?: MinecraftSceneFacts | null;
 }): MinecraftRuntimeFacts {
+  if (
+    input.menuState.status === "known" &&
+    input.menuState.value !== null &&
+    input.menuState.value !== "none"
+  ) {
+    return {
+      ...UNKNOWN_RUNTIME_FACTS,
+      menuState: input.menuState,
+      activity: activityFromKnownMenu(input.menuState) ?? UNKNOWN_RUNTIME_FACTS.activity,
+      recentDamage: unknownRuntimeFact(
+        "Health and action deltas are gated while a Minecraft menu or container overlay is open.",
+        input.menuState.confidence,
+        input.menuState.sourceRegionIds,
+      ),
+    };
+  }
   if (!confirmedHud(input.hud)) {
     return {
       ...UNKNOWN_RUNTIME_FACTS,

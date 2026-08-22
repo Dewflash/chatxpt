@@ -368,7 +368,7 @@ describe("StudioSessionApplication", () => {
     const stale = await context.application.read(connected.grant, null);
     expect(stale.readiness).toMatchObject({
       ready: false,
-      label: "Gameplay Capture stopped — reopen the persistent capture tab",
+      label: "Gameplay Capture stopped — reopen Gameplay Engine",
       recommendedAction: "request-capture-permission",
     });
     expect(stale.readiness.blockerCodes).toContain("gameplay-capture-stale");

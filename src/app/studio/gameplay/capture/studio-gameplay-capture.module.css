@@ -101,6 +101,7 @@
 
 .field select,
 .field input,
+.sourcePicker button,
 .actions button,
 .actions a {
   min-height: 44px;
@@ -135,12 +136,10 @@
 }
 
 .actions button:first-child {
-  border-color: #6bdab6;
-  color: #07130f;
-  background: #7ee7c2;
-  font-weight: 800;
+  font-weight: 700;
 }
 
+.sourcePicker button:disabled,
 .actions button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
@@ -148,10 +147,60 @@
 
 .actions a:focus-visible,
 .actions button:focus-visible,
+.sourcePicker button:focus-visible,
 .field input:focus-visible,
 .field select:focus-visible {
   outline: 3px solid rgba(126, 231, 194, 0.42);
   outline-offset: 2px;
+}
+
+.sourcePicker {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 18px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.sourcePicker legend {
+  padding: 0;
+  color: #dce4ff;
+  font-weight: 800;
+}
+
+.sourcePicker > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sourcePicker button {
+  min-height: 94px;
+  display: grid;
+  gap: 7px;
+  align-content: center;
+  padding: 15px 17px;
+  border-color: #6bdab6;
+  color: #07130f;
+  background: #7ee7c2;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sourcePicker button strong {
+  font-size: 1rem;
+}
+
+.sourcePicker button span {
+  color: #18352c;
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.sourcePicker > small {
+  color: #9eabc8;
 }
 
 .boundary {
@@ -243,6 +292,10 @@
   }
 
   .preview {
+    grid-template-columns: 1fr;
+  }
+
+  .sourcePicker > div {
     grid-template-columns: 1fr;
   }
 }

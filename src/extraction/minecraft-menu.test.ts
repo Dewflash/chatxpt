@@ -64,12 +64,40 @@ function sleepingFrame(): SampledPixelFrame {
   return frame;
 }
 
+function pauseFrame(): SampledPixelFrame {
+  const frame = frameFromPixel((x, y) => {
+    const value = 42 + ((x * 5 + y * 3) % 25);
+    return [value, value + 4, value + 2];
+  });
+  paintBox(frame, { x: 0.3, y: 0.2, width: 0.4, height: 0.42 }, (x, y) => {
+    if (y % 8 === 0 || x % 31 === 0) return [140, 140, 140];
+    return [48, 48, 48];
+  });
+  paintBox(frame, { x: 0.2, y: 0.68, width: 0.6, height: 0.22 }, () => [42, 46, 43]);
+  return frame;
+}
+
+function deathFrame(): SampledPixelFrame {
+  const frame = frameFromPixel((x, y) => {
+    const red = 80 + ((x + y) % 30);
+    return [red + 80, 60, 40];
+  });
+  paintBox(frame, { x: 0.28, y: 0.2, width: 0.44, height: 0.22 }, (x, y) =>
+    x % 7 === 0 || y % 5 === 0 ? [245, 245, 245] : [65, 28, 25],
+  );
+  paintBox(frame, { x: 0.3, y: 0.49, width: 0.4, height: 0.18 }, (x, y) =>
+    x % 18 === 0 || y % 7 === 0 ? [190, 190, 190] : [22, 18, 18],
+  );
+  paintBox(frame, { x: 0.2, y: 0.68, width: 0.6, height: 0.22 }, () => [83, 37, 30]);
+  return frame;
+}
+
 describe("Minecraft menu-state detector", () => {
-  it("detects a centered inventory-or-crafting panel without inventing the exact screen", () => {
+  it("detects a generic container without inventing its exact inventory/crafting/furnace subtype", () => {
     expect(detectMinecraftMenuState(inventoryFrame())).toMatchObject({
-      status: "unknown",
-      value: null,
-      reason: expect.stringContaining("cannot distinguish"),
+      status: "known",
+      value: "container",
+      reason: expect.stringContaining("exact inventory, crafting, or furnace subtype remains unknown"),
     });
   });
 
@@ -77,6 +105,20 @@ describe("Minecraft menu-state detector", () => {
     expect(detectMinecraftMenuState(sleepingFrame())).toMatchObject({
       status: "known",
       value: "sleeping",
+    });
+  });
+
+  it("detects the vanilla dark-button pause layout without requiring a bright panel", () => {
+    expect(detectMinecraftMenuState(pauseFrame())).toMatchObject({
+      status: "known",
+      value: "pause",
+    });
+  });
+
+  it("detects the red-tinted death title and respawn controls", () => {
+    expect(detectMinecraftMenuState(deathFrame())).toMatchObject({
+      status: "known",
+      value: "death",
     });
   });
 

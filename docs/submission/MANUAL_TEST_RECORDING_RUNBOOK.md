@@ -66,7 +66,7 @@ If a required external resource is unavailable, mark the affected row `NOT RUN`;
 3. Confirm server-only Twitch, Supabase, and optional provider values are configured without displaying them. The provider may remain unavailable because the credential-free path is mandatory.
 4. Upload or serve `release/chatxpt-twitch-extension-finals.zip` through Twitch Local or Hosted Test and configure the deployed ChatXPT EBS origin.
 5. In OBS, confirm the raw-game source does not contain the ChatXPT overlay. This prevents recursive analysis.
-6. Open only Studio initially. Open the persistent capture tab, Twitch viewer sessions, and OBS Browser Source when the corresponding step calls for them.
+6. Open only Studio initially. Open Gameplay Engine in the same Studio tab, then open Twitch viewer sessions and OBS Browser Source when the corresponding step calls for them.
 7. Start recording before the first Twitch connection or live-status transition.
 
 ## One uninterrupted final test
@@ -94,8 +94,8 @@ If a required external resource is unavailable, mark the affected row `NOT RUN`;
 ### 2. Real Minecraft Game Capture and gameplay understanding
 
 1. In OBS, start the raw Minecraft scene and OBS Virtual Camera.
-2. From Studio, open the persistent Game Capture tab and select OBS Virtual Camera.
-3. Keep the capture tab open. Return to **Gameplay Engine**.
+2. In Studio, open **Gameplay Engine** and select OBS Virtual Camera on that same page.
+3. Confirm **Current selected source** names OBS Virtual Camera, the watched-feed preview visibly moves, and the detector proof appears only after that exact preview is live. Keep **Gameplay Engine** open while capture is running.
 4. Exercise distinguishable owned-game periods:
    - quiet/standing still;
    - exploration/movement;
@@ -112,6 +112,8 @@ If a required external resource is unavailable, mark the affected row `NOT RUN`;
 
 **Pass:** Real frames cross the capture boundary and at least universal activity plus one supported Minecraft fact change truthfully.
 **Fail:** Metrics remain static, a fixture is shown as live, the overlay is recursively analysed, or an unsupported exact fact is asserted.
+
+Repeat once with **Screen or Window picker**: choose the owned Minecraft window, confirm the browser-provided window/title or privacy-safe source type is written under **Current selected source**, and confirm the visible preview plus frame heartbeat both move. This is separate real evidence for the direct-screen path.
 
 ### 3. Real Twitch activity and Live Analytics
 

@@ -50,3 +50,12 @@ export type {
   StreamerCommandFactory,
   StreamerUiCommand,
 } from "./streamer-commands";
+export {
+  GameplayCapturePreviewError,
+  connectGameplayCapturePreview,
+  describeSelectedGameplaySource,
+} from "./gameplay-capture-preview";
+export type {
+  ConnectGameplayCapturePreviewOptions,
+  GameplayCaptureSource,
+} from "./gameplay-capture-preview";

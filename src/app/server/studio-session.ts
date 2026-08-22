@@ -1015,7 +1015,7 @@ export class StudioSessionApplication {
       blockerCodes: blockers,
       recommendedAction,
       label: !gameplayCaptureFresh && state.gameplay !== null
-        ? "Gameplay Capture stopped — reopen the persistent capture tab"
+        ? "Gameplay Capture stopped — reopen Gameplay Engine"
         : ready
         ? state.session.status === "live"
           ? "Ready for the Twitch workflow"

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 
 import type { StreamerReadinessView, StreamerViewModel } from "@/core";
 import { connectRealtimeSnapshot } from "@/app/realtime-snapshot-client";
+import { StudioGameplayCaptureClient } from "@/app/studio/gameplay/capture/StudioGameplayCaptureClient";
 import {
   PersistentStreamOverlaySurface,
   StudioManagementSurface,
@@ -74,7 +75,7 @@ interface LocalPreviewAccount {
 }
 
 const LOCAL_PREVIEW_ACCOUNT_KEY = "chatxpt.local-preview-account.v1";
-const LOCAL_PREVIEW_BYPASS_KEY = "chatxpt.local-preview-account-bypass.v1";
+const LEGACY_LOCAL_PREVIEW_BYPASS_KEY = "chatxpt.local-preview-account-bypass.v1";
 const GAMEPLAY_CAPTURE_PREFERENCE_KEY = "chatxpt.studio.gameplayCapture.v1";
 const localPreviewAccountRequired = process.env.NEXT_PUBLIC_APP_ENV === "local" ||
   process.env.NEXT_PUBLIC_CHATXPT_PREVIEW_ACCOUNT_ENABLED === "true";
@@ -124,17 +125,17 @@ function readLocalPreviewAccount(): LocalPreviewAccount | null {
 }
 
 export function clearCleanStartBrowserState(storage: Storage = window.localStorage): void {
+  storage.removeItem(LOCAL_PREVIEW_ACCOUNT_KEY);
+  storage.removeItem(LEGACY_LOCAL_PREVIEW_BYPASS_KEY);
   storage.removeItem(GAMEPLAY_CAPTURE_PREFERENCE_KEY);
 }
 
 export function LocalPreviewAccountGate({
   loading,
   onSignIn,
-  onConnectTwitchWithoutAccount,
 }: {
   readonly loading: boolean;
   readonly onSignIn: (account: LocalPreviewAccount) => void;
-  readonly onConnectTwitchWithoutAccount: () => void;
 }) {
   const [accountError, setAccountError] = useState<string | null>(null);
 
@@ -165,8 +166,8 @@ export function LocalPreviewAccountGate({
           <h1 id="local-account-heading">Sign in to ChatXPT</h1>
         </div>
         <p>
-          This optional fake account only previews the future ChatXPT login. It stays in this browser
-          and does not create a Studio session or connect Twitch.
+          This required local fake account previews the future ChatXPT login. It stays in this browser
+          and must be completed before connecting Twitch or entering Studio.
         </p>
         {loading ? <p role="status">Checking this browser for a saved ChatXPT account…</p> : (
           <form onSubmit={signIn}>
@@ -186,9 +187,6 @@ export function LocalPreviewAccountGate({
             <small className={styles.accountNote}>The preview password is not transmitted or stored.</small>
           </form>
         )}
-        <button type="button" disabled={loading} onClick={onConnectTwitchWithoutAccount}>
-          Connect Twitch without demo account
-        </button>
         {accountError ? <p className={styles.error} role="alert">{accountError}</p> : null}
       </section>
     </main>
@@ -266,8 +264,8 @@ function StudioCaptureAndOverlaySetup() {
           Open the capture surface, choose the game profile, and select the game screen or window. Only
           normalized game facts are sent to this session; frames stay in the browser.
         </p>
-        <a href="/studio/gameplay/capture" target="_blank" rel="noreferrer">
-          Open Gameplay Capture
+        <a href="/studio/gameplay">
+          Open Gameplay Engine
         </a>
       </section>
       <section>
@@ -307,7 +305,6 @@ function StudioCaptureAndOverlaySetup() {
 export function StreamerAuthorizedClient({ surface }: { readonly surface: Surface }) {
   const [localAccountChecked, setLocalAccountChecked] = useState(!localPreviewAccountRequired);
   const [localAccount, setLocalAccount] = useState<LocalPreviewAccount | null>(null);
-  const [localAccountBypassed, setLocalAccountBypassed] = useState(!localPreviewAccountRequired);
   const [token, setToken] = useState<string | null>(null);
   const [view, setView] = useState<StreamerViewModel | null>(null);
   const [readiness, setReadiness] = useState<StreamerReadinessView | null>(null);
@@ -323,10 +320,8 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
   useEffect(() => {
     if (!localPreviewAccountRequired) return;
     const account = readLocalPreviewAccount();
-    const bypassed = window.localStorage.getItem(LOCAL_PREVIEW_BYPASS_KEY) === "true";
     const timer = window.setTimeout(() => {
       setLocalAccount(account);
-      setLocalAccountBypassed(bypassed);
       setLocalAccountChecked(true);
     }, 0);
     return () => window.clearTimeout(timer);
@@ -427,7 +422,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
     if (
       localPreviewAccountRequired &&
       isStudioAuthenticatedSurface(surface) &&
-      (!localAccountChecked || (localAccount === null && !localAccountBypassed))
+      (!localAccountChecked || localAccount === null)
     ) return;
     if (isStudioAuthenticatedSurface(surface) && requiresBootstrap) return;
     const active = isStudioAuthenticatedSurface(surface) || token !== null;
@@ -440,7 +435,7 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       window.clearTimeout(initial);
       window.clearInterval(interval);
     };
-  }, [localAccount, localAccountBypassed, localAccountChecked, refresh, requiresBootstrap, surface, token]);
+  }, [localAccount, localAccountChecked, refresh, requiresBootstrap, surface, token]);
 
   useEffect(() => {
     const sessionId = view?.session.sessionId;
@@ -561,21 +556,15 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
   if (
       localPreviewAccountRequired &&
       isStudioAuthenticatedSurface(surface) &&
-      (!localAccountChecked || (localAccount === null && !localAccountBypassed))
+      (!localAccountChecked || localAccount === null)
   ) {
     return (
       <LocalPreviewAccountGate
         loading={!localAccountChecked}
         onSignIn={(account) => {
-          window.localStorage.removeItem(LOCAL_PREVIEW_BYPASS_KEY);
+          window.localStorage.removeItem(LEGACY_LOCAL_PREVIEW_BYPASS_KEY);
           window.localStorage.setItem(LOCAL_PREVIEW_ACCOUNT_KEY, JSON.stringify(account));
-          setLocalAccountBypassed(false);
           setLocalAccount(account);
-        }}
-        onConnectTwitchWithoutAccount={() => {
-          window.localStorage.setItem(LOCAL_PREVIEW_BYPASS_KEY, "true");
-          setLocalAccountBypassed(true);
-          window.location.assign("/api/twitch/oauth/start");
         }}
       />
     );
@@ -615,15 +604,16 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
           pendingCommandId={pendingCommandId}
           onCommand={(command) => void dispatchCommand(command)}
           onResetSession={(command) => void resetToCleanStart(command)}
-        />
+        >
+          {productPage === "gameplay" ? <StudioGameplayCaptureClient /> : undefined}
+        </StudioProductPageSurface>
         {localPreviewAccountRequired && localAccount !== null ? (
           <aside className={styles.accountBadge} aria-label="Local ChatXPT account">
             <span><small>Demo account</small><strong>{localAccount.displayName}</strong></span>
             <button type="button" onClick={() => {
               window.localStorage.removeItem(LOCAL_PREVIEW_ACCOUNT_KEY);
-              window.localStorage.setItem(LOCAL_PREVIEW_BYPASS_KEY, "true");
+              window.localStorage.removeItem(LEGACY_LOCAL_PREVIEW_BYPASS_KEY);
               setLocalAccount(null);
-              setLocalAccountBypassed(true);
             }}>Sign out</button>
           </aside>
         ) : null}

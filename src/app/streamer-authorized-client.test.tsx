@@ -31,15 +31,16 @@ describe("LocalPreviewAccountGate", () => {
     const html = renderToStaticMarkup(h(LocalPreviewAccountGate, {
       loading: false,
       onSignIn: () => undefined,
-      onConnectTwitchWithoutAccount: () => undefined,
     }));
 
     expect(html).toContain("Demo account preview");
     expect(html).toContain("Sign in to ChatXPT");
     expect(html).toContain("streamer@chatxpt.local");
+    expect(html).toContain("Local Streamer");
+    expect(html).toContain("chatxpt-demo");
     expect(html).toContain("The preview password is not transmitted or stored.");
-    expect(html).toContain("Connect Twitch without demo account");
-    expect(html).toContain("does not create a Studio session or connect Twitch");
+    expect(html).toContain("must be completed before connecting Twitch or entering Studio");
+    expect(html).not.toContain("Connect Twitch without demo account");
   });
 });
 
@@ -58,7 +59,7 @@ describe("twitchOauthErrorMessage", () => {
 });
 
 describe("clearCleanStartBrowserState", () => {
-  it("clears session capture state without logging out or changing the chosen app-login path", () => {
+  it("clears the demo account, legacy bypass, and capture preference for a real clean start", () => {
     const storage = memoryStorage({
       "chatxpt.local-preview-account.v1": "preview",
       "chatxpt.local-preview-account-bypass.v1": "true",
@@ -68,8 +69,8 @@ describe("clearCleanStartBrowserState", () => {
 
     clearCleanStartBrowserState(storage);
 
-    expect(storage.getItem("chatxpt.local-preview-account.v1")).toBe("preview");
-    expect(storage.getItem("chatxpt.local-preview-account-bypass.v1")).toBe("true");
+    expect(storage.getItem("chatxpt.local-preview-account.v1")).toBeNull();
+    expect(storage.getItem("chatxpt.local-preview-account-bypass.v1")).toBeNull();
     expect(storage.getItem("chatxpt.studio.gameplayCapture.v1")).toBeNull();
     expect(storage.getItem("chatxpt.unrelated")).toBe("keep");
   });

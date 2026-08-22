@@ -121,6 +121,8 @@ const MINECRAFT_CONTEXT_SIGNAL_MAP = {
   hudLayout: "minecraft-hud-layout",
   healthHearts: "minecraft-health-hearts",
   hungerShanks: "minecraft-hunger-shanks",
+  airBubbles: "minecraft-air-bubbles",
+  submerged: "minecraft-submerged",
   armorPoints: "minecraft-armor-points",
   hotbarVisible: "minecraft-hotbar-visible",
   selectedHotbarCategory: "minecraft-selected-hotbar-category",
@@ -131,6 +133,14 @@ const MINECRAFT_CONTEXT_SIGNAL_MAP = {
   likelyDamageCause: "minecraft-likely-damage-cause",
   visibleHostile: "minecraft-visible-hostile",
   biomeOrEnvironment: "minecraft-biome-environment",
+  movement: "minecraft-movement",
+  turning: "minecraft-turning",
+  combat: "minecraft-combat",
+  eating: "minecraft-eating",
+  healthTrend: "minecraft-health-trend",
+  screen: "minecraft-screen",
+  environment: "minecraft-environment",
+  life: "minecraft-life",
 } as const;
 
 const MINECRAFT_CONTEXT_FRESHNESS_MS = 3_000;
@@ -293,6 +303,18 @@ function buildMinecraftContext(input: CandidateInput, now: number): MinecraftAwa
       method,
       reason: "Minecraft hunger shanks are not confirmed.",
     }),
+    airBubbles: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.airBubbles),
+      now,
+      method,
+      reason: "Minecraft air bubbles are not confirmed.",
+    }),
+    submerged: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.submerged),
+      now,
+      method,
+      reason: "Minecraft submersion is not confirmed.",
+    }),
     armorPoints: minecraftFactFromSignal({
       signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.armorPoints),
       now,
@@ -352,6 +374,54 @@ function buildMinecraftContext(input: CandidateInput, now: number): MinecraftAwa
       now,
       method,
       reason: "Minecraft biome or environment is not classified by the current detector.",
+    }),
+    movement: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.movement),
+      now,
+      method,
+      reason: "Minecraft movement is not confirmed by the current detector.",
+    }),
+    turning: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.turning),
+      now,
+      method,
+      reason: "Minecraft turning is not confirmed by the current detector.",
+    }),
+    combat: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.combat),
+      now,
+      method,
+      reason: "Minecraft attacking or fighting is not confirmed by the current detector.",
+    }),
+    eating: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.eating),
+      now,
+      method,
+      reason: "Minecraft eating is not confirmed by the current detector.",
+    }),
+    healthTrend: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.healthTrend),
+      now,
+      method,
+      reason: "Minecraft health trend is not confirmed by the current detector.",
+    }),
+    screen: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.screen),
+      now,
+      method,
+      reason: "Minecraft gameplay, pause, inventory, sleep, or death screen is not confirmed.",
+    }),
+    environment: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.environment),
+      now,
+      method,
+      reason: "Minecraft land versus water state is not confirmed.",
+    }),
+    life: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.life),
+      now,
+      method,
+      reason: "Minecraft alive versus dead state is not confirmed.",
     }),
   };
   return {

@@ -7,6 +7,7 @@ import {
 } from "../core";
 import {
   createBrowserCanvasPixelSampler,
+  cropSampledPixelFrameToContent,
   measurePixelChange,
   streamVisualFrameMeasurements,
   type FramePixelSampler,
@@ -170,5 +171,109 @@ describe("FrameSource visual measurement stream", () => {
     expect(() =>
       createBrowserCanvasPixelSampler().sample({} as CanvasImageSource, { width: 2, height: 2 }),
     ).toThrow("Browser canvas sampling is unavailable");
+  });
+
+  it("accepts the bounded 640x360 Minecraft browser sample", async () => {
+    const drawImage = vi.fn();
+    const getImageData = vi.fn(() => ({
+      data: new Uint8ClampedArray(640 * 360 * 4),
+    }));
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: () => ({ drawImage, getImageData }),
+    } as unknown as HTMLCanvasElement;
+    vi.stubGlobal("document", {
+      createElement: vi.fn(() => canvas),
+    });
+
+    try {
+      const image = {} as CanvasImageSource;
+      const sample = await createBrowserCanvasPixelSampler().sample(image, {
+        width: 640,
+        height: 360,
+      });
+
+      expect(sample).toMatchObject({ width: 640, height: 360 });
+      expect(sample.rgba).toHaveLength(640 * 360 * 4);
+      expect(drawImage).toHaveBeenCalledWith(image, 0, 0, 640, 360);
+      expect(getImageData).toHaveBeenCalledWith(0, 0, 640, 360);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("contains a desktop-shaped capture without stretching the game pixels", async () => {
+    const drawImage = vi.fn();
+    const clearRect = vi.fn();
+    const getImageData = vi.fn(() => ({
+      data: new Uint8ClampedArray(640 * 360 * 4),
+    }));
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: () => ({ drawImage, clearRect, getImageData }),
+    } as unknown as HTMLCanvasElement;
+    vi.stubGlobal("document", {
+      createElement: vi.fn(() => canvas),
+    });
+
+    try {
+      const image = {} as CanvasImageSource;
+      const sample = await createBrowserCanvasPixelSampler().sample(image, {
+        width: 640,
+        height: 360,
+        sourceWidth: 3024,
+        sourceHeight: 1964,
+        fit: "contain",
+      });
+
+      expect(sample.contentRect).toEqual({ x: 43, y: 0, width: 554, height: 360 });
+      expect(clearRect).toHaveBeenCalledWith(0, 0, 640, 360);
+      expect(drawImage).toHaveBeenCalledWith(
+        image,
+        0,
+        0,
+        3024,
+        1964,
+        43,
+        0,
+        554,
+        360,
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("crops sampler letterboxing before game-specific analysis", () => {
+    const rgba = new Uint8ClampedArray(6 * 2 * 4);
+    for (let y = 0; y < 2; y += 1) {
+      for (let x = 1; x < 5; x += 1) {
+        const offset = (y * 6 + x) * 4;
+        rgba.set([x * 10, y * 20, 50, 255], offset);
+      }
+    }
+    const cropped = cropSampledPixelFrameToContent({
+      width: 6,
+      height: 2,
+      rgba,
+      contentRect: { x: 1, y: 0, width: 4, height: 2 },
+    });
+
+    expect(cropped).toMatchObject({ width: 4, height: 2 });
+    expect([...cropped.rgba]).toEqual([
+      10, 0, 50, 255, 20, 0, 50, 255, 30, 0, 50, 255, 40, 0, 50, 255,
+      10, 20, 50, 255, 20, 20, 50, 255, 30, 20, 50, 255, 40, 20, 50, 255,
+    ]);
+  });
+
+  it("still rejects browser samples above the multi-game processing ceiling", () => {
+    expect(() =>
+      createBrowserCanvasPixelSampler().sample({} as CanvasImageSource, {
+        width: 640,
+        height: 480,
+      }),
+    ).toThrow("sample size must not exceed 262144 pixels");
   });
 });

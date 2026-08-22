@@ -66,6 +66,13 @@ const genericGameFactsSchema = z
     matchTimer: genericGameFactSchema,
     scoreState: genericGameFactSchema,
     environment: genericGameFactSchema,
+    movement: genericGameFactSchema,
+    turning: genericGameFactSchema,
+    combat: genericGameFactSchema,
+    eating: genericGameFactSchema,
+    healthTrend: genericGameFactSchema,
+    screen: genericGameFactSchema,
+    life: genericGameFactSchema,
   })
   .strict();
 
@@ -239,8 +246,43 @@ export function buildGenericGameStateContext(
       now,
     ),
     environment: genericFactFromSignal(
-      firstSignalByIds(bySignalId, ["minecraft-biome-environment"]),
+      firstSignalByIds(bySignalId, ["minecraft-environment", "minecraft-biome-environment"]),
       "Environment or biome state is not confirmed.",
+      now,
+    ),
+    movement: genericFactFromSignal(
+      firstSignalByIds(bySignalId, ["minecraft-movement"]),
+      "Walking, running, or stationary state is not confirmed.",
+      now,
+    ),
+    turning: genericFactFromSignal(
+      firstSignalByIds(bySignalId, ["minecraft-turning"]),
+      "Turning state is not confirmed.",
+      now,
+    ),
+    combat: genericFactFromSignal(
+      firstSignalByIds(bySignalId, ["minecraft-combat"]),
+      "Attacking or fighting state is not confirmed.",
+      now,
+    ),
+    eating: genericFactFromSignal(
+      firstSignalByIds(bySignalId, ["minecraft-eating"]),
+      "Eating state is not confirmed.",
+      now,
+    ),
+    healthTrend: genericFactFromSignal(
+      firstSignalByIds(bySignalId, ["minecraft-health-trend"]),
+      "Stable, damage, or regeneration state is not confirmed.",
+      now,
+    ),
+    screen: genericFactFromSignal(
+      firstSignalByIds(bySignalId, ["minecraft-screen", "minecraft-menu-state"]),
+      "Gameplay, pause, inventory, sleep, or death screen is not confirmed.",
+      now,
+    ),
+    life: genericFactFromSignal(
+      firstSignalByIds(bySignalId, ["minecraft-life"]),
+      "Alive versus dead is not confirmed.",
       now,
     ),
   };

@@ -1,0 +1,25 @@
+# Minecraft OBS/OCR state-tracking execution plan
+
+- Added an implementation-ready Role 2 execution addendum under D-086 for turning connected OBS Virtual Camera or browser-selected screen/window frames into stable Minecraft state and event timelines.
+- Reconciled the addendum with the existing Minecraft-aware plan instead of creating a competing architecture.
+- Ordered the work around aspect-preserving viewport localisation, screen-state/OCR gating, persistent HUD tracking with hysteresis, state deltas, temporal event machines, truthful runtime projection, replay calibration, and real live capture evidence.
+- Recorded initial owner-authorised Vanilla Minecraft recording findings and annotation targets without adding raw media, sampled frames, personal paths, or player-identifying pixels to Git.
+- Analysed the second owner-authorised Vanilla recording and amended the same plan with complementary swimming/oxygen, experience gain, block placement, daylight, furnace/cooking, extended combat, damage-flash, and sleep/wake evidence.
+- Added required screen/HUD facts and temporal rules for oxygen, experience, furnace, placement, swimming, slow-window daylight, and sleep/wake while keeping exact causes and ambiguous jump inference evidence-gated.
+- Added exclusion masks so desktop chrome, chat history, advancement/recipe toasts, and unrelated notifications cannot contaminate scene statistics, OCR, or AI context.
+- Added proposed measurable gates for viewport success, HUD accuracy, flicker, event precision/recall, latency, privacy, replay holdouts, and live OBS/screen-picker verification.
+- Kept raw-frame provider vision, Minecraft mods/plugins, paid dependencies, Studio redesign, Twitch work, and unsupported exact game claims outside this pass.
+- Began execution with aspect-preserving bounded browser sampling and sampler-letterbox cropping so desktop-shaped sources are no longer stretched into 16:9.
+- Added a rolling two-of-three Minecraft HUD tracker with stable evidence timestamps, bounded reconfirming/stale states, and three-second expiry instead of one-frame known/unknown flicker.
+- Added dominant-palette health support for ordinary, poisoned, frozen, and absorption hearts; broadened current hunger sprite handling; and added independent air-bubble/submersion facts.
+- Prevented underwater blue from becoming a false armor reading and prevented partial hotbar/HUD bands from being counted as complete ten-slot rows.
+- Added generic container and owner-recording sleep recognition, then gated HUD, scene, health-delta, damage, and activity inference while those overlays are open.
+- Projected air bubbles and submersion through canonical gameplay signals and the typed Minecraft AI context without exposing raw pixels.
+- Ran private local-only sampled-frame diagnostics on owner Recording B: underwater HUD tracking, crafting/furnace container gating, and the sleep screen behaved as intended. Raw media and sampled frames remain outside Git, and no live OBS/browser evidence is claimed.
+- Deferred exact pause/death/respawn/container OCR, XP, event machines, daylight/jump inference, and accuracy claims until their replay/holdout evidence is ready.
+- Added the approved minimum concurrent state contract: movement, turning, combat, eating, health trend, screen, land/water, and alive/dead are independent facts rather than one speculative activity.
+- Added a bounded Minecraft camera-motion field and short temporal tracker so stationary, travel, and turning use local scene vectors; walking/running is promoted only when cadence separates them, otherwise the accurate `moving` state survives.
+- Added conservative vanilla target-hit and item-use visual cues for temporally bounded attacking and eating, plus health-delta regeneration/damage facts that can overlap those actions.
+- Added explicit pause, inventory/container, sleep, gameplay, and death projection with brief overlay hysteresis, and lowered the health-band floor only behind the existing three-anchor layout gate.
+- Projected the new axes through gameplay snapshots, the typed generic/Minecraft state context, and the existing Studio detector proof.
+- Replayed the third owner-authorised movement/menu recording and representative action frames through the product tracker. The results support the implemented slice but remain local diagnostic evidence, not a live OBS or screen-picker accuracy claim.
