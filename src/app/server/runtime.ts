@@ -10,6 +10,7 @@ import {
   domainErrorSchema,
   intelligenceSnapshotSchema,
   resolveEffectiveStreamerProfile,
+  systemIntelligenceCommandSchema,
   systemLiveDirectorContextCommandSchema,
   type CandidateProvider,
   type AuthoritativeSessionState,
@@ -172,6 +173,146 @@ export class ChatXptServerRuntime {
       {
         kind: "system",
         actorId: "role1-live-director-refresh",
+        expiresAt: null,
+        moderatorForBroadcasterIds: [],
+        voterKey: null,
+        participationModes: [],
+      },
+      projectionContext,
+    );
+  }
+
+  async requestDeterministicFallbackProposal(
+    state: AuthoritativeSessionState,
+    projectionContext: ProjectionContextResolver,
+    input: {
+      readonly commandId: string;
+      readonly correlationId: string;
+      readonly issuedAt: number;
+    },
+  ): Promise<OrchestratorResult> {
+    const unavailable = (message: string): OrchestratorResult => ({
+      ok: false,
+      error: domainErrorSchema.parse({
+        code: "unavailable-capability",
+        message,
+        retryable: false,
+      }),
+    });
+    if (state.session.status !== "preparing" && state.session.status !== "live") {
+      return unavailable("Generate quest now is available only for a preparing or live session");
+    }
+    if (state.questCycle.status !== "idle") {
+      return unavailable("Finish or clear the current quest cycle before generating another fallback");
+    }
+    if (state.emergencyPaused) {
+      return unavailable("Clear emergency pause before generating fallback quests");
+    }
+
+    const existing = await this.persistence.sessions.findReceipt(input.commandId);
+    if (existing !== null) {
+      return {
+        ok: true,
+        outcome: "duplicate",
+        receipt: existing,
+        views: null,
+        delivery: "not-republished",
+      };
+    }
+
+    const now = this.clock.now();
+    const envelope = {
+      ...state.questCycle.envelope,
+      messageId: `manual-fallback-batch-${randomUUID()}`,
+      correlationId: input.correlationId,
+      occurredAt: now,
+      receivedAt: now,
+      source: "studio" as const,
+    };
+    const profile = resolveEffectiveStreamerProfile(state.profile, state.sessionOverride);
+    const fallbackProfile = profile.gameId === null
+      ? { ...profile, gameId: "generic", gameName: "Current Game" }
+      : profile;
+    const intelligence = intelligenceSnapshotSchema.safeParse({
+      envelope: {
+        ...envelope,
+        messageId: `manual-fallback-intelligence-${randomUUID()}`,
+      },
+      gameplay: {
+        envelope: {
+          ...envelope,
+          messageId: `manual-fallback-gameplay-unavailable-${randomUUID()}`,
+        },
+        capabilities: {
+          tier: "universal-visual",
+          gameId: fallbackProfile.gameId,
+          adapterId: null,
+          supportedSignals: [],
+        },
+        signals: [],
+      },
+      audience: {
+        envelope: {
+          ...envelope,
+          messageId: `manual-fallback-audience-unavailable-${randomUUID()}`,
+        },
+        sampleSize: 0,
+        signals: [],
+      },
+    });
+    if (!intelligence.success) {
+      return {
+        ok: false,
+        error: domainErrorSchema.parse({
+          code: "validation",
+          message: "Deterministic fallback context is not canonical",
+          retryable: false,
+        }),
+      };
+    }
+    const assembled = new DefaultCandidateAssembler().assemble({
+      envelope,
+      candidates: [],
+      intelligence: intelligence.data,
+      profile: fallbackProfile,
+      currentState: state.questCycle,
+      recentQuests: state.recentQuests ?? [],
+      now,
+      seed: input.commandId,
+    });
+    if (!assembled.ok) {
+      return unavailable(`Deterministic fallback could not produce three safe quests: ${assembled.reason}`);
+    }
+    try {
+      await this.persistence.candidates.store(assembled.batch);
+    } catch {
+      return {
+        ok: false,
+        error: domainErrorSchema.parse({
+          code: "dependency-unavailable",
+          message: "Deterministic fallback storage failed",
+          retryable: true,
+        }),
+      };
+    }
+
+    const command = systemIntelligenceCommandSchema.parse({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: state.session.sessionId,
+      questCycleId: state.questCycle.envelope.questCycleId,
+      commandId: input.commandId,
+      correlationId: input.correlationId,
+      expectedRevision: state.session.revision,
+      issuedAt: input.issuedAt,
+      actor: { kind: "system", actorId: "role1-manual-deterministic-fallback" },
+      type: "system.intelligence-ready",
+      candidateBatchId: assembled.batch.envelope.messageId,
+    });
+    return this.execute(
+      command,
+      {
+        kind: "system",
+        actorId: "role1-manual-deterministic-fallback",
         expiresAt: null,
         moderatorForBroadcasterIds: [],
         voterKey: null,

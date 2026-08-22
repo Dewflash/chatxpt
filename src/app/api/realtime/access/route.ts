@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       }
       authorisedSessionId = (await getObsOverlayApplication().read(
         `Bearer ${surfaceAuthorization}`,
-        sessionId,
+        { broadcasterId: null, sessionId },
       )).session.sessionId;
     }
     if (authorisedSessionId !== sessionId) {

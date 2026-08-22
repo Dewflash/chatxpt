@@ -5,9 +5,10 @@ import { describe, expect, it } from "vitest";
 import {
   CONTRACT_VERSION,
   gameplaySnapshotSchema,
-  streamerServiceCommandSchema,
   streamerLiveDirectorIntentCommandSchema,
   streamerProfileSettingsCommandSchema,
+  streamerQuestGenerationCommandSchema,
+  streamerServiceCommandSchema,
 } from "@/core";
 import { contractFixtureGameplaySnapshot } from "@/core/testing";
 import { createMemoryPersistenceRuntime } from "@/realtime";
@@ -36,13 +37,16 @@ function twitchJwt(role: "broadcaster" | "viewer", channelId = "channel-1"): str
   return `${header}.${payload}.${signature}`;
 }
 
-function application(environment: Record<string, string | undefined> = {}) {
+function application(
+  environment: Record<string, string | undefined> = {},
+  now: () => number = () => NOW,
+) {
   let id = 0;
   const persistence = createMemoryPersistenceRuntime();
   return {
     persistence,
     application: new StudioSessionApplication({
-      runtime: new ChatXptServerRuntime({ persistence, clock: { now: () => NOW } }),
+      runtime: new ChatXptServerRuntime({ persistence, clock: { now } }),
       setupKey: SETUP_KEY,
       extensionSecret: EXTENSION_SECRET,
       environment: {
@@ -53,7 +57,7 @@ function application(environment: Record<string, string | undefined> = {}) {
         TWITCH_EVENTSUB_SECRET: "eventsub-secret",
         ...environment,
       },
-      now: () => NOW,
+      now,
       nextId: () => `id-${++id}`,
     }),
   };
@@ -105,6 +109,39 @@ async function ingestGameplaySnapshot(context: ReturnType<typeof application>, s
 }
 
 describe("StudioSessionApplication", () => {
+  it("generates exactly three deterministic fallback quests before gameplay evidence exists", async () => {
+    const context = application();
+    const started = await context.application.start(SETUP_KEY, {
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: null,
+      gameName: null,
+    });
+    const command = streamerQuestGenerationCommandSchema.parse({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: started.view.session.sessionId,
+      questCycleId: started.view.questCycle.envelope.questCycleId,
+      commandId: "manual-deterministic-fallback-1",
+      correlationId: "manual-deterministic-fallback-1",
+      expectedRevision: started.view.envelope.revision,
+      issuedAt: NOW,
+      actor: { kind: "broadcaster", actorId: "channel-1" },
+      type: "streamer.quest-generation",
+      mode: "deterministic-fallback",
+    });
+
+    const result = await context.application.execute(started.grant, null, command);
+
+    expect(result.view.gameplay).toBeNull();
+    expect(result.view.questCycle.status).toBe("proposed");
+    expect(result.view.questCycle.options).toHaveLength(3);
+    expect(result.view.questCycle.options.every((candidate) =>
+      candidate.generation.method === "deterministic-fallback" &&
+      candidate.sourceSignalIds.length === 0,
+    )).toBe(true);
+    expect(result.message).toContain("No gameplay or audience evidence was used");
+  });
+
   it("creates and resumes a Twitch-verified session without the diagnostic setup key", async () => {
     const context = application();
     const connected = await context.application.startFromVerifiedTwitch({
@@ -314,6 +351,31 @@ describe("StudioSessionApplication", () => {
       .resolves.toMatchObject({ status: "live", reconnectDeadlineAt: NOW + 10 * 60 * 1_000 });
   });
 
+  it("blocks readiness when Gameplay Capture stops reporting fresh frames", async () => {
+    let now = NOW;
+    const context = application({}, () => now);
+    const connected = await context.application.startFromVerifiedTwitch({
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    });
+    await ingestGameplaySnapshot(context, connected);
+
+    expect((await context.application.read(connected.grant, null)).readiness.ready).toBe(true);
+
+    now += 11_000;
+    const stale = await context.application.read(connected.grant, null);
+    expect(stale.readiness).toMatchObject({
+      ready: false,
+      label: "Gameplay Capture stopped — reopen the persistent capture tab",
+      recommendedAction: "request-capture-permission",
+    });
+    expect(stale.readiness.blockerCodes).toContain("gameplay-capture-stale");
+    expect(stale.readiness.services.find((service) => service.service === "obs-capture"))
+      .toMatchObject({ health: { status: "unavailable", retryable: true } });
+  });
+
   it("accepts authoritative profile commands through the HttpOnly grant identity", async () => {
     const context = application();
     const started = await context.application.start(SETUP_KEY, {
@@ -403,8 +465,10 @@ describe("StudioSessionApplication", () => {
       action: "set",
       intent: {
         goal: "Reach the next shelter",
-        objective: "Explore carefully while chat helps choose the route.",
+        objective: "I am going mining for iron.",
         desiredAudienceInvolvement: "Suggest the next safe route.",
+        inputMethod: "speech",
+        confidence: 0.82,
         requestedExpiresAt: NOW + 60 * 60 * 1_000,
       },
     });
@@ -415,7 +479,9 @@ describe("StudioSessionApplication", () => {
     expect(result.view.liveDirector?.declaredIntent).toMatchObject({
       status: "known",
       goal: "Reach the next shelter",
-      objective: "Explore carefully while chat helps choose the route.",
+      objective: "I am going mining for iron.",
+      inputMethod: "speech",
+      confidence: 0.82,
     });
     expect(result.view.session.revision).toBe(started.view.session.revision + 1);
   });
@@ -453,6 +519,41 @@ describe("StudioSessionApplication", () => {
     expect(reopened.readiness.liveInputsUsed).toBe(true);
     expect(reopened.readiness.services.find((service) => service.service === "twitch")?.health.message)
       .toContain("authorization is verified");
+  });
+
+  it("ends the active broadcaster session so the next Test Lab run starts clean", async () => {
+    const context = application();
+    const started = await context.application.start(SETUP_KEY, {
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: null,
+      gameName: null,
+    });
+    const command = streamerServiceCommandSchema.parse({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: started.view.session.sessionId,
+      commandId: "test-lab-reset-1",
+      correlationId: "test-lab-reset-1",
+      expectedRevision: started.view.envelope.revision,
+      issuedAt: NOW,
+      actor: { kind: "broadcaster", actorId: "channel-1" },
+      type: "streamer.session",
+      action: "end",
+    });
+
+    const ended = await context.application.execute(started.grant, null, command);
+    expect(ended.view.session.status).toBe("offline");
+    expect(await context.persistence.twitchChannelSessions.findTwitchChannelSession("channel-1"))
+      .toBeNull();
+
+    const restarted = await context.application.start(SETUP_KEY, {
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: null,
+      gameName: null,
+    });
+    expect(restarted.view.session.status).toBe("preparing");
+    expect(restarted.view.session.sessionId).not.toBe(started.view.session.sessionId);
   });
 
   it("rejects an invalid bootstrap key before creating state", async () => {

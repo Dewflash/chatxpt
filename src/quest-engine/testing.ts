@@ -31,11 +31,11 @@ const candidates = [
   {
     candidateId: "role-3-candidate-1",
     title: "Hold Your Ground",
-    instruction: "Stay in the current playable area for the next 30 seconds.",
+    instruction: "In Minecraft, stay in the current playable area for the next 30 seconds.",
     durationSeconds: 30,
     difficulty: "easy" as const,
     rewardPoints: 100,
-    rationale: "A game-neutral deterministic fixture for engine tests only.",
+    rationale: "A Minecraft-aware deterministic fixture for engine tests only.",
     sourceSignalIds: [],
     confidence: 0.8,
     generation: {
@@ -47,11 +47,11 @@ const candidates = [
   {
     candidateId: "role-3-candidate-2",
     title: "Caster Mode",
-    instruction: "Narrate the next 45 seconds like a sports commentator.",
+    instruction: "Narrate the next 45 seconds of Minecraft like a sports commentator.",
     durationSeconds: 45,
     difficulty: "medium" as const,
     rewardPoints: 200,
-    rationale: "A distinct game-neutral fixture with a different duration.",
+    rationale: "A distinct Minecraft fixture with a different duration.",
     sourceSignalIds: [],
     confidence: 0.75,
     generation: {
@@ -63,7 +63,7 @@ const candidates = [
   {
     candidateId: "role-3-candidate-3",
     title: "Plan Out Loud",
-    instruction: "Explain your plan before taking the next major game action.",
+    instruction: "Explain your plan before taking the next major Minecraft action.",
     durationSeconds: 60,
     difficulty: "hard" as const,
     rewardPoints: 300,

@@ -317,6 +317,29 @@
   align-self: end;
 }
 
+.testLabCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cx-space-xl);
+  border-color: var(--cx-color-danger);
+}
+
+.testLabCard h3,
+.testLabCard p {
+  margin: 0;
+}
+
+.testLabCard p {
+  max-width: 68ch;
+  margin-top: var(--cx-space-sm);
+  color: var(--cx-color-text-muted);
+}
+
+.testLabCard > button {
+  flex: 0 0 auto;
+}
+
 .sectionNote {
   margin-top: var(--cx-space-md);
 }
@@ -387,7 +410,8 @@
 
   .hero,
   .sectionHeading,
-  .overridePanel {
+  .overridePanel,
+  .testLabCard {
     align-items: stretch;
     flex-direction: column;
   }

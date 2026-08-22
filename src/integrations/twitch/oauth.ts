@@ -89,7 +89,7 @@ export interface TwitchOAuthConnection {
 
 export class TwitchOAuthError extends Error {
   constructor(
-    readonly code: "misconfigured" | "exchange-failed" | "identity-failed" | "eventsub-failed",
+    readonly code: "misconfigured" | "secret-mismatch" | "exchange-failed" | "identity-failed" | "eventsub-failed",
     message: string,
   ) {
     super(message);
@@ -104,7 +104,18 @@ async function parseResponse(response: Response, message: string): Promise<unkno
   } catch {
     // A bounded generic error is safer than reflecting Twitch's response body.
   }
-  if (!response.ok) throw new TwitchOAuthError("exchange-failed", message);
+  if (!response.ok) {
+    const twitchMessage = payload !== null && typeof payload === "object" && "message" in payload
+      ? String((payload as { readonly message?: unknown }).message ?? "")
+      : "";
+    if (response.status === 403 && twitchMessage.toLowerCase().includes("invalid client secret")) {
+      throw new TwitchOAuthError(
+        "secret-mismatch",
+        "The configured Twitch client secret does not belong to this application",
+      );
+    }
+    throw new TwitchOAuthError("exchange-failed", message);
+  }
   return payload;
 }
 

@@ -147,6 +147,42 @@ describe("Live Director context composition", () => {
     );
   });
 
+  it("keeps confirmed speech confidence visible in private Live Context", () => {
+    const command = streamerLiveDirectorIntentCommandSchema.parse({
+      ...intentCommand("speech-intent"),
+      intent: {
+        ...intentCommand("speech-intent").intent!,
+        objective: "I am going mining for iron.",
+        inputMethod: "speech",
+        confidence: 0.82,
+      },
+    });
+    const current = state();
+    const withSpeech = {
+      ...current,
+      liveDirector: applyDeclaredStreamIntent(current, command, NOW),
+    };
+    const composed = composeLiveDirectorContext({
+      state: withSpeech,
+      command: contextCommand(null),
+      aggregate: null,
+      acceptedAt: NOW,
+    });
+    const streamerFact = composed.liveContext?.facts.find(
+      (fact) => fact.sourceClass === "streamer-declared",
+    );
+
+    expect(composed.declaredIntent).toMatchObject({
+      inputMethod: "speech",
+      confidence: 0.82,
+    });
+    expect(streamerFact).toMatchObject({
+      value: "I am going mining for iron.",
+      method: "confirmed-speech-transcript",
+      confidence: 0.82,
+    });
+  });
+
   it("deduplicates repeated participant content and retains only aggregate counts", () => {
     const pointer = composeAudiencePointer(contractFixtureAudiencePointerAggregate, NOW);
 

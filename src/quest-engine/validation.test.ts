@@ -20,8 +20,8 @@ const profile = streamerProfileSchema.parse({
   streamerId: "role-3-validation-streamer",
   revision: 0,
   displayName: "Role 3 Validation Fixture",
-  gameId: null,
-  gameName: null,
+  gameId: "minecraft",
+  gameName: "Minecraft",
   experience: { intensity: 0.5 },
   restrictions: [],
   preferredQuestTypes: [],
@@ -526,6 +526,48 @@ describe("DefaultCandidateAssembler", () => {
       role3FixtureCandidateBatch.candidates.map(({ candidateId }) => candidateId),
     );
     expect(result.audit).toHaveLength(3);
+  });
+
+  it("rejects candidate assembly when no game is selected", () => {
+    const result = new DefaultCandidateAssembler().assemble(
+      assemblyInput({
+        profile: streamerProfileSchema.parse({
+          ...profile,
+          gameId: null,
+          gameName: null,
+        }),
+      }),
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: "invalid-context",
+      reason: expect.stringContaining("selected game"),
+    });
+  });
+
+  it("replaces a generic provided objective with game-aware fallbacks", () => {
+    const generic = {
+      ...role3FixtureCandidateBatch.candidates[0],
+      candidateId: "generic-provided-candidate",
+      instruction: "Explain the next decision before acting.",
+    };
+    const result = new DefaultCandidateAssembler().assemble(
+      assemblyInput({ candidates: [generic] }),
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.audit).toContainEqual(
+      expect.objectContaining({
+        candidateId: generic.candidateId,
+        accepted: false,
+        issues: expect.arrayContaining([expect.objectContaining({ code: "game-mismatch" })]),
+      }),
+    );
+    expect(
+      result.batch.candidates.every(({ instruction }) => instruction.includes("Minecraft")),
+    ).toBe(true);
   });
 
   it.each([0, 1, 2])("assembles exactly three options from %i usable provided candidates", (usableCount) => {

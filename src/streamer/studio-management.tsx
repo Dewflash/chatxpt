@@ -78,7 +78,7 @@ const setupActionLabels: Readonly<Record<StreamerSetupAction, string>> = {
   "request-capture-permission": "Allow capture",
   "retry-service": "Retry check",
   "start-session": "Start session",
-  "end-session": "End session",
+  "end-session": "End session & reset",
   "open-diagnostics": "Review setup details",
 };
 
@@ -455,9 +455,9 @@ function HealthAndRecovery({
       meta: service.configured ? "Configured" : "Configuration incomplete",
       action,
       disabled: onCommand === undefined || pending,
-      onAction: action === null ? undefined : () => onCommand?.(
-        buildSetupCommand(view, service.service, action, commandFactory),
-      ),
+      onAction: action === null
+        ? undefined
+        : () => onCommand?.(buildSetupCommand(view, service.service, action, commandFactory)),
     };
   }
 
@@ -495,6 +495,52 @@ function HealthAndRecovery({
         <HealthCard {...serviceCard("Realtime", realtime, "Realtime snapshot and recovery state are unknown.")} />
       </CardGrid>
       <p className={styles.sectionNote}>There is no combined readiness percentage. Each layer keeps its own status and recovery action.</p>
+    </section>
+  );
+}
+
+function TestLab({
+  view,
+  onCommand,
+  commandFactory,
+  pending,
+}: {
+  readonly view: StreamerViewModel;
+  readonly onCommand?: (command: StreamerUiCommand) => void;
+  readonly commandFactory: StreamerCommandFactory;
+  readonly pending: boolean;
+}) {
+  function resetSession() {
+    if (!globalThis.confirm("End this ChatXPT session and return Studio to a clean start?")) return;
+    onCommand?.(buildSetupCommand(view, "session", "end-session", commandFactory));
+  }
+
+  return (
+    <section className={styles.section} aria-labelledby="test-lab-heading">
+      <div className={styles.sectionHeading}>
+        <div>
+          <p className={styles.eyebrow}>Test Lab</p>
+          <h2 id="test-lab-heading">Reset the app for a clean-start test</h2>
+        </div>
+        <StatusBadge tone="diagnostic">Testing control</StatusBadge>
+      </div>
+      <Card className={styles.testLabCard}>
+        <div>
+          <h3>Clean-start reset</h3>
+          <p>
+            Ends the current ChatXPT session, clears this browser&apos;s Studio session, and returns
+            to the starting screen. Your Twitch connection and permanent OBS Browser Source URL
+            stay linked to the broadcaster.
+          </p>
+        </div>
+        <Button
+          variant="danger"
+          disabled={onCommand === undefined || pending || view.session.status !== "live"}
+          onClick={resetSession}
+        >
+          {pending ? "Resetting…" : "End session & reset"}
+        </Button>
+      </Card>
     </section>
   );
 }
@@ -714,6 +760,7 @@ export function StudioManagementSurface({
           <a href="#live-director-heading">Live Director</a>
           <a href="#health-recovery-heading">Health &amp; recovery</a>
           <a href="#live-quests-heading">Live sidequests</a>
+          <a href="#test-lab-heading">Test Lab</a>
         </nav>
         <p>Full management lives here. Twitch Live Config stays compact for stream-time control.</p>
       </aside>
@@ -780,6 +827,12 @@ export function StudioManagementSurface({
         />
         <QuestManagement
           key={`${view.questCycle.envelope.questCycleId ?? "no-cycle"}:${view.questCycle.envelope.revision}`}
+          view={view}
+          onCommand={onCommand}
+          commandFactory={commandFactory}
+          pending={pending}
+        />
+        <TestLab
           view={view}
           onCommand={onCommand}
           commandFactory={commandFactory}

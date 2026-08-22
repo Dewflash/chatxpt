@@ -35,6 +35,7 @@ describe("deployment configuration", () => {
     expect(headerValue(global, "X-Content-Type-Options")).toBe("nosniff");
     expect(headerValue(global, "Referrer-Policy")).toBe("strict-origin-when-cross-origin");
     expect(headerValue(global, "Permissions-Policy")).toContain("camera=(self)");
+    expect(headerValue(global, "Permissions-Policy")).toContain("display-capture=(self)");
     expect(headerValue(global, "X-Frame-Options")).toBeNull();
     const csp = headerValue(global, "Content-Security-Policy");
     expect(csp).toContain("default-src 'self'");

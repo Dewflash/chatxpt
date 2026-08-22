@@ -112,11 +112,20 @@ function isStudioSessionApplicationError(
   caught: unknown,
 ): caught is StudioSessionApplicationError {
   if (caught instanceof StudioSessionApplicationError) return true;
-  if (!(caught instanceof Error)) return false;
-  const candidate = caught as Error & { code?: unknown; retryable?: unknown };
-  return typeof candidate.code === "string" &&
+  if (caught === null || typeof caught !== "object") return false;
+  const candidate = caught as {
+    readonly code?: unknown;
+    readonly message?: unknown;
+    readonly retryable?: unknown;
+    readonly name?: unknown;
+  };
+  return (
+    candidate.name === "StudioSessionApplicationError" &&
+    typeof candidate.code === "string" &&
     Object.prototype.hasOwnProperty.call(statuses, candidate.code) &&
-    typeof candidate.retryable === "boolean";
+    typeof candidate.message === "string" &&
+    (candidate.retryable === undefined || typeof candidate.retryable === "boolean")
+  );
 }
 
 export function studioErrorResponse(caught: unknown, headers: HeadersInit = studioHeaders) {
@@ -137,7 +146,11 @@ export function studioErrorResponse(caught: unknown, headers: HeadersInit = stud
     return NextResponse.json(
       {
         ok: false,
-        error: { code: caught.code, message: caught.message, retryable: caught.retryable },
+        error: {
+          code: caught.code,
+          message: caught.message,
+          retryable: caught.retryable ?? false,
+        },
       },
       { status: statuses[caught.code], headers },
     );

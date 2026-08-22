@@ -184,4 +184,13 @@ describe("Twitch OAuth", () => {
       .rejects.toMatchObject({ code: "identity-failed" } satisfies Partial<TwitchOAuthError>);
     expect(request).toHaveBeenCalledTimes(2);
   });
+
+  it("reports when the configured client secret does not belong to the Twitch application", async () => {
+    const request = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(json({ status: 403, message: "invalid client secret" }, 403));
+
+    await expect(new TwitchOAuthClient(configuration, request).connect("code-1"))
+      .rejects.toMatchObject({ code: "secret-mismatch" } satisfies Partial<TwitchOAuthError>);
+    expect(request).toHaveBeenCalledTimes(1);
+  });
 });

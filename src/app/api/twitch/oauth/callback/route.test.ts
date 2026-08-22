@@ -11,6 +11,12 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/integrations/server", () => ({
+  TwitchOAuthError: class TwitchOAuthError extends Error {
+    constructor(readonly code: string, message: string) {
+      super(message);
+      this.name = "TwitchOAuthError";
+    }
+  },
   TwitchOAuthClient: class {
     constructor(configuration: unknown) {
       mocks.oauthConfiguration(configuration);
@@ -133,6 +139,44 @@ describe("Twitch OAuth callback route", () => {
     expect(mocks.startFromVerifiedTwitch).not.toHaveBeenCalled();
     expect(response.headers.get("location")).toBe(
       "http://localhost:3000/studio?oauth=error&reason=state",
+    );
+  });
+
+  it("reports Twitch redirect mismatch as redirect-mismatch instead of denied", async () => {
+    const response = await GET(callbackRequest(
+      "error=redirect_mismatch&error_description=The+provided+redirect_uri+does+not+match&state=csrf-state",
+    ));
+
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/studio?oauth=error&reason=redirect-mismatch",
+    );
+    expect(response.headers.get("set-cookie") ?? "").toContain("chatxpt_twitch_oauth_state=");
+    expect(response.headers.get("set-cookie") ?? "").toContain("Max-Age=0");
+  });
+
+  it("reports OAuth code exchange failures without hiding them as a generic connection issue", async () => {
+    mocks.connect.mockRejectedValueOnce(Object.assign(new Error("Twitch did not accept the OAuth code"), {
+      name: "TwitchOAuthError",
+      code: "exchange-failed",
+    }));
+
+    const response = await GET(callbackRequest("code=oauth-code&state=csrf-state"));
+
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/studio?oauth=error&reason=exchange-failed",
+    );
+  });
+
+  it("reports an invalid application secret distinctly", async () => {
+    mocks.connect.mockRejectedValueOnce(Object.assign(new Error("invalid client secret"), {
+      name: "TwitchOAuthError",
+      code: "secret-mismatch",
+    }));
+
+    const response = await GET(callbackRequest("code=oauth-code&state=csrf-state"));
+
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/studio?oauth=error&reason=secret-mismatch",
     );
   });
 });

@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { OverlayViewModel } from "@/core";
-import { connectRealtimeSnapshot } from "@/app/realtime-snapshot-client";
 import { ObsQuestOverlaySurface } from "@/viewer";
 
 import styles from "./page.module.css";
@@ -18,20 +17,24 @@ export function ObsOverlayClient() {
   const [view, setView] = useState<OverlayViewModel | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [setupError, setSetupError] = useState<string | null>(null);
-  const [connection, setConnection] = useState<{
-    readonly token: string;
-    readonly sessionId: string;
-  } | null>(null);
+  const tokenRef = useRef<string | null>(null);
+  const broadcasterIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     document.documentElement.dataset.surface = "obs-overlay";
     const url = new URL(window.location.href);
     const fragment = new URLSearchParams(url.hash.replace(/^#/, ""));
-    const token = fragment.get("overlayAccessToken");
-    const sessionId = url.searchParams.get("sessionId");
-    if (token === null || token.length < 16 || sessionId === null || sessionId.length === 0) {
+    const broadcasterId = url.searchParams.get("broadcasterId");
+    const tokenStorageKey = broadcasterId === null
+      ? null
+      : `chatxpt.obs-overlay-token.${broadcasterId}`;
+    const fragmentToken = fragment.get("overlayAccessToken");
+    const token = fragmentToken ?? (tokenStorageKey === null
+      ? null
+      : window.sessionStorage.getItem(tokenStorageKey));
+    if (token === null || token.length < 16 || broadcasterId === null || broadcasterId.length === 0) {
       const notice = window.setTimeout(
-        () => setSetupError("This OBS Browser Source URL is incomplete. Generate a new URL in ChatXPT Studio."),
+        () => setSetupError("This OBS Browser Source URL is incomplete. Copy the permanent source URL from ChatXPT Studio."),
         0,
       );
       return () => {
@@ -39,11 +42,14 @@ export function ObsOverlayClient() {
         delete document.documentElement.dataset.surface;
       };
     }
-    const ready = window.setTimeout(() => setConnection({ token, sessionId }), 0);
-    url.hash = "";
-    window.history.replaceState(null, document.title, `${url.pathname}${url.search}`);
+    tokenRef.current = token;
+    broadcasterIdRef.current = broadcasterId;
+    if (fragmentToken !== null && tokenStorageKey !== null) {
+      window.sessionStorage.setItem(tokenStorageKey, fragmentToken);
+    }
     return () => {
-      window.clearTimeout(ready);
+      tokenRef.current = null;
+      broadcasterIdRef.current = null;
       delete document.documentElement.dataset.surface;
     };
   }, []);
@@ -53,14 +59,16 @@ export function ObsOverlayClient() {
     let activeController: AbortController | null = null;
 
     const refresh = async () => {
-      if (connection === null) return;
+      const token = tokenRef.current;
+      const broadcasterId = broadcasterIdRef.current;
+      if (token === null || broadcasterId === null) return;
       activeController?.abort();
       activeController = new AbortController();
       try {
         const response = await fetch(
-          `/api/obs/overlay/state?sessionId=${encodeURIComponent(connection.sessionId)}`,
+          `/api/obs/overlay/state?broadcasterId=${encodeURIComponent(broadcasterId)}`,
           {
-            headers: { authorization: `Bearer ${connection.token}` },
+            headers: { authorization: `Bearer ${token}` },
             cache: "no-store",
             signal: activeController.signal,
           },
@@ -83,7 +91,7 @@ export function ObsOverlayClient() {
     };
 
     const initial = window.setTimeout(() => void refresh(), 0);
-    const interval = window.setInterval(() => void refresh(), 10_000);
+    const interval = window.setInterval(() => void refresh(), 1_500);
     const clock = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => {
       stopped = true;
@@ -92,45 +100,7 @@ export function ObsOverlayClient() {
       window.clearInterval(interval);
       window.clearInterval(clock);
     };
-  }, [connection]);
-
-  useEffect(() => {
-    if (connection === null) return;
-    let stopped = false;
-    let disconnect: (() => Promise<void>) | null = null;
-    void connectRealtimeSnapshot({
-      role: "overlay",
-      sessionId: connection.sessionId,
-      surfaceAuthorization: connection.token,
-      loadLatest: async () => {
-        const response = await fetch(
-          `/api/obs/overlay/state?sessionId=${encodeURIComponent(connection.sessionId)}`,
-          {
-            headers: { authorization: `Bearer ${connection.token}` },
-            cache: "no-store",
-          },
-        );
-        const payload = (await response.json()) as OverlayPayload;
-        return response.ok && payload.ok ? payload.view ?? null : null;
-      },
-      onSnapshot: (snapshot) => {
-        if (!stopped) {
-          setView(snapshot);
-          setSetupError(null);
-          setNow(Date.now());
-        }
-      },
-    }).then((release) => {
-      if (stopped) void release?.();
-      else disconnect = release;
-    }).catch(() => {
-      // The authorised state read remains the reconnect path.
-    });
-    return () => {
-      stopped = true;
-      void disconnect?.();
-    };
-  }, [connection]);
+  }, []);
 
   return (
     <main className={`${styles.root} canonical-obs-overlay`}>

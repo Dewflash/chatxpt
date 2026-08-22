@@ -107,7 +107,15 @@ describe("Role 1 intervention coordinator", () => {
   });
 
   it("generates, Role 3-validates, stores, and submits only after intervention is allowed", async () => {
-    const state = persistenceState();
+    const baseState = persistenceState();
+    const state = {
+      ...baseState,
+      profile: {
+        ...baseState.profile,
+        gameId: "minecraft",
+        gameName: "Minecraft",
+      },
+    };
     const policy = new StaticPolicy({
       shouldPropose: true,
       score: 0.8,

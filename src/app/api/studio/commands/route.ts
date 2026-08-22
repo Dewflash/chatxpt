@@ -29,7 +29,10 @@ export async function POST(request: NextRequest) {
       request.headers.get("authorization"),
       body,
     );
-    return NextResponse.json({ ok: true, ...result }, { headers: studioCorsHeaders(request, corsMethods) });
+    return NextResponse.json(
+      { ok: true, ...result },
+      { headers: studioCorsHeaders(request, corsMethods) },
+    );
   } catch (caught) {
     return studioErrorResponse(caught, studioCorsHeaders(request, corsMethods));
   }

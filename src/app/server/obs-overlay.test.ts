@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createMemoryPersistenceRuntime } from "@/realtime";
+import { createMemoryPersistenceRuntime, SessionLifecycleService } from "@/realtime";
 
 import { ChatXptServerRuntime } from "./runtime";
 import { ObsOverlayApplication, ObsOverlayApplicationError } from "./obs-overlay";
@@ -33,102 +33,79 @@ async function context() {
     now: () => NOW,
     nextId: () => `overlay-${++id}`,
   });
-  return { overlay, started };
+  return { overlay, persistence, started, studio };
 }
 
 describe("ObsOverlayApplication", () => {
-  it("lets authorised Studio issue an overlay URL without exposing the setup key", async () => {
-    const { overlay, started } = await context();
-
-    await expect(overlay.issueGrantForStudio(
-      "https://chatxpt.example",
-      { sessionId: started.view.session.sessionId },
-      started.view.session.sessionId,
-    )).resolves.toMatchObject({ descriptor: { width: 1920, height: 1080 } });
-    await expect(overlay.issueGrantForStudio(
-      "https://chatxpt.example",
-      { sessionId: started.view.session.sessionId },
-      "another-session",
-    )).rejects.toMatchObject({ code: "forbidden" });
-  });
-
-  it("uses the server signer for Studio overlay setup while leaving manual diagnostics locked", async () => {
-    const persistence = createMemoryPersistenceRuntime();
-    const studio = new StudioSessionApplication({
-      runtime: new ChatXptServerRuntime({ persistence, clock: { now: () => NOW } }),
-      setupKey: STUDIO_KEY,
-      extensionSecret: "",
-      environment: {},
-      now: () => NOW,
-      nextId: () => "isolated",
-    });
-    const isolated = await studio.start(STUDIO_KEY, {
-      channelId: "channel-isolated",
-      displayName: "Isolated Streamer",
-      gameId: null,
-      gameName: null,
-    });
-    const overlay = new ObsOverlayApplication({
-      runtime: new ChatXptServerRuntime({ persistence, clock: { now: () => NOW } }),
-      setupKey: "",
-      grantSecret: OVERLAY_KEY,
-      now: () => NOW,
-      nextId: () => "studio-signer",
-    });
-
-    await expect(overlay.issueGrantForStudio(
-      "https://chatxpt.example",
-      { sessionId: isolated.view.session.sessionId },
-      isolated.view.session.sessionId,
-    )).resolves.toMatchObject({ descriptor: { readOnly: true } });
-    await expect(overlay.issueGrant(null, "https://chatxpt.example", {
-      sessionId: isolated.view.session.sessionId,
-    })).rejects.toMatchObject({ code: "misconfigured" });
-  });
-
-  it("issues a fragment-held read grant and projects authoritative overlay state", async () => {
-    const { overlay, started } = await context();
-    const issued = await overlay.issueGrant(OVERLAY_KEY, "https://chatxpt.example", {
-      sessionId: started.view.session.sessionId,
+  it("issues a reusable broadcaster installation and projects authoritative overlay state", async () => {
+    const { overlay, persistence, started, studio } = await context();
+    const issued = await overlay.issueInstallation("channel-1", "https://chatxpt.example", {
       width: 1280,
       height: 720,
     });
 
-    expect(issued.descriptor.url).toContain("/obs-overlay?sessionId=");
+    expect(issued.descriptor.url).toContain("/obs-overlay?broadcasterId=channel-1");
     expect(new URL(issued.descriptor.url).searchParams.has("overlayAccessToken")).toBe(false);
     expect(issued.descriptor.url).toContain("#overlayAccessToken=");
-    expect(issued.descriptor).toMatchObject({ width: 1280, height: 720, readOnly: true });
+    expect(issued.descriptor).toMatchObject({
+      width: 1280,
+      height: 720,
+      readOnly: true,
+      reusableAcrossSessions: true,
+    });
 
     const token = new URLSearchParams(new URL(issued.descriptor.url).hash.slice(1))
       .get("overlayAccessToken");
     const view = await overlay.read(
       `Bearer ${token}`,
-      started.view.session.sessionId,
+      { broadcasterId: "channel-1", sessionId: null },
     );
     expect(view).toMatchObject({
       readOnly: true,
       session: { sessionId: started.view.session.sessionId },
       connection: { service: "obs-overlay", status: "ready" },
     });
+
+    const ended = await new SessionLifecycleService(persistence.lifecycle).end(
+      started.view.session.sessionId,
+      started.view.session.revision,
+      NOW,
+      "test-next-stream",
+      "end-first-session",
+    );
+    expect(ended.ok).toBe(true);
+    const next = await studio.start(STUDIO_KEY, {
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: null,
+      gameName: null,
+    });
+    const nextView = await overlay.read(`Bearer ${token}`, {
+      broadcasterId: "channel-1",
+      sessionId: null,
+    });
+    expect(nextView.session.sessionId).toBe(next.view.session.sessionId);
+    expect(nextView.session.sessionId).not.toBe(started.view.session.sessionId);
   });
 
-  it("rejects a wrong setup key and a cross-session read", async () => {
-    const { overlay, started } = await context();
-    await expect(overlay.read(null, started.view.session.sessionId)).rejects.toMatchObject({
+  it("rejects unauthenticated and cross-broadcaster reads", async () => {
+    const { overlay } = await context();
+    await expect(overlay.read(null, {
+      broadcasterId: "channel-1",
+      sessionId: null,
+    })).rejects.toMatchObject({
       code: "unauthenticated",
     } satisfies Partial<ObsOverlayApplicationError>);
     await expect(
-      overlay.issueGrant("wrong", "https://chatxpt.example", {
-        sessionId: started.view.session.sessionId,
-      }),
-    ).rejects.toMatchObject({ code: "unauthenticated" } satisfies Partial<ObsOverlayApplicationError>);
-
-    const issued = await overlay.issueGrant(OVERLAY_KEY, "https://chatxpt.example", {
-      sessionId: started.view.session.sessionId,
-    });
+      overlay.issueInstallation("another-channel", "https://chatxpt.example", {}),
+    ).rejects.toMatchObject({ code: "session-not-found" } satisfies Partial<ObsOverlayApplicationError>);
+    const issued = await overlay.issueInstallation("channel-1", "https://chatxpt.example", {});
     const token = new URLSearchParams(new URL(issued.descriptor.url).hash.slice(1))
       .get("overlayAccessToken");
-    await expect(overlay.read(`Bearer ${token}`, "another-session")).rejects.toMatchObject({
+    await expect(overlay.read(`Bearer ${token}`, {
+      broadcasterId: "another-channel",
+      sessionId: null,
+    })).rejects.toMatchObject({
       code: "forbidden",
     } satisfies Partial<ObsOverlayApplicationError>);
   });

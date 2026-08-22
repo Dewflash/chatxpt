@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 
 import {
   Button,
@@ -11,12 +11,20 @@ import {
   StatusBadge,
   type StatusTone,
 } from "../design-system";
-import type {
-  DirectorCueAction,
-  LiveContextFact,
-  LiveContextSourceClass,
-  StreamerViewModel,
+import {
+  MIN_CONFIRMED_STREAMER_SPEECH_CONFIDENCE,
+  type DirectorCueAction,
+  type LiveContextFact,
+  type LiveContextSourceClass,
+  type StreamerViewModel,
 } from "../core";
+import {
+  browserSpeechRecognitionAvailable,
+  startBrowserSpeechRecognition,
+  type StreamerSpeechFailure,
+  type StreamerSpeechSession,
+  type StreamerSpeechTranscript,
+} from "./browser-speech-recognition";
 import {
   buildLiveDirectorCueCommand,
   buildLiveDirectorIntentCommand,
@@ -184,10 +192,97 @@ function IntentEditor({
 }: Required<Pick<LiveDirectorControlsProps, "view" | "pending" | "commandFactory">> &
   Pick<LiveDirectorControlsProps, "onCommand">) {
   const current = view.liveDirector?.declaredIntent;
+  const voiceContextHeadingId = useId();
   const retained = current?.status === "known" || current?.status === "stale" ? current : null;
   const [goal, setGoal] = useState(retained?.goal ?? "");
   const [objective, setObjective] = useState(retained?.objective ?? "");
   const [involvement, setInvolvement] = useState(retained?.desiredAudienceInvolvement ?? "");
+  const [objectiveInputMethod, setObjectiveInputMethod] = useState<"manual" | "speech">(
+    retained?.inputMethod ?? "manual",
+  );
+  const [objectiveConfidence, setObjectiveConfidence] = useState(retained?.confidence ?? 1);
+  const [speechStatus, setSpeechStatus] = useState<
+    "unavailable" | "idle" | "listening" | "processing" | "captured" | "error"
+  >("idle");
+  const [speechTranscript, setSpeechTranscript] = useState<StreamerSpeechTranscript | null>(null);
+  const [speechFailure, setSpeechFailure] = useState<StreamerSpeechFailure | null>(null);
+  const speechSession = useRef<StreamerSpeechSession | null>(null);
+  const latestSpeechTranscript = useRef<StreamerSpeechTranscript | null>(null);
+  const speechFailed = useRef(false);
+  const ignoreSpeechAbort = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      ignoreSpeechAbort.current = true;
+      speechSession.current?.abort();
+      speechSession.current = null;
+    };
+  }, []);
+
+  function startListening() {
+    if (!browserSpeechRecognitionAvailable()) {
+      setSpeechFailure({
+        code: "service-unavailable",
+        message: "Voice input is not available in this browser. Type the objective instead.",
+      });
+      setSpeechStatus("unavailable");
+      return;
+    }
+    latestSpeechTranscript.current = null;
+    speechFailed.current = false;
+    ignoreSpeechAbort.current = false;
+    setSpeechTranscript(null);
+    setSpeechFailure(null);
+    try {
+      speechSession.current = startBrowserSpeechRecognition({
+        onListening() {
+          setSpeechStatus("listening");
+        },
+        onTranscript(transcript) {
+          latestSpeechTranscript.current = transcript;
+          setSpeechTranscript(transcript);
+        },
+        onFailure(failure) {
+          if (failure.code === "aborted" && ignoreSpeechAbort.current) return;
+          speechFailed.current = true;
+          setSpeechFailure(failure);
+          setSpeechStatus("error");
+        },
+        onEnd() {
+          speechSession.current = null;
+          if (speechFailed.current || ignoreSpeechAbort.current) return;
+          setSpeechStatus(latestSpeechTranscript.current?.isFinal ? "captured" : "idle");
+        },
+      });
+      setSpeechStatus("listening");
+    } catch {
+      setSpeechFailure({
+        code: "service-unavailable",
+        message: "Voice input is not available in this browser. Type the objective instead.",
+      });
+      setSpeechStatus("unavailable");
+    }
+  }
+
+  function stopListening() {
+    if (speechSession.current === null) return;
+    setSpeechStatus("processing");
+    speechSession.current.stop();
+  }
+
+  function useSpeechTranscript() {
+    if (speechTranscript === null || !speechTranscript.isFinal) return;
+    if (speechTranscript.transcript.length < 3 || speechTranscript.transcript.length > 240) return;
+    setObjective(speechTranscript.transcript);
+    if (speechTranscript.confidence >= MIN_CONFIRMED_STREAMER_SPEECH_CONFIDENCE) {
+      setObjectiveInputMethod("speech");
+      setObjectiveConfidence(speechTranscript.confidence);
+    } else {
+      // Explicit review turns an uncertain recognition into a manual declaration.
+      setObjectiveInputMethod("manual");
+      setObjectiveConfidence(1);
+    }
+  }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -195,8 +290,32 @@ function IntentEditor({
       goal,
       objective,
       desiredAudienceInvolvement: involvement.trim() === "" ? null : involvement,
+      inputMethod: objectiveInputMethod,
+      confidence: objectiveConfidence,
     }, commandFactory));
   }
+
+  const speechUsable =
+    speechStatus === "captured" &&
+    speechTranscript?.isFinal === true &&
+    speechTranscript.transcript.length >= 3 &&
+    speechTranscript.transcript.length <= 240;
+  const speechLowConfidence =
+    speechTranscript?.isFinal === true &&
+    speechTranscript.confidence < MIN_CONFIRMED_STREAMER_SPEECH_CONFIDENCE;
+  const speechStatusLabels = {
+    unavailable: "Unavailable",
+    idle: "Ready",
+    listening: "Listening",
+    processing: "Finishing",
+    captured: "Review",
+    error: "Needs attention",
+  } as const;
+  const speechStatusTone: StatusTone =
+    speechStatus === "captured" ? "success"
+      : speechStatus === "listening" || speechStatus === "processing" ? "info"
+        : speechStatus === "error" ? "danger"
+          : speechStatus === "unavailable" ? "warning" : "neutral";
 
   return (
     <form className={styles.intentForm} onSubmit={submit}>
@@ -220,9 +339,80 @@ function IntentEditor({
           rows={3}
           required
           disabled={pending || onCommand === undefined}
-          onChange={(event) => setObjective(event.currentTarget.value)}
+          onChange={(event) => {
+            setObjective(event.currentTarget.value);
+            setObjectiveInputMethod("manual");
+            setObjectiveConfidence(1);
+          }}
         />
+        <small>
+          {objectiveInputMethod === "speech"
+            ? `Confirmed voice transcript · ${Math.round(objectiveConfidence * 100)}% recognition confidence`
+            : "Typed or manually confirmed by the streamer"}
+        </small>
       </label>
+      <section className={styles.speechPanel} aria-labelledby={voiceContextHeadingId}>
+        <ControlRow>
+          <div>
+            <strong id={voiceContextHeadingId}>Voice context</strong>
+            <small>Capture a spoken goal or broad activity, then review it before saving.</small>
+          </div>
+          <StatusBadge tone={speechStatusTone}>{speechStatusLabels[speechStatus]}</StatusBadge>
+        </ControlRow>
+        <div className={styles.speechActions}>
+          {speechStatus === "listening" || speechStatus === "processing" ? (
+            <Button
+              variant="secondary"
+              disabled={speechStatus === "processing" || pending}
+              onClick={stopListening}
+            >
+              {speechStatus === "processing" ? "Finishing…" : "Stop listening"}
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              disabled={speechStatus === "unavailable" || pending}
+              onClick={startListening}
+            >
+              Start listening
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            disabled={!speechUsable || pending}
+            onClick={useSpeechTranscript}
+          >
+            {speechLowConfidence ? "Review as typed objective" : "Use as current objective"}
+          </Button>
+        </div>
+        <div className={styles.transcript} aria-live="polite">
+          <small>Transcript</small>
+          <strong>{speechTranscript?.transcript || "Nothing captured yet."}</strong>
+          {speechTranscript !== null ? (
+            <small>
+              {speechTranscript.isFinal
+                ? `${Math.round(speechTranscript.confidence * 100)}% recognition confidence`
+                : "Listening result is still changing"}
+            </small>
+          ) : null}
+        </div>
+        {speechLowConfidence ? (
+          <Notice tone="warning" title="Check the transcript carefully">
+            Recognition confidence is low. Using it places the text in the objective editor as a manual declaration so you can correct it before saving.
+          </Notice>
+        ) : null}
+        {speechTranscript !== null && speechTranscript.transcript.length > 240 ? (
+          <Notice tone="warning" title="Transcript is too long">
+            Keep the Current Objective under 240 characters, then try a shorter statement.
+          </Notice>
+        ) : null}
+        {speechFailure !== null ? (
+          <Notice tone="danger" title="Voice input needs attention">{speechFailure.message}</Notice>
+        ) : null}
+        <small className={styles.speechPrivacy}>
+          Your browser may recognise speech on this device or through its own speech service. ChatXPT does not store raw microphone audio and never changes the objective until you confirm it.
+        </small>
+      </section>
       <label>
         <span>Desired audience involvement <small>(optional)</small></span>
         <input
@@ -286,6 +476,9 @@ export function LiveDirectorControls({
         <p>{retainedIntent?.objective ?? "Current Objective is unknown until the streamer declares it."}</p>
         {retainedIntent?.desiredAudienceInvolvement ? (
           <small>{`Audience involvement: ${retainedIntent.desiredAudienceInvolvement}`}</small>
+        ) : null}
+        {retainedIntent?.inputMethod === "speech" ? (
+          <small>{`Confirmed from voice · ${Math.round(retainedIntent.confidence * 100)}% recognition confidence`}</small>
         ) : null}
         {!compact ? (
           <IntentEditor

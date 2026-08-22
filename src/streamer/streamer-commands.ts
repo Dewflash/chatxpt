@@ -4,6 +4,7 @@ import {
   streamerLiveDirectorCueCommandSchema,
   streamerLiveDirectorIntentCommandSchema,
   streamerProfileSettingsCommandSchema,
+  streamerQuestGenerationCommandSchema,
   streamerSessionOverrideCommandSchema,
   streamerQuestCommandSchema,
   streamerQuestProgressCommandSchema,
@@ -13,6 +14,7 @@ import {
   type StreamerLiveDirectorCueCommand,
   type StreamerLiveDirectorIntentCommand,
   type StreamerProfileSettingsCommand,
+  type StreamerQuestGenerationCommand,
   type StreamerSessionOverrideCommand,
   type StreamerQuestAction,
   type StreamerQuestCommand,
@@ -28,6 +30,7 @@ import {
 
 export type StreamerUiCommand =
   | StreamerProfileSettingsCommand
+  | StreamerQuestGenerationCommand
   | StreamerSessionOverrideCommand
   | StreamerLiveDirectorIntentCommand
   | StreamerLiveDirectorCueCommand
@@ -60,6 +63,8 @@ export interface LiveDirectorIntentDraft {
   readonly goal: string;
   readonly objective: string;
   readonly desiredAudienceInvolvement: string | null;
+  readonly inputMethod?: "manual" | "speech";
+  readonly confidence?: number;
 }
 
 export const DEFAULT_LIVE_DIRECTOR_INTENT_LIFETIME_MILLISECONDS = 2 * 60 * 60 * 1_000;
@@ -191,6 +196,18 @@ export function buildQuestCommand(
   });
 }
 
+export function buildQuestGenerationCommand(
+  view: StreamerViewModel,
+  factory: StreamerCommandFactory = defaultStreamerCommandFactory,
+): StreamerQuestGenerationCommand {
+  return streamerQuestGenerationCommandSchema.parse({
+    ...metadata(view, factory, "quest-generation"),
+    questCycleId: view.questCycle.envelope.questCycleId,
+    type: "streamer.quest-generation",
+    mode: "deterministic-fallback",
+  });
+}
+
 export function buildQuestProgressCommand(
   view: StreamerViewModel,
   requestedValue: number,
@@ -230,6 +247,8 @@ export function buildLiveDirectorIntentCommand(
       ? null
       : {
           ...intent,
+          inputMethod: intent.inputMethod ?? "manual",
+          confidence: intent.confidence ?? 1,
           requestedExpiresAt:
             commandMetadata.issuedAt + DEFAULT_LIVE_DIRECTOR_INTENT_LIFETIME_MILLISECONDS,
         },

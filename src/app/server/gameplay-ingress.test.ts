@@ -51,6 +51,7 @@ function liveSnapshot(
   state: ReturnType<typeof liveState>,
   occurredAt: number,
   messageId = "live-gameplay-1",
+  source: "obs-virtual-camera" | "browser-display-capture" = "obs-virtual-camera",
 ): GameplaySnapshot {
   const base = structuredClone(contractFixtureGameplaySnapshot);
   return gameplaySnapshotSchema.parse({
@@ -64,7 +65,7 @@ function liveSnapshot(
       revision: state.session.revision,
       occurredAt,
       receivedAt: occurredAt,
-      source: "obs-virtual-camera",
+      source,
       evidenceClass: "live",
     },
     signals: base.signals.map((signal) => ({
@@ -73,7 +74,7 @@ function liveSnapshot(
         ...signal.observation,
         provenance: {
           ...signal.observation.provenance,
-          source: "obs-virtual-camera",
+          source,
           method: "fixture-ingress-contract-check",
           observedAt: occurredAt,
           receivedAt: occurredAt,
@@ -128,6 +129,34 @@ describe("authenticated gameplay snapshot ingress", () => {
         evidenceClass: "live",
       }),
     ).resolves.toMatchObject({ envelope: { messageId: "live-gameplay-1" } });
+    await expect(application.readStatus(`Bearer ${grant.token}`)).resolves.toMatchObject({
+      authority: { sessionId: state.session.sessionId },
+      proposal: { status: "not-requested", reason: "preparing-session" },
+    });
+  });
+
+  it("accepts a real browser-selected screen or window capture snapshot", async () => {
+    const { application, persistence, state } = await setup();
+    const grant = await application.issueGrant(KEY, { sessionId: state.session.sessionId });
+    const snapshot = liveSnapshot(
+      state,
+      FIXTURE_NOW + 1_000,
+      "browser-display-gameplay-1",
+      "browser-display-capture",
+    );
+
+    await expect(application.ingest(`Bearer ${grant.token}`, snapshot)).resolves.toMatchObject({
+      result: {
+        status: "accepted",
+        snapshot: { envelope: { source: "browser-display-capture" } },
+      },
+    });
+    await expect(persistence.gameplaySnapshots.readCurrent({
+      sessionId: state.session.sessionId,
+      questCycleId: state.questCycle.envelope.questCycleId,
+      revision: state.session.revision,
+      evidenceClass: "live",
+    })).resolves.toMatchObject({ envelope: { source: "browser-display-capture" } });
   });
 
   it("lets an authorised Studio session issue capture grants without exposing the setup key", async () => {

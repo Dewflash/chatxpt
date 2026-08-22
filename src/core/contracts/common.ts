@@ -11,6 +11,7 @@ export const confidenceSchema = z.number().min(0).max(1);
 
 export const messageSourceSchema = z.enum([
   "obs-virtual-camera",
+  "browser-display-capture",
   "twitch",
   "studio",
   "viewer-extension",

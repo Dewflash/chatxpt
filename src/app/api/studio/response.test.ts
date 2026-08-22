@@ -56,6 +56,7 @@ describe("Studio Twitch Asset Hosting CORS", () => {
 
   it("preserves typed Studio errors across development hot reload boundaries", async () => {
     const staleError = Object.assign(new Error("Studio state changed; refresh before retrying"), {
+      name: "StudioSessionApplicationError",
       code: "stale-revision",
       retryable: true,
     });
@@ -66,6 +67,25 @@ describe("Studio Twitch Asset Hosting CORS", () => {
     await expect(response.json()).resolves.toMatchObject({
       ok: false,
       error: { code: "stale-revision", retryable: true },
+    });
+  });
+
+  it("preserves Studio application error status when the error crosses a dev module boundary", async () => {
+    const response = studioErrorResponse({
+      name: "StudioSessionApplicationError",
+      code: "unauthenticated",
+      message: "Start or reopen an authorised Studio session",
+      retryable: false,
+    });
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: "unauthenticated",
+        message: "Start or reopen an authorised Studio session",
+        retryable: false,
+      },
     });
   });
 });

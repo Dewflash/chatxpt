@@ -552,6 +552,28 @@ describe("identity and command permissions", () => {
         actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
       }).success,
     ).toBe(false);
+    expect(
+      streamerLiveDirectorIntentCommandSchema.safeParse({
+        ...intent,
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+        intent: {
+          ...intent.intent,
+          inputMethod: "speech",
+          confidence: 0.4,
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      streamerLiveDirectorIntentCommandSchema.safeParse({
+        ...intent,
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+        intent: {
+          ...intent.intent,
+          inputMethod: "speech",
+          confidence: 0.82,
+        },
+      }).success,
+    ).toBe(true);
 
     const cueAction = {
       ...base,

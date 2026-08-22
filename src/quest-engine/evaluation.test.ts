@@ -191,7 +191,7 @@ function conversionInput(
     envelope: { ...role3FixtureCandidateBatch.envelope, source: "quest-engine" as const },
     candidates: null,
     intelligence: evaluationIntelligence,
-    profile: evaluationProfile(null),
+    profile: evaluationProfile("Minecraft"),
     currentState: role3FixtureIdleState,
     recentQuests: [],
     now: directorNow + 1_000,
@@ -206,8 +206,8 @@ function conversionInput(
 
 describe("Role 3 engine evaluation fixtures", () => {
   it("continues with exactly three deterministic fallbacks when the provider is unavailable", () => {
-    const first = assemble([], null, "provider-unavailable");
-    const replay = assemble([], null, "provider-unavailable");
+    const first = assemble([], "Minecraft", "provider-unavailable");
+    const replay = assemble([], "Minecraft", "provider-unavailable");
 
     expect(first).toEqual(replay);
     expect(first.ok).toBe(true);
@@ -252,15 +252,18 @@ describe("Role 3 engine evaluation fixtures", () => {
     );
   });
 
-  it.each(["Tactical Shooter", "Racing", "Strategy", "Platformer", null])(
-    "keeps non-Minecraft fallback output game-neutral for %s",
+  it.each(["Tactical Shooter", "Racing", "Strategy", "Platformer", "Minecraft"])(
+    "keeps fallback output game-aware for %s",
     (gameName) => {
-      const result = assemble([], gameName, `genre-${gameName ?? "unknown"}`);
+      const result = assemble([], gameName, `genre-${gameName}`);
 
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       expect(result.batch.candidates).toHaveLength(3);
       expect(new Set(result.batch.candidates.map(({ title }) => title)).size).toBe(3);
+      expect(
+        result.batch.candidates.every(({ instruction }) => instruction.includes(gameName)),
+      ).toBe(true);
       expect(
         result.batch.candidates.every(
           ({ generation, sourceSignalIds }) =>
@@ -270,22 +273,12 @@ describe("Role 3 engine evaluation fixtures", () => {
     },
   );
 
-  it("uses Minecraft-aware deterministic fallbacks when Minecraft is selected", () => {
-    const result = assemble([], "Minecraft", "genre-minecraft");
-
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.batch.candidates).toHaveLength(3);
-    expect(new Set(result.batch.candidates.map(({ title }) => title)).size).toBe(3);
-    expect(result.batch.candidates.every(({ instruction }) => instruction.includes("Minecraft")))
-      .toBe(true);
-    expect(
-      result.batch.candidates.every(
-        ({ generation, sourceSignalIds }) =>
-          generation.method === "deterministic-fallback" && sourceSignalIds.length === 0,
-      ),
-    ).toBe(true);
-    expect(JSON.stringify(result.batch)).not.toMatch(/\b(?:health|hunger|hotbar|sleep|biome|monster|damage cause)\b/iu);
+  it("returns typed invalid context instead of generic filler when no game is selected", () => {
+    expect(assemble([], null, "missing-game")).toMatchObject({
+      ok: false,
+      code: "invalid-context",
+      reason: expect.stringContaining("selected game"),
+    });
   });
 
   it("is replay-stable from a reconstructed voting snapshot and rejects a stale reconnect command", () => {

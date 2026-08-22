@@ -17,12 +17,18 @@ import {
   createValidatingIntelligenceProvider,
 } from "./index";
 
+const minecraftProfile = {
+  ...contractFixtureProfile,
+  gameId: "minecraft",
+  gameName: "Minecraft",
+};
+
 async function fixtureIntelligence(audience: AudienceSnapshot = contractFixtureAudienceSnapshot) {
   return createValidatingIntelligenceProvider().analyse({
     envelope: contractFixtureEnvelope,
     gameplay: contractFixtureGameplaySnapshot,
     audience,
-    profile: contractFixtureProfile,
+    profile: minecraftProfile,
   });
 }
 
@@ -67,7 +73,7 @@ describe("algorithmic candidate strategy", () => {
     const batch = await provider.generate({
       envelope: contractFixtureCandidateBatch.envelope,
       intelligence: await fixtureIntelligence(),
-      profile: contractFixtureProfile,
+      profile: minecraftProfile,
       recentQuestTitles: [],
       streamerGoal: null,
       activeChatXptQuest: null,
@@ -78,6 +84,10 @@ describe("algorithmic candidate strategy", () => {
     expect(batch.candidates.every((candidate) => candidate.generation.method === "algorithmic")).toBe(true);
     expect(batch.candidates.every((candidate) => candidate.generation.provider === null)).toBe(true);
     expect(batch.candidates.every((candidate) => candidate.confidence >= 0.58)).toBe(true);
+    expect(
+      batch.candidates.every((candidate) => candidate.instruction.includes("Minecraft")),
+    ).toBe(true);
+    expect(JSON.stringify(batch)).not.toContain("game-neutral");
   });
 
   it("avoids recent quest titles when enough alternatives exist", async () => {
@@ -85,7 +95,7 @@ describe("algorithmic candidate strategy", () => {
     const batch = await provider.generate({
       envelope: contractFixtureCandidateBatch.envelope,
       intelligence: await fixtureIntelligence(),
-      profile: contractFixtureProfile,
+      profile: minecraftProfile,
       recentQuestTitles: ["Plan Out Loud", "Caster Mode", "Calm Focus"],
       streamerGoal: null,
       activeChatXptQuest: null,
@@ -194,16 +204,19 @@ describe("algorithmic candidate strategy", () => {
     const batch = await provider.generate({
       envelope: contractFixtureCandidateBatch.envelope,
       intelligence: await fixtureIntelligence(audience),
-      profile: contractFixtureProfile,
+      profile: minecraftProfile,
       recentQuestTitles: [],
       streamerGoal: null,
       activeChatXptQuest: null,
     });
 
     const citedIds = batch.candidates.flatMap((candidate) => candidate.sourceSignalIds);
-    expect(citedIds).toEqual(
-      expect.arrayContaining(["audience-energy-known", "audience-intent-known"]),
-    );
+    expect(citedIds).toContain("audience-energy-known");
+    expect(
+      citedIds.every((signalId) =>
+        ["audience-energy-known", "audience-intent-known"].includes(signalId),
+      ),
+    ).toBe(true);
     expect(JSON.stringify(batch)).not.toContain("requesting quest please");
   });
 
@@ -218,7 +231,7 @@ describe("algorithmic candidate strategy", () => {
           observedAt: contractFixtureEnvelope.occurredAt,
         }),
       ),
-      profile: contractFixtureProfile,
+      profile: minecraftProfile,
       recentQuestTitles: [],
       streamerGoal: null,
       activeChatXptQuest: null,
@@ -240,7 +253,7 @@ describe("algorithmic candidate strategy", () => {
           observedAt: contractFixtureEnvelope.occurredAt - 30_001,
         }),
       ),
-      profile: contractFixtureProfile,
+      profile: minecraftProfile,
       recentQuestTitles: [],
       streamerGoal: null,
       activeChatXptQuest: null,
@@ -256,12 +269,27 @@ describe("algorithmic candidate strategy", () => {
     const input = {
       envelope: contractFixtureCandidateBatch.envelope,
       intelligence: await fixtureIntelligence(),
-      profile: contractFixtureProfile,
+      profile: minecraftProfile,
       recentQuestTitles: ["Audience Coach"],
       streamerGoal: null,
       activeChatXptQuest: null,
     };
 
     expect(await strategy.generate(input)).toEqual(await strategy.generate(input));
+  });
+
+  it("rejects generation instead of emitting generic filler when no game is selected", async () => {
+    const strategy = createAlgorithmicCandidateStrategy();
+    const intelligence = await fixtureIntelligence();
+    expect(() =>
+      strategy.generate({
+        envelope: contractFixtureCandidateBatch.envelope,
+        intelligence,
+        profile: contractFixtureProfile,
+        recentQuestTitles: [],
+        streamerGoal: null,
+        activeChatXptQuest: null,
+      }),
+    ).toThrow("selected game");
   });
 });

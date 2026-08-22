@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   actorSchema,
+  confidenceSchema,
   contractVersionSchema,
   identifierSchema,
   revisionSchema,
@@ -14,6 +15,7 @@ import {
   audienceSnapshotSchema,
   directorCueActionSchema,
   gameplaySnapshotSchema,
+  MIN_CONFIRMED_STREAMER_SPEECH_CONFIDENCE,
 } from "./signals";
 
 const commandEnvelopeFields = {
@@ -33,6 +35,15 @@ export const streamerQuestCommandSchema = z
     type: z.literal("streamer.quest"),
     action: streamerQuestActionSchema,
     candidateId: identifierSchema.nullable(),
+  })
+  .strict();
+
+export const streamerQuestGenerationCommandSchema = z
+  .object({
+    ...commandEnvelopeFields,
+    questCycleId: identifierSchema,
+    type: z.literal("streamer.quest-generation"),
+    mode: z.literal("deterministic-fallback"),
   })
   .strict();
 
@@ -237,9 +248,30 @@ const declaredStreamIntentRequestSchema = z
     goal: z.string().trim().min(3).max(120),
     objective: z.string().trim().min(3).max(240),
     desiredAudienceInvolvement: z.string().trim().min(1).max(160).nullable(),
+    inputMethod: z.enum(["manual", "speech"]).default("manual"),
+    confidence: confidenceSchema.default(1),
     requestedExpiresAt: timestampSchema,
   })
-  .strict();
+  .strict()
+  .superRefine((intent, context) => {
+    if (intent.inputMethod === "manual" && intent.confidence !== 1) {
+      context.addIssue({
+        code: "custom",
+        message: "Manual intent must retain full source confidence",
+        path: ["confidence"],
+      });
+    }
+    if (
+      intent.inputMethod === "speech" &&
+      intent.confidence < MIN_CONFIRMED_STREAMER_SPEECH_CONFIDENCE
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: `Speech-derived intent requires at least ${Math.round(MIN_CONFIRMED_STREAMER_SPEECH_CONFIDENCE * 100)}% recognition confidence`,
+        path: ["confidence"],
+      });
+    }
+  });
 
 export const streamerLiveDirectorIntentCommandSchema = z
   .object({
@@ -318,6 +350,7 @@ export const streamerLiveDirectorCueCommandSchema = z
 export const commandEnvelopeSchema = z
   .discriminatedUnion("type", [
     streamerQuestCommandSchema,
+    streamerQuestGenerationCommandSchema,
     viewerVoteCommandSchema,
     viewerReactionCommandSchema,
     systemIntelligenceCommandSchema,
@@ -338,6 +371,7 @@ export const commandEnvelopeSchema = z
   .superRefine((command, context) => {
     const allowedActorKinds: Record<typeof command.type, Array<typeof command.actor.kind>> = {
       "streamer.quest": ["broadcaster", "moderator"],
+      "streamer.quest-generation": ["broadcaster"],
       "viewer.vote": ["viewer", "anonymous"],
       "viewer.react": ["viewer", "anonymous"],
       "system.intelligence-ready": ["system"],
@@ -367,6 +401,9 @@ export const commandEnvelopeSchema = z
 
 export type CommandEnvelope = z.infer<typeof commandEnvelopeSchema>;
 export type StreamerQuestCommand = z.infer<typeof streamerQuestCommandSchema>;
+export type StreamerQuestGenerationCommand = z.infer<
+  typeof streamerQuestGenerationCommandSchema
+>;
 export type ViewerVoteCommand = z.infer<typeof viewerVoteCommandSchema>;
 export type ViewerReactionCommand = z.infer<typeof viewerReactionCommandSchema>;
 export type SystemVoteCloseCommand = z.infer<typeof systemVoteCloseCommandSchema>;

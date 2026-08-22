@@ -93,7 +93,13 @@ export function buildMultiGameGameplaySnapshot(input: {
         ? null
         : {
             value: input.assessment.motion.changedPixelRatio,
-            confidence: interpretationKnown ? interpretation.confidence : 0.5,
+            // The changed-pixel ratio is a direct measurement once two real
+            // frames exist. Higher-level motion interpretation can continue
+            // bootstrapping without hiding that measured activity from the
+            // intervention policy.
+            confidence: interpretationKnown
+              ? Math.max(MINIMUM_CONFIDENCE, interpretation.confidence)
+              : MINIMUM_CONFIDENCE,
           },
     ),
     group(

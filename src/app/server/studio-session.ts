@@ -55,6 +55,7 @@ const startSessionSchema = z
   });
 
 const STUDIO_GRANT_TTL_MS = 12 * 60 * 60 * 1_000;
+const GAMEPLAY_CAPTURE_STALE_AFTER_MS = 10_000;
 const studioPresenceSchema = z.object({ action: z.enum(["heartbeat", "disconnect"]) }).strict();
 const twitchStreamEventSchema = z.object({
   broadcasterId: identifierSchema,
@@ -561,6 +562,43 @@ export class StudioSessionApplication {
     }
     this.assertCommandActor(parsedCommand.data, authorized);
     let currentState = authorized.state;
+    if (parsedCommand.data.type === "streamer.quest-generation") {
+      const maxFallbackAttempts = 20;
+      for (let attempt = 0; attempt < maxFallbackAttempts; attempt += 1) {
+        const fallback = await this.dependencies.runtime.requestDeterministicFallbackProposal(
+          currentState,
+          new StudioProjectionContext(this.now),
+          {
+            commandId: parsedCommand.data.commandId,
+            correlationId: parsedCommand.data.correlationId,
+            issuedAt: parsedCommand.data.issuedAt,
+          },
+        );
+        if (fallback.ok) {
+          return {
+            ...(await this.surfaceState(fallback.receipt.state, authorized.twitchVerified)),
+            outcome: fallback.outcome,
+            message:
+              "Three deterministic fallback quests are ready for review. No gameplay or audience evidence was used.",
+          };
+        }
+        if (fallback.error.code !== "stale-revision" || attempt === maxFallbackAttempts - 1) {
+          throw commandError(fallback.error.code, fallback.error.message, fallback.error.retryable);
+        }
+        currentState = await this.loadSession(currentState.session.sessionId);
+        if (currentState.session.broadcasterId !== authorized.state.session.broadcasterId) {
+          throw new StudioSessionApplicationError(
+            "forbidden",
+            "Studio grant no longer owns this session",
+          );
+        }
+      }
+      throw new StudioSessionApplicationError(
+        "dependency-unavailable",
+        "Studio could not generate fallback quests while live gameplay was updating",
+        true,
+      );
+    }
     let result;
     // Live capture can advance the shared authoritative revision several times
     // while a broadcaster command is in flight. Rebase the already-authenticated
@@ -844,6 +882,9 @@ export class StudioSessionApplication {
       (name) => name !== "TWITCH_EXTENSION_CLIENT_ID" && name !== "TWITCH_EXTENSION_SECRET",
     );
     const gameplayLive = state.gameplay?.envelope.evidenceClass === "live";
+    const gameplayCaptureFresh = state.gameplay !== null &&
+      checkedAt - state.gameplay.envelope.occurredAt <= GAMEPLAY_CAPTURE_STALE_AFTER_MS &&
+      state.gameplay.envelope.occurredAt <= checkedAt + 5_000;
     let realtimeHealth = serviceHealthSchema.parse({
       service: "realtime",
       status: this.persistence.mode === "supabase" ? "ready" : "degraded",
@@ -866,16 +907,18 @@ export class StudioSessionApplication {
     }
     const captureHealth = serviceHealthSchema.parse({
       service: "gameplay-capture",
-      status: state.gameplay === null ? "unavailable" : "ready",
+      status: gameplayCaptureFresh ? "ready" : "unavailable",
       checkedAt,
       message: state.gameplay === null
         ? "No Gameplay Capture snapshot is available"
-        : `${state.gameplay.signals.length} Detected Game Facts are available with explicit confidence`,
-      retryable: state.gameplay === null,
+        : gameplayCaptureFresh
+          ? `${state.gameplay.signals.length} Detected Game Facts are available with explicit confidence`
+          : `Gameplay Capture stopped reporting frames ${Math.max(1, Math.floor((checkedAt - state.gameplay.envelope.occurredAt) / 1_000))} seconds ago; keep the persistent Capture tab open and reconnect it`,
+      retryable: !gameplayCaptureFresh,
     });
     const integrationBlockers = [
       ...(!twitchCoreReady ? ["twitch-configuration"] : []),
-      ...(state.gameplay === null ? ["gameplay-capture"] : []),
+      ...(!gameplayCaptureFresh ? [state.gameplay === null ? "gameplay-capture" : "gameplay-capture-stale"] : []),
     ];
     const canStartSession = state.session.status === "preparing" && integrationBlockers.length === 0;
     const sessionReady = state.session.status === "live" || canStartSession;
@@ -941,7 +984,7 @@ export class StudioSessionApplication {
     const recommendedAction =
       canStartSession && !realtimeBlocksStart && !twitchVerified
         ? "start-session"
-        : state.gameplay === null
+        : !gameplayCaptureFresh
           ? "request-capture-permission"
           : !twitchCoreReady
             ? "connect-twitch"
@@ -964,14 +1007,16 @@ export class StudioSessionApplication {
               : ["install-extension", "retry-service", "open-diagnostics"]
             : ["connect-twitch", "open-diagnostics"],
         },
-        { service: "obs-capture", configured: state.gameplay !== null, health: captureHealth, allowedActions: state.gameplay === null ? ["request-capture-permission", "select-capture-source", "open-diagnostics"] : ["open-diagnostics"] },
+        { service: "obs-capture", configured: state.gameplay !== null, health: captureHealth, allowedActions: gameplayCaptureFresh ? ["open-diagnostics"] : ["request-capture-permission", "select-capture-source", "open-diagnostics"] },
         { service: "realtime", configured: this.persistence.mode === "supabase", health: realtimeHealth, allowedActions: ["retry-service", "open-diagnostics"] },
         { service: "intelligence", configured: true, health: intelligenceHealth, allowedActions: ["retry-service", "open-diagnostics"] },
         { service: "session", configured: true, health: sessionHealth, allowedActions: sessionActions },
       ],
       blockerCodes: blockers,
       recommendedAction,
-      label: ready
+      label: !gameplayCaptureFresh && state.gameplay !== null
+        ? "Gameplay Capture stopped — reopen the persistent capture tab"
+        : ready
         ? state.session.status === "live"
           ? "Ready for the Twitch workflow"
           : twitchVerified

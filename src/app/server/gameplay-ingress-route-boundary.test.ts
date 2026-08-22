@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { assertSecureGameplayIngressRequest } from "../api/gameplay/ingress/response";
+import {
+  assertSecureGameplayIngressRequest,
+  gameplayIngressErrorResponse,
+} from "../api/gameplay/ingress/response";
 import { BoundedJsonError, readBoundedJson } from "./bounded-json";
 
 describe("gameplay ingress HTTP boundary", () => {
@@ -42,5 +45,43 @@ describe("gameplay ingress HTTP boundary", () => {
         new Request("http://chatxpt.example/api/gameplay/ingress/grant"),
       ),
     ).toThrow(/requires HTTPS/);
+  });
+
+  it("maps Studio authorization failures during capture grant exchange to gameplay auth responses", async () => {
+    const response = gameplayIngressErrorResponse({
+      name: "StudioSessionApplicationError",
+      code: "unauthenticated",
+      message: "Start or reopen an authorised Studio session",
+      retryable: false,
+    });
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: "unauthenticated",
+        message: "Start or reopen an authorised Studio session",
+        retryable: false,
+      },
+    });
+  });
+
+  it("preserves gameplay ingress application error status across dev module boundaries", async () => {
+    const response = gameplayIngressErrorResponse({
+      name: "GameplayIngressApplicationError",
+      code: "unauthenticated",
+      message: "Gameplay ingress setup key is missing",
+      retryable: false,
+    });
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: "unauthenticated",
+        message: "Gameplay ingress setup key is missing",
+        retryable: false,
+      },
+    });
   });
 });

@@ -161,6 +161,8 @@ const fixtureDirectorIntent: Extract<DeclaredStreamIntent, { readonly status: "k
   goal: "Build safely",
   objective: "Build safely while keeping chat involved",
   desiredAudienceInvolvement: "Choose the next safe build",
+  inputMethod: "manual",
+  confidence: 1,
   authorId: "role-3-streamer",
   updatedAt: ROLE_3_FIXTURE_TIME - 60_000,
   expiresAt: ROLE_3_FIXTURE_TIME + 60_000,

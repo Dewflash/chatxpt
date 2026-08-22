@@ -761,6 +761,11 @@ export class DefaultQuestEngine implements QuestEngine {
         return transitionQuestProgress(input);
       case "streamer.quest":
         return transitionStreamerCommand(input);
+      case "streamer.quest-generation":
+        return error(
+          "unavailable-capability",
+          "Manual fallback generation is handled by the Role 1 application seam",
+        );
       case "viewer.vote":
         return transitionVote(input);
       case "viewer.react":

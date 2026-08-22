@@ -21,6 +21,7 @@ import {
 import {
   buildProfileSettingsCommand,
   buildEmergencyClearCommand,
+  buildQuestGenerationCommand,
   buildQuestCommand,
   buildQuestProgressCommand,
   buildSessionOverrideCommand,
@@ -49,7 +50,10 @@ export interface StudioProductPageSurfaceProps {
   readonly commandMessage?: string | null;
   readonly pendingCommandId?: string | null;
   readonly onCommand?: (command: StreamerUiCommand) => void;
+  readonly onResetSession?: (command: StreamerUiCommand | null) => void;
   readonly commandFactory?: StreamerCommandFactory;
+  readonly children?: ReactNode;
+  readonly navigationTarget?: "_self" | "_blank";
 }
 
 const NAV_ITEMS: readonly { readonly page: StudioProductPage; readonly href: string; readonly label: string }[] = [
@@ -106,7 +110,7 @@ const PAGE_SECTIONS: Readonly<Partial<Record<StudioProductPage, readonly string[
   "live-quests": ["Now", "Recommendations", "Voting", "Results"],
   profile: ["Personality", "Stream Presets", "Safety", "Accessibility"],
   "stream-settings": ["Saved Source", "Session Override", "Reset to Saved"],
-  "test-lab": ["Sample / Live Source", "Capture Controls", "Observed / Unknown", "Recovery"],
+  "test-lab": ["Clean Start Reset", "Sample / Live Source", "Capture Controls", "Observed / Unknown", "Recovery"],
 };
 
 function titleCase(value: string): string {
@@ -252,7 +256,7 @@ function HealthStrip({ view, readiness }: {
   readonly readiness?: StreamerReadinessView | null;
 }) {
   const twitch = readinessAvailability(readiness, "twitch", "Connect Twitch so ChatXPT can monitor the stream.");
-  const obs = readinessAvailability(readiness, "obs-capture", "Allow OBS Virtual Camera from Studio when capture is ready.");
+  const obs = readinessAvailability(readiness, "obs-capture", "Select a gameplay screen or window from Studio when capture is ready.");
   const realtime = readinessAvailability(readiness, "realtime", "Viewer Voting connects after session state is available.");
   const participationModes = view === null
     ? []
@@ -701,6 +705,15 @@ function GameplayPage({
   const metrics = snapshot?.captureMetrics ?? null;
   const knownFacts = snapshot?.signals.filter((signal) => signal.observation.status === "known").length ?? 0;
   const gameplayFacts = view?.liveDirector?.liveContext?.facts.filter((fact) => fact.sourceClass === "gameplay-observed") ?? [];
+  const originalCaptureSource = snapshot?.signals.find((signal) =>
+    signal.observation.provenance.source === "browser-display-capture" ||
+    signal.observation.provenance.source === "obs-virtual-camera"
+  )?.observation.provenance.source ?? snapshot?.envelope.source;
+  const captureSourceLabel = originalCaptureSource === "browser-display-capture"
+    ? "Selected screen or window"
+    : originalCaptureSource === "obs-virtual-camera"
+      ? "OBS Virtual Camera"
+      : "Gameplay capture";
   const timeline = gameplayFacts
     .filter((fact) => fact.status === "known" || fact.status === "stale")
     .sort((left, right) => left.observedAt - right.observedAt)
@@ -738,8 +751,8 @@ function GameplayPage({
 
       <div className={styles.engineColumns}>
         <article id="game-capture" className={styles.captureCard}>
-          <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Game Capture</span><h2>OBS processing</h2></div><StatusBadge tone={capture.tone}>{capture.badge}</StatusBadge></div>
-          <div className={styles.captureSource}><strong>OBS Virtual Camera</strong><small>{snapshot === null ? capture.detail : `${titleCase(snapshot.capabilities.tier)} · frames remain local`}</small></div>
+          <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Game Capture</span><h2>Gameplay processing</h2></div><StatusBadge tone={capture.tone}>{capture.badge}</StatusBadge></div>
+          <div className={styles.captureSource}><strong>{captureSourceLabel}</strong><small>{snapshot === null ? capture.detail : `${titleCase(snapshot.capabilities.tier)} · frames remain local`}</small></div>
           <div className={styles.captureMetrics} aria-label="Game capture processing metrics">
             {primaryMetrics.map((metric) => <span key={metric.label}><small>{metric.label}</small><b>{metric.value}</b><em>{metric.detail}</em></span>)}
           </div>
@@ -849,6 +862,14 @@ function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
     ? manualProgressDraft.value
     : serverManualProgress;
   const totalVotes = cycle?.voteTallies.reduce((sum, tally) => sum + tally.votes, 0) ?? 0;
+  const deterministicFallback = cycle?.options.length === 3 && cycle.options.every(
+    (option) => option.generation.method === "deterministic-fallback",
+  );
+  const canGenerateFallback = view !== null &&
+    cycle?.status === "idle" &&
+    (view.session.status === "preparing" || view.session.status === "live") &&
+    !view.emergencyPaused &&
+    onCommand !== undefined;
   const actionLabels = {
     approve: "Approve selected",
     reject: "Reject selected",
@@ -870,11 +891,36 @@ function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
     <div className={styles.questWorkspace}>
       <article id="now" className={styles.nowQuest}>
         <div><StatusBadge tone={cycle?.status === "voting" ? "info" : cycle?.status === "active" ? "success" : "neutral"}>{cycle === null ? "Waiting" : titleCase(cycle.status)}</StatusBadge><h2>Now</h2><strong>{active === null ? cycle?.status === "voting" ? "Viewers are choosing the next sidequest" : "No sidequest is active" : active.title}</strong><p>{cycle === null || cycle.options.length !== 3 ? "ChatXPT waits until exactly three safe, game-compatible options are validated." : "All three options passed the deterministic safety and game-fit boundary before appearing here."}</p></div>
-        {view?.emergencyPaused ? <button type="button" className={styles.primaryAction} disabled={pending || onCommand === undefined} onClick={() => onCommand?.(buildEmergencyClearCommand(view, commandFactory))}>Clear emergency pause</button> : cycle?.availableStreamerActions.includes("emergency-pause") ? <button type="button" className={styles.dangerAction} disabled={pending || onCommand === undefined} onClick={() => sendAction("emergency-pause")}>Pause new quests</button> : null}
+        <div>
+          {cycle?.status === "idle" ? (
+            <button
+              type="button"
+              className={styles.primaryAction}
+              disabled={pending || !canGenerateFallback}
+              onClick={() => {
+                if (view !== null) onCommand?.(buildQuestGenerationCommand(view, commandFactory));
+              }}
+            >
+              {pending ? "Generating fallback…" : "Generate quest now"}
+            </button>
+          ) : null}
+          {view?.emergencyPaused ? <button type="button" className={styles.primaryAction} disabled={pending || onCommand === undefined} onClick={() => onCommand?.(buildEmergencyClearCommand(view, commandFactory))}>Clear emergency pause</button> : cycle?.availableStreamerActions.includes("emergency-pause") ? <button type="button" className={styles.dangerAction} disabled={pending || onCommand === undefined} onClick={() => sendAction("emergency-pause")}>Pause new quests</button> : null}
+        </div>
       </article>
 
       <section id="recommendations" aria-labelledby="recommendations-heading">
-        <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Recommendations</span><h2 id="recommendations-heading">Exactly three official choices</h2></div><span className={styles.softLabel}>{cycle?.options.length === 3 ? `${totalVotes} votes` : "Waiting for validation"}</span></div>
+        <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Recommendations</span><h2 id="recommendations-heading">Exactly three official choices</h2></div><span className={styles.softLabel}>{deterministicFallback ? "Deterministic fallback" : cycle?.options.length === 3 ? `${totalVotes} votes` : "Waiting for validation"}</span></div>
+        {deterministicFallback ? (
+          <Notice tone="info" title="Deterministic fallback shown">
+            These three safe quests were generated immediately without gameplay or audience evidence.
+            Evidence-driven recommendations use trusted signals later and still pass the same validation.
+          </Notice>
+        ) : null}
+        {deterministicFallback && view?.session.status !== "live" ? (
+          <Notice tone="warning" title="Start the stream before opening the vote">
+            You can review the fallback now. Viewer voting becomes available after the broadcaster session is live.
+          </Notice>
+        ) : null}
         {cycle?.options.length === 3 ? (
           <div className={styles.questCards}>
             {cycle.options.map((option, index) => {
@@ -896,7 +942,7 @@ function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
         <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Voting & controls</span><h2>Authoritative stream controls</h2></div><StatusBadge tone={cycle === null ? "neutral" : "info"}>{cycle === null ? "Waiting" : titleCase(cycle.status)}</StatusBadge></div>
         <div className={styles.actions}>
           {cycle?.availableStreamerActions.filter((action) => action !== "emergency-pause").map((action) => (
-            <button key={action} type="button" className={["cancel", "skip", "fail"].includes(action) ? styles.dangerAction : styles.secondaryButton} disabled={pending || onCommand === undefined || (["approve", "reject", "start"].includes(action) && selectedCandidateId === null)} onClick={() => {
+            <button key={action} type="button" className={["cancel", "skip", "fail"].includes(action) ? styles.dangerAction : styles.secondaryButton} disabled={pending || onCommand === undefined || (["approve", "reject", "start"].includes(action) && selectedCandidateId === null) || (action === "approve" && view?.session.status !== "live")} onClick={() => {
               if (action === "cancel" || action === "skip" || action === "fail") {
                 setConfirmationDraft({ cycleId, action });
               }
@@ -1207,17 +1253,53 @@ function StreamSettingsPage({
   );
 }
 
-function TestLabPage({ view, readiness }: {
+function TestLabPage({
+  view,
+  readiness,
+  pending,
+  onResetSession,
+  commandFactory,
+}: {
   readonly view: StreamerViewModel | null;
   readonly readiness?: StreamerReadinessView | null;
+  readonly pending: boolean;
+  readonly onResetSession?: (command: StreamerUiCommand | null) => void;
+  readonly commandFactory: StreamerCommandFactory;
 }) {
-  const capture = readinessAvailability(readiness, "obs-capture", "Connect OBS Virtual Camera before running the live capture check.");
+  const capture = readinessAvailability(readiness, "obs-capture", "Select a gameplay screen or window before running the live capture check.");
   const voting = readinessAvailability(readiness, "twitch", "Connect Twitch and install the Extension before checking viewer voting.");
   return (
     <div className={styles.testWorkspace}>
+      <article id="clean-start-reset" className={styles.cleanStartReset}>
+        <div>
+          <StatusBadge tone="danger">Full app reset</StatusBadge>
+          <h2>Start the entire ChatXPT test from the beginning</h2>
+          <p>
+            Ends the current session, disconnects this browser from Twitch, clears the local demo
+            account, and returns to the first sign-in screen. The permanent broadcaster-linked OBS
+            Browser Source URL remains valid for that broadcaster&apos;s future sessions.
+          </p>
+        </div>
+        <button
+          className={styles.dangerButton}
+          type="button"
+          disabled={pending || onResetSession === undefined}
+          onClick={() => {
+            if (globalThis.confirm("Reset ChatXPT completely and return to the first sign-in screen?")) {
+              onResetSession?.(
+                view === null || (view.session.status !== "preparing" && view.session.status !== "live")
+                  ? null
+                  : buildSetupCommand(view, "session", "end-session", commandFactory),
+              );
+            }
+          }}
+        >
+          {pending ? "Resetting ChatXPT…" : "Reset ChatXPT to clean start"}
+        </button>
+      </article>
       <Notice tone="warning" title="Sample checks stay separate from live state">A sample never becomes the judged live gameplay or Twitch evidence. Live checks use the current authorised session and are labelled separately.</Notice>
       <div className={styles.testGrid}>
-        <article><span className={styles.testIcon}>01</span><strong>Game Capture</strong><p>Use OBS Virtual Camera in a persistent capture tab while you move through Studio.</p><StatusBadge tone={capture.tone}>{capture.badge}</StatusBadge><a href="/studio/gameplay/capture" target="_blank" rel="noreferrer">Run live capture check</a></article>
+        <article><span className={styles.testIcon}>01</span><strong>Game Capture</strong><p>Select the gameplay screen or window in a persistent capture tab while you move through Studio.</p><StatusBadge tone={capture.tone}>{capture.badge}</StatusBadge><a href="/studio/gameplay/capture" target="_blank" rel="noreferrer">Run live capture check</a></article>
         <article id="viewer-voting-check"><span className={styles.testIcon}>02</span><strong>Viewer Voting</strong><p>Open the installed panel from the Twitch channel. A direct browser tab cannot create a Twitch viewer identity.</p><StatusBadge tone={voting.tone}>{voting.badge}</StatusBadge><span className={styles.disabledAction}>Test through Twitch Local or Hosted Test</span></article>
         <article><span className={styles.testIcon}>03</span><strong>Broadcast Overlay</strong><p>Check voting, active quest, result, reconnect, and sanitised Up next output.</p><StatusBadge tone={view?.session.status === "live" ? "success" : "neutral"}>{view?.session.status === "live" ? "Session live" : "Waiting for live session"}</StatusBadge><a href="#broadcast-output-setup">Generate below</a></article>
       </div>
@@ -1229,12 +1311,13 @@ function TestLabPage({ view, readiness }: {
   );
 }
 
-function PageBody({ page, view, readiness, pending, onCommand, commandFactory }: {
+function PageBody({ page, view, readiness, pending, onCommand, onResetSession, commandFactory }: {
   readonly page: StudioProductPage;
   readonly view: StreamerViewModel | null;
   readonly readiness?: StreamerReadinessView | null;
   readonly pending: boolean;
   readonly onCommand?: (command: StreamerUiCommand) => void;
+  readonly onResetSession?: (command: StreamerUiCommand | null) => void;
   readonly commandFactory: StreamerCommandFactory;
 }) {
   if (page === "home") {
@@ -1271,7 +1354,15 @@ function PageBody({ page, view, readiness, pending, onCommand, commandFactory }:
       />
     );
   }
-  return <TestLabPage view={view} readiness={readiness} />;
+  return (
+    <TestLabPage
+      view={view}
+      readiness={readiness}
+      pending={pending}
+      onResetSession={onResetSession}
+      commandFactory={commandFactory}
+    />
+  );
 }
 
 export function StudioProductPageSurface({
@@ -1281,7 +1372,10 @@ export function StudioProductPageSurface({
   commandMessage,
   pendingCommandId = null,
   onCommand,
+  onResetSession,
   commandFactory = defaultStreamerCommandFactory,
+  children,
+  navigationTarget = "_self",
 }: StudioProductPageSurfaceProps) {
   const copy = PAGE_COPY[page];
   const pending = pendingCommandId !== null;
@@ -1294,7 +1388,13 @@ export function StudioProductPageSurface({
         </div>
         <nav className={styles.nav}>
           {NAV_ITEMS.map((item) => (
-            <a key={item.page} href={item.href} aria-current={item.page === page ? "page" : undefined}>
+            <a
+              key={item.page}
+              href={item.href}
+              aria-current={item.page === page ? "page" : undefined}
+              target={navigationTarget === "_blank" ? "_blank" : undefined}
+              rel={navigationTarget === "_blank" ? "noreferrer" : undefined}
+            >
               {item.label}
             </a>
           ))}
@@ -1323,14 +1423,17 @@ export function StudioProductPageSurface({
           </nav>
         ) : null}
         {commandMessage ? <Notice tone="warning" title="Studio status">{commandMessage}</Notice> : null}
-        <PageBody
-          page={page}
-          view={view}
-          readiness={readiness}
-          pending={pending}
-          onCommand={onCommand}
-          commandFactory={commandFactory}
-        />
+        {children ?? (
+          <PageBody
+            page={page}
+            view={view}
+            readiness={readiness}
+            pending={pending}
+            onCommand={onCommand}
+            onResetSession={onResetSession}
+            commandFactory={commandFactory}
+          />
+        )}
       </main>
     </DesignSystemRoot>
   );

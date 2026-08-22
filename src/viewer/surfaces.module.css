@@ -169,6 +169,12 @@
   gap: 8px;
 }
 
+.secondaryActions {
+  display: grid;
+  gap: 8px;
+  padding-top: 2px;
+}
+
 .extension .actions {
   position: sticky;
   z-index: 2;

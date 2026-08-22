@@ -85,6 +85,11 @@ export interface GameplayIngressResult {
   readonly proposal: GameplayIngressProposalResult;
 }
 
+export interface GameplayIngressStatus {
+  readonly authority: GameplayIngressAuthoritySnapshot;
+  readonly proposal: GameplayIngressProposalResult | null;
+}
+
 export type GameplayIngressLiveDirectorResult =
   | {
       readonly status: "not-requested";
@@ -169,6 +174,7 @@ export class GameplayIngressApplication {
     { messageId: string; acceptedAt: number; expiresAt: number }
   >();
   private readonly lastPublishedBySession = new Map<string, number>();
+  private readonly lastProposalBySession = new Map<string, GameplayIngressProposalResult>();
 
   constructor(dependencies: GameplayIngressApplicationDependencies) {
     this.persistence = dependencies.persistence;
@@ -224,6 +230,14 @@ export class GameplayIngressApplication {
     return authoritySnapshot(state);
   }
 
+  async readStatus(authorizationHeader: string | null): Promise<GameplayIngressStatus> {
+    const { state } = await this.authorize(authorizationHeader);
+    return {
+      authority: authoritySnapshot(state),
+      proposal: this.lastProposalBySession.get(state.session.sessionId) ?? null,
+    };
+  }
+
   async ingest(
     authorizationHeader: string | null,
     input: unknown,
@@ -241,12 +255,13 @@ export class GameplayIngressApplication {
       );
     }
     if (
-      snapshot.envelope.source !== "obs-virtual-camera" ||
+      (snapshot.envelope.source !== "obs-virtual-camera" &&
+        snapshot.envelope.source !== "browser-display-capture") ||
       snapshot.envelope.evidenceClass === "fixture"
     ) {
       throw new GameplayIngressApplicationError(
         "validation",
-        "Gameplay ingress accepts only real or diagnostic OBS Virtual Camera snapshots",
+        "Gameplay ingress accepts only real or diagnostic browser gameplay capture snapshots",
       );
     }
     const now = this.now();
@@ -297,6 +312,7 @@ export class GameplayIngressApplication {
       });
     }
     const proposal = await this.maybeRequestEligibleCycleProposal(state, result);
+    this.lastProposalBySession.set(state.session.sessionId, proposal);
     const stateAfterProposal = await this.loadActiveSession(grant.sessionId);
     const liveDirector =
       proposal.status === "submitted" || proposal.status === "duplicate"
@@ -466,7 +482,7 @@ export class GameplayIngressApplication {
   }
 }
 
-const applicationKey = Symbol.for("chatxpt.gameplayIngressApplication.v1");
+const applicationKey = Symbol.for("chatxpt.gameplayIngressApplication.v2");
 const globalApplication = globalThis as typeof globalThis & {
   [applicationKey]?: GameplayIngressApplication;
 };

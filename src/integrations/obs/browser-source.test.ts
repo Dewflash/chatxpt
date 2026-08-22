@@ -10,7 +10,7 @@ describe("OBS browser source descriptor", () => {
   it("creates a read-only transparent overlay URL for OBS", () => {
     const descriptor = createObsBrowserSourceDescriptor({
       baseUrl: "https://chatxpt.example",
-      sessionId: "fixture-session",
+      broadcasterId: "fixture-broadcaster",
       accessToken: "fixture-overlay-token-0001",
     });
 
@@ -21,11 +21,12 @@ describe("OBS browser source descriptor", () => {
       readOnly: true,
       hidesWhenInactive: true,
       latestSnapshotFirst: true,
+      reusableAcrossSessions: true,
       role: "overlay",
-      sessionId: "fixture-session",
+      broadcasterId: "fixture-broadcaster",
     });
     expect(parseObsBrowserSourceRequest(descriptor.url)).toEqual({
-      sessionId: "fixture-session",
+      broadcasterId: "fixture-broadcaster",
       accessToken: "fixture-overlay-token-0001",
     });
     const url = new URL(descriptor.url);
@@ -37,7 +38,7 @@ describe("OBS browser source descriptor", () => {
     expect(
       createObsBrowserSourceDescriptor({
         baseUrl: "http://localhost:3000",
-        sessionId: "fixture-session",
+        broadcasterId: "fixture-broadcaster",
         accessToken: "fixture-overlay-token-0001",
       }).url,
     ).toContain("http://localhost:3000/obs-overlay");
@@ -45,7 +46,7 @@ describe("OBS browser source descriptor", () => {
     expect(() =>
       createObsBrowserSourceDescriptor({
         baseUrl: "http://chatxpt.example",
-        sessionId: "fixture-session",
+        broadcasterId: "fixture-broadcaster",
         accessToken: "fixture-overlay-token-0001",
       }),
     ).toThrow("HTTPS");
@@ -54,7 +55,7 @@ describe("OBS browser source descriptor", () => {
   it("redacts the overlay access token before logging or documentation", () => {
     const descriptor = createObsBrowserSourceDescriptor({
       baseUrl: "https://chatxpt.example",
-      sessionId: "fixture-session",
+      broadcasterId: "fixture-broadcaster",
       accessToken: "fixture-overlay-token-0001",
     });
 

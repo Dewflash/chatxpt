@@ -16,14 +16,15 @@ const obsBrowserSourceDescriptorSchema = z
     readOnly: z.literal(true),
     hidesWhenInactive: z.literal(true),
     latestSnapshotFirst: z.literal(true),
+    reusableAcrossSessions: z.literal(true),
     role: z.literal("overlay"),
-    sessionId: identifierSchema,
+    broadcasterId: identifierSchema,
   })
   .strict();
 
 export interface CreateObsBrowserSourceDescriptorInput {
   readonly baseUrl: string;
-  readonly sessionId: string;
+  readonly broadcasterId: string;
   readonly accessToken: string;
   readonly path?: string;
   readonly width?: number;
@@ -33,7 +34,7 @@ export interface CreateObsBrowserSourceDescriptorInput {
 export type ObsBrowserSourceDescriptor = z.infer<typeof obsBrowserSourceDescriptorSchema>;
 
 export interface ObsBrowserSourceRequest {
-  readonly sessionId: string;
+  readonly broadcasterId: string;
   readonly accessToken: string;
 }
 
@@ -45,10 +46,10 @@ export function createObsBrowserSourceDescriptor(
     throw new Error("OBS Browser Source URL must use HTTPS outside localhost");
   }
 
-  const sessionId = identifierSchema.parse(input.sessionId);
+  const broadcasterId = identifierSchema.parse(input.broadcasterId);
   const accessToken = overlayAccessTokenSchema.parse(input.accessToken);
   const url = new URL(input.path ?? "/obs-overlay", baseUrl);
-  url.searchParams.set("sessionId", sessionId);
+  url.searchParams.set("broadcasterId", broadcasterId);
   url.hash = new URLSearchParams({ overlayAccessToken: accessToken }).toString();
 
   return obsBrowserSourceDescriptorSchema.parse({
@@ -59,8 +60,9 @@ export function createObsBrowserSourceDescriptor(
     readOnly: true,
     hidesWhenInactive: true,
     latestSnapshotFirst: true,
+    reusableAcrossSessions: true,
     role: "overlay",
-    sessionId,
+    broadcasterId,
   });
 }
 
@@ -68,7 +70,7 @@ export function parseObsBrowserSourceRequest(input: string | URL): ObsBrowserSou
   const url = typeof input === "string" ? new URL(input) : input;
   const fragment = new URLSearchParams(url.hash.replace(/^#/, ""));
   return {
-    sessionId: identifierSchema.parse(url.searchParams.get("sessionId")),
+    broadcasterId: identifierSchema.parse(url.searchParams.get("broadcasterId")),
     accessToken: overlayAccessTokenSchema.parse(fragment.get("overlayAccessToken")),
   };
 }

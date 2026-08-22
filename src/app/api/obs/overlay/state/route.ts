@@ -17,7 +17,10 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const view = await getObsOverlayApplication().read(
       request.headers.get("authorization"),
-      url.searchParams.get("sessionId"),
+      {
+        broadcasterId: url.searchParams.get("broadcasterId"),
+        sessionId: url.searchParams.get("sessionId"),
+      },
     );
     return NextResponse.json({ ok: true, view }, { headers: obsOverlayHeaders });
   } catch (caught) {

@@ -73,6 +73,19 @@ describe("StudioManagementSurface", () => {
     expect(html).not.toContain("model selector");
   });
 
+  it("keeps the reusable clean-start reset in Test Lab", () => {
+    const view = createFixtureUiGatewaySnapshot().views.streamer;
+    const html = renderToStaticMarkup(h(StudioManagementSurface, {
+      view,
+      onCommand: () => undefined,
+    }));
+
+    expect(html).toContain("Test Lab");
+    expect(html).toContain("Reset the app for a clean-start test");
+    expect(html).toContain("clears this browser&#x27;s Studio session");
+    expect(html).toContain("End session &amp; reset");
+  });
+
   it("warns when an AI candidate batch contains validated fallback replacements", () => {
     const html = renderToStaticMarkup(h(StudioManagementSurface, {
       view: mixedGenerationView(),
@@ -156,6 +169,9 @@ describe("StudioManagementSurface", () => {
 
     expect(html).toContain("Session Goal");
     expect(html).toContain("Current Objective");
+    expect(html).toContain("Voice context");
+    expect(html).toContain("Start listening");
+    expect(html).toContain("does not store raw microphone audio");
     expect(html).toContain("Streamer says");
     expect(html).toContain("ChatXPT detects");
     expect(html).toContain("Chat suggests");

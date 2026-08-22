@@ -7,7 +7,7 @@ import {
 } from "../../core";
 
 type FrameEvidenceClass = "live" | "diagnostic" | "fixture";
-type FrameMessageSource = "obs-virtual-camera" | "test-fixture";
+type FrameMessageSource = "obs-virtual-camera" | "browser-display-capture" | "test-fixture";
 
 export interface BrowserFrameCapture {
   readonly width: number;
@@ -140,6 +140,21 @@ export function obsVirtualCameraFailureReason(
   if (name === "NotFoundError" || name === "OverconstrainedError") return "not-found";
   if (name === "NotReadableError" || name === "AbortError") return "device-unavailable";
   return null;
+}
+
+export interface BrowserDisplayCaptureRequestOptions {
+  readonly mediaDevices?: Pick<MediaDevices, "getDisplayMedia">;
+}
+
+/** Opens the browser-native screen/window/tab picker from a direct user action. */
+export async function requestBrowserDisplayCaptureStream(
+  options: BrowserDisplayCaptureRequestOptions = {},
+): Promise<MediaStream> {
+  const mediaDevices = options.mediaDevices ?? globalThis.navigator?.mediaDevices;
+  if (mediaDevices?.getDisplayMedia === undefined) {
+    throw new Error("Screen and window capture are unavailable in this browser");
+  }
+  return mediaDevices.getDisplayMedia({ audio: false, video: true });
 }
 
 export function findObsVirtualCameraDevice(

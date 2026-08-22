@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { identifierSchema, timestampSchema } from "../../core";
 
-const overlayGrantSchema = z
+const sessionOverlayGrantSchema = z
   .object({
     version: z.literal(1),
     grantId: identifierSchema,
@@ -15,6 +15,20 @@ const overlayGrantSchema = z
     expiresAt: timestampSchema,
   })
   .strict();
+
+const broadcasterOverlayGrantSchema = z
+  .object({
+    version: z.literal(2),
+    grantId: identifierSchema,
+    broadcasterId: identifierSchema,
+    issuedAt: timestampSchema,
+  })
+  .strict();
+
+const overlayGrantSchema = z.discriminatedUnion("version", [
+  sessionOverlayGrantSchema,
+  broadcasterOverlayGrantSchema,
+]);
 
 export type ObsOverlayGrant = z.infer<typeof overlayGrantSchema>;
 
@@ -97,7 +111,7 @@ export class ObsOverlayGrantAuthority {
     if (!parsed.success) {
       throw new ObsOverlayAuthError("malformed-token", "OBS overlay grant is malformed");
     }
-    if (parsed.data.expiresAt <= now) {
+    if (parsed.data.version === 1 && parsed.data.expiresAt <= now) {
       throw new ObsOverlayAuthError("expired-token", "OBS overlay grant has expired");
     }
     return parsed.data;

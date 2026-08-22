@@ -5,11 +5,29 @@ import {
   ObsVirtualCameraError,
   findObsVirtualCameraDevice,
   obsVirtualCameraFailureReason,
+  requestBrowserDisplayCaptureStream,
   requestObsVirtualCameraStream,
   type BrowserFrameCapture,
 } from "./browser-frame-source";
 
 describe("OBS browser frame source", () => {
+  it("opens the browser-native display picker for a selected screen or window", async () => {
+    const stream = { getTracks: () => [] } as unknown as MediaStream;
+    let requested: DisplayMediaStreamOptions | undefined;
+
+    const selected = await requestBrowserDisplayCaptureStream({
+      mediaDevices: {
+        getDisplayMedia: async (constraints) => {
+          requested = constraints;
+          return stream;
+        },
+      },
+    });
+
+    expect(selected).toBe(stream);
+    expect(requested).toEqual({ audio: false, video: true });
+  });
+
   it("stamps each frame with the latest realtime session authority", async () => {
     let revision = 4;
     let cycleId = "cycle-4";

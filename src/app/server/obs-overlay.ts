@@ -29,15 +29,12 @@ import type { ChatXptPersistenceRuntime, VerifiedCommandActor } from "@/realtime
 import { getChatXptServerRuntime, type ChatXptServerRuntime } from "./runtime";
 import { studioSessionSecret } from "./twitch-connection-grant";
 
-const grantRequestSchema = z
+const installationRequestSchema = z
   .object({
-    sessionId: identifierSchema,
     width: z.number().int().positive().max(7680).optional(),
     height: z.number().int().positive().max(4320).optional(),
   })
   .strict();
-
-const GRANT_TTL_MS = 12 * 60 * 60 * 1_000;
 
 export type ObsOverlayApplicationErrorCode =
   | "misconfigured"
@@ -70,7 +67,6 @@ export interface ObsOverlayApplicationDependencies {
 
 export interface ObsOverlayGrantResult {
   readonly descriptor: ObsBrowserSourceDescriptor;
-  readonly expiresAt: number;
 }
 
 function authError(caught: unknown): ObsOverlayApplicationError {
@@ -94,7 +90,6 @@ function authError(caught: unknown): ObsOverlayApplicationError {
 export class ObsOverlayApplication {
   private readonly persistence: ChatXptPersistenceRuntime;
   private readonly grants: ObsOverlayGrantAuthority;
-  private readonly diagnosticSetup: ObsOverlayGrantAuthority;
   private readonly now: () => number;
   private readonly nextId: () => string;
 
@@ -103,64 +98,60 @@ export class ObsOverlayApplication {
     this.grants = new ObsOverlayGrantAuthority(
       dependencies.grantSecret ?? dependencies.setupKey,
     );
-    this.diagnosticSetup = new ObsOverlayGrantAuthority(dependencies.setupKey);
     this.now = dependencies.now ?? Date.now;
     this.nextId = dependencies.nextId ?? randomUUID;
   }
 
-  async issueGrant(
-    setupKey: string | null,
+  async issueInstallation(
+    broadcasterId: string,
     baseUrl: string,
     input: unknown,
   ): Promise<ObsOverlayGrantResult> {
-    try {
-      this.diagnosticSetup.authenticateSetupKey(setupKey);
-    } catch (caught) {
-      throw authError(caught);
+    const parsedBroadcasterId = identifierSchema.safeParse(broadcasterId);
+    const parsed = installationRequestSchema.safeParse(input);
+    if (!parsedBroadcasterId.success) {
+      throw new ObsOverlayApplicationError("validation", "OBS broadcaster installation is invalid");
     }
-    return this.issueGrantForStudio(baseUrl, input);
-  }
-
-  async issueGrantForStudio(
-    baseUrl: string,
-    input: unknown,
-    authorizedSessionId?: string,
-  ): Promise<ObsOverlayGrantResult> {
-    const parsed = grantRequestSchema.safeParse(input);
     if (!parsed.success) {
       throw new ObsOverlayApplicationError("validation", "OBS Browser Source setup is invalid");
     }
-    if (authorizedSessionId !== undefined && parsed.data.sessionId !== authorizedSessionId) {
+    const record = await this.persistence.twitchChannelSessions.findTwitchChannelSession(
+      parsedBroadcasterId.data,
+    );
+    if (record === null) {
       throw new ObsOverlayApplicationError(
-        "forbidden",
-        "Studio authorization does not belong to the requested overlay session",
+        "session-not-found",
+        "Start the ChatXPT broadcaster session before installing the OBS Browser Source",
+        true,
       );
     }
-    const state = await this.loadSession(parsed.data.sessionId);
+    const state = await this.loadSession(record.sessionId);
     if (state.session.status !== "preparing" && state.session.status !== "live") {
       throw new ObsOverlayApplicationError(
         "session-inactive",
         "OBS Browser Source grants require an active broadcaster session",
       );
     }
-    const expiresAt = this.now() + GRANT_TTL_MS;
-    const token = this.grants.issue({
-      version: 1,
-      grantId: `overlay-${this.nextId()}`,
-      sessionId: state.session.sessionId,
-      broadcasterId: state.session.broadcasterId,
-      expiresAt,
-    });
+    let token: string;
+    try {
+      token = this.grants.issue({
+        version: 2,
+        grantId: `overlay-installation-${this.nextId()}`,
+        broadcasterId: state.session.broadcasterId,
+        issuedAt: this.now(),
+      });
+    } catch (caught) {
+      throw authError(caught);
+    }
     try {
       return {
         descriptor: createObsBrowserSourceDescriptor({
           baseUrl,
-          sessionId: state.session.sessionId,
+          broadcasterId: state.session.broadcasterId,
           accessToken: token,
           width: parsed.data.width,
           height: parsed.data.height,
         }),
-        expiresAt,
       };
     } catch (caught) {
       throw new ObsOverlayApplicationError(
@@ -172,7 +163,10 @@ export class ObsOverlayApplication {
 
   async read(
     authorizationHeader: string | null,
-    requestedSessionId: string | null,
+    requested: {
+      readonly broadcasterId: string | null;
+      readonly sessionId: string | null;
+    },
   ): Promise<OverlayViewModel> {
     let grant;
     try {
@@ -183,14 +177,36 @@ export class ObsOverlayApplication {
     } catch (caught) {
       throw authError(caught);
     }
-    const parsedSessionId = identifierSchema.safeParse(requestedSessionId);
-    if (!parsedSessionId.success || parsedSessionId.data !== grant.sessionId) {
-      throw new ObsOverlayApplicationError(
-        "forbidden",
-        "OBS overlay grant does not belong to the requested session",
+    let state: AuthoritativeSessionState;
+    if (grant.version === 1) {
+      const parsedSessionId = identifierSchema.safeParse(requested.sessionId);
+      if (!parsedSessionId.success || parsedSessionId.data !== grant.sessionId) {
+        throw new ObsOverlayApplicationError(
+          "forbidden",
+          "OBS overlay grant does not belong to the requested session",
+        );
+      }
+      state = await this.loadSession(grant.sessionId);
+    } else {
+      const parsedBroadcasterId = identifierSchema.safeParse(requested.broadcasterId);
+      if (!parsedBroadcasterId.success || parsedBroadcasterId.data !== grant.broadcasterId) {
+        throw new ObsOverlayApplicationError(
+          "forbidden",
+          "OBS overlay installation does not belong to the requested broadcaster",
+        );
+      }
+      const record = await this.persistence.twitchChannelSessions.findTwitchChannelSession(
+        grant.broadcasterId,
       );
+      if (record === null) {
+        throw new ObsOverlayApplicationError(
+          "session-not-found",
+          "Waiting for this broadcaster's next ChatXPT session",
+          true,
+        );
+      }
+      state = await this.loadSession(record.sessionId);
     }
-    let state = await this.loadSession(grant.sessionId);
     if (state.session.broadcasterId !== grant.broadcasterId) {
       throw new ObsOverlayApplicationError(
         "forbidden",

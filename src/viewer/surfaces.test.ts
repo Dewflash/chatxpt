@@ -62,6 +62,7 @@ describe("Role 5 viewer surfaces", () => {
     expect(html.match(/Option [123]\./g)).toHaveLength(3);
     expect(html.match(/<button/g)).toHaveLength(4);
     expect(html).toContain("Vote");
+    expect(html.indexOf("Community hype")).toBeLessThan(html.indexOf(">Vote<"));
     expect(html).not.toContain("4 votes");
     expect(html).not.toContain("2 votes");
     expect(html).not.toContain("rev ");
@@ -362,12 +363,12 @@ describe("Role 5 viewer surfaces", () => {
 });
 
 describe("Role 5 OBS overlay surface", () => {
-  it("stays visually quiet while inactive", () => {
+  it("shows a pending sidequest state while inactive", () => {
     const html = renderToStaticMarkup(h(ObsQuestOverlaySurface, { view: contractFixtureOverlayView }));
 
-    expect(html).not.toContain("Overlay ready");
-    expect(html).not.toContain("Waiting for sidequests");
-    expect(html).toContain('aria-hidden="true"');
+    expect(html).toContain("Sidequest pending");
+    expect(html).toContain("Waiting for the next safe, validated sidequest and viewer vote.");
+    expect(html).not.toContain("Overlay connected");
   });
 
   it("renders an active quest without command controls", () => {

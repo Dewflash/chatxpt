@@ -908,6 +908,11 @@ describe("Role 1 application orchestrator", () => {
   it("atomically converts a cue into exactly three private proposals with provider-unavailable fallback", async () => {
     const state = {
       ...initialState(),
+      profile: streamerProfileSchema.parse({
+        ...structuredClone(contractFixtureProfile),
+        gameId: "minecraft",
+        gameName: "Minecraft",
+      }),
       liveDirector: structuredClone(contractFixtureLiveDirectorState),
     };
     const repository = new FixtureSessionStateRepository([state]);

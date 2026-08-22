@@ -40,9 +40,36 @@ function statesMatch(expected: string | undefined, received: string | null): boo
 
 function failure(request: Request, reason: string) {
   const response = NextResponse.redirect(new URL(`/studio?oauth=error&reason=${reason}`, request.url));
-  response.cookies.delete(TWITCH_OAUTH_STATE_COOKIE);
+  response.cookies.set(TWITCH_OAUTH_STATE_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: new URL(request.url).protocol === "https:",
+    path: "/api/twitch/oauth/callback",
+    expires: new Date(0),
+    maxAge: 0,
+  });
   response.headers.set("cache-control", "no-store");
   return response;
+}
+
+function twitchAuthorizationFailureReason(error: string): string {
+  if (error === "access_denied") return "denied";
+  if (error === "redirect_mismatch") return "redirect-mismatch";
+  return "twitch-authorize";
+}
+
+function twitchCallbackFailureReason(caught: unknown): string {
+  if (caught !== null && typeof caught === "object") {
+    const candidate = caught as { readonly name?: unknown; readonly code?: unknown };
+    if (candidate.name === "TwitchOAuthError" && typeof candidate.code === "string") {
+      if (candidate.code === "misconfigured") return "misconfigured";
+      if (candidate.code === "secret-mismatch") return "secret-mismatch";
+      if (candidate.code === "exchange-failed") return "exchange-failed";
+      if (candidate.code === "identity-failed") return "identity-failed";
+      if (candidate.code === "eventsub-failed") return "eventsub-failed";
+    }
+  }
+  return "connection";
 }
 
 function cookieValue(request: Request, name: string): string | undefined {
@@ -58,7 +85,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const error = url.searchParams.get("error");
   if (error !== null) {
-    return failure(request, "denied");
+    return failure(request, twitchAuthorizationFailureReason(error));
   }
   if (!statesMatch(
     cookieValue(request, TWITCH_OAUTH_STATE_COOKIE),
@@ -146,7 +173,7 @@ export async function GET(request: Request) {
     response.cookies.delete(TWITCH_OAUTH_STATE_COOKIE);
     response.headers.set("cache-control", "no-store");
     return response;
-  } catch {
-    return failure(request, "connection");
+  } catch (caught) {
+    return failure(request, twitchCallbackFailureReason(caught));
   }
 }

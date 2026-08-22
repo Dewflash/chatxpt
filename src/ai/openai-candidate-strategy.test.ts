@@ -16,6 +16,12 @@ import {
 import { ProviderGenerationError } from "./provider-fallback";
 import { createConfiguredCandidateProvider, parseOpenAIResponse } from "./server";
 
+const minecraftProfile = {
+  ...contractFixtureProfile,
+  gameId: "minecraft",
+  gameName: "Minecraft",
+};
+
 async function candidateInput(): Promise<CandidateInput> {
   const gameplay = {
     ...contractFixtureGameplaySnapshot,
@@ -39,12 +45,12 @@ async function candidateInput(): Promise<CandidateInput> {
     envelope: contractFixtureEnvelope,
     gameplay,
     audience: contractFixtureAudienceSnapshot,
-    profile: contractFixtureProfile,
+    profile: minecraftProfile,
   });
   return {
     envelope: contractFixtureCandidateBatch.envelope,
     intelligence,
-    profile: contractFixtureProfile,
+    profile: minecraftProfile,
     recentQuestTitles: ["Previous Fixture Quest"],
     streamerGoal: "Reach the next safe shelter",
     activeChatXptQuest: "Keep Moving: Reach the next checkpoint safely.",
@@ -123,12 +129,12 @@ async function minecraftCandidateInput(): Promise<CandidateInput> {
   };
 }
 
-function validOutput(signalId: string | null = null): string {
+function validOutput(signalId: string | null = null, gameName = "Minecraft"): string {
   return JSON.stringify({
     candidates: [
       {
         title: "Steady Reset",
-        instruction: "Take the next safe moment to reset and state the immediate plan.",
+        instruction: `In ${gameName}, take the next safe moment to reset and state the immediate plan.`,
         durationSeconds: 60,
         difficulty: "easy",
         rewardPoints: 100,
@@ -137,7 +143,7 @@ function validOutput(signalId: string | null = null): string {
       },
       {
         title: "Deliberate Pressure",
-        instruction: "Commit to one controlled play and explain the decision before acting.",
+        instruction: `In ${gameName}, commit to one controlled play and explain the decision before acting.`,
         durationSeconds: 75,
         difficulty: "medium",
         rewardPoints: 180,
@@ -146,7 +152,7 @@ function validOutput(signalId: string | null = null): string {
       },
       {
         title: "Chat Calls It",
-        instruction: "Let viewers choose the tone of the next clear in-game decision.",
+        instruction: `In ${gameName}, let viewers choose the tone of the next clear decision.`,
         durationSeconds: 60,
         difficulty: "easy",
         rewardPoints: 120,
@@ -197,9 +203,29 @@ describe("OpenAI-compatible candidate strategy", () => {
     expect(context).toHaveProperty("streamer");
     expect(context.streamer.goal).toBe(input.streamerGoal);
     expect(context.activeChatXptQuest).toBe(input.activeChatXptQuest);
-    expect(JSON.stringify(context)).not.toContain(contractFixtureProfile.streamerId);
-    expect(JSON.stringify(context)).not.toContain(contractFixtureProfile.displayName);
+    expect(JSON.stringify(context)).not.toContain(minecraftProfile.streamerId);
+    expect(JSON.stringify(context)).not.toContain(minecraftProfile.displayName);
     expect(JSON.stringify(requests[0])).not.toMatch(/api[_-]?key/i);
+    expect(requests[0].instructions).toContain("Every option must explicitly name the selected game");
+  });
+
+  it("rejects provider output that does not name the selected game", async () => {
+    const strategy = createOpenAICandidateStrategy({
+      providerId: "openai/fixture-model",
+      model: "fixture-model",
+      transport: {
+        async generate() {
+          return {
+            outputText: validOutput().replaceAll("Minecraft", "the selected title"),
+          };
+        },
+      },
+    });
+
+    await expect(strategy.generate(await candidateInput())).rejects.toMatchObject({
+      reason: "malformed",
+      message: expect.stringContaining("selected game"),
+    });
   });
 
   it("rejects hallucinated signal citations as malformed", async () => {
@@ -467,7 +493,7 @@ describe("OpenAI-compatible candidate strategy", () => {
       transport: {
         async generate(request) {
           requests.push(request);
-          return { outputText: validOutput("match-timer") };
+          return { outputText: validOutput("match-timer", "Brawl Stars") };
         },
       },
     }).generate(input);

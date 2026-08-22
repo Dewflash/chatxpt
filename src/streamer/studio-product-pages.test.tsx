@@ -23,7 +23,7 @@ const requiredPageSections: Readonly<Record<StudioProductPage, readonly string[]
   "live-quests": ["Now", "Recommendations", "Why", "Voting", "Results"],
   profile: ["Personality", "Stream Presets", "Safety", "Accessibility"],
   "stream-settings": ["Saved Source", "Session Override", "Reset to Saved"],
-  "test-lab": ["Sample / Live Source", "Capture Controls", "Observed / Unknown", "Recovery"],
+  "test-lab": ["Clean Start Reset", "Sample / Live Source", "Capture Controls", "Observed / Unknown", "Recovery"],
 };
 
 describe("StudioProductPageSurface", () => {
@@ -51,6 +51,21 @@ describe("StudioProductPageSurface", () => {
     expect(html).not.toContain("Fixture");
     expect(html).not.toContain("tester");
     expect(html).not.toContain("Role ");
+  });
+
+  it("can keep a persistent capture surface open while Studio navigation opens separately", () => {
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "gameplay",
+      view: null,
+      readiness: null,
+      navigationTarget: "_blank",
+      children: h("p", null, "Persistent capture controls"),
+    }));
+
+    expect(html).toContain("Persistent capture controls");
+    expect(html).toContain('href="/studio/gameplay"');
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noreferrer"');
   });
 
   it.each(pages)("renders %s without a loaded session and keeps controls unavailable", (page) => {
@@ -92,8 +107,79 @@ describe("StudioProductPageSurface", () => {
 
     expect(home).not.toContain("Sample checks and live source checks");
     expect(lab).toContain("Sample checks stay separate from live state");
+    expect(lab).toContain("Start the entire ChatXPT test from the beginning");
+    expect(lab).toContain("Reset ChatXPT to clean start");
     expect(lab).toContain("A direct browser tab cannot create a Twitch viewer identity");
     expect(lab).not.toContain('href="/viewer.html"');
+  });
+
+  it("keeps the clean-start reset available when Studio has no loaded session", () => {
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "test-lab",
+      view: null,
+      readiness: null,
+      onResetSession: () => undefined,
+    }));
+
+    expect(html).toContain("Reset ChatXPT to clean start");
+    expect(html).toContain("<button");
+    expect(html).not.toContain("disabled=\"\"");
+  });
+
+  it("shows Generate quest now while the authoritative cycle is idle", () => {
+    const base = createFixtureUiGatewaySnapshot().views.streamer;
+    const view = {
+      ...base,
+      session: { ...base.session, status: "preparing" as const },
+      questCycle: {
+        ...base.questCycle,
+        status: "idle" as const,
+        options: [],
+        activeCandidateId: null,
+        availableStreamerActions: [],
+        voteTallies: [],
+        startsAt: null,
+        endsAt: null,
+        progress: null,
+        completionRule: null,
+        result: null,
+      },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-quests",
+      view,
+      onCommand: () => undefined,
+    }));
+
+    expect(html).toContain("Generate quest now");
+  });
+
+  it("labels an immediate fallback as deterministic and evidence-free", () => {
+    const base = createFixtureUiGatewaySnapshot().views.streamer;
+    const view = {
+      ...base,
+      questCycle: {
+        ...base.questCycle,
+        status: "proposed" as const,
+        options: base.questCycle.options.map((option) => ({
+          ...option,
+          sourceSignalIds: [],
+          generation: {
+            method: "deterministic-fallback" as const,
+            provider: null,
+            generatedAt: option.generation.generatedAt,
+          },
+        })),
+      },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-quests",
+      view,
+    }));
+
+    expect(html).toContain("Deterministic fallback shown");
+    expect(html).toContain("without gameplay or audience evidence");
+    expect(html).toContain("Evidence-driven recommendations use trusted signals later");
   });
 
   it.each(pages)("renders the required ICP-01 sections for %s", (page) => {

@@ -480,6 +480,55 @@
   gap: var(--cx-space-lg);
 }
 
+.cleanStartReset {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cx-space-xl);
+  padding: var(--cx-space-xl);
+  border: 2px solid var(--cx-color-danger);
+  border-radius: var(--cx-radius-lg);
+  background: var(--cx-color-danger-soft);
+}
+
+.cleanStartReset > div {
+  display: grid;
+  gap: var(--cx-space-sm);
+}
+
+.cleanStartReset h2,
+.cleanStartReset p {
+  margin: 0;
+}
+
+.cleanStartReset p {
+  max-width: 68ch;
+  color: var(--cx-color-text-muted);
+}
+
+.dangerButton {
+  min-height: 3rem;
+  flex: 0 0 auto;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--cx-color-danger);
+  border-radius: var(--cx-radius-md);
+  color: var(--cx-color-background);
+  background: var(--cx-color-danger);
+  font: inherit;
+  font-weight: var(--cx-font-weight-bold);
+  cursor: pointer;
+}
+
+.dangerButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.dangerButton:focus-visible {
+  outline: none;
+  box-shadow: var(--cx-focus-ring);
+}
+
 .currentStream {
   overflow: hidden;
 }
@@ -1199,9 +1248,14 @@
   .panelHeading,
   .settingsSummary,
   .nowQuest,
-  .presetActions {
+  .presetActions,
+  .cleanStartReset {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .dangerButton {
+    width: 100%;
   }
 
   .readyDetails,

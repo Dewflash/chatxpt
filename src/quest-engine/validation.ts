@@ -30,6 +30,7 @@ export type CandidateValidationCode =
   | "unsafe"
   | "streamer-restricted"
   | "accessibility-conflict"
+  | "game-mismatch"
   | "unsupported-evidence"
   | "unsupported-completion-rule"
   | "unknown-dependent"
@@ -121,137 +122,132 @@ interface FallbackDefinition {
   readonly rationale: string;
 }
 
-const fallbackLibrary: readonly FallbackDefinition[] = [
-  {
-    key: "plan-out-loud",
-    title: "Plan Out Loud",
-    instruction: "Explain your plan before taking the next major game action.",
-    durationSeconds: 45,
-    difficulty: "easy",
-    rewardPoints: 100,
-    rationale: "A game-neutral strategy prompt that does not depend on hidden gameplay facts.",
-  },
-  {
-    key: "caster-mode",
-    title: "Caster Mode",
-    instruction: "Narrate the next 45 seconds like a friendly sports commentator.",
-    durationSeconds: 45,
-    difficulty: "easy",
-    rewardPoints: 100,
-    rationale: "A game-neutral performance prompt suitable when specific gameplay facts are unknown.",
-  },
-  {
-    key: "calm-focus",
-    title: "Calm Focus",
-    instruction: "Describe one decision at a time for the next 60 seconds.",
-    durationSeconds: 60,
-    difficulty: "easy",
-    rewardPoints: 100,
-    rationale: "A low-intensity focus prompt that remains judgeable without game telemetry.",
-  },
-  {
-    key: "three-step-preview",
-    title: "Three-Step Preview",
-    instruction: "State your next three intended actions before carrying them out.",
-    durationSeconds: 60,
-    difficulty: "medium",
-    rewardPoints: 200,
-    rationale: "A game-neutral planning challenge with a clear completion condition.",
-  },
-  {
-    key: "audience-coach",
-    title: "Audience Coach",
-    instruction: "Share one useful beginner tip during the next 45 seconds.",
-    durationSeconds: 45,
-    difficulty: "easy",
-    rewardPoints: 100,
-    rationale: "A supportive audience prompt that needs no specific state claim.",
-  },
-  {
-    key: "dramatic-recap",
-    title: "Dramatic Recap",
-    instruction: "Give a dramatic recap of your most recent decision in one minute.",
-    durationSeconds: 60,
-    difficulty: "medium",
-    rewardPoints: 200,
-    rationale: "A comedic reflection prompt that avoids unsupported gameplay assertions.",
-  },
-  {
-    key: "decision-spotlight",
-    title: "Decision Spotlight",
-    instruction: "Explain why you chose your next major action before completing it.",
-    durationSeconds: 60,
-    difficulty: "medium",
-    rewardPoints: 200,
-    rationale: "A competitive decision prompt that remains game-neutral and measurable.",
-  },
-  {
-    key: "one-minute-mentor",
-    title: "One-Minute Mentor",
-    instruction: "Teach one general strategy lesson during the next 60 seconds.",
-    durationSeconds: 60,
-    difficulty: "medium",
-    rewardPoints: 200,
-    rationale: "A beginner-friendly teaching prompt that works without calibrated signals.",
-  },
-  {
-    key: "positive-commentary",
-    title: "Positive Commentary",
-    instruction: "Keep your commentary constructive for the next 60 seconds.",
-    durationSeconds: 60,
-    difficulty: "easy",
-    rewardPoints: 100,
-    rationale: "A low-risk tone challenge with a clear time boundary.",
-  },
-] as const;
+interface SelectedGame {
+  readonly name: string;
+  readonly isMinecraft: boolean;
+}
 
-const minecraftFallbackLibrary: readonly FallbackDefinition[] = [
-  {
-    key: "minecraft-next-goal",
-    title: "Next Goal Check",
-    instruction: "Name one Minecraft goal, then make your next choice support it.",
-    durationSeconds: 60,
-    difficulty: "easy",
-    rewardPoints: 100,
-    rationale: "A Minecraft-specific fallback that uses the selected game without claiming unsupported HUD or world facts.",
-  },
-  {
-    key: "minecraft-audience-route",
-    title: "Chat Chooses the Vibe",
-    instruction: "Ask chat for a cautious or bold Minecraft approach, then follow the winning vibe.",
-    durationSeconds: 60,
-    difficulty: "medium",
-    rewardPoints: 200,
-    rationale: "A Minecraft-specific audience prompt that stays safe when exact game facts are unknown.",
-  },
-  {
-    key: "minecraft-choice-explain",
-    title: "Explain the Choice",
-    instruction: "Before your next Minecraft action, explain what you are trying to achieve.",
-    durationSeconds: 45,
-    difficulty: "easy",
-    rewardPoints: 100,
-    rationale: "A Minecraft-specific planning prompt with no unsupported claim about exact game state.",
-  },
-  {
-    key: "minecraft-teach-moment",
-    title: "Teach the Moment",
-    instruction: "Share one Minecraft tip that fits your current plan before continuing.",
-    durationSeconds: 45,
-    difficulty: "easy",
-    rewardPoints: 100,
-    rationale: "A Minecraft-specific teaching fallback that does not depend on parsed HUD facts.",
-  },
-  {
-    key: "minecraft-recap",
-    title: "Blocky Recap",
-    instruction: "Give a quick Minecraft recap of your last decision and what you will try next.",
-    durationSeconds: 60,
-    difficulty: "medium",
-    rewardPoints: 200,
-    rationale: "A Minecraft-specific recap that remains measurable without inferring exact game state.",
-  },
-] as const;
+function selectedGameFrom(profile: StreamerProfile): SelectedGame | null {
+  const rawName = profile.gameName?.trim() || profile.gameId?.trim();
+  if (!rawName) return null;
+  const name = rawName
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (character) => character.toLocaleUpperCase());
+  const identity = `${profile.gameId ?? ""} ${profile.gameName ?? ""}`.toLocaleLowerCase();
+  return { name, isMinecraft: identity.includes("minecraft") };
+}
+
+function fallbackLibraryFor(game: SelectedGame): readonly FallbackDefinition[] {
+  const instructions = game.isMinecraft
+    ? {
+        plan: "Before your next Minecraft action, explain whether you will build, explore, gather, or craft and why.",
+        caster: "Narrate the next 45 seconds of Minecraft like a friendly sports commentator.",
+        focus: "For 60 seconds, name each Minecraft action before placing, breaking, crafting, or moving.",
+        preview: "State your next three Minecraft actions using building, gathering, crafting, or exploration before acting.",
+        coach: "Teach viewers one Minecraft tip about building, crafting, resource gathering, or navigation.",
+        recap: "Give a dramatic recap of your most recent Minecraft decision in one minute.",
+        decision: "Before your next Minecraft action, explain why building, crafting, gathering, or exploring best supports your objective.",
+        mentor: "Teach one Minecraft mechanic and show how it informs your next decision within 60 seconds.",
+        positive: "Keep your Minecraft commentary constructive for the next 60 seconds.",
+      }
+    : {
+        plan: `Before your next ${game.name} action, explain what you intend to do and why.`,
+        caster: `Narrate the next 45 seconds of ${game.name} like a friendly sports commentator.`,
+        focus: `For 60 seconds of ${game.name}, describe one decision at a time before acting.`,
+        preview: `State your next three intended ${game.name} actions before carrying them out.`,
+        coach: `Teach viewers one useful beginner ${game.name} tip during the next 45 seconds.`,
+        recap: `Give a dramatic recap of your most recent ${game.name} decision in one minute.`,
+        decision: `Before your next major ${game.name} action, explain why it supports your objective.`,
+        mentor: `Teach one ${game.name} mechanic and connect it to your next decision within 60 seconds.`,
+        positive: `Keep your ${game.name} commentary constructive for the next 60 seconds.`,
+      };
+  const rationale = (purpose: string) =>
+    `A deterministic ${game.name} fallback ${purpose} without claiming unsupported current state.`;
+
+  return [
+    {
+      key: "plan-out-loud",
+      title: "Plan Out Loud",
+      instruction: instructions.plan,
+      durationSeconds: 45,
+      difficulty: "easy",
+      rewardPoints: 100,
+      rationale: rationale("creates a measurable planning moment"),
+    },
+    {
+      key: "caster-mode",
+      title: "Caster Mode",
+      instruction: instructions.caster,
+      durationSeconds: 45,
+      difficulty: "easy",
+      rewardPoints: 100,
+      rationale: rationale("creates audience-safe commentary"),
+    },
+    {
+      key: "calm-focus",
+      title: "Calm Focus",
+      instruction: instructions.focus,
+      durationSeconds: 60,
+      difficulty: "easy",
+      rewardPoints: 100,
+      rationale: rationale("keeps the objective safe under noisy evidence"),
+    },
+    {
+      key: "three-step-preview",
+      title: "Three-Step Preview",
+      instruction: instructions.preview,
+      durationSeconds: 60,
+      difficulty: "medium",
+      rewardPoints: 200,
+      rationale: rationale("creates a clear completion condition"),
+    },
+    {
+      key: "audience-coach",
+      title: "Audience Coach",
+      instruction: instructions.coach,
+      durationSeconds: 45,
+      difficulty: "easy",
+      rewardPoints: 100,
+      rationale: rationale("creates a supportive teaching moment"),
+    },
+    {
+      key: "dramatic-recap",
+      title: "Dramatic Recap",
+      instruction: instructions.recap,
+      durationSeconds: 60,
+      difficulty: "medium",
+      rewardPoints: 200,
+      rationale: rationale("creates a personality-led reflection moment"),
+    },
+    {
+      key: "decision-spotlight",
+      title: "Decision Spotlight",
+      instruction: instructions.decision,
+      durationSeconds: 60,
+      difficulty: "medium",
+      rewardPoints: 200,
+      rationale: rationale("rewards clear decision-making"),
+    },
+    {
+      key: "one-minute-mentor",
+      title: "One-Minute Mentor",
+      instruction: instructions.mentor,
+      durationSeconds: 60,
+      difficulty: "medium",
+      rewardPoints: 200,
+      rationale: rationale("turns play into an accessible teaching moment"),
+    },
+    {
+      key: "positive-commentary",
+      title: "Positive Commentary",
+      instruction: instructions.positive,
+      durationSeconds: 60,
+      difficulty: "easy",
+      rewardPoints: 100,
+      rationale: rationale("lowers risk when chat pressure is negative"),
+    },
+  ];
+}
 
 const safetyRules = [
   {
@@ -710,27 +706,6 @@ function stableHash(value: string): number {
   return hash >>> 0;
 }
 
-function isMinecraftAssembly(input: CandidateAssemblyInput): boolean {
-  const profileGame = `${input.profile.gameId ?? ""} ${input.profile.gameName ?? ""}`.toLowerCase();
-  const gameplayGame = `${input.intelligence.gameplay.capabilities.gameId ?? ""}`.toLowerCase();
-  return profileGame.includes("minecraft") || gameplayGame.includes("minecraft");
-}
-
-function sortedFallbacks(
-  values: readonly FallbackDefinition[],
-  seed: string,
-): readonly FallbackDefinition[] {
-  return [...values].sort((left, right) => {
-    const difference = stableHash(`${seed}:${left.key}`) - stableHash(`${seed}:${right.key}`);
-    return difference !== 0 ? difference : left.key.localeCompare(right.key);
-  });
-}
-
-function selectedFallbackLibrary(input: CandidateAssemblyInput): readonly FallbackDefinition[] {
-  if (!isMinecraftAssembly(input)) return sortedFallbacks(fallbackLibrary, input.seed);
-  return sortedFallbacks(minecraftFallbackLibrary, `${input.seed}:minecraft`);
-}
-
 function fallbackCandidate(definition: FallbackDefinition, input: CandidateAssemblyInput): QuestCandidate {
   return questCandidateSchema.parse({
     candidateId: `fallback-${definition.key}-${stableHash(`${input.seed}:${definition.key}`).toString(36)}`,
@@ -744,6 +719,12 @@ function fallbackCandidate(definition: FallbackDefinition, input: CandidateAssem
     confidence: 1,
     generation: { method: "deterministic-fallback", provider: null, generatedAt: input.now },
   });
+}
+
+function explicitlyNamesGame(candidate: QuestCandidate, game: SelectedGame): boolean {
+  return `${candidate.title} ${candidate.instruction}`
+    .toLocaleLowerCase()
+    .includes(game.name.toLocaleLowerCase());
 }
 
 export class DefaultCandidateAssembler {
@@ -783,6 +764,16 @@ export class DefaultCandidateAssembler {
       };
     }
 
+    const selectedGame = selectedGameFrom(profile.data);
+    if (selectedGame === null) {
+      return {
+        ok: false,
+        code: "invalid-context",
+        reason: "A selected game profile is required for game-aware candidate assembly.",
+        audit: [],
+      };
+    }
+
     const accepted: QuestCandidate[] = [];
     const audit: CandidateAssemblyAudit[] = [];
     const validate = (candidate: unknown, source: CandidateAssemblyAudit["source"]) => {
@@ -794,7 +785,29 @@ export class DefaultCandidateAssembler {
         acceptedCandidates: accepted,
         now: input.now,
       });
-      audit.push({ candidateId: result.candidate?.candidateId ?? null, source, accepted: result.accepted, issues: result.issues });
+      if (result.accepted && !explicitlyNamesGame(result.candidate, selectedGame)) {
+        audit.push({
+          candidateId: result.candidate.candidateId,
+          source,
+          accepted: false,
+          issues: [
+            ...result.issues,
+            issue(
+              "game-mismatch",
+              "reject",
+              "Candidate does not explicitly identify the selected game.",
+              [selectedGame.name],
+            ),
+          ],
+        });
+        return;
+      }
+      audit.push({
+        candidateId: result.candidate?.candidateId ?? null,
+        source,
+        accepted: result.accepted,
+        issues: result.issues,
+      });
       if (result.accepted) accepted.push(result.candidate);
     };
 
@@ -802,7 +815,10 @@ export class DefaultCandidateAssembler {
       if (accepted.length === 3) break;
       validate(candidate, "provided");
     }
-    const orderedFallbacks = selectedFallbackLibrary(input);
+    const orderedFallbacks = [...fallbackLibraryFor(selectedGame)].sort((left, right) => {
+      const difference = stableHash(`${input.seed}:${left.key}`) - stableHash(`${input.seed}:${right.key}`);
+      return difference !== 0 ? difference : left.key.localeCompare(right.key);
+    });
     for (const definition of orderedFallbacks) {
       if (accepted.length === 3) break;
       validate(fallbackCandidate(definition, input), "fallback");

@@ -88,7 +88,11 @@ export interface MultiGameVisionStreamOptions {
   readonly analyzer?: MultiGameVisionAnalyzer;
 }
 
-const MAX_RETAINED_SAMPLE_PIXELS = 16_384;
+// Minecraft HUD icons can collapse to a single sampled row at the former
+// 160x90 ceiling. This still bounds retained browser analysis to one
+// 640x360 RGBA sample (under 1 MiB) while preserving enough icon structure
+// for real HUD calibration.
+const MAX_RETAINED_SAMPLE_PIXELS = 262_144;
 const MINECRAFT_TEMPORAL_CONFIRMATION_WINDOW_MS = 3_000;
 
 function copyFrame(frame: SampledPixelFrame): SampledPixelFrame {
@@ -384,7 +388,11 @@ export class MultiGameVisionAnalyzer {
         : rawBrawlHud;
     const rawMinecraftHud =
       resolved.profile.gameId === "minecraft"
-        ? fingerprintMinecraftHud(frame, resolved.profile)
+        ? fingerprintMinecraftHud(
+            frame,
+            resolved.profile,
+            this.previousRawMinecraftHud?.locatedRegions,
+          )
         : null;
     const minecraftCalibrationConfirmed =
       rawMinecraftHud !== null &&

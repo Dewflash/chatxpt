@@ -10,6 +10,18 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 
 **Most recently completed pass:** `role-1/live-director-03-streamer-delivery` mounts private source-separated Live Director controls in Studio, Twitch Live Config, and a Studio-authorised browser pop-out/OBS Custom Dock route. Role 1 now authenticates and commits Role 3 cue actions through a dedicated public port; Role 3's exactly-three conversion is merged and its runtime publication/delivery wiring is the R1-026/R3-014 follow-up.
 
+## Today: owner-requested integration check queue (2026-08-22)
+
+- Check local setup/start/reset/reconnect first: `npm run dev:twitch` wakes the app, Test Lab reset returns this browser to an unconnected clean-start state, and Connect Twitch resumes only through the intended Twitch/OAuth path.
+- Check Gameplay Capture end to end: after setup, the selected game screen/window must send fresh live snapshots to the active broadcaster session.
+- Check gameplay analysis output: fresh captured frames must produce understandable observed/unknown facts and confidence that match what the streamer sees in Studio.
+- Check the game schema and how tightly the selected game parameter affects capture, analysis, OBS/broadcast output, and downstream quest context.
+- Check quest-engine generation, including how gameplay/audience/profile inputs reach candidate generation and deterministic fallback.
+- Check AI integrations after the live capture path works: verify current provider wiring, whether a temporary Codex-linked bypass is possible, and otherwise identify the path to a real API key/provider setup.
+- Inspect the schema sent to AI and the schema returned from AI, including validation, fallback, and failure handling.
+- Find the intended persistent screen overlay path for Live Director and confirm whether it belongs in OBS as a permanent browser/custom-dock surface.
+- Check the Twitch Extension and voting path through hosted/local Extension testing.
+
 | ID | Priority | Status | Task | Depends on | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
 | R1-001 | P0 | DONE | Merge the beginner-safe team foundation. | None | Root/role guides, playbook, GitHub templates, CODEOWNERS, TODOs, changelog workflow, checks, and pushed PR. |
@@ -39,6 +51,7 @@ Execute these outcomes through `docs/build-plans/ROLE-1-BUILD-PLAN.md`; the plan
 | R1-025 | P0 | DONE | `LD-R1-03`: deliver Session Goal, Live Context, cue actions, existing recommended quests, and private pop-out/OBS Dock through Studio/Live Config. | R1-023/R1-024; Role 3 R3-010 actions | Commit `b71c1ae` adds the authenticated lifecycle port, private routes, source-separated UI, cue controls, dock guide, server/consumer tests, and exact 420/1440 px fixture renders in `E-20260819-R1-003`; stale, permission, loading, offline, reconnect, privacy, and no-overflow boundaries pass without claiming real Twitch/OBS execution. |
 | R1-026 | P0 | IN PROGRESS | `LD-R1-04`: preserve Extension Vote/Active/Result and compressed OBS payoff, with minimal Catch-up isolated as a P1 experiment. | R1-023; Role 3 lifecycle/conversion passes | Source wiring now keeps personal receipt/recovery private, preserves hosted/chat fallback paths, routes `turn-into-vote`, accepted-live-gameplay eligible-cycle proposals, accepted-gameplay Live Director context refreshes, and public OBS `Up next` through the shared runtime/projection boundaries without adding OBS private cue/context fields. Final responsive/accessibility/reconnect/terminal fixtures, viewer/OBS payoff proof, and real evidence remain owner-run before `DONE`. |
 | R1-027 | P0 | READY | `LD-R1-05`: add the P1 intervention-specific Session Brief and run golden integration plus comparative value evaluation. | R1-023 through R1-026; Role 3 R3-009 through R3-013 | Same revision reaches Studio/Live Config, two viewers, persistence, and OBS across real Minecraft/Twitch/OBS and failure/fallback cases; brief remains aggregate/non-causal; full checks and evidence manifest pass; failed hypotheses are recorded. |
+| R1-028 | P0 | DONE | Add consent-gated browser speech transcription as confirmed streamer-declared Current Objective context. | D-081; D4-46; R1-023/R1-025 | Full Studio starts/stops browser recognition only after streamer action, shows final/interim transcript confidence and specific failures, requires review before an authoritative command, persists no raw audio, preserves method/confidence through private Live Context, and passes focused plus full repository checks. Real microphone/browser-service evidence remains separate from fixture tests. |
 
 ## Current R1-018 evidence
 

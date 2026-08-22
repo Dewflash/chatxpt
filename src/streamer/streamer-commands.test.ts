@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  commandEnvelopeSchema,
   streamerProfileSettingsCommandSchema,
   streamerLiveDirectorCueCommandSchema,
   streamerLiveDirectorIntentCommandSchema,
   streamerQuestCommandSchema,
+  streamerQuestGenerationCommandSchema,
   streamerQuestProgressCommandSchema,
   streamerServiceCommandSchema,
   streamerSessionOverrideCommandSchema,
@@ -16,6 +18,7 @@ import {
   buildLiveDirectorIntentCommand,
   buildProfileSettingsCommand,
   buildQuestCommand,
+  buildQuestGenerationCommand,
   buildQuestProgressCommand,
   buildSessionOverrideCommand,
   buildSetupCommand,
@@ -100,6 +103,20 @@ describe("Role 4 streamer command builders", () => {
     });
   });
 
+  it("builds the broadcaster-only deterministic Generate quest now command", () => {
+    const command = buildQuestGenerationCommand(contractFixtureStreamerView, factory);
+
+    expect(streamerQuestGenerationCommandSchema.safeParse(command).success).toBe(true);
+    expect(commandEnvelopeSchema.safeParse(command).success).toBe(true);
+    expect(command).toMatchObject({
+      commandId: "test-quest-generation",
+      questCycleId: contractFixtureStreamerView.questCycle.envelope.questCycleId,
+      actor: { kind: "broadcaster" },
+      type: "streamer.quest-generation",
+      mode: "deterministic-fallback",
+    });
+  });
+
   it("builds canonical manual progress and emergency-clear commands", () => {
     const progress = buildQuestProgressCommand(contractFixtureStreamerView, 0.65, factory);
     const clear = buildEmergencyClearCommand(contractFixtureStreamerView, factory);
@@ -145,13 +162,40 @@ describe("Role 4 streamer command builders", () => {
       commandId: "test-live-director-intent",
       questCycleId: null,
       action: "set",
-      intent: { requestedExpiresAt: 1_786_027_200_000 },
+      intent: {
+        inputMethod: "manual",
+        confidence: 1,
+        requestedExpiresAt: 1_786_027_200_000,
+      },
     });
     expect(streamerLiveDirectorCueCommandSchema.safeParse(cue).success).toBe(true);
     expect(cue).toMatchObject({
       commandId: "test-live-director-cue-later",
       cueId: "fixture-director-cue",
       action: "later",
+    });
+  });
+
+  it("preserves confirmed speech provenance without changing command authority", () => {
+    const intent = buildLiveDirectorIntentCommand(
+      contractFixtureStreamerView,
+      {
+        goal: "Finish the base",
+        objective: "I am building a house near the river.",
+        desiredAudienceInvolvement: null,
+        inputMethod: "speech",
+        confidence: 0.84,
+      },
+      factory,
+    );
+
+    expect(intent).toMatchObject({
+      actor: { kind: "broadcaster" },
+      intent: {
+        objective: "I am building a house near the river.",
+        inputMethod: "speech",
+        confidence: 0.84,
+      },
     });
   });
 });

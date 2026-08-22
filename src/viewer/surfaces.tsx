@@ -396,6 +396,25 @@ function ViewerShell({
     }
     return "Voting is closed or unavailable.";
   })();
+  const engagementControls = (
+    <>
+      <div className={styles.engagement} aria-label="Viewer engagement">
+        <div className={`${styles.engagementMetric} ${styles.engagementPrimary}`}>
+          <span className={styles.metricLabel}>Community hype</span>
+          <strong className={styles.metricValue}>{presentation.communityHype}</strong>
+        </div>
+        <div className={styles.engagementMetric}>
+          <span className={styles.metricLabel}>Your session points</span>
+          <strong>{presentation.sessionPoints}</strong>
+        </div>
+      </div>
+      {canReact ? (
+        <Button variant="secondary" onClick={() => onReact?.("hype")}>
+          Send hype
+        </Button>
+      ) : null}
+    </>
+  );
 
   return (
     <DesignSystemRoot
@@ -502,6 +521,9 @@ function ViewerShell({
                 : null}
             </Notice>
           ) : null}
+          {surface === "extension" ? (
+            <div className={styles.secondaryActions}>{engagementControls}</div>
+          ) : null}
         </div>
 
         <div className={styles.actions}>
@@ -529,21 +551,7 @@ function ViewerShell({
           <p className={styles.statusLine} aria-live="polite">
             {voteStatus}
           </p>
-          <div className={styles.engagement} aria-label="Viewer engagement">
-            <div className={`${styles.engagementMetric} ${styles.engagementPrimary}`}>
-              <span className={styles.metricLabel}>Community hype</span>
-              <strong className={styles.metricValue}>{presentation.communityHype}</strong>
-            </div>
-            <div className={styles.engagementMetric}>
-              <span className={styles.metricLabel}>Your session points</span>
-              <strong>{presentation.sessionPoints}</strong>
-            </div>
-          </div>
-          {canReact ? (
-            <Button variant="secondary" onClick={() => onReact?.("hype")}>
-              Send hype
-            </Button>
-          ) : null}
+          {surface === "hosted" ? engagementControls : null}
         </div>
       </Panel>
     </DesignSystemRoot>
@@ -666,7 +674,20 @@ export function ObsQuestOverlaySurface({ view, now }: ObsQuestOverlaySurfaceProp
   ) {
     return (
       <DesignSystemRoot theme="dark" density="compact" className={styles.overlay}>
-        <div className={styles.overlayEmpty} aria-hidden="true" />
+        <Card className={styles.overlayCard}>
+          <div className={styles.shell}>
+            <header className={styles.header}>
+              <div className={styles.titleBlock}>
+                <p className={styles.eyebrow}>ChatXPT Sidequests</p>
+                <h2 className={styles.title}>Sidequest pending</h2>
+              </div>
+              <StatusBadge tone="neutral">Waiting</StatusBadge>
+            </header>
+            <p className={styles.statusLine}>
+              Waiting for the next safe, validated sidequest and viewer vote.
+            </p>
+          </div>
+        </Card>
       </DesignSystemRoot>
     );
   }

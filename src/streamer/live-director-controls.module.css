@@ -42,6 +42,7 @@
 }
 
 .intentForm label:nth-child(2),
+.speechPanel,
 .intentForm > small {
   grid-column: 1 / -1;
 }
@@ -66,10 +67,42 @@
 }
 
 .intentActions,
-.cueActions {
+.cueActions,
+.speechActions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--cx-space-sm);
+}
+
+.speechPanel {
+  display: grid;
+  gap: var(--cx-space-md);
+  padding: var(--cx-space-md);
+  border: 1px solid var(--cx-color-border);
+  border-radius: var(--cx-radius-md);
+  background: var(--cx-color-surface-raised);
+}
+
+.speechPanel > div:first-child > div,
+.transcript {
+  display: grid;
+  gap: var(--cx-space-xs);
+}
+
+.speechPanel small,
+.speechPrivacy {
+  color: var(--cx-color-text-muted);
+}
+
+.transcript {
+  min-height: 4.5rem;
+  padding: var(--cx-space-sm) var(--cx-space-md);
+  border-radius: var(--cx-radius-sm);
+  background: var(--cx-color-surface);
+}
+
+.transcript strong {
+  overflow-wrap: anywhere;
 }
 
 .sourceGrid {
@@ -124,6 +157,7 @@
   }
 
   .intentForm label:nth-child(2),
+  .speechPanel,
   .intentForm > small {
     grid-column: auto;
   }
@@ -131,7 +165,9 @@
   .intentActions,
   .intentActions > button,
   .cueActions,
-  .cueActions > button {
+  .cueActions > button,
+  .speechActions,
+  .speechActions > button {
     width: 100%;
   }
 }

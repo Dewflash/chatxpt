@@ -15,10 +15,10 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     assertSecureGameplayIngressRequest(request);
-    const authority = await getGameplayIngressApplication().readAuthority(
+    const status = await getGameplayIngressApplication().readStatus(
       request.headers.get("authorization"),
     );
-    return NextResponse.json({ ok: true, authority }, { headers: gameplayIngressHeaders });
+    return NextResponse.json({ ok: true, ...status }, { headers: gameplayIngressHeaders });
   } catch (caught) {
     return gameplayIngressErrorResponse(caught);
   }

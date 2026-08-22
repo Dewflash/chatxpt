@@ -144,7 +144,7 @@ Return exactly three meaningfully different options: one lower-risk stabilising 
 Use only the supplied normalized facts. Never invent HUD values, items, maps, modes, objectives, scores, team states, game rules, emotions, or player intent.
 If a fact is unknown, stale, unsupported, or low-confidence, do not cite or imply that fact.
 Treat gameState.facts as the cross-game vocabulary. Use it for general game claims such as health, resource, defense, loadout, menu, activity, combat risk, objective, timer, score, or environment only when the relevant fact is known.
-When exact evidence is weak, choose broadly measurable game-neutral quests for non-Minecraft games. For Minecraft, choose safe Minecraft-aware quests about goals, choices, route planning, explanation, or chat-guided style without claiming health, hunger, hotbar, sleep, inventory, biome, hostile mobs, held items, damage cause, danger, menu state, objective completion, or location unless the corresponding minecraft.gameFacts entry is known and cited.
+Every option must explicitly name the selected game and use only mechanics known from that game profile. When exact evidence is weak, choose a broadly measurable game-compatible quest that makes no current-state claim. For Minecraft, choose safe Minecraft-aware quests about goals, choices, route planning, explanation, or chat-guided style without claiming health, hunger, hotbar, sleep, inventory, biome, hostile mobs, held items, damage cause, danger, menu state, objective completion, or location unless the corresponding minecraft.gameFacts entry is known and cited.
 For Minecraft, treat the minecraft.gameFacts block as the game-specific layer on top of gameState: use a Minecraft fact only when its status is known, and do not infer sleep, biome, hostile mob, item, damage cause, danger, menu, quest intent, or player objective from other fields.
 Weak and strong models receive the same typed context; never compensate for model uncertainty by inventing facts or sourceSignalIds.
 Every sourceSignalIds entry must exactly match an available known signal ID supplied in the input. Use an empty list when a quest does not rely on one.
@@ -399,6 +399,28 @@ function providerContext(input: CandidateInput): string {
   });
 }
 
+function selectedGameNames(input: CandidateInput): readonly string[] {
+  const names = [...new Set([
+    input.profile.gameName?.trim(),
+    input.profile.gameId?.trim().replace(/[-_]+/g, " "),
+  ].filter((name): name is string => name !== undefined && name.length > 0))];
+  if (names.length === 0) {
+    throw new ProviderGenerationError(
+      "malformed",
+      "A selected game profile is required for game-aware candidate generation",
+    );
+  }
+  return names;
+}
+
+function explicitlyNamesGame(
+  candidate: z.infer<typeof candidateDraftSchema>,
+  gameNames: readonly string[],
+): boolean {
+  const copy = `${candidate.title} ${candidate.instruction}`.toLocaleLowerCase();
+  return gameNames.some((gameName) => copy.includes(gameName.toLocaleLowerCase()));
+}
+
 function knownSignalIds(input: CandidateInput): ReadonlySet<string> {
   const now = input.envelope.occurredAt;
   const known = new Set<string>();
@@ -457,6 +479,7 @@ export function createOpenAICandidateStrategy(
   }
   return {
     async generate(input, signal) {
+      const gameNames = selectedGameNames(input);
       let response: StructuredCandidateTransportResponse;
       try {
         response = await options.transport.generate({
@@ -474,6 +497,12 @@ export function createOpenAICandidateStrategy(
       const bundle = parseDrafts(response.outputText, response.refused === true);
       const allowedSignalIds = knownSignalIds(input);
       for (const draft of bundle.candidates) {
+        if (!explicitlyNamesGame(draft, gameNames)) {
+          throw new ProviderGenerationError(
+            "malformed",
+            "LLM provider returned a candidate that did not name the selected game",
+          );
+        }
         if (draft.sourceSignalIds.some((signalId) => !allowedSignalIds.has(signalId))) {
           throw new ProviderGenerationError(
             "malformed",

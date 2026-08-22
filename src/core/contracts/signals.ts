@@ -289,11 +289,15 @@ export const liveContextFactSchema = z
     }
   });
 
+export const MIN_CONFIRMED_STREAMER_SPEECH_CONFIDENCE = 0.55;
+
 const declaredStreamIntentFields = {
   intentId: identifierSchema,
   goal: z.string().trim().min(3).max(120),
   objective: z.string().trim().min(3).max(240),
   desiredAudienceInvolvement: z.string().trim().min(1).max(160).nullable(),
+  inputMethod: z.enum(["manual", "speech"]).default("manual"),
+  confidence: confidenceSchema.default(1),
   authorId: identifierSchema,
   updatedAt: timestampSchema,
   expiresAt: timestampSchema,
