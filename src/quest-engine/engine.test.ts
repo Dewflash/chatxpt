@@ -35,6 +35,7 @@ import {
   role3VoteCloseCommand,
   role3VoteCommand,
 } from "./testing";
+import { contractFixtureUiX06QuestStateCatalog } from "../core/testing";
 
 function decision(result: QuestEngineResult) {
   if (!result.ok) throw new Error(`Expected decision, received ${result.error.code}`);
@@ -1465,6 +1466,40 @@ describe("DefaultQuestEngine", () => {
       result: null,
     });
     expect(idle.events).toEqual([
+      {
+        eventType: "quest-cycle.cooldown-ended",
+        attributes: { previousOutcome: "expired" },
+      },
+    ]);
+  });
+
+  it("consumes the canonical UI-X06 cooldown fixture at its authoritative deadline", () => {
+    const cooldown = contractFixtureUiX06QuestStateCatalog["r4.quest.cooldown.v1"];
+    if (cooldown.endsAt === null) throw new Error("Expected fixture cooldown deadline");
+    if (cooldown.envelope.questCycleId === null) {
+      throw new Error("Expected fixture quest-cycle identity");
+    }
+
+    const result = decision(
+      new DefaultQuestEngine().decide({
+        currentState: cooldown,
+        command: tickCommand({
+          sessionId: cooldown.envelope.sessionId,
+          questCycleId: cooldown.envelope.questCycleId,
+          expectedRevision: cooldown.envelope.revision,
+        }),
+        candidateBatch: null,
+        now: cooldown.endsAt,
+      }),
+    );
+
+    expect(result.nextState).toMatchObject({
+      status: "idle",
+      result: null,
+      startsAt: null,
+      endsAt: null,
+    });
+    expect(result.events).toEqual([
       {
         eventType: "quest-cycle.cooldown-ended",
         attributes: { previousOutcome: "expired" },

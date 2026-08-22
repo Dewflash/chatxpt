@@ -658,6 +658,12 @@ export const contractFixtureUiX06QuestStateCatalog = {
   "r4.quest.cooldown.v1": uiX06QuestState("r4-quest-cooldown-v1", "cooldown", {
     startsAt: FIXTURE_TIME + 20_000,
     endsAt: FIXTURE_TIME + 140_000,
+    result: {
+      outcome: "expired",
+      occurredAt: FIXTURE_TIME + 20_000,
+      reason: "Fixture authoritative timer expired before cooldown.",
+      rewardPointsAwarded: 0,
+    },
   }),
 } as const;
 

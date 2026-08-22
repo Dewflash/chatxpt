@@ -328,6 +328,11 @@ describe("candidate and lifecycle boundaries", () => {
     expect(
       contractFixtureUiX06QuestStateCatalog["r5.quest.active-automatic-progress.v1"].progress?.method,
     ).toBe("automatic");
+
+    const cooldown = contractFixtureUiX06QuestStateCatalog["r4.quest.cooldown.v1"];
+    expect(cooldown.result).not.toBeNull();
+    expect(cooldown.startsAt).toBe(cooldown.result?.occurredAt);
+    expect(cooldown.endsAt).toBe((cooldown.result?.occurredAt ?? 0) + 120_000);
     expect(contractFixtureUiX06QuestStateCatalog["r5.quest.succeeded-reward.v1"].result).toMatchObject({
       outcome: "succeeded",
       rewardPointsAwarded: 100,
