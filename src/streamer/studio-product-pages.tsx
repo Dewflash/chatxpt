@@ -76,44 +76,6 @@ const NAV_ITEMS: readonly { readonly page: StudioProductPage; readonly href: str
   { page: "test-lab", href: "/studio/test-lab", label: "Test Lab" },
 ];
 
-const PAGE_COPY: Readonly<Record<StudioProductPage, { readonly eyebrow: string; readonly title: string; readonly body: string }>> = {
-  home: {
-    eyebrow: "Current Stream",
-    title: "Get ChatXPT ready for this stream",
-    body: "Connect Twitch, Game Capture, viewer participation, and broadcast output from one place.",
-  },
-  gameplay: {
-    eyebrow: "Gameplay Engine",
-    title: "What ChatXPT can see",
-    body: "Inspect capture health, supported game facts, confidence, unknowns, and recovery actions.",
-  },
-  "live-analytics": {
-    eyebrow: "Live Analytics",
-    title: "Current audience health",
-    body: "Track aggregate energy, mood, participation, and repeated topics without exposing viewer messages.",
-  },
-  "live-quests": {
-    eyebrow: "Live Quests",
-    title: "Sidequests waiting for approval",
-    body: "Review recommendations, understand why they fit, and keep voting and result state in one trusted flow.",
-  },
-  profile: {
-    eyebrow: "Profile & Defaults",
-    title: "Settings that return next stream",
-    body: "Manage personality, safety, game preferences, accessibility, voting, rewards, and stream presets.",
-  },
-  "stream-settings": {
-    eyebrow: "Stream Settings",
-    title: "Effective settings for right now",
-    body: "See whether the current stream follows saved defaults or a temporary override.",
-  },
-  "test-lab": {
-    eyebrow: "Test Lab",
-    title: "Check gameplay inputs",
-    body: "Use approved sample or live capture checks without confusing samples with the active stream.",
-  },
-};
-
 const PAGE_SECTIONS: Readonly<Partial<Record<StudioProductPage, readonly string[]>>> = {
   gameplay: ["Overview", "Game Capture", "Understanding", "Health & Recovery"],
   "live-analytics": ["Overview", "Activity", "Topics", "Session History"],
@@ -154,6 +116,36 @@ function serviceById(
   serviceId: StreamerSetupService["service"],
 ): StreamerSetupService | null {
   return readiness?.services.find((service) => service.service === serviceId) ?? null;
+}
+
+function studioPageLabel(page: StudioProductPage): string {
+  return NAV_ITEMS.find((item) => item.page === page)?.label ?? "Studio";
+}
+
+function twitchLifecycleLabel(
+  view: StreamerViewModel | null,
+  readiness: StreamerReadinessView | null | undefined,
+): "Disconnected" | "Preparing" | "Live" | "Stream ended" {
+  if (view?.session.status === "ended") return "Stream ended";
+  const twitch = serviceById(readiness, "twitch");
+  if (view === null || twitch?.health.status !== "ready") return "Disconnected";
+  return view.session.status === "live" ? "Live" : "Preparing";
+}
+
+function activeGameplayCaptureSource(
+  view: StreamerViewModel | null,
+  readiness: StreamerReadinessView | null | undefined,
+): "OBS Capture" | "Screen Capture" | "None" {
+  if (serviceById(readiness, "obs-capture")?.health.status !== "ready") return "None";
+  const snapshot = view?.gameplay ?? null;
+  if (snapshot === null) return "None";
+  const source = snapshot.signals.find((signal) =>
+    signal.observation.provenance.source === "obs-virtual-camera" ||
+    signal.observation.provenance.source === "browser-display-capture"
+  )?.observation.provenance.source ?? snapshot.envelope.source;
+  if (source === "obs-virtual-camera") return "OBS Capture";
+  if (source === "browser-display-capture") return "Screen Capture";
+  return "None";
 }
 
 function actionAllowed(
@@ -439,6 +431,7 @@ function HomeStatePanel({
   return (
     <section className={styles.readyHero} data-mode={mode} aria-labelledby="home-state-heading">
       <div className={styles.homeSummary}>
+        <span className={styles.sectionLabel}>Live Director</span>
         <StatusBadge tone={mode === "live" || mode === "ready" ? "success" : mode === "cannot-connect" || mode === "reconnecting" ? "warning" : "neutral"}>
           {copy.badge}
         </StatusBadge>
@@ -581,7 +574,7 @@ function HomeSurfacePreview({ view }: { readonly view: StreamerViewModel }) {
       <div className={styles.previewTabs} role="tablist" aria-label="Live surface preview">
         {(["streamer", "viewer", "overlay"] as const).map((value) => (
           <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)}>
-            {value === "streamer" ? "Streamer View" : value === "viewer" ? "Twitch Extension" : "OBS Overlay"}
+            {value === "streamer" ? "Live Director" : value === "viewer" ? "Twitch Extension" : "OBS Overlay"}
           </button>
         ))}
       </div>
@@ -626,7 +619,7 @@ function LiveHomeDashboard({ view, readiness, pending, onCommand, commandFactory
     <div className={styles.liveHome}>
       <article className={styles.currentStream}>
         <div className={styles.currentStreamHeader}>
-          <div><StatusBadge tone="success">Live</StatusBadge><h2>{resolveCurrentStreamGame(view.profile, view.session.currentGame)?.gameName ?? "Current stream"}</h2><small>{preset?.name ?? "Saved defaults"} · {formatElapsed(view.session.startedAt, view.envelope.receivedAt)}</small></div>
+          <div><span className={styles.sectionLabel}>Live Director</span><StatusBadge tone="success">Live</StatusBadge><h2>{resolveCurrentStreamGame(view.profile, view.session.currentGame)?.gameName ?? "Current stream"}</h2><small>{preset?.name ?? "Saved defaults"} · {formatElapsed(view.session.startedAt, view.envelope.receivedAt)}</small></div>
           <HomeControlButton label="End ChatXPT session" disabledLabel="End unavailable" disabled={!canEnd} pending={pending} onClick={() => onCommand?.(buildSetupCommand(view, "session", "end-session", commandFactory))} />
         </div>
         <div className={styles.directorReading}>
@@ -1419,11 +1412,9 @@ export function StudioProductPageSurface({
   commandFactory = defaultStreamerCommandFactory,
   children,
 }: StudioProductPageSurfaceProps) {
-  const copy = PAGE_COPY[page];
+  const pageLabel = studioPageLabel(page);
   const pending = pendingCommandId !== null;
   const activeProfile = view?.profile ?? localProfile;
-  const twitchHealth = readiness?.services.find((service) => service.service === "twitch")?.health;
-  const captureHealth = readiness?.services.find((service) => service.service === "obs-capture")?.health;
   const profileConnection = view?.profileConnection;
   const accountLabel = profileConnection?.accountStatus === "twitch-verified"
     ? "Twitch verified"
@@ -1434,14 +1425,6 @@ export function StudioProductPageSurface({
     : localProfile !== null
       ? "Local profile"
       : "Not connected";
-  const twitchVerified = profileConnection?.accountStatus === "twitch-verified";
-  const inputLabel = twitchVerified && twitchHealth?.status === "ready" && captureHealth?.status === "ready"
-    ? "Twitch + gameplay live"
-    : twitchVerified && twitchHealth?.status === "ready"
-      ? "Capture waiting"
-      : captureHealth?.status === "ready"
-        ? "Gameplay live · Twitch waiting"
-      : "Inputs waiting";
   const storageLabel = profileConnection?.persistenceStatus === "synced"
     ? "Saved to account"
     : profileConnection?.persistenceStatus === "temporary"
@@ -1453,13 +1436,11 @@ export function StudioProductPageSurface({
         : view !== null
           ? "Storage checking"
           : "Storage unavailable";
+  const twitchLifecycle = twitchLifecycleLabel(view, readiness);
+  const captureSource = activeGameplayCaptureSource(view, readiness);
   return (
     <DesignSystemRoot className={styles.surface}>
       <aside className={styles.sidebar} aria-label="Studio navigation">
-        <div className={styles.brand}>
-          <strong>ChatXPT Studio</strong>
-          <small>{customerSafeLabel(activeProfile?.displayName, "Streamer workspace")}</small>
-        </div>
         <nav className={styles.nav}>
           {NAV_ITEMS.map((item) => (
             <a
@@ -1471,12 +1452,6 @@ export function StudioProductPageSurface({
             </a>
           ))}
         </nav>
-        <section className={styles.connectionHealth} aria-label="Connection health">
-          <div><small>Account</small><strong>{accountLabel}</strong></div>
-          <div><small>Live inputs</small><strong>{inputLabel}</strong></div>
-          <div><small>Profile storage</small><strong>{storageLabel}</strong></div>
-          <p>{profileConnection?.message ?? (localProfile !== null ? "Local fallback · this device only" : "Connect Twitch to load an account profile.")}</p>
-        </section>
         {localAccountDisplayName !== null ? (
           <section className={styles.localAccount} aria-label="Local ChatXPT account">
             <span><small>Local fallback</small><strong>{localAccountDisplayName}</strong></span>
@@ -1485,23 +1460,29 @@ export function StudioProductPageSurface({
         ) : null}
       </aside>
       <main className={styles.main}>
-        <section className={styles.hero}>
-          <div>
-            <p className={styles.muted}>{copy.eyebrow}</p>
-            <h1>{copy.title}</h1>
-            <p>{copy.body}</p>
+        <header className={styles.studioHeader}>
+          <div className={styles.pageIdentity}>
+            <strong>ChatXPT</strong>
+            <h1>{pageLabel}</h1>
           </div>
-          <div className={styles.heroMeta}>
-            <StatusBadge tone={readiness?.ready ? "success" : readiness ? "warning" : "neutral"}>
-              {view === null && localProfile !== null
-                ? "Local profile"
-                : customerSafeLabel(readiness?.label, readiness?.ready ? "Ready to start" : "Connect Studio")}
-            </StatusBadge>
-            <small>{view?.session.currentGame?.gameName ?? activeProfile?.gameName ?? "No game selected"}</small>
+          <div className={styles.accountSummary}>
+            <span>Account</span>
+            <strong>{customerSafeLabel(activeProfile?.displayName, "Not connected")}</strong>
+            <small>{accountLabel} · {storageLabel}</small>
+            <dl>
+              <div>
+                <dt>Twitch</dt>
+                <dd data-state={twitchLifecycle.toLowerCase().replace(/\s+/gu, "-")}>{twitchLifecycle}</dd>
+              </div>
+              <div>
+                <dt>Game Capture</dt>
+                <dd>{captureSource}</dd>
+              </div>
+            </dl>
           </div>
-        </section>
+        </header>
         {PAGE_SECTIONS[page] ? (
-          <nav className={styles.sectionNav} aria-label={`${copy.title} sections`}>
+          <nav className={styles.sectionNav} aria-label={`${pageLabel} sections`}>
             {PAGE_SECTIONS[page]?.map((section) => (
               <a key={section} href={`#${gameIdFromName(section)}`}>{section}</a>
             ))}

@@ -4,23 +4,15 @@
 }
 
 .shell > * {
+  box-sizing: border-box;
   width: 100%;
 }
 
-.intro,
 .panel p,
 .panel li,
-.boundary {
+.lastCapture {
   color: #aeb8d4;
   line-height: 1.6;
-}
-
-.intro {
-  padding: 0 2px;
-}
-
-.intro p {
-  margin: 0;
 }
 
 .eyebrow {
@@ -91,10 +83,76 @@
   margin-top: 0;
 }
 
+.setupHeading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.setupHeading h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.captureInfo {
+  position: relative;
+  display: inline-flex;
+}
+
+.captureInfo > button {
+  width: 1.45rem;
+  height: 1.45rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #52617f;
+  border-radius: 50%;
+  color: #c9d4ef;
+  background: transparent;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: help;
+}
+
+.captureInfo > button:focus-visible {
+  outline: 3px solid rgba(126, 231, 194, 0.42);
+  outline-offset: 2px;
+}
+
+.captureInfo [role="tooltip"] {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 8px);
+  left: 0;
+  width: min(19rem, 75vw);
+  padding: 12px 14px;
+  border: 1px solid #3a4564;
+  border-radius: 8px;
+  color: #eef2ff;
+  background: #090c14;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.captureInfo [role="tooltip"] ol {
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+.captureInfo:hover [role="tooltip"],
+.captureInfo:focus-within [role="tooltip"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .field {
   display: grid;
   gap: 8px;
-  margin-top: 18px;
+  margin-top: 12px;
   color: #dce4ff;
   font-weight: 700;
 }
@@ -102,11 +160,10 @@
 .field select,
 .field input,
 .sourcePicker button,
-.actions button,
-.actions a {
+.stopCapture {
   min-height: 44px;
   border: 1px solid #3a4564;
-  border-radius: 10px;
+  border-radius: 8px;
   color: #eef2ff;
   background: #171d2e;
   font: inherit;
@@ -118,35 +175,13 @@
   padding: 0 12px;
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.actions button,
-.actions a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 18px;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.actions button:first-child {
-  font-weight: 700;
-}
-
 .sourcePicker button:disabled,
-.actions button:disabled {
+.stopCapture:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
 
-.actions a:focus-visible,
-.actions button:focus-visible,
+.stopCapture:focus-visible,
 .sourcePicker button:focus-visible,
 .field input:focus-visible,
 .field select:focus-visible {
@@ -158,7 +193,7 @@
   display: grid;
   gap: 10px;
   min-width: 0;
-  margin: 18px 0 0;
+  margin: 14px 0 0;
   padding: 0;
   border: 0;
 }
@@ -171,44 +206,33 @@
 
 .sourcePicker > div {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
 .sourcePicker button {
-  min-height: 94px;
-  display: grid;
-  gap: 7px;
-  align-content: center;
-  padding: 15px 17px;
+  min-height: 48px;
+  padding: 10px 12px;
   border-color: #6bdab6;
   color: #07130f;
   background: #7ee7c2;
-  text-align: left;
+  font-weight: 800;
+  text-align: center;
   cursor: pointer;
 }
 
-.sourcePicker button strong {
-  font-size: 1rem;
-}
-
-.sourcePicker button span {
-  color: #18352c;
-  font-size: 0.86rem;
-  font-weight: 600;
-  line-height: 1.35;
-}
-
-.sourcePicker > small {
-  color: #9eabc8;
-}
-
-.boundary {
-  margin-bottom: 0;
-  font-size: 0.9rem;
+.stopCapture {
+  width: 100%;
+  margin-top: 14px;
+  border-color: #914a57;
+  color: #ffd6dc;
+  background: #2a151a;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .preview {
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(260px, 1.4fr) minmax(220px, 1fr);
   gap: 16px;
@@ -233,27 +257,26 @@
   object-fit: contain;
 }
 
-.preview div {
+.captureControls,
+.selectedSource {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
-.preview span,
-.preview small {
+.selectedSource span,
+.selectedSource small {
   color: #8792b1;
 }
 
-.preview strong {
+.selectedSource strong {
   color: #eef2ff;
   overflow-wrap: anywhere;
 }
 
-.keepOpen {
+.lastCapture {
   margin: 12px 0 0;
-  padding: 12px 14px;
-  border-left: 3px solid #7ee7c2;
-  color: #dce4ff !important;
-  background: rgba(126, 231, 194, 0.08);
+  font-size: 0.86rem;
 }
 
 .error {
