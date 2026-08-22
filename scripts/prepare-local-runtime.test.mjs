@@ -30,6 +30,9 @@ test("creates stable private local defaults without external provider credential
     assert.match(first, /^TWITCH_EVENTSUB_SECRET=\S+$/mu);
     assert.match(first, /^CHATXPT_STUDIO_SESSION_SECRET=\S+$/mu);
     assert.match(first, /^CHATXPT_HOSTED_BOARD_SECRET=\S+$/mu);
+    assert.match(first, /^CHATXPT_STUDIO_SETUP_KEY=\S+$/mu);
+    assert.match(first, /^CHATXPT_OBS_OVERLAY_SETUP_KEY=\S+$/mu);
+    assert.match(first, /^CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY=\S+$/mu);
     assert.doesNotMatch(first, /^TWITCH_CLIENT_ID=/mu);
     assert.doesNotMatch(first, /^TWITCH_CLIENT_SECRET=/mu);
     // Windows exposes inherited ACLs rather than meaningful POSIX mode bits.
@@ -56,6 +59,9 @@ test("fills blank generated values without overwriting existing configuration", 
       "TWITCH_EVENTSUB_SECRET=existing-secret",
       "CHATXPT_STUDIO_SESSION_SECRET=",
       "CHATXPT_HOSTED_BOARD_SECRET=\"\"",
+      "CHATXPT_STUDIO_SETUP_KEY=existing-studio-setup-key",
+      "CHATXPT_OBS_OVERLAY_SETUP_KEY=",
+      "CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY=''",
       "CHATXPT_LLM_ENABLED=",
       "",
     ].join("\n"));
@@ -67,6 +73,9 @@ test("fills blank generated values without overwriting existing configuration", 
     assert.match(source, /^TWITCH_EVENTSUB_SECRET=existing-secret$/mu);
     assert.match(source, /^CHATXPT_STUDIO_SESSION_SECRET=\S+$/mu);
     assert.match(source, /^CHATXPT_HOSTED_BOARD_SECRET=\S+$/mu);
+    assert.match(source, /^CHATXPT_STUDIO_SETUP_KEY=existing-studio-setup-key$/mu);
+    assert.match(source, /^CHATXPT_OBS_OVERLAY_SETUP_KEY=\S+$/mu);
+    assert.match(source, /^CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY=\S+$/mu);
     assert.match(source, /^CHATXPT_LLM_ENABLED=false$/mu);
   } finally {
     await rm(directory, { recursive: true, force: true });

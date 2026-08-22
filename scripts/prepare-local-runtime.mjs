@@ -25,6 +25,9 @@ const defaults = [
   ["TWITCH_EVENTSUB_SECRET", secret()],
   ["CHATXPT_STUDIO_SESSION_SECRET", secret()],
   ["CHATXPT_HOSTED_BOARD_SECRET", secret()],
+  ["CHATXPT_STUDIO_SETUP_KEY", secret()],
+  ["CHATXPT_OBS_OVERLAY_SETUP_KEY", secret()],
+  ["CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY", secret()],
 ];
 let next = source;
 const additions = [];

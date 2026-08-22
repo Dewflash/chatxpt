@@ -68,7 +68,7 @@ const studioStart = await json(
   201,
 );
 assert.equal(studioStart.payload.ok, true);
-assert.equal(studioStart.payload.view.session.status, "live");
+assert.equal(studioStart.payload.view.session.status, "preparing");
 assert.ok(studioStart.payload.roomCode);
 const sessionId = studioStart.payload.view.session.sessionId;
 const roomCode = studioStart.payload.roomCode;
@@ -81,7 +81,7 @@ const { payload: studioRead } = await json("/api/studio/session", {
   headers: { cookie: studioCookie },
 });
 assert.equal(studioRead.view.session.sessionId, sessionId);
-checks.push("Studio starts and recovers one signed channel-bound live session");
+checks.push("Studio creates and recovers one signed channel-bound preparing session");
 
 const overlayGrant = await json(
   "/api/obs/overlay/grant",
