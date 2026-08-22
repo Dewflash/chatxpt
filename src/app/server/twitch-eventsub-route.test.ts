@@ -28,8 +28,8 @@ function request(
   signature: string,
   messageType = "webhook_callback_verification",
   messageId = "eventsub-route-message",
+  timestamp = new Date().toISOString(),
 ) {
-  const timestamp = new Date().toISOString();
   const validSignature = `sha256=${createHmac("sha256", SECRET)
     .update(messageId)
     .update(timestamp)
@@ -115,5 +115,31 @@ describe("Twitch EventSub route", () => {
       displayName: "Streamer One",
       deliveryId: "offline-delivery-1",
     }));
+  });
+
+  it("dispatches signed Twitch chat messages into the 1/2/3 fallback ingestor", async () => {
+    vi.stubEnv("TWITCH_EVENTSUB_SECRET", SECRET);
+    mocks.ingestChat.mockResolvedValue({ status: "counted", choice: 2 });
+    const timestamp = new Date().toISOString();
+    const body = JSON.stringify({
+      subscription: { type: "channel.chat.message" },
+      event: {
+        broadcaster_user_id: "channel-1",
+        chatter_user_id: "viewer-1",
+        message_id: "chat-delivery-1",
+        message: { text: "2" },
+      },
+    });
+    const response = await POST(request(body, "valid", "notification", "chat-delivery-1", timestamp));
+
+    expect(response.status).toBe(204);
+    expect(mocks.ingestChat).toHaveBeenCalledWith({
+      broadcasterId: "channel-1",
+      chatterId: "viewer-1",
+      messageId: "chat-delivery-1",
+      text: "2",
+      occurredAt: Date.parse(timestamp),
+      receivedAt: expect.any(Number),
+    });
   });
 });

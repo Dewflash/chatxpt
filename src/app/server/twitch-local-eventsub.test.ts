@@ -179,6 +179,31 @@ describe("local Twitch EventSub WebSocket", () => {
       deliveryId: "online-delivery-1",
       occurredAt: NOW,
     }));
+
+    socket.message({
+      metadata: {
+        message_id: "chat-delivery-1",
+        message_type: "notification",
+        message_timestamp: new Date(NOW + 1_000).toISOString(),
+      },
+      payload: {
+        subscription: { type: "channel.chat.message" },
+        event: {
+          broadcaster_user_id: "broadcaster-1",
+          chatter_user_id: "viewer-1",
+          message_id: "chat-message-1",
+          message: { text: "3" },
+        },
+      },
+    });
+    await vi.waitFor(() => expect(applications.chat).toHaveBeenCalledWith({
+      broadcasterId: "broadcaster-1",
+      chatterId: "viewer-1",
+      messageId: "chat-message-1",
+      text: "3",
+      occurredAt: NOW + 1_000,
+      receivedAt: NOW + 1_000,
+    }));
   });
 
   it("refreshes and rotates an expired local Twitch authorization before reconnecting", async () => {
