@@ -528,6 +528,16 @@ describe("identity and command permissions", () => {
         rewards: undefined,
       }).success,
     ).toBe(false);
+    expect(
+      streamerProfileSettingsCommandSchema.safeParse({
+        ...base,
+        actor: { kind: "broadcaster", actorId: "fixture-broadcaster" },
+        experiencePatch: {},
+        voting: undefined,
+        rewards: undefined,
+        desktopDirector: { setupMode: "manual" },
+      }).success,
+    ).toBe(true);
   });
 
   it("accepts source-specific current-stream game commands without profile fields", () => {
@@ -752,6 +762,9 @@ describe("streamer profile boundary", () => {
     expect(streamerProfileSchema.parse(contractFixtureProfile).rewards).toMatchObject({
       persistentEconomy: false,
       monetaryRewards: false,
+    });
+    expect(streamerProfileSchema.parse(contractFixtureProfile).desktopDirector).toEqual({
+      setupMode: "automatic",
     });
     expect(
       streamerProfileSchema.safeParse({

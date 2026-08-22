@@ -6,194 +6,356 @@
 }
 
 .shell {
-  width: min(100%, 420px);
+  width: min(100%, 360px);
   min-width: 0;
   display: grid;
-  gap: 8px;
+  gap: 7px;
   margin: 0 auto;
-  padding: 10px;
+  padding: 8px;
 }
 
-.header,
-.bandHeader,
-.metricRow,
-.footer {
+.header {
   display: flex;
+  min-width: 0;
   align-items: center;
-}
-
-.header,
-.bandHeader {
   justify-content: space-between;
   gap: 8px;
-}
-
-.header > div {
-  min-width: 0;
-}
-
-.header h1,
-.header p,
-.band p {
-  margin: 0;
+  min-height: 24px;
+  padding: 0 2px;
 }
 
 .header h1 {
+  margin: 0;
+  color: var(--cx-color-accent);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.feedState {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   overflow: hidden;
-  font-size: 1rem;
-  line-height: 1.15;
+  color: var(--cx-color-text-muted);
+  font-size: 0.61rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.feedState i {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--cx-color-accent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--cx-color-accent) 70%, transparent);
+}
+
+.statusGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+
+.statusCell {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  min-height: 54px;
+  align-content: center;
+  margin: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--cx-color-border);
+  border-radius: 10px;
+  background: var(--cx-color-surface);
+}
+
+.statusCell dt,
+.statusCell dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.eyebrow {
-  color: var(--cx-color-accent);
-  font-size: 0.62rem;
-  font-weight: 850;
+.statusCell dt {
+  color: var(--cx-color-text-muted);
+  font-size: 0.61rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
 }
 
-.band {
+.statusCell dd {
+  color: var(--cx-color-text);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.questPicker {
   min-width: 0;
   display: grid;
-  gap: 7px;
-  padding: 10px;
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid color-mix(in srgb, var(--cx-color-accent) 56%, var(--cx-color-border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--cx-color-surface) 90%, var(--cx-color-accent) 10%);
 }
 
-.bandHeader > span:first-child {
-  color: var(--cx-color-text-muted);
-  font-size: 0.7rem;
-  font-weight: 800;
+.questPickerHeader {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.questPickerHeader h2,
+.questPickerHeader span,
+.commandMessage {
+  margin: 0;
+}
+
+.questPickerHeader h2 {
+  color: var(--cx-color-text);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.045em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
-.metricRow {
-  display: grid;
-  grid-template-columns: auto 1fr auto 1fr;
-  gap: 4px 7px;
-  font-size: 0.75rem;
-}
-
-.metricRow strong {
-  color: var(--cx-color-accent);
-  font-size: 1rem;
-}
-
-.metricRow span,
-.muted,
-.explainer,
-.footer {
+.questPickerHeader span,
+.commandMessage {
+  overflow: hidden;
   color: var(--cx-color-text-muted);
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.gameplayStatus,
-.primaryCopy strong {
-  overflow-wrap: anywhere;
-  font-size: 0.92rem;
+.questOptions {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
 }
 
-.primaryCopy {
+.questOption {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  min-height: 29px;
+  padding: 4px 5px;
+  border: 1px solid var(--cx-color-border);
+  border-radius: 7px;
+  color: var(--cx-color-text-muted);
+  background: #0d0913;
+  cursor: pointer;
+}
+
+.questOption[data-selected="true"] {
+  border-color: var(--cx-color-accent);
+  color: var(--cx-color-text);
+  background: color-mix(in srgb, var(--cx-color-accent) 18%, #0d0913);
+}
+
+.questOption[data-interactive="false"] {
+  cursor: default;
+}
+
+.questOption input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.questOption span {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border-radius: 999px;
+  color: #0d0913;
+  background: var(--cx-color-accent);
+  font-size: 0.58rem;
+  font-weight: 900;
+}
+
+.questOption strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.63rem;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.questPicker button {
+  min-height: 27px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 7px;
+  color: #0d0913;
+  background: var(--cx-color-accent);
+  font: 900 0.65rem/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.questPicker button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.commandMessage {
+  text-align: center;
+}
+
+.activeQuest {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--cx-color-accent) 68%, var(--cx-color-border));
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--cx-color-accent) 13%, transparent), transparent 56%),
+    var(--cx-color-surface);
+}
+
+.activeQuestHeader,
+.activeQuestFooter {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.activeQuestIdentity {
   min-width: 0;
   display: grid;
   gap: 3px;
 }
 
-.primaryCopy span,
-.explainer,
-.muted {
-  overflow-wrap: anywhere;
-  font-size: 0.72rem;
-  line-height: 1.35;
+.activeQuestIdentity span,
+.activeQuestTimer span,
+.activeQuestMetadata {
+  color: var(--cx-color-text-muted);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
 }
 
-.questList {
-  display: grid;
-  gap: 5px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.questList li {
+.activeQuestIdentity h2 {
   min-width: 0;
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
+  margin: 0;
+  overflow: hidden;
+  color: var(--cx-color-text);
+  font-size: 0.86rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.questList b {
+.activeQuestTimer {
+  flex: 0 0 auto;
   display: grid;
-  width: 20px;
-  height: 20px;
-  place-items: center;
-  border-radius: 50%;
-  color: #0d0913;
-  background: var(--cx-color-accent);
+  justify-items: end;
+  gap: 1px;
 }
 
-.questList span {
+.activeQuestTimer strong {
+  color: var(--cx-color-accent);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.activeQuestInstruction {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--cx-color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.activeQuestMetadata {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.questList small {
-  color: var(--cx-color-text-muted);
-}
-
-.footer {
-  flex-wrap: wrap;
-  gap: 7px 12px;
-  padding: 2px 2px 0;
-  font-size: 0.66rem;
-}
-
-.footer span {
-  display: inline-flex;
+.activeQuestActions {
+  flex: 0 0 auto;
+  display: flex;
   align-items: center;
   gap: 5px;
 }
 
-.footer i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #8c8499;
+.activeQuestActions button {
+  min-height: 27px;
+  padding: 4px 8px;
+  border: 1px solid var(--cx-color-border);
+  border-radius: 7px;
+  color: var(--cx-color-text);
+  background: color-mix(in srgb, var(--cx-color-surface) 80%, var(--cx-color-text) 8%);
+  font: 900 0.63rem/1 system-ui, sans-serif;
+  cursor: pointer;
 }
 
-.footer i[data-tone="ready"] {
-  background: #71e3ba;
+.activeQuestActions button[data-tone="danger"] {
+  border-color: color-mix(in srgb, var(--cx-color-danger) 58%, var(--cx-color-border));
+  color: color-mix(in srgb, var(--cx-color-danger) 72%, var(--cx-color-text));
+  background: color-mix(in srgb, var(--cx-color-danger) 10%, transparent);
 }
 
-.footer i[data-tone="degraded"],
-.footer i[data-tone="misconfigured"] {
-  background: #ffc970;
+.activeQuestActions button[data-tone="success"] {
+  border-color: color-mix(in srgb, var(--cx-color-accent) 62%, var(--cx-color-border));
+  color: #0d0913;
+  background: var(--cx-color-accent);
 }
 
-.footer i[data-tone="unavailable"],
-.footer i[data-tone="permission-denied"] {
-  background: #ff887d;
+.activeQuestActions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
-.private {
-  margin-left: auto;
-}
-
-@media (max-width: 360px) {
-  .shell {
-    padding: 7px;
+@media (max-width: 300px) {
+  .statusGrid {
+    grid-template-columns: 1fr;
   }
 
-  .metricRow {
-    grid-template-columns: auto 1fr;
+  .activeQuestFooter {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
-  .private {
+  .activeQuestActions {
     width: 100%;
-    margin-left: 0;
+    flex-wrap: wrap;
   }
 }

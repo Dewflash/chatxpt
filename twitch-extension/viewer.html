@@ -10,29 +10,38 @@
     <script defer src="assets/viewer.js"></script>
   </head>
   <body data-surface="viewer">
-    <main class="shell voter-shell" aria-label="ChatXPT viewer voting surface">
+    <main class="shell voter-shell broadcast-card" aria-label="ChatXPT viewer voting surface">
       <header class="voter-header">
         <div>
-          <p class="kicker">ChatXPT Viewer</p>
-          <h1>Vote for the sidequest</h1>
+          <p id="surface-label" class="kicker">Audience vote</p>
+          <h1 id="surface-title">Vote now</h1>
         </div>
-        <span id="connection-state" class="pill">Connecting</span>
+        <div class="voter-meta">
+          <p id="countdown" class="countdown" hidden></p>
+          <span id="connection-state" class="pill">Connecting</span>
+        </div>
       </header>
-      <p id="countdown" class="countdown" hidden></p>
-      <section id="quest-list" class="quest-list" aria-label="Sidequest choices">
-        <div class="empty-state">
-          <strong>No vote is open.</strong>
-          <span>Generate sidequests in ChatXPT Studio first.</span>
+      <section class="voter-scroll">
+        <div class="state-explainer">
+          <span>What this means</span>
+          <small id="state-explanation">Keep this panel open for the next audience sidequest.</small>
         </div>
+        <section id="quest-list" class="quest-list" aria-label="Sidequest choices">
+          <div class="empty-state">
+            <strong>No vote is open.</strong>
+            <span>Stay here for the next audience sidequest.</span>
+          </div>
+        </section>
+        <section id="viewer-engagement" class="viewer-engagement" aria-label="Viewer engagement" hidden>
+          <div><span>Community hype</span><strong id="community-hype">0</strong></div>
+          <div><span>Your session points</span><strong id="session-points">0</strong></div>
+          <button id="send-hype" type="button" disabled>Send hype</button>
+        </section>
       </section>
-      <button id="submit-vote" class="submit-vote" disabled>Vote</button>
-      <section class="viewer-engagement" aria-label="Viewer engagement">
-        <div><span>Community hype</span><strong id="community-hype">0</strong></div>
-        <div><span>Your session points</span><strong id="session-points">0</strong></div>
-        <button id="send-hype" type="button" disabled>Send hype</button>
-      </section>
-      <p id="vote-status" class="status-line" aria-live="polite">Waiting for Twitch authorization.</p>
-      <p class="api-note">Backend: <span id="api-base-label">auto</span></p>
+      <footer class="voter-actions">
+        <button id="submit-vote" class="submit-vote" disabled hidden>Vote</button>
+        <p id="vote-status" class="status-line" aria-live="polite">Waiting for Twitch authorization.</p>
+      </footer>
     </main>
   </body>
 </html>

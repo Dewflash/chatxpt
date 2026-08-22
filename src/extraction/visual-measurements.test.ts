@@ -202,6 +202,39 @@ describe("FrameSource visual measurement stream", () => {
     }
   });
 
+  it("uses a reusable DOM canvas for live video even when OffscreenCanvas exists", async () => {
+    const drawImage = vi.fn();
+    const getImageData = vi.fn(() => ({
+      data: new Uint8ClampedArray(2 * 2 * 4),
+    }));
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: () => ({ drawImage, getImageData }),
+    } as unknown as HTMLCanvasElement;
+    const createElement = vi.fn(() => canvas);
+    class VideoElement {}
+    const offscreen = vi.fn(() => {
+      throw new Error("live video must not use OffscreenCanvas");
+    });
+    vi.stubGlobal("HTMLVideoElement", VideoElement);
+    vi.stubGlobal("OffscreenCanvas", offscreen);
+    vi.stubGlobal("document", { createElement });
+
+    try {
+      const sampler = createBrowserCanvasPixelSampler();
+      const video = new VideoElement() as unknown as CanvasImageSource;
+      await sampler.sample(video, { width: 2, height: 2 });
+      await sampler.sample(video, { width: 2, height: 2 });
+
+      expect(createElement).toHaveBeenCalledTimes(1);
+      expect(offscreen).not.toHaveBeenCalled();
+      expect(drawImage).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("contains a desktop-shaped capture without stretching the game pixels", async () => {
     const drawImage = vi.fn();
     const clearRect = vi.fn();

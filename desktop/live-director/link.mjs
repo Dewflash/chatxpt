@@ -1,7 +1,21 @@
 const DIRECTOR_PATH = "/live-director-overlay";
 const TOKEN_MIN_LENGTH = 16;
 const TOKEN_MAX_LENGTH = 4096;
-const DEFAULT_BOUNDS = Object.freeze({ width: 420, height: 760 });
+const LEGACY_DEFAULT_BOUNDS = Object.freeze({ width: 420, height: 760 });
+const DEFAULT_BOUNDS = Object.freeze({ width: 360, height: 240 });
+export const DESKTOP_DIRECTOR_OPEN_URL = "chatxpt://open";
+
+export function isPackagedDesktopRuntime({ electronPackaged, platform, runtimeDirectory }) {
+  if (electronPackaged) return true;
+  if (platform !== "darwin") return false;
+  return /[/\\]Contents[/\\]Resources[/\\]app$/.test(runtimeDirectory);
+}
+
+export function desktopProtocolClientAction({ isPackaged, platform, isDefaultClient }) {
+  if (isPackaged) return "register-packaged-client";
+  if (platform === "darwin" && isDefaultClient) return "remove-development-client";
+  return "none";
+}
 
 function isLoopbackHostname(hostname) {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
@@ -54,6 +68,18 @@ export function parseDesktopLinkUrl(input) {
   return normalizeDirectorUrl(link.searchParams.get("url") ?? "");
 }
 
+export function isDesktopDirectorOpenUrl(input) {
+  const link = new URL(input);
+  return link.protocol === "chatxpt:"
+    && link.hostname === "open"
+    && (link.pathname === "" || link.pathname === "/")
+    && link.username === ""
+    && link.password === ""
+    && link.port === ""
+    && link.search === ""
+    && link.hash === "";
+}
+
 export function redactDirectorUrl(input) {
   const url = new URL(normalizeDirectorUrl(input));
   const fragment = new URLSearchParams(url.hash.replace(/^#/, ""));
@@ -66,7 +92,7 @@ export function normalizeWindowBounds(input) {
   const record = input && typeof input === "object" ? input : {};
   const bounds = {
     width: boundedInteger(record.width, 320, 1600, DEFAULT_BOUNDS.width),
-    height: boundedInteger(record.height, 420, 1400, DEFAULT_BOUNDS.height),
+    height: boundedInteger(record.height, 200, 1400, DEFAULT_BOUNDS.height),
   };
   if (Number.isInteger(record.x)) bounds.x = record.x;
   if (Number.isInteger(record.y)) bounds.y = record.y;
@@ -84,5 +110,23 @@ export function normalizePreferences(input) {
     autoLaunch: record.autoLaunch === true,
     opacity,
     bounds: normalizeWindowBounds(record.bounds),
+  };
+}
+
+export function migrateLegacyPreferences(input, settingsVersion) {
+  const normalized = normalizePreferences(input);
+  if (
+    settingsVersion !== 1 ||
+    normalized.bounds.width !== LEGACY_DEFAULT_BOUNDS.width ||
+    normalized.bounds.height !== LEGACY_DEFAULT_BOUNDS.height
+  ) {
+    return normalized;
+  }
+  return {
+    ...normalized,
+    bounds: {
+      ...normalized.bounds,
+      ...DEFAULT_BOUNDS,
+    },
   };
 }

@@ -16,7 +16,7 @@ Twitch is the only implemented platform for the MVP. YouTube, Discord, and other
 - **Hosted Viewer Quest Board:** first participation fallback when Extension interaction is unavailable.
 - **Twitch-chat voting:** final `1`/`2`/`3` fallback.
 - **OBS Browser Source:** broadcast-only quest overlay; it is not the main configuration or voting surface.
-- **Desktop Live Director:** private Electron companion that renders the existing broadcaster-authorised Live Director projection in an always-on-top window. It stores the permanent grant through OS encryption and owns only desktop delivery preferences—not session, quest, capture, or persistence authority.
+- **Desktop Live Director:** private Electron companion that renders the existing broadcaster-authorised Live Director projection in an always-on-top window. It stores the permanent grant through OS encryption and may emit canonical quest-generation, mode-appropriate proposed-cycle, and currently allowed active-quest cancel/complete commands. Role 1 revalidates every request and Role 3 remains lifecycle authority; the companion owns only desktop delivery preferences—not session, quest, capture, vote, reward, or persistence authority.
 
 ## Data flow
 

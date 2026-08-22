@@ -26,6 +26,7 @@ import {
   buildSetupCommand,
   editableDefaultsFromView,
   profileDefaultsChanged,
+  resolveDesktopDirectorSetupMode,
   type StreamerCommandFactory,
 } from "./streamer-commands";
 
@@ -35,6 +36,18 @@ const factory: StreamerCommandFactory = {
 };
 
 describe("Role 4 streamer command builders", () => {
+  it("defaults legacy profiles without desktop director preferences to automatic", () => {
+    const legacyProfile: Partial<typeof contractFixtureStreamerView.profile> = {
+      ...contractFixtureStreamerView.profile,
+    };
+    delete legacyProfile.desktopDirector;
+
+    expect(resolveDesktopDirectorSetupMode(legacyProfile)).toBe("automatic");
+    expect(resolveDesktopDirectorSetupMode({ desktopDirector: { setupMode: "manual" } })).toBe(
+      "manual",
+    );
+  });
+
   it("builds a broadcaster-owned saved-default command through the canonical profile seam", () => {
     const draft = editableDefaultsFromView(contractFixtureStreamerView);
     const changed = {
@@ -47,6 +60,7 @@ describe("Role 4 streamer command builders", () => {
       forbiddenQuestTypes: [...draft.forbiddenQuestTypes, "inventory-trash"],
       accessibilityNeeds: ["high-contrast", "reduced-motion"],
       keywordWatchlist: ["diamonds", "food supplies"],
+      desktopDirector: { setupMode: "manual" as const },
       selectedPresetId: "competitive",
       voting: {
         ...draft.voting,
@@ -76,6 +90,7 @@ describe("Role 4 streamer command builders", () => {
       forbiddenQuestTypes: expect.arrayContaining(["inventory-trash"]),
       accessibilityNeeds: ["high-contrast", "reduced-motion"],
       keywordWatchlist: ["diamonds", "food supplies"],
+      desktopDirector: { setupMode: "manual" },
       selectedPresetId: "competitive",
       voting: {
         voteVisibility: "hidden-until-close",

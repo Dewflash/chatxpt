@@ -64,7 +64,13 @@ describe("OBS browser source descriptor", () => {
     expect(descriptor).toMatchObject({
       width: 420,
       height: 900,
-      readOnly: true,
+      readOnly: false,
+      commandScope: [
+        "quest-generation",
+        "quest-approval",
+        "quest-cancel",
+        "quest-complete",
+      ],
       reusableAcrossSessions: true,
       role: "live-director",
       broadcasterId: "fixture-broadcaster",

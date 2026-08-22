@@ -31,6 +31,7 @@ import {
   connectGameplayCapturePreview,
   describeSelectedGameplaySource,
   editableDefaultsFromView,
+  resolveDesktopDirectorSetupMode,
   STUDIO_GAME_PROFILE_OPTIONS,
   studioGameProfileOption,
   type StudioGameProfileId,
@@ -46,6 +47,20 @@ export type CaptureGame = StudioGameProfileId;
 type CaptureSource = "screen-window" | "obs-virtual-camera";
 
 const CAPTURE_PREFERENCE_KEY = "chatxpt.studio.gameplayCapture.v1";
+export const DESKTOP_DIRECTOR_OPEN_URL = "chatxpt://open";
+
+export function requestAutomaticDesktopDirectorOpen(
+  view: StreamerViewModel,
+  navigate: (url: string) => void = (url) => window.location.assign(url),
+): boolean {
+  try {
+    if (resolveDesktopDirectorSetupMode(view.profile) !== "automatic") return false;
+    navigate(DESKTOP_DIRECTOR_OPEN_URL);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 interface StudioSessionPayload {
   readonly ok: boolean;
@@ -252,12 +267,23 @@ function waitForCaptureRetry(signal: AbortSignal, durationMs = 1_000): Promise<v
   });
 }
 
-function signalValue(snapshot: GameplaySnapshot, signalId: string): string {
+function signalValue(
+  snapshot: GameplaySnapshot,
+  signalId: string,
+  lastKnownValues?: Map<string, string>,
+): string {
   const observation = snapshot.signals.find((signal) => signal.signalId === signalId)?.observation;
-  if (observation === undefined) return "Unknown";
-  if (observation.status === "known") return String(observation.value);
-  if (observation.status === "stale") return `${String(observation.previousValue ?? "Unknown")} (stale)`;
-  return "Unknown";
+  if (observation?.status === "known") {
+    const value = String(observation.value);
+    lastKnownValues?.set(signalId, value);
+    return value;
+  }
+  if (observation?.status === "stale" && observation.previousValue !== undefined) {
+    const value = String(observation.previousValue);
+    lastKnownValues?.set(signalId, value);
+    return value;
+  }
+  return lastKnownValues?.get(signalId) ?? "Unknown";
 }
 
 const CAPTURE_READING_DEFINITIONS: Readonly<Record<CaptureGame, readonly Omit<CaptureReading, "value">[]>> = {
@@ -272,8 +298,10 @@ const CAPTURE_READING_DEFINITIONS: Readonly<Record<CaptureGame, readonly Omit<Ca
     { signalId: "minecraft-movement", label: "Movement", category: "activity", availability: "supported" },
     { signalId: "minecraft-combat", label: "Combat", category: "activity", availability: "supported" },
     { signalId: "minecraft-eating", label: "Eating", category: "activity", availability: "supported" },
-    { signalId: "minecraft-environment", label: "Land / water", category: "environment", availability: "supported" },
-    { signalId: "minecraft-biome-environment", label: "Scene / environment", category: "environment", availability: "supported" },
+    { signalId: "game-global-motion-pattern", label: "Global motion", category: "activity", availability: "supported" },
+    { signalId: "minecraft-environment", label: "Scene / environment", category: "environment", availability: "supported" },
+    { signalId: "minecraft-day-night", label: "Day / night", category: "environment", availability: "supported" },
+    { signalId: "game-scene-transition", label: "Scene transition", category: "environment", availability: "supported" },
     { signalId: "minecraft-screen", label: "Screen state", category: "others", availability: "supported" },
     { signalId: "minecraft-selected-hotbar-category", label: "Selected item", category: "others", availability: "supported" },
   ],
@@ -296,10 +324,11 @@ const CAPTURE_READING_DEFINITIONS: Readonly<Record<CaptureGame, readonly Omit<Ca
 export function captureReadingsForSnapshot(
   game: CaptureGame,
   snapshot: GameplaySnapshot | null,
+  lastKnownValues?: Map<string, string>,
 ): readonly CaptureReading[] {
   return CAPTURE_READING_DEFINITIONS[game].map((reading) => ({
     ...reading,
-    value: snapshot === null ? "—" : signalValue(snapshot, reading.signalId),
+    value: snapshot === null ? "—" : signalValue(snapshot, reading.signalId, lastKnownValues),
   }));
 }
 
@@ -329,6 +358,7 @@ export function StudioGameplayCaptureClient() {
   const [savingGameProfile, setSavingGameProfile] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
   const previewRef = useRef<HTMLVideoElement | null>(null);
+  const lastKnownSignalValuesRef = useRef(new Map<string, string>());
   const capturePreferenceLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -477,6 +507,10 @@ export function StudioGameplayCaptureClient() {
   }
 
   async function selectGameProfile(nextGame: CaptureGame): Promise<void> {
+    if (nextGame !== game) {
+      lastKnownSignalValuesRef.current.clear();
+      setLatest(null);
+    }
     setGame(nextGame);
     rememberCapturePreference({ game: nextGame, source: captureSource, connected: false });
     if (view === null) return;
@@ -573,6 +607,7 @@ export function StudioGameplayCaptureClient() {
       await connectGameplayCapturePreview(preview, mediaStream);
       setCaptureDeviceLabel(describeSelectedGameplaySource(videoTrack, selectedSource));
       setPreviewConnected(true);
+      requestAutomaticDesktopDirectorOpen(currentView);
       setIngressStatus(
         captureProfile.requestedGameId === null
           ? `${selectedSource === "obs-virtual-camera" ? "OBS Virtual Camera" : "Selected-screen"} capture started with the Generic activity profile`
@@ -777,7 +812,11 @@ export function StudioGameplayCaptureClient() {
                 : [],
             ),
             unknownFactCount,
-            profileReadings: captureReadingsForSnapshot(game, builtSnapshot),
+            profileReadings: captureReadingsForSnapshot(
+              game,
+              builtSnapshot,
+              lastKnownSignalValuesRef.current,
+            ),
           });
           snapshotDelivery.push(snapshot);
         }
@@ -922,7 +961,7 @@ export function StudioGameplayCaptureClient() {
               <ol>
                 <li>Select the matching game profile.</li>
                 <li>Choose a screen or connect OBS Virtual Camera.</li>
-                <li>Keep Gameplay Engine open while capturing.</li>
+                <li>Move around Studio freely; capture continues until you stop it.</li>
               </ol>
             </div>
           </div>

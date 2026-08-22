@@ -56,7 +56,7 @@ Role 2 maintains this baseline plan. Role 4's settled answers are recorded in `d
 - Session preparation/start/end controls supplied by Role 1.
 - Proposed-quest review and authoritative approve/reject/start/pause/cancel/skip/succeed/fail/emergency-pause controls.
 - Compact Twitch Config and Live Config surfaces.
-- Private Desktop Live Director companion using the existing authorised, read-only Live Director projection.
+- Private Desktop Live Director companion using the existing authorised projection, with D-095 quest generation/mode-appropriate proposed-cycle commands and D-096 active-quest cancel/complete commands in addition to live state.
 - Responsive, keyboard, reduced-motion, failure, reconnect, and consumer-contract evidence.
 
 ### P1 after the P0 integration exit
@@ -107,7 +107,7 @@ Live Config is a compact dashboard companion:
 
 ### Desktop Live Director Companion
 
-The companion is a private streamer-only delivery surface for the existing Live Director projection. Studio creates its permanent broadcaster link once. The installed companion stores that link through operating-system secure storage, resolves the current session on later launches, remains above ordinary game windows, and offers click-through plus hide/show recovery controls. It does not own commands, state, persistence, gameplay capture, or quest logic, and it is never the public OBS overlay.
+The companion is a private streamer-only delivery surface for the existing Live Director projection. Studio creates its permanent broadcaster link once. The installed companion stores that link through operating-system secure storage, resolves the current session on later launches, remains above ordinary game windows, and offers click-through plus hide/show recovery controls. Under D-095 it may generate the same exactly-three validated proposal as Studio and submit the same mode-appropriate proposed-cycle command. Under D-096 an active quest also exposes confirmed cancellation and immediate completion when those actions are supplied by authority. Role 1 revalidates broadcaster, current session, effective profile, cycle, revision, optional candidate, and allowed action before Role 3 decides the transition and reward. It does not select an Automatic winner, cast a viewer vote, issue fail/skip/pause/progress commands, or own state, persistence, gameplay capture, or quest logic, and it is never the public OBS overlay.
 
 Twitch currently describes Config as infrequent setup in a dynamically sized iframe up to 1100px wide and Live Config as stream-time dashboard control that may pop out. Role 1 owns Extension registration and hosting; Role 4 must keep both modules fluid and CSP-compatible. See [Twitch Extension life cycle](https://dev.twitch.tv/docs/extensions/life-cycle) and [Extensions reference](https://dev.twitch.tv/docs/extensions/reference/).
 

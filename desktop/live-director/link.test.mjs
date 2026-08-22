@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   createDesktopLinkUrl,
+  DESKTOP_DIRECTOR_OPEN_URL,
+  desktopProtocolClientAction,
+  isDesktopDirectorOpenUrl,
+  isPackagedDesktopRuntime,
+  migrateLegacyPreferences,
   normalizeDirectorUrl,
   normalizePreferences,
   parseDesktopLinkUrl,
@@ -16,6 +21,50 @@ describe("Desktop Live Director linking", () => {
 
     expect(desktopLink).toContain("chatxpt://link?");
     expect(parseDesktopLinkUrl(desktopLink)).toBe(directorUrl);
+  });
+
+  it("accepts only the token-free open action for an already-linked companion", () => {
+    expect(DESKTOP_DIRECTOR_OPEN_URL).toBe("chatxpt://open");
+    expect(isDesktopDirectorOpenUrl(DESKTOP_DIRECTOR_OPEN_URL)).toBe(true);
+    expect(isDesktopDirectorOpenUrl("chatxpt://open/")).toBe(true);
+    expect(isDesktopDirectorOpenUrl("chatxpt://open?directorAccessToken=secret")).toBe(false);
+    expect(isDesktopDirectorOpenUrl("chatxpt://link")).toBe(false);
+  });
+
+  it("reserves the macOS protocol association for the packaged companion", () => {
+    expect(desktopProtocolClientAction({
+      isPackaged: true,
+      platform: "darwin",
+      isDefaultClient: false,
+    })).toBe("register-packaged-client");
+    expect(desktopProtocolClientAction({
+      isPackaged: false,
+      platform: "darwin",
+      isDefaultClient: true,
+    })).toBe("remove-development-client");
+    expect(desktopProtocolClientAction({
+      isPackaged: false,
+      platform: "darwin",
+      isDefaultClient: false,
+    })).toBe("none");
+  });
+
+  it("recognises the hand-built macOS app even when Electron reports development mode", () => {
+    expect(isPackagedDesktopRuntime({
+      electronPackaged: false,
+      platform: "darwin",
+      runtimeDirectory: "/Applications/ChatXPT Live Director.app/Contents/Resources/app",
+    })).toBe(true);
+    expect(isPackagedDesktopRuntime({
+      electronPackaged: false,
+      platform: "darwin",
+      runtimeDirectory: "/workspace/chatxpt/desktop/live-director",
+    })).toBe(false);
+    expect(isPackagedDesktopRuntime({
+      electronPackaged: true,
+      platform: "linux",
+      runtimeDirectory: "/opt/chatxpt/resources/app.asar",
+    })).toBe(true);
   });
 
   it("allows local development and rejects unsafe or unrelated links", () => {
@@ -46,5 +95,13 @@ describe("Desktop Live Director linking", () => {
       opacity: 0.7,
       bounds: { width: 320, height: 1400, x: 12, y: 24 },
     });
+  });
+
+  it("defaults to the compact 2x2 director size and migrates the old tall default", () => {
+    expect(normalizePreferences(null).bounds).toEqual({ width: 360, height: 240 });
+    expect(migrateLegacyPreferences({ bounds: { width: 420, height: 760 } }, 1).bounds)
+      .toEqual({ width: 360, height: 240 });
+    expect(migrateLegacyPreferences({ bounds: { width: 700, height: 600 } }, 1).bounds)
+      .toEqual({ width: 700, height: 600 });
   });
 });

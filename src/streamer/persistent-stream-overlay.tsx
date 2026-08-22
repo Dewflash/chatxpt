@@ -1,198 +1,293 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
+import { DesignSystemRoot } from "../design-system";
 import {
-  Card,
-  DesignSystemRoot,
-  Notice,
-  Progress,
-  StatusBadge,
-  type StatusTone,
-} from "../design-system";
-import {
-  resolveCurrentStreamGame,
+  resolveEffectiveStreamerProfile,
   type StreamerReadinessView,
   type StreamerViewModel,
 } from "../core";
+import {
+  presentChatStatus,
+  presentGameplayFeedState,
+  presentGameplayTempo,
+  presentQuestStatus,
+  presentSessionPhase,
+} from "./live-status-presentation";
+import {
+  buildQuestCommand,
+  buildQuestGenerationCommand,
+  defaultStreamerCommandFactory,
+  type StreamerCommandFactory,
+  type StreamerUiCommand,
+} from "./streamer-commands";
 
 import styles from "./persistent-stream-overlay.module.css";
 
 export interface PersistentStreamOverlaySurfaceProps {
   readonly view: StreamerViewModel | null;
   readonly readiness?: StreamerReadinessView | null;
+  readonly pendingCommandId?: string | null;
+  readonly commandMessage?: string | null;
+  readonly onCommand?: (command: StreamerUiCommand) => void;
+  readonly commandFactory?: StreamerCommandFactory;
 }
 
-function titleCase(value: string): string {
-  return value
-    .split(/[-_]/u)
-    .filter(Boolean)
-    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
-    .join(" ");
-}
+function formatRemainingTime(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
 
-function sessionTone(status: StreamerViewModel["session"]["status"]): StatusTone {
-  if (status === "live") return "success";
-  if (status === "preparing") return "info";
-  if (status === "ended") return "neutral";
-  return "warning";
-}
-
-function chatTone(status: NonNullable<StreamerViewModel["publicContext"]>["chatStatus"]): StatusTone {
-  if (status === "hype") return "success";
-  if (status === "quiet") return "warning";
-  if (status === "steady") return "info";
-  return "neutral";
-}
-
-function remainingSeconds(view: StreamerViewModel): number | null {
-  if (view.questCycle.endsAt === null) return null;
-  return Math.max(0, Math.ceil((view.questCycle.endsAt - view.envelope.receivedAt) / 1_000));
-}
-
-function QuestBand({ view }: { readonly view: StreamerViewModel }) {
-  const cycle = view.questCycle;
-  const winner = cycle.options.find((option) => option.candidateId === cycle.activeCandidateId);
-  const remaining = remainingSeconds(view);
-  const statusLabel = cycle.status === "selected"
-    ? cycle.endsAt === null
-      ? "Approval needed"
-      : "Winner selected"
-    : titleCase(cycle.status);
-  return (
-    <Card className={styles.band}>
-      <div className={styles.bandHeader}>
-        <span>Sidequest</span>
-        <StatusBadge tone={cycle.status === "active" ? "success" : cycle.status === "selected" ? "info" : "neutral"}>
-          {statusLabel}
-        </StatusBadge>
-      </div>
-      {cycle.result ? (
-        <div className={styles.primaryCopy}>
-          <strong>{titleCase(cycle.result.outcome)}</strong>
-          <span>{cycle.result.reason}</span>
-        </div>
-      ) : winner ? (
-        <div className={styles.primaryCopy}>
-          <strong>{winner.title}</strong>
-          <span>{winner.instruction}</span>
-        </div>
-      ) : cycle.status === "voting" ? (
-        <ol className={styles.questList}>
-          {cycle.options.map((option, index) => (
-            <li key={option.candidateId}>
-              <b>{index + 1}</b>
-              <span>{option.title}</span>
-              <small>{cycle.voteTallies.find((tally) => tally.candidateId === option.candidateId)?.votes ?? 0}</small>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <span className={styles.muted}>Waiting for the next safe three-option vote.</span>
-      )}
-      {cycle.status === "selected" ? (
-        <p className={styles.explainer}>
-          {cycle.endsAt === null
-            ? "The viewers chose this quest. Approve Start in Studio or Twitch Live Config."
-            : `The viewers chose this quest. It starts automatically in ${remaining ?? 0}s.`}
-        </p>
-      ) : cycle.status === "voting" && remaining !== null ? (
-        <p className={styles.explainer}>{`${remaining}s left in the audience vote.`}</p>
-      ) : null}
-      {cycle.progress ? (
-        <Progress
-          label={`Progress · ${titleCase(cycle.progress.method)}`}
-          value={cycle.progress.value}
-          max={1}
-          valueLabel={`${Math.round(cycle.progress.value * 100)}%`}
-        />
-      ) : null}
-    </Card>
-  );
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 export function PersistentStreamOverlaySurface({
   view,
-  readiness,
+  pendingCommandId = null,
+  commandMessage = null,
+  onCommand,
+  commandFactory = defaultStreamerCommandFactory,
 }: PersistentStreamOverlaySurfaceProps) {
-  if (view === null) {
-    return (
-      <DesignSystemRoot theme="dark" density="compact" className={styles.surface}>
-        <main className={styles.shell}>
-          <Notice title="Live Director is ready" politeness="polite">
-            Waiting for this broadcaster&apos;s active ChatXPT session.
-          </Notice>
-        </main>
-      </DesignSystemRoot>
-    );
-  }
+  const cycle = view?.questCycle ?? null;
+  const cycleKey = cycle === null
+    ? "no-cycle"
+    : [
+        cycle.envelope.questCycleId ?? "no-cycle",
+        cycle.status,
+        ...cycle.options.map((option) => option.candidateId),
+      ].join(":");
+  const defaultCandidateId = cycle?.options[0]?.candidateId ?? null;
+  const [selection, setSelection] = useState({ cycleKey, candidateId: defaultCandidateId });
+  const [cancelConfirmationCycleKey, setCancelConfirmationCycleKey] = useState<string | null>(null);
+  const selectedCandidateId = selection.cycleKey === cycleKey
+    ? selection.candidateId
+    : defaultCandidateId;
+  const questControlMode = view === null || resolveEffectiveStreamerProfile(
+    view.profile,
+    view.sessionOverride,
+    view.session.currentGame,
+  ).voting.winnerActivationMode === "automatic"
+    ? "automatic"
+    : "manual";
+  const canRouteRecommendations =
+    view !== null &&
+    cycle?.status === "proposed" &&
+    cycle.options.length === 3 &&
+    cycle.availableStreamerActions.includes("approve");
+  const canGenerateRecommendations =
+    view !== null &&
+    cycle?.status === "idle" &&
+    (view.session.status === "preparing" || view.session.status === "live") &&
+    !view.emergencyPaused;
+  const activeQuest = cycle?.status === "active" && cycle.activeCandidateId !== null
+    ? cycle.options.find((option) => option.candidateId === cycle.activeCandidateId) ?? null
+    : null;
+  const canCancelActiveQuest = activeQuest !== null &&
+    cycle?.availableStreamerActions.includes("cancel") === true;
+  const canCompleteActiveQuest = activeQuest !== null &&
+    cycle?.availableStreamerActions.includes("succeed") === true;
+  const confirmingCancellation = canCancelActiveQuest && cancelConfirmationCycleKey === cycleKey;
+  const activeQuestId = activeQuest?.candidateId ?? null;
+  const needsLiveClock = activeQuestId !== null || cycle?.status === "voting";
+  const [currentTime, setCurrentTime] = useState(view?.envelope.receivedAt ?? 0);
+  const authoritativeDisplayTime = view === null
+    ? currentTime
+    : Math.max(currentTime, view.envelope.receivedAt);
+  const remainingSeconds = activeQuest !== null && cycle !== null && cycle.endsAt !== null && view !== null
+    ? Math.max(0, Math.ceil((cycle.endsAt - authoritativeDisplayTime) / 1_000))
+    : null;
 
-  const context = view.publicContext;
-  const capture = readiness?.services.find((service) => service.service === "obs-capture")?.health ??
-    view.services.find((service) => service.service === "gameplay-capture");
-  const realtime = readiness?.services.find((service) => service.service === "realtime")?.health ??
-    view.services.find((service) => service.service === "realtime");
-  const cue = view.liveDirector?.cue ?? null;
-  const currentGame = resolveCurrentStreamGame(view.profile, view.session.currentGame);
+  useEffect(() => {
+    if (!needsLiveClock) return undefined;
+
+    const intervalId = window.setInterval(() => setCurrentTime(Date.now()), 250);
+
+    return () => window.clearInterval(intervalId);
+  }, [needsLiveClock, cycle?.endsAt]);
+  const statuses = [
+    { key: "session", label: "Session phase", value: presentSessionPhase(view) },
+    { key: "gameplay", label: "Gameplay tempo", value: presentGameplayTempo(view) },
+    { key: "chat", label: "Chat status", value: presentChatStatus(view) },
+    {
+      key: "quest",
+      label: "Quest status",
+      value: presentQuestStatus(view, authoritativeDisplayTime),
+    },
+  ] as const;
+
+  function sendActiveQuestAction(action: "cancel" | "succeed") {
+    if (view === null || activeQuest === null) return;
+    onCommand?.(buildQuestCommand(view, action, null, commandFactory));
+    setCancelConfirmationCycleKey(null);
+  }
 
   return (
     <DesignSystemRoot theme="dark" density="compact" className={styles.surface}>
-      <main className={styles.shell}>
+      <main className={styles.shell} aria-label="Private Live Director">
         <header className={styles.header}>
-          <div>
-            <p className={styles.eyebrow}>Private Live Director</p>
-            <h1>{currentGame?.gameName ?? view.profile.displayName}</h1>
-          </div>
-          <StatusBadge tone={sessionTone(view.session.status)}>{titleCase(view.session.status)}</StatusBadge>
+          <h1>Live Director</h1>
+          <span className={styles.feedState} data-director-feed-state>
+            <i aria-hidden="true" />
+            {presentGameplayFeedState(view)}
+          </span>
         </header>
-
-        {view.emergencyPaused ? (
-          <Notice tone="danger" title="Emergency pause active" politeness="assertive">
-            New sidequests are blocked until the pause is cleared.
-          </Notice>
+        <dl className={styles.statusGrid}>
+          {statuses.map((status) => (
+            <div key={status.key} className={styles.statusCell} data-director-status={status.key}>
+              <dt>{status.label}</dt>
+              <dd>{status.value}</dd>
+            </div>
+          ))}
+        </dl>
+        {canGenerateRecommendations && view !== null ? (
+          <section className={styles.questPicker} aria-labelledby="director-generate-heading">
+            <div className={styles.questPickerHeader}>
+              <h2 id="director-generate-heading">Quests</h2>
+              <span>Generate three safe options</span>
+            </div>
+            <button
+              type="button"
+              disabled={onCommand === undefined || pendingCommandId !== null}
+              onClick={() => onCommand?.(buildQuestGenerationCommand(view, commandFactory))}
+            >
+              {pendingCommandId === null ? "Generate quests" : "Generating…"}
+            </button>
+            {commandMessage ? <p className={styles.commandMessage} role="status">{commandMessage}</p> : null}
+          </section>
         ) : null}
-
-        <Card className={styles.band}>
-          <div className={styles.bandHeader}>
-            <span>Chat health</span>
-            <StatusBadge tone={chatTone(context?.chatStatus ?? "unknown")}>
-              {titleCase(context?.chatStatus ?? "unknown")}
-            </StatusBadge>
-          </div>
-          <div className={styles.metricRow}>
-            <strong>{context?.chatEnergy === null || context?.chatEnergy === undefined ? "—" : `${Math.round(context.chatEnergy * 100)}%`}</strong>
-            <span>Energy</span>
-            <strong>{view.communityHype}</strong>
-            <span>Community hype</span>
-          </div>
-        </Card>
-
-        <Card className={styles.band}>
-          <div className={styles.bandHeader}>
-            <span>Gameplay</span>
-            <StatusBadge tone={context?.gameplayStatus ? "success" : "neutral"}>
-              {context?.gameplayStatus ? "Observed" : "Unknown"}
-            </StatusBadge>
-          </div>
-          <strong className={styles.gameplayStatus}>{context?.gameplayStatus ?? "No supported fresh state yet"}</strong>
-          <p className={styles.explainer}>{context?.explainer ?? "ChatXPT is still observing the current stream."}</p>
-        </Card>
-
-        <QuestBand view={view} />
-
-        <Card className={styles.band}>
-          <div className={styles.bandHeader}>
-            <span>Director cue</span>
-            <StatusBadge tone={cue?.state === "proposed" ? "info" : "neutral"}>
-              {cue ? titleCase(cue.state) : "None"}
-            </StatusBadge>
-          </div>
-          <p className={styles.explainer}>{cue?.reason ?? "No private cue needs attention."}</p>
-        </Card>
-
-        <footer className={styles.footer}>
-          <span><i data-tone={capture?.status ?? "unknown"} />Capture {titleCase(capture?.status ?? "unknown")}</span>
-          <span><i data-tone={realtime?.status ?? "unknown"} />Realtime {titleCase(realtime?.status ?? "unknown")}</span>
-          <span className={styles.private}>Private · no raw chat</span>
-        </footer>
+        {canRouteRecommendations && cycle !== null ? (
+          <section className={styles.questPicker} aria-labelledby="director-recommendations-heading">
+            <div className={styles.questPickerHeader}>
+              <h2 id="director-recommendations-heading">Recommended quests</h2>
+              <span>{questControlMode === "automatic" ? "Send all three to viewers" : "Choose one to start"}</span>
+            </div>
+            <div className={styles.questOptions} role={questControlMode === "manual" ? "radiogroup" : "list"} aria-label="Recommended quests">
+              {cycle.options.map((option, index) => (
+                questControlMode === "manual" ? (
+                  <label
+                    key={option.candidateId}
+                    className={styles.questOption}
+                    data-selected={option.candidateId === selectedCandidateId || undefined}
+                    title={`${option.title}: ${option.instruction}`}
+                  >
+                    <input
+                      type="radio"
+                      name="desktop-live-director-quest"
+                      checked={option.candidateId === selectedCandidateId}
+                      onChange={() => setSelection({ cycleKey, candidateId: option.candidateId })}
+                    />
+                    <span>{index + 1}</span>
+                    <strong>{option.title}</strong>
+                  </label>
+                ) : (
+                  <div key={option.candidateId} className={styles.questOption} data-interactive="false" role="listitem" title={`${option.title}: ${option.instruction}`}>
+                    <span>{index + 1}</span>
+                    <strong>{option.title}</strong>
+                  </div>
+                )
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={
+                onCommand === undefined ||
+                pendingCommandId !== null ||
+                (questControlMode === "manual" && selectedCandidateId === null)
+              }
+              onClick={() => {
+                if (view === null || (questControlMode === "manual" && selectedCandidateId === null)) return;
+                onCommand?.(
+                  buildQuestCommand(
+                    view,
+                    "approve",
+                    questControlMode === "manual" ? selectedCandidateId : null,
+                    commandFactory,
+                  ),
+                );
+              }}
+            >
+              {pendingCommandId === null
+                ? questControlMode === "automatic" ? "Push quests now" : "Start selected quest"
+                : questControlMode === "automatic" ? "Pushing quests…" : "Starting quest…"}
+            </button>
+            {commandMessage ? <p className={styles.commandMessage} role="status">{commandMessage}</p> : null}
+          </section>
+        ) : null}
+        {activeQuest !== null ? (
+          <section
+            className={styles.activeQuest}
+            data-director-active-quest="true"
+            aria-labelledby="director-active-quest-heading"
+          >
+            <div className={styles.activeQuestHeader}>
+              <div className={styles.activeQuestIdentity}>
+                <span>Current quest</span>
+                <h2 id="director-active-quest-heading">{activeQuest.title}</h2>
+              </div>
+              <div
+                className={styles.activeQuestTimer}
+                aria-label={remainingSeconds === null
+                  ? "Quest timer unavailable"
+                  : `${formatRemainingTime(remainingSeconds)} remaining`}
+              >
+                <strong>{remainingSeconds === null ? "—" : formatRemainingTime(remainingSeconds)}</strong>
+                <span>{remainingSeconds === null ? "timer unavailable" : "remaining"}</span>
+              </div>
+            </div>
+            <p className={styles.activeQuestInstruction}>{activeQuest.instruction}</p>
+            <div className={styles.activeQuestFooter}>
+              <span className={styles.activeQuestMetadata}>
+                {activeQuest.difficulty} · {activeQuest.rewardPoints} pts
+              </span>
+              {canCancelActiveQuest || canCompleteActiveQuest ? (
+                <div className={styles.activeQuestActions} aria-label="Quest actions">
+                  {confirmingCancellation ? (
+                    <>
+                      <button
+                        type="button"
+                        data-tone="danger"
+                        disabled={onCommand === undefined || pendingCommandId !== null}
+                        onClick={() => sendActiveQuestAction("cancel")}
+                      >
+                        {pendingCommandId === null ? "Confirm cancel" : "Cancelling…"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={pendingCommandId !== null}
+                        onClick={() => setCancelConfirmationCycleKey(null)}
+                      >
+                        Keep quest
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {canCancelActiveQuest ? (
+                        <button
+                          type="button"
+                          data-tone="danger"
+                          disabled={onCommand === undefined || pendingCommandId !== null}
+                          onClick={() => setCancelConfirmationCycleKey(cycleKey)}
+                        >
+                          Cancel quest
+                        </button>
+                      ) : null}
+                      {canCompleteActiveQuest ? (
+                        <button
+                          type="button"
+                          data-tone="success"
+                          disabled={onCommand === undefined || pendingCommandId !== null}
+                          onClick={() => sendActiveQuestAction("succeed")}
+                        >
+                          {pendingCommandId === null ? "Mark complete" : "Completing…"}
+                        </button>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
       </main>
     </DesignSystemRoot>
   );

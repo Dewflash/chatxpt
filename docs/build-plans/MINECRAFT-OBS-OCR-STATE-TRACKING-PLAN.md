@@ -217,6 +217,7 @@ Completed foundation:
 - Generic container and real sleep-screen proposals gate HUD, scene, damage, and gameplay-activity deltas. Exact inventory/crafting/furnace subtype remains unknown without the later selective-OCR phase.
 - Stable fact timestamps and expiry now reach flat gameplay signals and the typed Minecraft AI context for health, hunger, air bubbles, and submersion.
 - The minimum quest-facing state contract now uses independent concurrent axes for movement (`stationary`/`moving`/`walking`/`running`), turning, combat, eating, health trend, screen, environment, and life. Ambiguous walking-versus-running windows retain the truthful `moving` value.
+- A local brightness tracker now adds an independent `day`/`night` environmental axis. Day requires a sustained bright window; night requires a much longer uninterrupted dark window; an abrupt darkness drop retains the last confirmed day state as an indoor, shadowed, or camera-occluded view until the earlier brightness returns.
 - A bounded local camera-motion field replaces whole-frame pixel change for Minecraft movement and turning. A separate narrow action detector uses temporally confirmed target-hit flashes and vanilla item-use poses for attacking and eating.
 - Vanilla pause, inventory/container, sleep, and death screens are projected explicitly and held briefly across one-frame misses so screen-state flicker cannot create action or health deltas.
 - The Studio detector proof now exposes every minimum state axis instead of hiding them behind the legacy single activity label.
@@ -234,7 +235,7 @@ Still open:
 
 - Stable-border/desktop-chrome localisation metadata and material-viewport-change reacquisition.
 - Selective OCR for exact crafting/inventory/furnace subtype and furnace progress; respawn transition confirmation remains open even though the death screen has a visual state.
-- Experience tracking, broader event machines, daylight/jump inference, formal replay confusion matrices, and real OBS plus screen-picker proof.
+- Experience tracking, broader event machines, formal daylight/jump replay calibration, formal replay confusion matrices, and real OBS plus screen-picker proof.
 
 ## Ordered Implementation Phases
 

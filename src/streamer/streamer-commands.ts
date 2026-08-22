@@ -23,6 +23,7 @@ import {
   type StreamerQuestCommand,
   type StreamerQuestProgressCommand,
   type StreamerRewardPreferences,
+  type StreamerDesktopDirectorPreferences,
   type StreamerProfile,
   type StreamPreset,
   type StreamerServiceCommand,
@@ -60,6 +61,7 @@ export interface EditableProfileDefaults {
   readonly keywordWatchlist: readonly string[];
   readonly streamPresets: readonly StreamPreset[];
   readonly selectedPresetId: string | null;
+  readonly desktopDirector: StreamerDesktopDirectorPreferences;
   readonly voting: StreamerVotingPreferences;
   readonly rewards: StreamerRewardPreferences;
 }
@@ -90,6 +92,14 @@ export const defaultStreamerCommandFactory: StreamerCommandFactory = {
     return Date.now();
   },
 };
+
+export function resolveDesktopDirectorSetupMode(profile: {
+  readonly desktopDirector?: {
+    readonly setupMode?: StreamerDesktopDirectorPreferences["setupMode"];
+  } | null;
+}): StreamerDesktopDirectorPreferences["setupMode"] {
+  return profile.desktopDirector?.setupMode === "manual" ? "manual" : "automatic";
+}
 
 function metadata(
   view: StreamerViewModel,
@@ -126,6 +136,7 @@ export function editableDefaultsFromProfile(profile: StreamerProfile): EditableP
       rewards: { ...preset.rewards },
     })),
     selectedPresetId: profile.selectedPresetId,
+    desktopDirector: { setupMode: resolveDesktopDirectorSetupMode(profile) },
     voting: { ...profile.voting },
     rewards: { ...profile.rewards },
   };
@@ -150,6 +161,7 @@ export function applyEditableDefaultsToProfile(
     forbiddenQuestTypes: [...defaults.forbiddenQuestTypes],
     accessibilityNeeds: [...defaults.accessibilityNeeds],
     keywordWatchlist: [...defaults.keywordWatchlist],
+    desktopDirector: { ...defaults.desktopDirector },
     streamPresets: defaults.streamPresets.map((preset) => ({
       ...preset,
       experience: { ...preset.experience },
@@ -206,6 +218,7 @@ export function buildProfileSettingsCommand(
       preferredQuestTypes: [...sourcePreset.preferredQuestTypes],
     })),
     selectedPresetId: draft.selectedPresetId,
+    desktopDirector: { ...draft.desktopDirector },
     voting: draft.voting,
     rewards: draft.rewards,
   });

@@ -17,6 +17,23 @@ npm run supabase:test
 The reset applies every migration and the intentionally empty seed. Never run a
 linked reset against a shared or production project.
 
+## Explicit local fallback
+
+When the shared Supabase project is unavailable or its schema is not ready,
+local development can deliberately keep the Twitch, gameplay, quest, viewer,
+and OBS workflow on the process-local memory runtime even when Supabase keys
+remain configured:
+
+```bash
+CHATXPT_PERSISTENCE_MODE=memory
+```
+
+Set this only in the ignored `.env.local` file and restart ChatXPT. Studio
+reports degraded local persistence, Supabase realtime is disabled, and browser-
+local presets remain available. Use `auto` to return to configured Supabase.
+Hosted preview and production environments reject forced memory mode because
+process-local state is not reliable across server instances.
+
 ## Shared preview project
 
 Role 1 creates one Supabase Free project, links it locally, previews pending

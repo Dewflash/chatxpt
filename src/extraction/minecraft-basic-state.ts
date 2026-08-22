@@ -1,14 +1,16 @@
 import type { MinecraftCameraMotionMeasurement } from "./minecraft-camera-motion";
 import type { MinecraftActionVisualMeasurement } from "./minecraft-action-visual";
+import type { MinecraftDayNightState } from "./minecraft-daylight";
 import type { MinecraftHudFact, MinecraftHudFingerprint } from "./minecraft-hud";
 import type { MinecraftMenuState } from "./minecraft-menu";
 import type { MinecraftRuntimeFacts } from "./minecraft-runtime";
+import type { MinecraftSceneEnvironment } from "./minecraft-scene";
 
 export type MinecraftMovementState = "stationary" | "moving" | "walking" | "running";
 export type MinecraftCombatState = "none" | "attacking" | "fighting";
 export type MinecraftHealthTrend = "stable" | "taking-damage" | "regenerating";
 export type MinecraftScreenState = "gameplay" | "pause" | "inventory" | "sleeping" | "dead";
-export type MinecraftEnvironmentState = "land" | "water";
+export type MinecraftEnvironmentState = MinecraftSceneEnvironment;
 export type MinecraftLifeState = "alive" | "dead";
 
 export interface MinecraftBasicStateFacts {
@@ -19,6 +21,7 @@ export interface MinecraftBasicStateFacts {
   readonly healthTrend: MinecraftHudFact<MinecraftHealthTrend>;
   readonly screen: MinecraftHudFact<MinecraftScreenState>;
   readonly environment: MinecraftHudFact<MinecraftEnvironmentState>;
+  readonly dayNight: MinecraftHudFact<MinecraftDayNightState>;
   readonly life: MinecraftHudFact<MinecraftLifeState>;
 }
 
@@ -68,8 +71,17 @@ function unknown<T extends string | number | boolean>(
   };
 }
 
-function confirmedHud(hud: MinecraftHudFingerprint | null): hud is MinecraftHudFingerprint {
+function confirmedHud(hud: MinecraftHudFingerprint | null): boolean {
   return hud?.status === "vanilla-like" || hud?.status === "minecraft-like";
+}
+
+function hasConfirmedGameplayFact(hud: MinecraftHudFingerprint | null): hud is MinecraftHudFingerprint {
+  if (confirmedHud(hud)) return true;
+  if (hud === null) return false;
+  const pairedVitals =
+    hud.facts.healthHearts.status === "known" &&
+    hud.facts.hungerShanks.status === "known";
+  return pairedVitals || hud.facts.hotbarVisible.status === "known";
 }
 
 function screenFact(input: {
@@ -91,12 +103,21 @@ function screenFact(input: {
       return known("dead", input.menuState.confidence, "The Minecraft death screen is open.", source);
     }
   }
-  if (confirmedHud(input.hud)) {
+  if (hasConfirmedGameplayFact(input.hud)) {
     return known(
       "gameplay",
-      input.hud.confidence,
-      "The confirmed Minecraft HUD is visible without a detected menu overlay.",
-      input.hud.facts.hotbarVisible.sourceRegionIds,
+      Math.max(
+        input.hud.confidence,
+        input.hud.facts.healthHearts.confidence,
+        input.hud.facts.hungerShanks.confidence,
+        input.hud.facts.hotbarVisible.confidence,
+      ),
+      "Confirmed Minecraft HUD facts are visible without a detected menu overlay.",
+      [...new Set([
+        ...input.hud.facts.healthHearts.sourceRegionIds,
+        ...input.hud.facts.hungerShanks.sourceRegionIds,
+        ...input.hud.facts.hotbarVisible.sourceRegionIds,
+      ])],
     );
   }
   return unknown(
@@ -108,15 +129,15 @@ function screenFact(input: {
 
 function hasTravelEvidence(measurement: MinecraftCameraMotionMeasurement): boolean {
   return measurement.reliableVectorCount >= 3 && (
-    Math.abs(measurement.meanDy) >= 0.45 ||
-    (Math.abs(measurement.radialMotion) >= 0.5 && Math.abs(measurement.radialCoherence) >= 0.22)
+    Math.abs(measurement.meanDy) >= 1.35 ||
+    (Math.abs(measurement.radialMotion) >= 0.65 && Math.abs(measurement.radialCoherence) >= 0.4)
   );
 }
 
 function hasTurningEvidence(measurement: MinecraftCameraMotionMeasurement): boolean {
   return measurement.reliableVectorCount >= 3 &&
-    measurement.yawStrength >= 0.45 &&
-    measurement.yawCoherence >= 0.2;
+    measurement.yawStrength >= 1.1 &&
+    measurement.yawCoherence >= 0.35;
 }
 
 function spanMs(rows: readonly TimedCameraMotion[]): number {
@@ -173,6 +194,7 @@ export class MinecraftBasicStateTracker {
     readonly menuState: MinecraftHudFact<MinecraftMenuState>;
     readonly hud: MinecraftHudFingerprint | null;
     readonly runtimeFacts: MinecraftRuntimeFacts;
+    readonly dayNight?: MinecraftHudFact<MinecraftDayNightState>;
   }): MinecraftBasicStateFacts {
     if (!Number.isInteger(input.observedAt) || input.observedAt < 0) {
       throw new RangeError("Minecraft basic-state timestamps must be non-negative integers");
@@ -184,6 +206,11 @@ export class MinecraftBasicStateTracker {
     const rawScreen = screenFact(input);
     if (rawScreen.status === "known" && rawScreen.value !== "gameplay") {
       this.heldOverlayScreen = { fact: rawScreen, lastSeenAt: input.observedAt };
+    } else if (rawScreen.status === "known" && rawScreen.value === "gameplay") {
+      // The analyzer already holds a detected overlay until a real resume
+      // transition. Once it supplies confirmed gameplay again, clear this UI
+      // smoothing hold immediately instead of showing pause after resuming.
+      this.heldOverlayScreen = null;
     } else if (
       this.heldOverlayScreen !== null &&
       input.observedAt - this.heldOverlayScreen.lastSeenAt > 800
@@ -192,18 +219,26 @@ export class MinecraftBasicStateTracker {
     }
     const screen = this.heldOverlayScreen?.fact ?? rawScreen;
     const gameplayVisible = screen.status === "known" && screen.value === "gameplay";
+    const nonGameplayScreenVisible =
+      screen.status === "known" && screen.value !== "gameplay";
+    const cameraFieldAvailable =
+      input.cameraMotion !== null && input.cameraMotion.reliableVectorCount >= 3;
 
-    if (gameplayVisible && input.actionVisuals !== null && input.actionVisuals !== undefined) {
+    if (
+      !nonGameplayScreenVisible &&
+      input.actionVisuals !== null &&
+      input.actionVisuals !== undefined
+    ) {
       this.actionHistory.push({ observedAt: input.observedAt, measurement: input.actionVisuals });
-      this.actionHistory = this.actionHistory.filter(({ observedAt }) => observedAt >= input.observedAt - 1_500);
-    } else if (!gameplayVisible) {
+      this.actionHistory = this.actionHistory.filter(({ observedAt }) => observedAt >= input.observedAt - 2_500);
+    } else if (nonGameplayScreenVisible) {
       this.actionHistory = [];
     }
 
-    if (gameplayVisible && input.cameraMotion !== null) {
+    if (!nonGameplayScreenVisible && input.cameraMotion !== null) {
       this.motionHistory.push({ observedAt: input.observedAt, measurement: input.cameraMotion });
       this.motionHistory = this.motionHistory.filter(({ observedAt }) => observedAt >= input.observedAt - 3_000);
-    } else {
+    } else if (nonGameplayScreenVisible) {
       this.motionHistory = [];
     }
 
@@ -217,10 +252,13 @@ export class MinecraftBasicStateTracker {
     let movement: MinecraftHudFact<MinecraftMovementState>;
     let turning: MinecraftHudFact<boolean>;
 
-    if (!gameplayVisible) {
-      const reason = screen.status === "known"
-        ? `Movement is gated while the Minecraft ${screen.value} screen is open.`
-        : "A confirmed gameplay screen is required before movement can be classified.";
+    if (nonGameplayScreenVisible) {
+      const reason = `Movement is gated while the Minecraft ${screen.value} screen is open.`;
+      movement = unknown(reason, screen.confidence, screen.sourceRegionIds);
+      turning = unknown(reason, screen.confidence, screen.sourceRegionIds);
+    } else if (!gameplayVisible && !cameraFieldAvailable) {
+      const reason =
+        "A confirmed gameplay HUD or reliable Minecraft camera field is required before movement can be classified.";
       movement = unknown(reason, screen.confidence, screen.sourceRegionIds);
       turning = unknown(reason, screen.confidence, screen.sourceRegionIds);
     } else if (recent.length < 3 || recentSpan < 400) {
@@ -228,7 +266,7 @@ export class MinecraftBasicStateTracker {
       turning = unknown("A short recent camera-motion window is still being acquired.");
     } else {
       const confidence = motionConfidence(recent);
-      if (travelRatio >= 0.45) {
+      if (travelRatio >= 0.3) {
         const paceWindow = this.motionHistory.filter(
           ({ observedAt, measurement }) => observedAt >= input.observedAt - 2_500 && hasTravelEvidence(measurement),
         );
@@ -250,9 +288,10 @@ export class MinecraftBasicStateTracker {
           0,
         ) / Math.max(1, paceWindow.length);
         if (paceSpan < 800) {
-          movement = unknown(
-            "Travel-like motion is present, but a longer window is required to reject camera-only movement.",
+          movement = known(
+            "moving",
             confidence,
+            "Player travel is observed; walking versus running needs a longer camera-bob window.",
             ["minecraft-camera-field"],
           );
         } else if (paceSpan < 1_200) {
@@ -379,6 +418,9 @@ export class MinecraftBasicStateTracker {
         )
       : unknown<MinecraftHealthTrend>("Two fresh confirmed health observations are required for a health trend.");
     const recentActions = this.actionHistory.filter(({ observedAt }) => observedAt >= input.observedAt - 1_000);
+    const recentCombatActions = this.actionHistory.filter(
+      ({ observedAt }) => observedAt >= input.observedAt - 2_200,
+    );
     const eatingPoses = recentActions.filter(({ measurement }) => measurement.eatingPose);
     const eatingPoseSpan = eatingPoses.length < 2
       ? 0
@@ -400,8 +442,18 @@ export class MinecraftBasicStateTracker {
     let combat: MinecraftHudFact<MinecraftCombatState>;
     if (screen.status === "known" && screen.value !== "gameplay") {
       combat = known("none", screen.confidence, "Combat is not active on the detected non-gameplay screen.", screen.sourceRegionIds);
-    } else if (recentActions.some(({ measurement }) => measurement.hitFlash)) {
-      const hitEvidence = recentActions.filter(({ measurement }) => measurement.hitFlash);
+    } else if (
+      input.runtimeFacts.recentDamage.status === "known" &&
+      input.runtimeFacts.recentDamage.value === true
+    ) {
+      combat = known(
+        "fighting",
+        input.runtimeFacts.recentDamage.confidence,
+        "A confirmed recent health drop supports active fighting or being attacked.",
+        input.runtimeFacts.recentDamage.sourceRegionIds,
+      );
+    } else if (recentCombatActions.some(({ measurement }) => measurement.hitFlash)) {
+      const hitEvidence = recentCombatActions.filter(({ measurement }) => measurement.hitFlash);
       const takingDamage = input.runtimeFacts.recentDamage.status === "known" && input.runtimeFacts.recentDamage.value === true;
       combat = known(
         takingDamage ? "fighting" : "attacking",
@@ -414,26 +466,57 @@ export class MinecraftBasicStateTracker {
           ...input.runtimeFacts.recentDamage.sourceRegionIds,
         ])],
       );
+    } else if (
+      recentCombatActions.length >= 2 &&
+      recentCombatActions.at(-1)!.observedAt - recentCombatActions[0].observedAt >= 400
+    ) {
+      combat = known(
+        "none",
+        0.78,
+        "The recent gameplay action window contains no attack, hit, or damage evidence.",
+        ["minecraft-action-hit-region"],
+      );
     } else {
       combat = unknown("No confirmed weapon-use sequence supports attacking or fighting.");
     }
 
     let environment: MinecraftHudFact<MinecraftEnvironmentState>;
     const submerged = input.hud?.facts.submerged;
+    const sceneEnvironment = input.runtimeFacts.biomeOrEnvironment;
+    const supportedSceneEnvironments: readonly MinecraftEnvironmentState[] = [
+      "field",
+      "forest",
+      "water",
+      "sand",
+      "building",
+    ];
     if (gameplayVisible && submerged?.status === "known" && submerged.value === true) {
       environment = known("water", submerged.confidence, "The Minecraft air/HUD band confirms submersion.", submerged.sourceRegionIds);
-    } else if (gameplayVisible && submerged?.status === "known" && submerged.value === false) {
-      environment = known("land", submerged.confidence, "The confirmed gameplay HUD shows no submersion state.", submerged.sourceRegionIds);
+    } else if (
+      !nonGameplayScreenVisible &&
+      sceneEnvironment.status === "known" &&
+      typeof sceneEnvironment.value === "string" &&
+      supportedSceneEnvironments.includes(sceneEnvironment.value as MinecraftEnvironmentState)
+    ) {
+      environment = known(
+        sceneEnvironment.value as MinecraftEnvironmentState,
+        sceneEnvironment.confidence,
+        sceneEnvironment.reason,
+        sceneEnvironment.sourceRegionIds,
+      );
     } else {
-      environment = unknown("Land versus water is not confirmed by the current HUD and scene evidence.");
+      environment = unknown("The current screen does not expose a classifiable Minecraft gameplay environment.");
     }
 
+    const dayNight = input.dayNight ?? unknown<MinecraftDayNightState>(
+      "A sustained Minecraft daylight measurement has not been observed yet.",
+    );
     const life: MinecraftHudFact<MinecraftLifeState> = screen.status !== "known"
       ? unknown("Alive versus dead requires a confirmed gameplay, menu, sleep, or death screen.")
       : screen.value === "dead"
         ? known("dead", screen.confidence, "The Minecraft death screen confirms the player is dead.", screen.sourceRegionIds)
         : known("alive", screen.confidence, "A live Minecraft gameplay or menu state is visible.", screen.sourceRegionIds);
 
-    return { movement, turning, combat, eating, healthTrend, screen, environment, life };
+    return { movement, turning, combat, eating, healthTrend, screen, environment, dayNight, life };
   }
 }

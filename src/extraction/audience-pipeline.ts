@@ -353,9 +353,6 @@ export class AudienceAnalyticsAccumulator {
     for (const item of current) {
       for (const topic of item.topics) {
         const existing = topicCounts.get(topic) ?? { count: 0, participants: new Set<string>(), evidence: [] };
-        if (item.participantKey !== null && existing.participants.has(item.participantKey)) {
-          continue;
-        }
         existing.count += 1;
         if (item.participantKey !== null) {
           existing.participants.add(item.participantKey);
@@ -369,7 +366,7 @@ export class AudienceAnalyticsAccumulator {
       }
     }
     const primaryEntry = [...topicCounts.entries()]
-      .filter(([, value]) => value.participants.size >= 2)
+      .filter(([, value]) => value.evidence.length >= 2)
       .sort((left, right) => right[1].count - left[1].count || right[1].participants.size - left[1].participants.size)[0] ?? null;
     const primaryTopic: AudienceAnalyticsTopic | null = primaryEntry === null
       ? null

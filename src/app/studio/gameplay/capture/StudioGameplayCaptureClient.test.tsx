@@ -2,7 +2,13 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { StudioGameplayCaptureClient } from "./StudioGameplayCaptureClient";
+import { createFixtureUiGatewaySnapshot } from "@/core";
+
+import {
+  DESKTOP_DIRECTOR_OPEN_URL,
+  requestAutomaticDesktopDirectorOpen,
+  StudioGameplayCaptureClient,
+} from "./StudioGameplayCaptureClient";
 
 describe("StudioGameplayCaptureClient recovery navigation", () => {
   it("shows game-aware detector columns before compact stopped capture controls", () => {
@@ -55,5 +61,40 @@ describe("StudioGameplayCaptureClient recovery navigation", () => {
     expect(html).not.toContain("This page connects the product capture path");
     expect(html).not.toContain("Returning here lets you reconnect it");
     expect(html).not.toContain('target="_blank"');
+  });
+
+  it("opens the already-linked desktop director only for automatic capture setup", () => {
+    const view = createFixtureUiGatewaySnapshot().views.streamer;
+    const opened: string[] = [];
+
+    expect(requestAutomaticDesktopDirectorOpen(view, (url) => opened.push(url))).toBe(true);
+    expect(opened).toEqual([DESKTOP_DIRECTOR_OPEN_URL]);
+
+    const manualView = {
+      ...view,
+      profile: {
+        ...view.profile,
+        desktopDirector: { setupMode: "manual" as const },
+      },
+    };
+    expect(requestAutomaticDesktopDirectorOpen(manualView, (url) => opened.push(url))).toBe(false);
+    expect(opened).toEqual([DESKTOP_DIRECTOR_OPEN_URL]);
+  });
+
+  it("keeps capture setup safe for legacy profiles and failed desktop protocol launches", () => {
+    const view = createFixtureUiGatewaySnapshot().views.streamer;
+    const legacyProfile: Partial<typeof view.profile> = { ...view.profile };
+    delete legacyProfile.desktopDirector;
+    const legacyView = {
+      ...view,
+      profile: legacyProfile,
+    } as unknown as typeof view;
+    const opened: string[] = [];
+
+    expect(requestAutomaticDesktopDirectorOpen(legacyView, (url) => opened.push(url))).toBe(true);
+    expect(opened).toEqual([DESKTOP_DIRECTOR_OPEN_URL]);
+    expect(requestAutomaticDesktopDirectorOpen(view, () => {
+      throw new Error("Desktop protocol unavailable");
+    })).toBe(false);
   });
 });

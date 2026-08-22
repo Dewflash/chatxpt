@@ -9,7 +9,10 @@ import {
   CanonicalViewProjector,
   identifierSchema,
   overlayViewModelSchema,
+  resolveEffectiveStreamerProfile,
   serviceHealthSchema,
+  streamerQuestCommandSchema,
+  streamerQuestGenerationCommandSchema,
   streamerViewModelSchema,
   systemVoteCloseCommandSchema,
   type AuthoritativeSessionState,
@@ -75,6 +78,52 @@ export interface ObsOverlayGrantResult {
 
 export interface LiveDirectorDockGrantResult {
   readonly descriptor: LiveDirectorDockDescriptor;
+}
+
+export interface LiveDirectorCommandResult {
+  readonly outcome: string;
+  readonly message: string;
+  readonly view: StreamerViewModel;
+}
+
+type LiveDirectorQuestAction = "approve" | "cancel" | "succeed";
+
+function isLiveDirectorQuestAction(action: string): action is LiveDirectorQuestAction {
+  return action === "approve" || action === "cancel" || action === "succeed";
+}
+
+function duplicateLiveDirectorQuestMessage(
+  action: LiveDirectorQuestAction,
+  automaticMode: boolean,
+): string {
+  if (action === "cancel") return "This quest was already cancelled.";
+  if (action === "succeed") return "This quest was already marked complete.";
+  return automaticMode
+    ? "These quests were already pushed to viewers."
+    : "The selected quest was already started.";
+}
+
+function committedLiveDirectorQuestMessage(
+  action: LiveDirectorQuestAction,
+  automaticMode: boolean,
+  published: boolean,
+): string {
+  if (action === "cancel") {
+    return published ? "Quest cancelled." : "Quest cancelled; realtime delivery is recovering.";
+  }
+  if (action === "succeed") {
+    return published
+      ? "Quest marked complete."
+      : "Quest marked complete; realtime delivery is recovering.";
+  }
+  if (automaticMode) {
+    return published
+      ? "Three quests pushed to viewers for voting."
+      : "Three quests pushed; realtime delivery is recovering.";
+  }
+  return published
+    ? "Selected quest started without viewer voting."
+    : "Selected quest started without viewer voting; realtime delivery is recovering.";
 }
 
 function authError(caught: unknown): ObsOverlayApplicationError {
@@ -365,6 +414,271 @@ export class ObsOverlayApplication {
       );
     }
     state = await this.closeVoteIfDue(state);
+    return this.projectLiveDirectorState(state);
+  }
+
+  async executeLiveDirectorCommand(
+    authorizationHeader: string | null,
+    broadcasterId: string | null,
+    input: unknown,
+  ): Promise<LiveDirectorCommandResult> {
+    let grant;
+    try {
+      grant = this.grants.verify(readObsOverlayBearerToken(authorizationHeader), this.now());
+    } catch (caught) {
+      throw authError(caught);
+    }
+    const parsedBroadcasterId = identifierSchema.safeParse(broadcasterId);
+    if (
+      grant.version !== 3 ||
+      grant.surface !== "live-director" ||
+      !parsedBroadcasterId.success ||
+      parsedBroadcasterId.data !== grant.broadcasterId
+    ) {
+      throw new ObsOverlayApplicationError(
+        "forbidden",
+        "Live Director control access does not belong to this broadcaster",
+      );
+    }
+    const parsedQuestCommand = streamerQuestCommandSchema.safeParse(input);
+    const parsedGenerationCommand = streamerQuestGenerationCommandSchema.safeParse(input);
+    if (!parsedQuestCommand.success && !parsedGenerationCommand.success) {
+      throw new ObsOverlayApplicationError(
+        "validation",
+        "Live Director accepts only quest generation, recommendation routing, cancellation, or completion",
+      );
+    }
+    if (
+      parsedQuestCommand.success &&
+      !isLiveDirectorQuestAction(parsedQuestCommand.data.action)
+    ) {
+      throw new ObsOverlayApplicationError(
+        "validation",
+        "Live Director does not permit this quest action",
+      );
+    }
+    const parsedCommand = parsedQuestCommand.success
+      ? parsedQuestCommand.data
+      : parsedGenerationCommand.success ? parsedGenerationCommand.data : null;
+    if (parsedCommand === null) {
+      throw new ObsOverlayApplicationError("validation", "Live Director command is invalid");
+    }
+    const record = await this.persistence.twitchChannelSessions.findTwitchChannelSession(
+      grant.broadcasterId,
+    );
+    if (record === null) {
+      throw new ObsOverlayApplicationError(
+        "session-not-found",
+        "Waiting for this broadcaster's next ChatXPT session",
+        true,
+      );
+    }
+    let state = await this.loadSession(record.sessionId);
+    if (
+      state.session.broadcasterId !== grant.broadcasterId ||
+      parsedCommand.sessionId !== state.session.sessionId ||
+      parsedCommand.questCycleId !== state.questCycle.envelope.questCycleId ||
+      parsedCommand.actor.kind !== "broadcaster" ||
+      parsedCommand.actor.actorId !== grant.broadcasterId
+    ) {
+      throw new ObsOverlayApplicationError(
+        "forbidden",
+        "Live Director command does not belong to the current broadcaster session",
+      );
+    }
+    const actor: VerifiedCommandActor = {
+      kind: "broadcaster",
+      actorId: grant.broadcasterId,
+      expiresAt: null,
+      moderatorForBroadcasterIds: [],
+      voterKey: null,
+      participationModes: [],
+    };
+    const maxRevisionAttempts = 20;
+
+    if (parsedGenerationCommand.success) {
+      for (let attempt = 0; attempt < maxRevisionAttempts; attempt += 1) {
+        const result = await this.dependencies.runtime.requestDeterministicFallbackProposal(
+          state,
+          this.liveDirectorProjectionContext("Live Director quest generation is current"),
+          {
+            commandId: parsedGenerationCommand.data.commandId,
+            correlationId: parsedGenerationCommand.data.correlationId,
+            issuedAt: parsedGenerationCommand.data.issuedAt,
+          },
+        );
+        if (result.ok) {
+          const resultState = result.receipt.state;
+          const mode = resolveEffectiveStreamerProfile(
+            resultState.profile,
+            resultState.sessionOverride,
+            resultState.session.currentGame,
+          ).voting.winnerActivationMode;
+          return {
+            outcome: result.outcome,
+            message: mode === "automatic"
+              ? "Three quests generated. Push them to viewers when ready."
+              : "Three quests generated. Choose one to start directly.",
+            view: this.projectLiveDirectorState(resultState),
+          };
+        }
+        if (result.error.code !== "stale-revision" || attempt === maxRevisionAttempts - 1) {
+          throw new ObsOverlayApplicationError(
+            result.error.retryable ? "dependency-unavailable" : "session-inactive",
+            result.error.message,
+            result.error.retryable,
+          );
+        }
+        state = await this.loadSession(state.session.sessionId);
+      }
+      throw new ObsOverlayApplicationError(
+        "dependency-unavailable",
+        "Live Director could not generate quests while live gameplay was updating",
+        true,
+      );
+    }
+
+    if (!parsedQuestCommand.success) {
+      throw new ObsOverlayApplicationError("validation", "Live Director quest action is invalid");
+    }
+    const questCommand = parsedQuestCommand.data;
+    const questAction = questCommand.action;
+    if (!isLiveDirectorQuestAction(questAction)) {
+      throw new ObsOverlayApplicationError("validation", "Live Director quest action is invalid");
+    }
+    const questMode = resolveEffectiveStreamerProfile(
+      state.profile,
+      state.sessionOverride,
+      state.session.currentGame,
+    ).voting.winnerActivationMode;
+    const automaticMode = questMode === "automatic";
+    if (
+      questAction === "approve" &&
+      questMode === "streamer-approval" &&
+      questCommand.candidateId === null
+    ) {
+      throw new ObsOverlayApplicationError(
+        "validation",
+        "Manual mode requires one selected recommendation",
+      );
+    }
+    if (questAction !== "approve" && questCommand.candidateId !== null) {
+      throw new ObsOverlayApplicationError(
+        "validation",
+        "Active quest actions must not select another recommendation",
+      );
+    }
+    const existing = await this.persistence.sessions.findReceipt(questCommand.commandId);
+    if (existing !== null) {
+      const accepted = existing.command;
+      if (
+        accepted.type !== "streamer.quest" ||
+        accepted.sessionId !== questCommand.sessionId ||
+        accepted.questCycleId !== questCommand.questCycleId ||
+        accepted.action !== questAction ||
+        accepted.candidateId !== questCommand.candidateId ||
+        accepted.actor.kind !== "broadcaster" ||
+        accepted.actor.actorId !== grant.broadcasterId
+      ) {
+        throw new ObsOverlayApplicationError(
+          "validation",
+          "Live Director command ID was already used for another action",
+        );
+      }
+      return {
+        outcome: "duplicate",
+        message: duplicateLiveDirectorQuestMessage(questAction, automaticMode),
+        view: this.projectLiveDirectorState(state),
+      };
+    }
+    const actionIsAvailable = state.questCycle.availableStreamerActions.includes(questAction);
+    const proposalIsCurrent =
+      questAction === "approve" &&
+      state.questCycle.status === "proposed" &&
+      actionIsAvailable &&
+      (questCommand.candidateId === null || state.questCycle.options.some(
+        (option) => option.candidateId === questCommand.candidateId,
+      ));
+    const activeQuestIsCurrent =
+      questAction !== "approve" &&
+      state.questCycle.status === "active" &&
+      state.questCycle.activeCandidateId !== null &&
+      actionIsAvailable;
+    if (!proposalIsCurrent && !activeQuestIsCurrent) {
+      throw new ObsOverlayApplicationError(
+        "session-inactive",
+        questAction === "approve"
+          ? "These recommendations are no longer available"
+          : "This quest is no longer active",
+        true,
+      );
+    }
+    for (let attempt = 0; attempt < maxRevisionAttempts; attempt += 1) {
+      const command = streamerQuestCommandSchema.parse({
+        ...questCommand,
+        expectedRevision: state.session.revision,
+      });
+      const result = await this.dependencies.runtime.execute(
+        command,
+        actor,
+        this.liveDirectorProjectionContext("Live Director quest action is current"),
+      );
+      if (result.ok) {
+        return {
+          outcome: result.outcome,
+          message: committedLiveDirectorQuestMessage(
+            questAction,
+            automaticMode,
+            result.delivery === "published",
+          ),
+          view: this.projectLiveDirectorState(result.receipt.state),
+        };
+      }
+      if (result.error.code !== "stale-revision" || attempt === maxRevisionAttempts - 1) {
+        throw new ObsOverlayApplicationError(
+          result.error.retryable ? "dependency-unavailable" : "session-inactive",
+          result.error.message,
+          result.error.retryable,
+        );
+      }
+      state = await this.loadSession(state.session.sessionId);
+      if (
+        state.session.broadcasterId !== grant.broadcasterId ||
+        state.questCycle.envelope.questCycleId !== questCommand.questCycleId
+      ) {
+        throw new ObsOverlayApplicationError(
+          "session-inactive",
+          "The quest cycle changed before Live Director could complete the action",
+          true,
+        );
+      }
+    }
+    throw new ObsOverlayApplicationError(
+      "dependency-unavailable",
+      "Live Director could not complete the quest action while live gameplay was updating",
+      true,
+    );
+  }
+
+  private liveDirectorProjectionContext(message: string): ProjectionContextResolver {
+    return {
+      resolve: () => ({
+        participationMode: "unavailable",
+        viewerId: null,
+        sessionPoints: 0,
+        acceptedCandidateId: null,
+        connection: serviceHealthSchema.parse({
+          service: "realtime",
+          status: "ready",
+          checkedAt: this.now(),
+          message,
+          retryable: false,
+        }),
+      }),
+    };
+  }
+
+  private projectLiveDirectorState(state: AuthoritativeSessionState): StreamerViewModel {
     const now = this.now();
     const projected = new CanonicalViewProjector().project({
       envelope: {

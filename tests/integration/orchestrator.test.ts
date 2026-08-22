@@ -350,6 +350,7 @@ describe("Role 1 application orchestrator", () => {
       preferredQuestTypes: ["exploration", "chat-choice"],
       forbiddenQuestTypes: ["humiliation", "inventory-trash"],
       accessibilityNeeds: ["high-contrast", "reduced-motion"],
+      desktopDirector: { setupMode: "manual" },
       voting: {
         voteVisibility: "hidden-until-close",
         voteDurationSeconds: 60,
@@ -376,6 +377,7 @@ describe("Role 1 application orchestrator", () => {
     expect(result.receipt.state.profile.preferredQuestTypes).toEqual(["exploration", "chat-choice"]);
     expect(result.receipt.state.profile.forbiddenQuestTypes).toEqual(["humiliation", "inventory-trash"]);
     expect(result.receipt.state.profile.accessibilityNeeds).toEqual(["high-contrast", "reduced-motion"]);
+    expect(result.receipt.state.profile.desktopDirector).toEqual({ setupMode: "manual" });
     expect(result.receipt.state.profile.experience.intensity).toBe(0.8);
     expect(result.receipt.state.profile.voting).toMatchObject({
       voteVisibility: "hidden-until-close",

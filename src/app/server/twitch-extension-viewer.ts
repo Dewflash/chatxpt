@@ -918,6 +918,7 @@ export class TwitchExtensionViewerApplication {
       acceptedCandidateId: context.acceptedCandidateId,
       connection: context.connection,
       sessionOverride: state.sessionOverride,
+      liveDirector: state.liveDirector,
     });
     const viewer = viewerViewModelSchema.parse(projected.viewer);
     return viewerViewModelSchema.parse(

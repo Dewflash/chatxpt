@@ -163,6 +163,7 @@ export { detectMinecraftMenuState } from "./minecraft-menu";
 export { measureMinecraftActionVisuals } from "./minecraft-action-visual";
 export { MinecraftBasicStateTracker } from "./minecraft-basic-state";
 export { measureMinecraftCameraMotion } from "./minecraft-camera-motion";
+export { measureMinecraftDaylight, MinecraftDaylightTracker } from "./minecraft-daylight";
 export { deriveMinecraftRuntimeFacts } from "./minecraft-runtime";
 export { detectMinecraftSceneFacts } from "./minecraft-scene";
 export type {
@@ -189,6 +190,11 @@ export type {
   MinecraftMovementState,
   MinecraftScreenState,
 } from "./minecraft-basic-state";
+export type {
+  MinecraftDaylightMeasurement,
+  MinecraftDaylightTrackerOptions,
+  MinecraftDayNightState,
+} from "./minecraft-daylight";
 export type { MinecraftCameraMotionMeasurement } from "./minecraft-camera-motion";
 export type { MinecraftRuntimeFacts } from "./minecraft-runtime";
 export type { MinecraftSceneFacts } from "./minecraft-scene";

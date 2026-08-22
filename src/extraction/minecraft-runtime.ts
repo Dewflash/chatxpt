@@ -340,6 +340,8 @@ export function deriveMinecraftRuntimeFacts(input: {
       ...UNKNOWN_RUNTIME_FACTS,
       menuState: input.menuState,
       activity: activityFromKnownMenu(input.menuState) ?? UNKNOWN_RUNTIME_FACTS.activity,
+      visibleHostile: input.sceneFacts?.visibleHostile ?? UNKNOWN_RUNTIME_FACTS.visibleHostile,
+      biomeOrEnvironment: input.sceneFacts?.biomeOrEnvironment ?? UNKNOWN_RUNTIME_FACTS.biomeOrEnvironment,
     };
   }
   const recentDamage = damageFact({ hud: input.hud, previousHud: input.previousHud });

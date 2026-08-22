@@ -315,6 +315,7 @@ export function createBrowserCanvasPixelSampler(
   options: BrowserCanvasPixelSamplerOptions = {},
 ): FramePixelSampler {
   const maximumPixels = options.maximumPixels ?? MAX_VISUAL_MEASUREMENT_SAMPLE_PIXELS;
+  let videoCanvas: HTMLCanvasElement | null = null;
   if (
     !Number.isInteger(maximumPixels) ||
     maximumPixels < 1 ||
@@ -328,6 +329,33 @@ export function createBrowserCanvasPixelSampler(
     sample(image, size, signal) {
       throwIfAborted(signal);
       assertSampleSize(size, maximumPixels);
+
+      // Safari/WebKit can present a live MediaStream in <video> while an
+      // OffscreenCanvas redraw of that video remains stale. Route live video
+      // through a reusable DOM canvas so the pixels analysed here continue to
+      // match the operator-visible preview. Other CanvasImageSource types keep
+      // the faster OffscreenCanvas path.
+      if (
+        typeof document !== "undefined" &&
+        typeof HTMLVideoElement !== "undefined" &&
+        image instanceof HTMLVideoElement
+      ) {
+        videoCanvas ??= document.createElement("canvas");
+        if (videoCanvas.width !== size.width) videoCanvas.width = size.width;
+        if (videoCanvas.height !== size.height) videoCanvas.height = size.height;
+        const context = videoCanvas.getContext("2d", { willReadFrequently: true });
+        if (context === null) throw canvasUnavailable();
+        const contentRect = containedContentRect(size);
+        drawSample(context, image, size, contentRect);
+        const pixels = context.getImageData(0, 0, size.width, size.height).data;
+        throwIfAborted(signal);
+        return {
+          width: size.width,
+          height: size.height,
+          rgba: new Uint8ClampedArray(pixels),
+          ...(contentRect === null ? {} : { contentRect }),
+        };
+      }
 
       if (typeof OffscreenCanvas === "function") {
         const canvas = new OffscreenCanvas(size.width, size.height);

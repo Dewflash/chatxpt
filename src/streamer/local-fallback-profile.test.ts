@@ -31,6 +31,7 @@ describe("local fallback profile", () => {
     const edited = updateLocalFallbackProfile(seeded.envelope, {
       ...draft,
       selectedPresetId: "chill",
+      desktopDirector: { setupMode: "manual" },
       restrictions: ["No jump scares"],
     }, 200);
     writeLocalFallbackProfile(target, edited);
@@ -39,7 +40,9 @@ describe("local fallback profile", () => {
     expect(restored.envelope.localAccountId).toBe(LOCAL_FALLBACK_ACCOUNT_ID);
     expect(restored.envelope.profile.selectedPresetId).toBe("chill");
     expect(restored.envelope.profile.restrictions).toEqual(["No jump scares"]);
+    expect(restored.envelope.profile.desktopDirector.setupMode).toBe("manual");
     expect(restored.envelope.pendingPatch?.restrictions).toEqual(["No jump scares"]);
+    expect(restored.envelope.pendingPatch?.desktopDirector.setupMode).toBe("manual");
     expect(restored.recovered).toBe(false);
   });
 

@@ -1,12 +1,12 @@
 # Private Live Director desktop companion, pop-out, and OBS Dock
 
-The private Live Director uses one broadcaster-linked, read-only projection across three private delivery choices:
+The private Live Director uses one permanent broadcaster link across three private delivery choices. Its state projection remains server-authored. D-095 permits quest generation and the same mode-appropriate proposed-cycle action as Studio; D-096 additionally permits cancellation and completion of the currently active quest when authority exposes those actions.
 
 1. **Desktop companion (recommended):** a small always-on-top app above windowed gameplay.
 2. **Browser pop-out:** `/studio/live-director?display=popout` in an ordinary browser window.
 3. **OBS Custom Browser Dock:** the same private URL inside OBS while OBS is visible.
 
-None of these is the public `/obs-overlay` Browser Source. The private surface may show streamer-only context and cue reasoning; the public overlay remains read-only broadcast output and structurally receives no private state.
+None of these is the public `/obs-overlay` Browser Source. The private surface may show streamer-only state and the current recommendations; the public overlay remains read-only broadcast output and structurally receives no private state. The private client never selects a winner or owns vote, lifecycle, reward, or persistence logic. Role 3 decides whether an authorised proposed-cycle command opens Automatic viewer voting or directly activates a Manual selection, and whether an active quest may be cancelled or marked complete.
 
 ## Desktop companion setup
 
@@ -15,13 +15,17 @@ None of these is the public `/obs-overlay` Browser Source. The private surface m
 1. Start ChatXPT with `npm run dev:twitch`.
 2. In another terminal, run `npm run desktop:live-director`.
 3. Open Studio, connect the broadcaster, and create the permanent private Live Director link.
-4. Choose **Open Desktop Companion**. If the browser cannot open the `chatxpt://` link, copy the private link and paste it into the companion once.
+4. Copy the private link and paste it into the source companion once.
 5. Position and resize the window above the game. The companion remembers its bounds and reconnects the same broadcaster on later launches.
+
+The source command is for renderer and Electron development only. On macOS it deliberately does not register `chatxpt://`, because LaunchServices cannot relaunch the generic development `Electron.app` with the source entry file. Automatic capture-time opening must be tested with the packaged app below. If an older source build had claimed the scheme, the next source launch removes only that development association so macOS can restore the packaged companion.
+
+After this one-time link, **Profile & Defaults → Desktop Director** controls capture-time launch behaviour. **Automatic setup** is the default: after Gameplay Engine successfully connects the selected screen/window or OBS Virtual Camera feed, Studio asks macOS to open the installed companion. **Manual setup** leaves the companion closed until the streamer opens it directly. The capture page sends only the token-free `chatxpt://open` action; the companion unlocks its previously encrypted broadcaster grant locally. If it has not been linked yet, it opens the trusted setup screen instead.
 
 ### Packaged macOS app
 
 1. Run `npm run desktop:package:mac`.
-2. Open `dist/live-director/ChatXPT Live Director.app` and optionally move it to Applications.
+2. Open `dist/live-director/ChatXPT Live Director.app` once so macOS registers the packaged companion for `chatxpt://`; optionally move it to Applications first.
 3. Link it once from Studio as above.
 4. Enable **Open when I sign in** if desired.
 
@@ -34,8 +38,23 @@ The repository package is ad-hoc signed for local use. A public download still r
 - `Command/Ctrl + Shift + H` hides or restores the companion.
 - The **Window** application menu provides the same controls, opacity choices, relinking, and Studio access.
 - The window position, size, opacity, always-on-top, workspace, and launch-at-login preferences persist. Click-through deliberately starts disabled after a restart so the window cannot become difficult to recover.
+- A browser or macOS may show its normal confirmation before opening the `chatxpt://` application protocol. This confirmation is outside ChatXPT and does not expose the private broadcaster grant.
 
 The permanent private link is encrypted through Electron `safeStorage` before it reaches disk. On macOS this uses Keychain-backed operating-system encryption. If secure storage is unavailable, the grant remains memory-only and must be linked again after closing the app. The app never logs the private link.
+
+When no proposal is ready, **Generate quests** emits the canonical deterministic quest-generation command and produces exactly three validated recommendations. When recommendations are ready, the available action follows the effective profile mode:
+
+- `Automatic`: there is no candidate selector. **Push quests now** sends the complete three-option batch to the authoritative viewer vote; viewers choose and the winner activates automatically.
+- `Manual`: the streamer selects one current recommendation. **Start selected quest** activates that quest directly; no viewer vote, voting countdown, or tally is created.
+
+While a quest is active, the companion shows only the terminal actions currently supplied by authority:
+
+- **Cancel quest** opens an explicit confirmation before sending the canonical cancellation command.
+- **Mark complete** immediately sends the canonical success command, matching Studio's non-destructive success behaviour.
+
+The permanent grant cannot issue fail, skip, pause, progress, winner, viewer-vote, profile, session, or persistence commands.
+
+The server re-resolves the broadcaster's current session and effective profile, validates the current quest cycle, optional candidate, allowed action, and command identity, then lets the canonical quest engine decide the transition. Retries are idempotent. The grant cannot issue other Studio commands and the public OBS token cannot use this endpoint.
 
 ## OBS privacy
 
@@ -58,4 +77,4 @@ Do not paste private URLs, Studio cookies, setup keys, Twitch JWTs, or private s
 
 ## Verification boundary
 
-Automated tests verify URL validation, deep-link parsing, redaction, preference bounds, and the existing authorised server projection. The source and packaged Electron smoke runs verify real macOS window creation, always-on-top, click-through toggling, hide/show, and secure-storage availability. They do not prove owner broadcaster linking, Twitch-issued identity, Supabase Cloud realtime, real gameplay extraction, Apple notarisation, Windows packaging, or exclusion from OBS Display Capture.
+Automated tests verify URL validation, deep-link parsing, packaged-only protocol registration, redaction, preference bounds, the authorised server projection, scoped quest generation, Automatic batch push, Manual direct activation, active cancellation/completion, disallowed-action rejection, idempotent retry, public-token denial, and the same authoritative revision in Studio. The source and packaged Electron smoke runs verify real macOS window creation, always-on-top, click-through toggling, hide/show, secure-storage availability, and that source Electron cannot retain the packaged protocol association. Native LaunchServices inspection and a real `chatxpt://open` exercise verify that macOS targets `com.chatxpt.live-director`, not generic `com.github.electron`. They do not prove owner broadcaster linking, Twitch-issued identity, Supabase Cloud realtime, real gameplay extraction, Apple notarisation, Windows packaging, or exclusion from OBS Display Capture.

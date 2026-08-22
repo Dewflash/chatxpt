@@ -308,6 +308,7 @@ function authoritativeProfileSettingsUpdate(
     forbiddenQuestTypes: command.forbiddenQuestTypes ?? current.profile.forbiddenQuestTypes,
     accessibilityNeeds: command.accessibilityNeeds ?? current.profile.accessibilityNeeds,
     keywordWatchlist: command.keywordWatchlist ?? current.profile.keywordWatchlist,
+    desktopDirector: command.desktopDirector ?? current.profile.desktopDirector,
     streamPresets,
     selectedPresetId,
     voting: {

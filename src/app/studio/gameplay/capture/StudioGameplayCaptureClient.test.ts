@@ -63,7 +63,9 @@ describe("captureReadingsForSnapshot", () => {
     signals: [
       known("minecraft-health-hearts", 8),
       known("minecraft-hunger-shanks", 7),
-      known("minecraft-biome-environment", "grassy-overworld"),
+      known("minecraft-environment", "field"),
+      known("minecraft-day-night", "day"),
+      known("minecraft-movement", "walking"),
       known("brawl-hud-layout", "standard-like"),
       known("brawl-match-active", true),
       known("game-vision-state", "stable"),
@@ -78,8 +80,12 @@ describe("captureReadingsForSnapshot", () => {
 
     expect(readings).toContainEqual(expect.objectContaining({ label: "Health", value: "8", category: "condition" }));
     expect(readings).toContainEqual(expect.objectContaining({ label: "Hunger", value: "7", category: "condition" }));
-    expect(readings.some(({ label }) => label === "Day / night")).toBe(false);
-    expect(readings).toContainEqual(expect.objectContaining({ label: "Scene / environment", value: "grassy-overworld", category: "environment" }));
+    expect(readings).toContainEqual(expect.objectContaining({ label: "Day / night", value: "day", category: "environment" }));
+    expect(readings).toContainEqual(expect.objectContaining({ label: "Scene / environment", category: "environment" }));
+    expect(readings).toContainEqual(expect.objectContaining({ label: "Scene / environment", value: "field", category: "environment" }));
+    expect(readings).toContainEqual(expect.objectContaining({ label: "Movement", value: "walking", category: "activity" }));
+    expect(readings.some(({ label }) => label === "Visual activity")).toBe(false);
+    expect(readings).toContainEqual(expect.objectContaining({ label: "Scene transition", value: "false", category: "environment" }));
     expect(readings).toContainEqual(expect.objectContaining({ label: "Screen state", category: "others" }));
     expect(readings.some(({ label }) => label === "Match active")).toBe(false);
   });
@@ -113,5 +119,38 @@ describe("captureReadingsForSnapshot", () => {
 
     expect(readings.length).toBeGreaterThan(0);
     expect(readings.every(({ value }) => value === "—")).toBe(true);
+  });
+
+  it("keeps the last confirmed value through later unknown frames until a new value is confirmed", () => {
+    const lastKnown = new Map<string, string>();
+    const armorEight = gameplaySnapshotSchema.parse({
+      ...contractFixtureGameplaySnapshot,
+      signals: [known("minecraft-armor-points", 8)],
+    });
+    const unknownFrame = gameplaySnapshotSchema.parse({
+      ...contractFixtureGameplaySnapshot,
+      signals: [],
+    });
+    const armorSix = gameplaySnapshotSchema.parse({
+      ...contractFixtureGameplaySnapshot,
+      signals: [known("minecraft-armor-points", 6)],
+    });
+
+    expect(captureReadingsForSnapshot("minecraft", armorEight, lastKnown))
+      .toContainEqual(expect.objectContaining({ label: "Armor", value: "8" }));
+    expect(captureReadingsForSnapshot("minecraft", unknownFrame, lastKnown))
+      .toContainEqual(expect.objectContaining({ label: "Armor", value: "8" }));
+    expect(captureReadingsForSnapshot("minecraft", armorSix, lastKnown))
+      .toContainEqual(expect.objectContaining({ label: "Armor", value: "6" }));
+  });
+
+  it("keeps a never-observed value unknown", () => {
+    const unknownFrame = gameplaySnapshotSchema.parse({
+      ...contractFixtureGameplaySnapshot,
+      signals: [],
+    });
+
+    expect(captureReadingsForSnapshot("minecraft", unknownFrame, new Map()))
+      .toContainEqual(expect.objectContaining({ label: "Armor", value: "Unknown" }));
   });
 });

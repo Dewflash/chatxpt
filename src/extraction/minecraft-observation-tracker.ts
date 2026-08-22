@@ -23,6 +23,15 @@ function isConfirmedStatus(status: MinecraftHudFingerprint["status"]): boolean {
   return status === "vanilla-like" || status === "minecraft-like";
 }
 
+function hasKnownVitalPair(hud: MinecraftHudFingerprint): boolean {
+  return (
+    hud.facts.healthHearts.status === "known" &&
+    hud.facts.healthHearts.value !== null &&
+    hud.facts.hungerShanks.status === "known" &&
+    hud.facts.hungerShanks.value !== null
+  );
+}
+
 function unknownFact<T extends string | number | boolean>(reason: string): MinecraftHudFact<T> {
   return { status: "unknown", value: null, confidence: 0, reason, sourceRegionIds: [] };
 }
@@ -98,6 +107,53 @@ function trackedFacts(observations: readonly TimedHud[], expiresAfterMs: number)
   };
 }
 
+function vitalOnlyFacts(
+  observations: readonly TimedHud[],
+  expiresAfterMs: number,
+): MinecraftHudFacts {
+  const tracked = trackedFacts(observations, expiresAfterMs);
+  return {
+    healthHearts: tracked.healthHearts,
+    hungerShanks: tracked.hungerShanks,
+    airBubbles: unknownFact("Minecraft air bubbles require a confirmed full HUD layout."),
+    submerged: unknownFact("Minecraft submersion requires a confirmed full HUD layout."),
+    armorPoints: unknownFact("Minecraft armor requires a confirmed full HUD layout."),
+    hotbarVisible: unknownFact("Minecraft hotbar visibility requires a confirmed full HUD layout."),
+    selectedHotbarCategory: unknownFact("Minecraft selected item requires a confirmed full HUD layout."),
+  };
+}
+
+function confirmedVitalFingerprint(
+  raw: MinecraftHudFingerprint,
+  observations: readonly TimedHud[],
+  observedAt: number,
+  expiresAfterMs: number,
+): MinecraftHudFingerprint | null {
+  const facts = vitalOnlyFacts(observations, expiresAfterMs);
+  if (facts.healthHearts.status !== "known" || facts.hungerShanks.status !== "known") {
+    return null;
+  }
+  return {
+    ...raw,
+    status: isConfirmedStatus(raw.status) ? "candidate-unconfirmed" : raw.status,
+    supportedSignals: [
+      ...new Set([
+        ...raw.supportedSignals.filter((signal) => signal !== "minecraft-hud-layout"),
+        "minecraft-health-hearts",
+        "minecraft-hunger-shanks",
+      ]),
+    ],
+    facts,
+    trackingStatus: "confirmed",
+    lastConfirmedAt: observedAt,
+    reasons: [
+      ...raw.reasons,
+      "Health and hunger are confirmed independently by two matching paired ten-slot colour observations.",
+      "The full HUD layout remains unconfirmed until the hotbar also agrees.",
+    ],
+  };
+}
+
 function carriedFingerprint(
   stable: MinecraftHudFingerprint,
   status: Extract<MinecraftHudTrackingStatus, "reconfirming" | "stale">,
@@ -147,13 +203,14 @@ export class MinecraftObservationTracker {
 
   observe(raw: MinecraftHudFingerprint, observedAt: number): MinecraftHudFingerprint {
     this.history = this.history.filter((entry) => observedAt - entry.observedAt <= this.confirmationWindowMs);
-    if (isConfirmedStatus(raw.status)) {
+    if (isConfirmedStatus(raw.status) || hasKnownVitalPair(raw)) {
       this.history.push({ hud: raw, observedAt });
       this.history = this.history.slice(-this.historySize);
-      if (this.history.length >= 2) {
+      const layoutHistory = this.history.filter(({ hud }) => isConfirmedStatus(hud.status));
+      if (isConfirmedStatus(raw.status) && layoutHistory.length >= 2) {
         const result: MinecraftHudFingerprint = {
           ...raw,
-          facts: trackedFacts(this.history, this.confirmationWindowMs),
+          facts: trackedFacts(layoutHistory, this.confirmationWindowMs),
           trackingStatus: "confirmed",
           lastConfirmedAt: observedAt,
           reasons: [
@@ -164,6 +221,20 @@ export class MinecraftObservationTracker {
         this.stable = result;
         this.lastConfirmedAt = observedAt;
         return result;
+      }
+      const vitalHistory = this.history.filter(({ hud }) => hasKnownVitalPair(hud));
+      if (vitalHistory.length >= 2) {
+        const result = confirmedVitalFingerprint(
+          raw,
+          vitalHistory,
+          observedAt,
+          this.confirmationWindowMs,
+        );
+        if (result !== null) {
+          this.stable = result;
+          this.lastConfirmedAt = observedAt;
+          return result;
+        }
       }
       return acquiringFingerprint(raw);
     }

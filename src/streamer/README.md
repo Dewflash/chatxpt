@@ -12,7 +12,7 @@ The public streamer entrypoint includes:
 - `StudioProductPageSurface` provides the routed Home, Gameplay, Analytics, Live Quests, Profile & Defaults, Stream Settings, and Test Lab pages.
 - `TwitchConfigSurface` keeps infrequent channel/Extension setup compact and sends detailed management back to Studio.
 - `TwitchLiveConfigSurface` keeps stream-time status, proposed/active quest state, allowed actions, emergency pause, and a quick-intensity boundary in one responsive column.
-- `StudioStatusSurface` and `PersistentStreamOverlaySurface` render read-only live state without becoming lifecycle or persistence authorities.
+- `StudioStatusSurface` renders read-only live state. `PersistentStreamOverlaySurface` renders the private broadcaster state and may emit the narrowly scoped recommendation-approval command; Role 1 and Role 3 remain the lifecycle, vote, and persistence authorities.
 
 The modules emit only canonical commands created by the exported Role 4 command builders. `streamer.profile-settings` persists experience, voting, reward, default game, restrictions, preferred/forbidden quest types, accessibility settings, presets, and watchlists through the authoritative orchestrator. `streamer.session-override` applies and clears temporary intensity/creativity overrides without rewriting saved defaults. Connected-account persistence never relies on browser storage.
 

@@ -3,7 +3,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { createFixtureUiGatewaySnapshot } from "../core";
-import { contractFixtureUiX01ReadinessCatalog } from "../core/testing";
+import {
+  contractFixtureUiX01ReadinessCatalog,
+  contractFixtureUiX06RoleViewCatalog,
+} from "../core/testing";
 import { StudioProductPageSurface, type StudioProductPage } from "./studio-product-pages";
 import { seedLocalFallbackProfile } from "./local-fallback-profile";
 
@@ -31,7 +34,7 @@ const requiredPageSections: Readonly<Record<StudioProductPage, readonly string[]
   home: ["Stream engagement", "Live Quests", "Chat Analytics", "Live surfaces", "Viewer Voting", "Broadcast Overlay"],
   gameplay: ["Overview", "Game Capture", "Understanding", "Health &amp; Recovery"],
   "live-analytics": ["Overview", "Activity", "Topics", "Session History"],
-  "live-quests": ["Now", "Recommendations", "Why", "Voting", "Results"],
+  "live-quests": ["Quest Status", "Recommendations", "Why", "Voting", "Results"],
   profile: ["Personality", "Stream Presets", "Community", "Safety &amp; Accessibility"],
   "stream-settings": ["Saved Source", "Session Override", "Reset to Saved"],
   "test-lab": ["Clean Start Reset", "Sample / Live Source", "Capture Controls", "Observed / Unknown", "Recovery"],
@@ -52,6 +55,8 @@ describe("StudioProductPageSurface", () => {
       page: "home",
       view,
       readiness,
+      viewerLiveSurface: h("div", { "data-test-live-surface": "viewer" }, "Canonical Twitch surface"),
+      obsLiveSurface: h("div", { "data-test-live-surface": "overlay" }, "Canonical OBS surface"),
     }));
 
     expect(html).toContain("<strong>ChatXPT</strong><span>Streamer Studio</span>");
@@ -67,6 +72,15 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("Test Lab");
     expect(html).toContain("Stream engagement");
     expect(html).toContain("What your stream sees");
+    expect(html).toContain('data-live-surface-grid="public"');
+    expect(html).toContain("Twitch Extension");
+    expect(html).toContain("OBS Overlay");
+    expect(html).toContain('data-live-surface="twitch-extension"');
+    expect(html).toContain('data-test-live-surface="viewer"');
+    expect(html).toContain('data-live-surface="obs-overlay"');
+    expect(html).toContain('data-test-live-surface="overlay"');
+    expect(html).not.toContain('role="tablist"');
+    expect(html).not.toContain('role="tab"');
     expect(html).toContain("Viewer Voting");
     expect(html).toContain("Broadcast Overlay");
     expect(html).toContain('aria-label="Stream setup"');
@@ -93,6 +107,28 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("Gameplay connection controls");
     expect(html).toContain('href="/studio/gameplay"');
     expect(html).not.toContain('target="_blank"');
+  });
+
+  it("keeps one capture surface mounted in the background on other Studio pages", () => {
+    const capture = h("p", { "data-test-capture": "persistent" }, "Persistent capture runtime");
+    const gameplayHtml = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "gameplay",
+      view: null,
+      readiness: null,
+      persistentGameplayCapture: capture,
+    }));
+    const analyticsHtml = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-analytics",
+      view: null,
+      readiness: null,
+      persistentGameplayCapture: capture,
+    }));
+
+    expect(gameplayHtml).toContain('data-studio-capture-visibility="visible"');
+    expect(gameplayHtml).toContain("Persistent capture runtime");
+    expect(analyticsHtml).toContain('data-studio-capture-visibility="background"');
+    expect(analyticsHtml).toContain("Persistent capture runtime");
+    expect(analyticsHtml).toContain("Audience reactions");
   });
 
   it("gives every persistent Studio navigation item a compact icon", () => {
@@ -172,6 +208,10 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("Local Streamer");
     expect(html).toContain("Competitive");
     expect(html).toContain("Save default game");
+    expect(html).toContain("Desktop Director");
+    expect(html).toContain("When capture connects");
+    expect(html).toContain('type="radio" name="desktopDirectorSetupMode" checked="" value="automatic"');
+    expect(html).toContain('type="radio" name="desktopDirectorSetupMode" value="manual"');
     expect(html).toContain('<select name="gameProfile"');
     expect(html).toContain('<option value="minecraft">Minecraft</option>');
     expect(html).toContain('<option value="brawl-stars">Brawl Stars</option>');
@@ -186,6 +226,24 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("Saved on device");
     expect(html).toContain("Local profile");
     expect(html).toContain("This device only");
+  });
+
+  it("renders legacy profiles without desktop director preferences using the automatic default", () => {
+    const local = seedLocalFallbackProfile("Legacy Local Streamer", 100);
+    const legacyProfile: Partial<typeof local.profile> = { ...local.profile };
+    delete legacyProfile.desktopDirector;
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "profile",
+      view: null,
+      readiness: null,
+      localProfile: legacyProfile as typeof local.profile,
+      onLocalProfileChange: () => undefined,
+    }));
+
+    expect(html).toContain("Desktop Director");
+    expect(html).toContain(
+      'type="radio" name="desktopDirectorSetupMode" checked="" value="automatic"',
+    );
   });
 
   it("shows the effective quest activation mode on Home before the stream is live", () => {
@@ -446,7 +504,47 @@ describe("StudioProductPageSurface", () => {
     expect(html).not.toContain("without gameplay or audience evidence");
     expect(html).toContain("Why these were recommended");
     expect(html).toContain("Provider output becomes official only after deterministic validation.");
+    expect(html).toContain("Generation status");
+    expect(html).toContain("Select AI model");
+    expect(html).toContain("AI model");
+    expect(html).toContain("Presentation only. Quest generation still uses deterministic fallback.");
+    expect(html).not.toContain("AI enabled · Preview only");
     expect(html).toContain("Mode: Automatic");
+  });
+
+  it("shows compact quest status with the effective profile and game boundaries", () => {
+    const base = createFixtureUiGatewaySnapshot().views.streamer;
+    const view = {
+      ...base,
+      session: {
+        ...base.session,
+        currentGame: {
+          gameId: "minecraft-java",
+          gameName: "Minecraft Java Edition",
+          source: "streamer" as const,
+        },
+      },
+      profile: {
+        ...base.profile,
+        restrictions: ["No jump scares"],
+        forbiddenQuestTypes: ["team-sabotage"],
+        accessibilityNeeds: ["No flashing prompts"],
+      },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-quests",
+      view,
+    }));
+
+    expect(html).toContain('<article id="quest-status"');
+    expect(html).toContain("<h2>Quest Status</h2>");
+    expect(html).not.toContain("<h2>Now</h2>");
+    expect(html).toContain("Deterministic safety</dt><dd>Selected");
+    expect(html).toContain("Game-fit boundary</dt><dd>Minecraft Java Edition selected");
+    expect(html).toContain("Selected defaults</dt><dd>Community");
+    expect(html).toContain("No jump scares");
+    expect(html).toContain("Block Team Sabotage");
+    expect(html).toContain("Accessibility: No flashing prompts");
   });
 
   it("shows the effective selected preset activation mode in Live Quests", () => {
@@ -469,6 +567,42 @@ describe("StudioProductPageSurface", () => {
 
     expect(html).toContain("Mode: Manual");
     expect(html).not.toContain(">Proposed</span></div><div");
+  });
+
+  it("uses batch push in automatic mode and candidate selection only in manual mode", () => {
+    const automaticView = contractFixtureUiX06RoleViewCatalog["r4.quest.proposed.v1"].streamer;
+    const automaticHtml = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-quests",
+      view: automaticView,
+      onCommand: () => undefined,
+    }));
+    expect(automaticHtml).toContain("Push quests now");
+    expect(automaticHtml.match(/Viewer option/gu)).toHaveLength(3);
+    expect(automaticHtml).toContain("No streamer candidate pick is used");
+    expect(automaticHtml).not.toContain('aria-pressed="true"');
+
+    const manualView = {
+      ...automaticView,
+      profile: {
+        ...automaticView.profile,
+        voting: {
+          ...automaticView.profile.voting,
+          winnerActivationMode: "streamer-approval" as const,
+        },
+        streamPresets: automaticView.profile.streamPresets.map((preset) => ({
+          ...preset,
+          voting: { ...preset.voting, winnerActivationMode: "streamer-approval" as const },
+        })),
+      },
+    };
+    const manualHtml = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-quests",
+      view: manualView,
+      onCommand: () => undefined,
+    }));
+    expect(manualHtml).toContain("Start selected quest");
+    expect(manualHtml).toContain('aria-pressed="true"');
+    expect(manualHtml).not.toContain("Push quests now");
   });
 
   it.each(pages)("renders the required ICP-01 sections for %s", (page) => {

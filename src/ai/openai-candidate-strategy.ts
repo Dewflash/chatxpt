@@ -140,6 +140,7 @@ const MINECRAFT_CONTEXT_SIGNAL_MAP = {
   healthTrend: "minecraft-health-trend",
   screen: "minecraft-screen",
   environment: "minecraft-environment",
+  dayNight: "minecraft-day-night",
   life: "minecraft-life",
 } as const;
 
@@ -154,8 +155,8 @@ Use only the supplied normalized facts. Never invent HUD values, items, maps, mo
 If a fact is unknown, stale, unsupported, or low-confidence, do not cite or imply that fact.
 Do not name an unknown, stale, unsupported, or low-confidence fact category anywhere in an option, even to say the option avoids assuming it. In rationale, describe that constraint generically as not relying on unsupported state.
 Treat gameState.facts as the cross-game vocabulary. Use it for general game claims such as health, resource, defense, loadout, menu, activity, combat risk, objective, timer, score, or environment only when the relevant fact is known.
-Every option must explicitly name the selected game and use only mechanics known from that game profile. When exact evidence is weak, choose a broadly measurable game-compatible quest that makes no current-state claim. For Minecraft, choose safe Minecraft-aware quests about goals, choices, route planning, explanation, or chat-guided style without claiming health, hunger, hotbar, sleep, inventory, biome, hostile mobs, held items, damage cause, danger, menu state, objective completion, or location unless the corresponding minecraft.gameFacts entry is known and cited.
-For Minecraft, treat the minecraft.gameFacts block as the game-specific layer on top of gameState: use a Minecraft fact only when its status is known, and do not infer sleep, biome, hostile mob, item, damage cause, danger, menu, quest intent, or player objective from other fields.
+Every option must explicitly name the selected game and use only mechanics known from that game profile. When exact evidence is weak, choose a broadly measurable game-compatible quest that makes no current-state claim. For Minecraft, choose safe Minecraft-aware quests about goals, choices, route planning, explanation, or chat-guided style without claiming health, hunger, hotbar, sleep, inventory, day/night, biome, hostile mobs, held items, damage cause, danger, menu state, objective completion, or location unless the corresponding minecraft.gameFacts entry is known and cited.
+For Minecraft, treat the minecraft.gameFacts block as the game-specific layer on top of gameState: use a Minecraft fact only when its status is known, and do not infer sleep, day/night, biome, hostile mob, item, damage cause, danger, menu, quest intent, or player objective from other fields.
 Weak and strong models receive the same typed context; never compensate for model uncertainty by inventing facts or sourceSignalIds.
 Every sourceSignalIds entry must exactly match an available known signal ID supplied in the input. Use an empty list when a quest does not rely on one.
 Respect every restriction, forbidden quest type, and accessibility need. Avoid team sabotage, throwing, griefing, wagering, humiliation, sexual content, discrimination, illegal activity, dangerous activity, and real-world physical dares.
@@ -416,7 +417,13 @@ function buildMinecraftContext(input: CandidateInput, now: number): MinecraftAwa
       signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.environment),
       now,
       method,
-      reason: "Minecraft land versus water state is not confirmed.",
+      reason: "Minecraft scene environment is not confirmed.",
+    }),
+    dayNight: minecraftFactFromSignal({
+      signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.dayNight),
+      now,
+      method,
+      reason: "Minecraft day versus night is not confirmed by sustained pixel brightness.",
     }),
     life: minecraftFactFromSignal({
       signal: bySignalId.get(MINECRAFT_CONTEXT_SIGNAL_MAP.life),

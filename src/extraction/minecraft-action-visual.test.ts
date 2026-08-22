@@ -40,6 +40,20 @@ describe("Minecraft vanilla action visuals", () => {
     });
   });
 
+  it("detects a small off-centre target damage flash", () => {
+    const previous = quiet();
+    const current = frame((x, y) =>
+      x >= 12 && x < 35 && y >= 8 && y < 25
+        ? [215, 35, 30]
+        : [30, 95, 30],
+    );
+
+    expect(measureMinecraftActionVisuals(previous, current)).toMatchObject({
+      hitFlash: true,
+      eatingPose: false,
+    });
+  });
+
   it("detects an animated warm food pose without calling it a hit", () => {
     const previous = quiet();
     const current = frame((x, y) =>

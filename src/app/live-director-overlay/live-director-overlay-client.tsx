@@ -3,13 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { StreamerViewModel } from "@/core";
-import { PersistentStreamOverlaySurface } from "@/streamer";
+import {
+  PersistentStreamOverlaySurface,
+  type StreamerUiCommand,
+} from "@/streamer";
 
 import styles from "./page.module.css";
 
 interface LiveDirectorPayload {
   readonly ok: boolean;
   readonly view?: StreamerViewModel;
+  readonly message?: string;
   readonly error?: { readonly code?: string; readonly message?: string };
 }
 
@@ -53,6 +57,8 @@ declare global {
 export function LiveDirectorOverlayClient() {
   const [view, setView] = useState<StreamerViewModel | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [commandMessage, setCommandMessage] = useState<string | null>(null);
+  const [pendingCommandId, setPendingCommandId] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const tokenRef = useRef<string | null>(null);
   const broadcasterIdRef = useRef<string | null>(null);
@@ -137,9 +143,51 @@ export function LiveDirectorOverlayClient() {
     };
   }, [authReady]);
 
+  async function dispatchCommand(command: StreamerUiCommand) {
+    const token = tokenRef.current;
+    const broadcasterId = broadcasterIdRef.current;
+    if (token === null || broadcasterId === null) {
+      setError("The private Live Director link is not ready.");
+      return;
+    }
+    setPendingCommandId(command.commandId);
+    setCommandMessage(null);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/live-director/commands?broadcasterId=${encodeURIComponent(broadcasterId)}`,
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${token}`,
+            "content-type": "application/json",
+          },
+          cache: "no-store",
+          body: JSON.stringify(command),
+        },
+      );
+      const payload = (await response.json()) as LiveDirectorPayload;
+      if (payload.view !== undefined) setView(payload.view);
+      if (!response.ok || !payload.ok) {
+        setError(payload.error?.message ?? "Live Director could not complete the quest action.");
+        return;
+      }
+      setCommandMessage(payload.message ?? "Quest action completed.");
+    } catch {
+      setError("The Live Director command was interrupted. Current state is refreshing.");
+    } finally {
+      setPendingCommandId(null);
+    }
+  }
+
   return (
     <main className={styles.root}>
-      <PersistentStreamOverlaySurface view={view} />
+      <PersistentStreamOverlaySurface
+        view={view}
+        pendingCommandId={pendingCommandId}
+        commandMessage={commandMessage}
+        onCommand={(command) => void dispatchCommand(command)}
+      />
       {error !== null ? <p className={styles.error} role="status">{error}</p> : null}
     </main>
   );

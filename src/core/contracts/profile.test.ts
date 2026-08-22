@@ -31,6 +31,19 @@ describe("stream preset profile contract", () => {
     ]);
     expect(profile.selectedPresetId).toBe("community");
     expect(profile.keywordWatchlist).toEqual([]);
+    expect(profile.desktopDirector).toEqual({ setupMode: "automatic" });
+  });
+
+  it("keeps desktop director setup explicit and defaults existing profiles to automatic", () => {
+    expect(profile.desktopDirector.setupMode).toBe("automatic");
+    expect(streamerProfileSchema.parse({
+      ...profile,
+      desktopDirector: { setupMode: "manual" },
+    }).desktopDirector.setupMode).toBe("manual");
+    expect(streamerProfileSchema.safeParse({
+      ...profile,
+      desktopDirector: { setupMode: "sometimes" },
+    }).success).toBe(false);
   });
 
   it("resolves the selected session preset and live patch without mutating saved defaults", () => {

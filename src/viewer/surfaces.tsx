@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import {
   Button,
   Card,
@@ -271,6 +273,49 @@ function LivePulse({
       {context.gameplayStatus ? <span><b>Game</b> {context.gameplayStatus}</span> : null}
       {context.explainer ? <small>{context.explainer}</small> : null}
     </div>
+  );
+}
+
+function BroadcastQuestFrame({
+  rootClassName,
+  cardClassName,
+  phase,
+  eyebrow,
+  title,
+  meta,
+  ribbon,
+  children,
+}: {
+  readonly rootClassName: string;
+  readonly cardClassName: string;
+  readonly phase: string;
+  readonly eyebrow: string;
+  readonly title: string;
+  readonly meta?: ReactNode;
+  readonly ribbon?: "selected" | "winner";
+  readonly children: ReactNode;
+}) {
+  return (
+    <DesignSystemRoot
+      theme="dark"
+      density="compact"
+      className={rootClassName}
+      data-phase={phase}
+      data-broadcast-frame="true"
+    >
+      <Card ribbon={ribbon} className={cardClassName}>
+        <div className={styles.shell}>
+          <header className={styles.header}>
+            <div className={styles.titleBlock}>
+              <p className={styles.eyebrow}>{eyebrow}</p>
+              <h2 className={styles.title}>{title}</h2>
+            </div>
+            {meta ? <div className={styles.metaRow}>{meta}</div> : null}
+          </header>
+          {children}
+        </div>
+      </Card>
+    </DesignSystemRoot>
   );
 }
 
@@ -593,7 +638,308 @@ function ViewerShell({
 }
 
 export function TwitchExtensionViewerSurface(props: ViewerSurfaceProps) {
-  return <ViewerShell surface="extension" {...props} />;
+  const {
+    view,
+    selectedCandidateId = null,
+    pendingCandidateId = null,
+    commandError = null,
+    now,
+    onSelectCandidate,
+    onVoteCandidate,
+    onReact,
+    onRetry,
+    onReauthenticate,
+  } = props;
+  const presentation = presentViewer(view);
+  const remaining = formatRemaining(presentation.endsAt, now);
+  const accepted = presentation.acceptedCandidateId !== null;
+  const pending = pendingCandidateId !== null;
+  const interactionsPaused = commandError !== null;
+  const waitingForResult = awaitingOfficialResult(
+    presentation.phase,
+    presentation.endsAt,
+    now,
+    presentation.canVote,
+  ) && presentation.connection?.status === "ready";
+  const effectiveSelectedCandidateId = presentation.acceptedCandidateId ?? selectedCandidateId;
+  const selectedOption = presentation.options.find(
+    (option) => option.candidateId === selectedCandidateId,
+  );
+  const selectedWinner = presentation.options.find((option) => option.selected);
+  const resolvedQuest = presentation.options.find(
+    (option) => option.candidateId === presentation.activeCandidateId,
+  );
+  const visibleOptions = presentation.phase === "voting"
+    ? presentation.options
+    : presentation.phase === "selected" && selectedWinner
+      ? [selectedWinner]
+      : (presentation.phase === "active" || presentation.phase === "result") && resolvedQuest
+        ? [resolvedQuest]
+        : [];
+  const canSelect =
+    presentation.canVote &&
+    !accepted &&
+    !pending &&
+    !interactionsPaused &&
+    onSelectCandidate !== undefined;
+  const canSubmit =
+    presentation.canVote &&
+    !accepted &&
+    onVoteCandidate !== undefined &&
+    selectedOption !== undefined &&
+    !pending &&
+    !interactionsPaused;
+  const canReact = presentation.canReact && onReact !== undefined && !interactionsPaused;
+  const errorCopy = commandError ? commandErrorCopy(commandError) : null;
+  const needsTwitchAuth =
+    presentation.connection?.status === "permission-denied" ||
+    commandError?.code === "unauthenticated" ||
+    commandError?.code === "forbidden";
+  const canRetry =
+    !needsTwitchAuth &&
+    (presentation.connection?.retryable === true || commandError?.retryable === true);
+  const resultDetails = presentation.result ? resultCopy(presentation.result) : null;
+  const recovering =
+    presentation.connection !== null && presentation.connection.status !== "ready";
+  const headline = (() => {
+    if (presentation.phase === "voting") {
+      return waitingForResult ? "Awaiting the official result" : "Vote now";
+    }
+    if (presentation.phase === "selected") return selectedWinner?.title ?? "Winner selected";
+    if (presentation.phase === "active") return resolvedQuest?.title ?? "Sidequest active";
+    if (presentation.phase === "result") return resultDetails?.title ?? "Sidequest result";
+    return phaseTitle(presentation.phase);
+  })();
+  const eyebrow = (() => {
+    if (presentation.phase === "voting") return "Audience vote";
+    if (presentation.phase === "selected") return "Winning sidequest";
+    if (presentation.phase === "active") return "Sidequest active";
+    if (presentation.phase === "result") return "Sidequest result";
+    return "ChatXPT viewer";
+  })();
+  const stateExplanation = (() => {
+    if (recovering) {
+      return "ChatXPT is reconnecting. Your latest safe sidequest stays visible while interactions are paused.";
+    }
+    if (presentation.phase === "voting") {
+      return accepted
+        ? "Your vote is locked in. The server-supplied tallies are now visible."
+        : "Choose one of the three safe sidequests, review its details, then confirm your vote.";
+    }
+    if (presentation.phase === "selected") {
+      return "The audience winner is confirmed and is waiting to start.";
+    }
+    if (presentation.phase === "active") {
+      return "This is the same active sidequest now shown on the broadcast.";
+    }
+    if (presentation.phase === "result") {
+      return "The official sidequest result and any awarded reward are shown below.";
+    }
+    if (presentation.phase === "cooldown") {
+      return "ChatXPT is waiting for another safe moment before opening the next vote.";
+    }
+    return "Keep this panel open for the next audience sidequest.";
+  })();
+  const voteStatus = (() => {
+    if (presentation.phase === "active") return "Winner confirmed. The sidequest is now active.";
+    if (presentation.phase === "selected") {
+      return presentation.endsAt === null
+        ? "Winner confirmed. Waiting for the streamer to start the sidequest."
+        : "Winner confirmed. The sidequest starts automatically after the reveal.";
+    }
+    if (presentation.phase === "result") return "The authoritative sidequest result is shown above.";
+    if (presentation.phase === "cooldown") return "The next vote opens after the official cooldown.";
+    if (waitingForResult) return "Awaiting the official result.";
+    if (accepted) return "Vote accepted. Live tallies are now visible.";
+    if (pending) return "Sending your vote. Keep this panel open for confirmation.";
+    if (interactionsPaused) return "Voting and reactions are paused until recovery completes.";
+    if (presentation.canVote && onVoteCandidate !== undefined) return "Select one option, then vote.";
+    return "Voting is closed or unavailable.";
+  })();
+  const ribbon =
+    presentation.phase === "selected" ||
+    presentation.phase === "active" ||
+    presentation.result?.outcome === "succeeded"
+      ? "winner" as const
+      : undefined;
+
+  return (
+    <BroadcastQuestFrame
+      rootClassName={`${styles.surface} ${styles.extensionOverlay}`}
+      cardClassName={`${styles.overlayCard} ${styles.extensionOverlayCard}`}
+      phase={presentation.phase}
+      eyebrow={eyebrow}
+      title={headline}
+      ribbon={ribbon}
+      meta={(
+        <>
+          {remaining ? <StatusBadge tone="info">{remaining}</StatusBadge> : null}
+          <StatusBadge tone={connectionTone(presentation.connection?.status)}>
+            {connectionLabel(presentation.connection?.status)}
+          </StatusBadge>
+        </>
+      )}
+    >
+      <div className={styles.extensionOverlayContent}>
+        {presentation.connection?.status && presentation.connection.status !== "ready" ? (
+          <Notice
+            tone={presentation.connection.status === "degraded" ? "warning" : "danger"}
+            title={connectionLabel(presentation.connection.status)}
+            politeness="polite"
+            className={styles.notice}
+          >
+            {connectionRecoveryCopy(presentation.connection.status)}
+          </Notice>
+        ) : null}
+
+        {errorCopy ? (
+          <Notice
+            tone={errorCopy.tone}
+            title={errorCopy.title}
+            politeness="polite"
+            className={styles.notice}
+          >
+            {errorCopy.body}
+          </Notice>
+        ) : null}
+
+        {waitingForResult ? (
+          <Notice title="Awaiting the official result" tone="info" className={styles.notice}>
+            ChatXPT will announce a winner, tie resolution, or no-vote outcome from the server.
+          </Notice>
+        ) : null}
+
+        <div className={styles.overlayUpNext} aria-label="Twitch Extension state explanation">
+          <span>What this means</span>
+          <small>{stateExplanation}</small>
+        </div>
+
+        <LivePulse
+          context={presentation.publicContext}
+          communityHype={presentation.communityHype}
+        />
+
+        {visibleOptions.length > 0 ? (
+          <ol className={`${styles.overlayVotingList} ${styles.extensionQuestList}`} aria-label="Sidequest choices">
+            {visibleOptions.map((option) => {
+              const index = presentation.options.findIndex(
+                (candidate) => candidate.candidateId === option.candidateId,
+              );
+              const selected =
+                option.candidateId === effectiveSelectedCandidateId || option.acceptedByViewer;
+              const optionPending = option.candidateId === pendingCandidateId;
+              const winner = option.selected || option.active ||
+                option.candidateId === presentation.activeCandidateId && presentation.phase === "result";
+              return (
+                <li
+                  key={option.candidateId}
+                  className={styles.extensionQuestOption}
+                  data-selected={selected || undefined}
+                  data-winner={winner || undefined}
+                >
+                  <button
+                    type="button"
+                    className={styles.extensionQuestButton}
+                    aria-pressed={selected}
+                    disabled={!canSelect || optionPending}
+                    onClick={() => onSelectCandidate?.(option.candidateId)}
+                  >
+                    <span>
+                      <span className={styles.chatDigit} aria-hidden="true">{index + 1}</span>
+                      <VisuallyHidden>Option {index + 1}. </VisuallyHidden>
+                    </span>
+                    <span className={styles.extensionQuestDetail}>
+                      <strong className={styles.optionTitle}>{option.title}</strong>
+                      <span className={styles.instruction}>{option.instruction}</span>
+                      <span className={styles.optionFooter}>
+                        <StatusBadge tone={difficultyTone(option.difficulty)}>{option.difficulty}</StatusBadge>
+                        <StatusBadge tone="info">{formatSeconds(option.durationSeconds)}</StatusBadge>
+                        <StatusBadge tone="success">{formatReward(option.rewardPoints)}</StatusBadge>
+                        {option.votes === null ? null : (
+                          <StatusBadge tone={selected || winner ? "success" : "neutral"}>
+                            {`${option.votes} votes`}
+                          </StatusBadge>
+                        )}
+                        {selected && !winner ? <StatusBadge tone="info">Selected</StatusBadge> : null}
+                        {winner ? <StatusBadge tone="success">Winner</StatusBadge> : null}
+                        {optionPending ? <StatusBadge tone="info">Sending</StatusBadge> : null}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        ) : presentation.result === null ? (
+          <Notice title={phaseTitle(presentation.phase)} className={styles.notice}>
+            No vote is open right now.
+          </Notice>
+        ) : null}
+
+        {presentation.progress ? (
+          <div className={styles.progressBlock}>
+            <Progress
+              label="Sidequest progress"
+              value={presentation.progress.value}
+              max={1}
+              valueLabel={`${Math.round(presentation.progress.value * 100)}%`}
+            />
+            <p className={styles.progressMeta}>{progressMethodLabel(presentation.progress.method)}</p>
+          </div>
+        ) : null}
+
+        {presentation.result && resultDetails ? (
+          <Notice tone={resultDetails.tone} title={resultDetails.title} politeness="polite">
+            {presentation.result.reason}
+            {presentation.result.rewardPointsAwarded > 0
+              ? ` Awarded ${formatReward(presentation.result.rewardPointsAwarded)}.`
+              : null}
+          </Notice>
+        ) : null}
+
+        {view !== null ? (
+          <div className={styles.extensionEngagement} aria-label="Viewer engagement">
+            <div className={`${styles.engagementMetric} ${styles.engagementPrimary}`}>
+              <span className={styles.metricLabel}>Community hype</span>
+              <strong className={styles.metricValue}>{presentation.communityHype}</strong>
+            </div>
+            <div className={styles.engagementMetric}>
+              <span className={styles.metricLabel}>Your session points</span>
+              <strong>{presentation.sessionPoints}</strong>
+            </div>
+            {canReact ? (
+              <Button variant="secondary" onClick={() => onReact?.("hype")}>Send hype</Button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      <div className={`${styles.actions} ${styles.extensionOverlayActions}`}>
+        {needsTwitchAuth && onReauthenticate ? (
+          <Button className={styles.voteButton} variant="secondary" onClick={onReauthenticate}>
+            Reconnect with Twitch
+          </Button>
+        ) : canRetry && onRetry ? (
+          <Button className={styles.voteButton} variant="secondary" onClick={onRetry}>
+            Retry connection
+          </Button>
+        ) : presentation.phase === "voting" ? (
+          <Button
+            className={styles.voteButton}
+            disabled={!accepted && !canSubmit}
+            aria-disabled={accepted || undefined}
+            loading={pending}
+            onClick={() => {
+              if (canSubmit && selectedOption) onVoteCandidate?.(selectedOption.candidateId);
+            }}
+          >
+            {accepted ? "Vote accepted" : pending ? "Sending vote" : "Vote"}
+          </Button>
+        ) : null}
+        <p className={styles.statusLine} aria-live="polite">{voteStatus}</p>
+      </div>
+    </BroadcastQuestFrame>
+  );
 }
 
 export function HostedQuestBoardSurface({ roomCode, ...props }: HostedBoardSurfaceProps) {
@@ -696,30 +1042,6 @@ export function ChatFallbackInstructions({ view, now }: ChatFallbackInstructions
   );
 }
 
-function overlayStateExplanation(
-  phase: ReturnType<typeof presentOverlay>["phase"],
-  recovering: boolean,
-): string {
-  if (recovering) {
-    return "ChatXPT is reconnecting. The last safe sidequest state remains visible until the current state returns.";
-  }
-  switch (phase) {
-    case "voting":
-      return "Viewers are choosing between three safe, validated sidequests.";
-    case "selected":
-      return "The vote winner is confirmed and is waiting to start.";
-    case "active":
-      return "This is the current active sidequest for the stream.";
-    case "result":
-      return "The sidequest has ended and its official result is shown.";
-    case "cooldown":
-      return "ChatXPT is waiting before opening another sidequest vote.";
-    case "inactive":
-    case "loading":
-      return "No sidequest is active. ChatXPT is waiting for a safe moment to open voting.";
-  }
-}
-
 export function ObsQuestOverlaySurface({
   view,
   now,
@@ -748,89 +1070,67 @@ export function ObsQuestOverlaySurface({
   ) {
     const offline = view === null && standby === "offline";
     return (
-      <DesignSystemRoot theme="dark" density="compact" className={styles.overlay}>
-        <Card className={styles.overlayCard}>
-          <div className={styles.shell}>
-            <header className={styles.header}>
-              <div className={styles.titleBlock}>
-                <p className={styles.eyebrow}>ChatXPT Broadcast Overlay</p>
-                <h2 className={styles.title}>
-                  {offline
-                    ? "Overlay connected"
-                    : view === null
-                      ? "Connecting overlay"
-                      : "Sidequest pending"}
-                </h2>
-              </div>
-              <StatusBadge tone={offline ? "success" : "neutral"}>
-                {offline ? "Stream offline" : view === null ? "Connecting" : "Waiting"}
-              </StatusBadge>
-            </header>
-            <p className={styles.statusLine}>
-              {offline
-                ? "The permanent Browser Source is ready and will switch to live quest status when your next ChatXPT stream starts."
-                : view === null
-                  ? "Checking this permanent Browser Source connection."
-                  : "Waiting for the next safe, validated sidequest and viewer vote."}
-            </p>
-            <div className={styles.overlayUpNext} aria-label="Overlay state explanation">
-              <span>What this means</span>
-              <small>
-                {offline
-                  ? "There is no active ChatXPT stream session, so no quest or vote is shown yet."
-                  : overlayStateExplanation(presentation.phase, false)}
-              </small>
-            </div>
-            <LivePulse
-              context={presentation.publicContext}
-              communityHype={presentation.communityHype}
-            />
-          </div>
-        </Card>
-      </DesignSystemRoot>
+      <BroadcastQuestFrame
+        rootClassName={styles.overlay}
+        cardClassName={styles.overlayCard}
+        phase={presentation.phase}
+        eyebrow="ChatXPT Broadcast Overlay"
+        title={offline
+          ? "Overlay connected"
+          : view === null
+            ? "Connecting overlay"
+            : "Sidequest pending"}
+        meta={(
+          <StatusBadge tone={offline ? "success" : "neutral"}>
+            {offline ? "Stream offline" : view === null ? "Connecting" : "Waiting"}
+          </StatusBadge>
+        )}
+      >
+        <p className={styles.statusLine}>
+          {offline
+            ? "The permanent Browser Source is ready and will switch to live quest status when your next ChatXPT stream starts."
+            : view === null
+              ? "Checking this permanent Browser Source connection."
+              : "Waiting for the next safe, validated sidequest and viewer vote."}
+        </p>
+        <LivePulse
+          context={presentation.publicContext}
+          communityHype={presentation.communityHype}
+        />
+      </BroadcastQuestFrame>
     );
   }
 
   return (
-    <DesignSystemRoot theme="dark" density="compact" className={styles.overlay}>
-      <Card
-        ribbon={presentation.result?.outcome === "succeeded" ? "winner" : undefined}
-        className={styles.overlayCard}
-      >
-        <div className={styles.shell}>
-          <header className={styles.header}>
-            <div className={styles.titleBlock}>
-              <p className={styles.eyebrow}>
-                {presentation.phase === "voting" ? "Audience vote" : "Sidequest"}
-              </p>
-              <h2 className={styles.title}>
-                {presentation.phase === "voting"
-                  ? waitingForResult
-                    ? "Awaiting the official result"
-                    : "Vote now"
-                  : presentation.phase === "selected"
-                    ? presentation.selectedQuest?.title ?? "Winner selected"
-                  : presentation.phase === "cooldown"
-                    ? "Next vote soon"
-                    : presentation.activeQuest?.title ?? resultDetails?.title ?? "Overlay reconnecting"}
-              </h2>
-            </div>
-            <div className={styles.metaRow}>
-              {remaining ? <StatusBadge tone="info">{remaining}</StatusBadge> : null}
-              <StatusBadge tone={connectionTone(presentation.connection?.status)}>
-                {connectionLabel(presentation.connection?.status)}
-              </StatusBadge>
-            </div>
-          </header>
+    <BroadcastQuestFrame
+      rootClassName={styles.overlay}
+      cardClassName={styles.overlayCard}
+      phase={presentation.phase}
+      eyebrow={presentation.phase === "voting" ? "Audience vote" : "Sidequest"}
+      title={presentation.phase === "voting"
+        ? waitingForResult
+          ? "Awaiting the official result"
+          : "Vote now"
+        : presentation.phase === "selected"
+          ? presentation.selectedQuest?.title ?? "Winner selected"
+          : presentation.phase === "cooldown"
+            ? "Next vote soon"
+            : presentation.activeQuest?.title ?? resultDetails?.title ?? "Overlay reconnecting"}
+      ribbon={presentation.result?.outcome === "succeeded" ? "winner" : undefined}
+      meta={(
+        <>
+          {remaining ? <StatusBadge tone="info">{remaining}</StatusBadge> : null}
+          <StatusBadge tone={connectionTone(presentation.connection?.status)}>
+            {connectionLabel(presentation.connection?.status)}
+          </StatusBadge>
+        </>
+      )}
+    >
           {recovering ? (
             <p className={styles.statusLine} aria-live="polite">
               {overlayRecoveryCopy(presentation.connection?.status)}
             </p>
           ) : null}
-          <div className={styles.overlayUpNext} aria-label="Overlay state explanation">
-            <span>What this means</span>
-            <small>{overlayStateExplanation(presentation.phase, recovering)}</small>
-          </div>
           {visibleUpNext ? (
             <div className={styles.overlayUpNext} aria-label="Public up next">
               <span>{visibleUpNext.label}</span>
@@ -884,8 +1184,6 @@ export function ObsQuestOverlaySurface({
                 : null}
             </p>
           ) : null}
-        </div>
-      </Card>
-    </DesignSystemRoot>
+    </BroadcastQuestFrame>
   );
 }

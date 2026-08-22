@@ -1,8 +1,6 @@
-import { StreamerAuthorizedClient } from "../../streamer-authorized-client";
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default function StudioStreamSettingsPage() {
-  return <StreamerAuthorizedClient surface="studio-stream-settings" />;
+  return null;
 }

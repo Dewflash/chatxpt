@@ -71,6 +71,15 @@ function solidFrame(value = 0): SampledPixelFrame {
   return frameFromPixel(() => [value, value, value]);
 }
 
+function brightDaylightFrame(): SampledPixelFrame {
+  return frameFromPixel((x, y) => {
+    const red = 100 + ((x * 37 + y * 61 + x * y * 13) % 156);
+    const green = 100 + ((x * 53 + y * 29 + x * y * 17) % 156);
+    const blue = 100 + ((x * 19 + y * 47 + x * y * 23) % 156);
+    return [red, green, blue];
+  });
+}
+
 function shifted(source: SampledPixelFrame, dx: number, dy: number): SampledPixelFrame {
   return frameFromPixel((x, y) => {
     const sourceX = x - dx;
@@ -81,6 +90,16 @@ function shifted(source: SampledPixelFrame, dx: number, dy: number): SampledPixe
     const offset = (sourceY * source.width + sourceX) * 4;
     return [source.rgba[offset], source.rgba[offset + 1], source.rgba[offset + 2]];
   }, source.width, source.height);
+}
+
+function dimmed(source: SampledPixelFrame, factor: number): SampledPixelFrame {
+  const rgba = new Uint8ClampedArray(source.rgba);
+  for (let offset = 0; offset < rgba.length; offset += 4) {
+    rgba[offset] = Math.round(rgba[offset] * factor);
+    rgba[offset + 1] = Math.round(rgba[offset + 1] * factor);
+    rgba[offset + 2] = Math.round(rgba[offset + 2] * factor);
+  }
+  return { width: source.width, height: source.height, rgba };
 }
 
 function localAction(source: SampledPixelFrame, phase: number): SampledPixelFrame {
@@ -153,9 +172,11 @@ function minecraftHudFrame(input: {
   readonly hotbarWidthMultiplier?: number;
   readonly hotbarAspectDivisor?: number;
   readonly healthPalette?: "red" | "poisoned" | "frozen" | "absorbing";
+  readonly hotbar?: boolean;
+  readonly brightness?: number;
 } = {}): SampledPixelFrame {
   const frame = frameFromPixel((x, y) => {
-    const value = 28 + ((x * 7 + y * 11) % 18);
+    const value = Math.max(0, Math.min(237, (input.brightness ?? 28) + ((x * 7 + y * 11) % 18)));
     return [value, value + 4, value + 2];
   }, input.width ?? 320, input.height ?? 180);
   const health = input.health ?? 10;
@@ -212,13 +233,20 @@ function minecraftHudFrame(input: {
       const localWidth = Math.max(1, Math.round(slotWidth * frame.width));
       return x / localWidth < hungerFill ? [188, 102, 24] : [36, 18, 6];
     });
-    if (slot < armor) {
+    const armorFill = Math.max(0, Math.min(1, armor - slot));
+    if (armorFill > 0) {
       paintNormalizedBox(frame, {
         x: hotbarX + slot * slotWidth,
         y: armorY,
         width: slotWidth,
         height: healthHeight,
-      }, (x, y) => (x + y) % 2 === 0 ? [150, 185, 230] : [35, 50, 85]);
+      }, (x, y) => {
+        const localWidth = Math.max(1, Math.round(slotWidth * frame.width));
+        if (x === 0 || y === 0 || y >= Math.max(1, Math.round(healthHeight * frame.height) - 2)) {
+          return [78, 82, 86];
+        }
+        return x / localWidth < armorFill ? [202, 208, 214] : [34, 36, 38];
+      });
     }
     if (air !== undefined) {
       const airFill = Math.max(0, Math.min(1, air - slot));
@@ -236,23 +264,32 @@ function minecraftHudFrame(input: {
     }
   }
 
-  const hotbarSlotWidth = hotbarWidth / 9;
-  for (let slot = 0; slot < 9; slot += 1) {
+  if (input.hotbar !== false) {
+    const hotbarSlotWidth = hotbarWidth / 9;
+    for (let slot = 0; slot < 9; slot += 1) {
+      paintNormalizedBox(frame, {
+        x: hotbarX + slot * hotbarSlotWidth,
+        y: hotbarY,
+        width: hotbarSlotWidth,
+        height: hotbarHeight,
+      }, (x, y) => {
+        const pixelWidth = Math.max(2, Math.round(hotbarSlotWidth * frame.width));
+        const pixelHeight = Math.max(2, Math.round(hotbarHeight * frame.height));
+        const border = x <= 1 || y <= 1 || x >= pixelWidth - 2 || y >= pixelHeight - 2;
+        if (border) return slot === 0 && input.selectedBlock === true ? [248, 248, 248] : [120, 120, 120];
+        if (slot === 0 && input.selectedBlock === true) {
+          return (x + y) % 2 === 0 ? [210, 210, 205] : [8, 8, 8];
+        }
+        return [22, 22, 22];
+      });
+    }
+  } else {
     paintNormalizedBox(frame, {
-      x: hotbarX + slot * hotbarSlotWidth,
+      x: hotbarX,
       y: hotbarY,
-      width: hotbarSlotWidth,
+      width: hotbarWidth,
       height: hotbarHeight,
-    }, (x, y) => {
-      const pixelWidth = Math.max(2, Math.round(hotbarSlotWidth * frame.width));
-      const pixelHeight = Math.max(2, Math.round(hotbarHeight * frame.height));
-      const border = x <= 1 || y <= 1 || x >= pixelWidth - 2 || y >= pixelHeight - 2;
-      if (border) return slot === 0 && input.selectedBlock === true ? [248, 248, 248] : [120, 120, 120];
-      if (slot === 0 && input.selectedBlock === true) {
-        return (x + y) % 2 === 0 ? [210, 210, 205] : [8, 8, 8];
-      }
-      return [22, 22, 22];
-    });
+    }, () => [30, 30, 30]);
   }
   paintNormalizedBox(frame, { x: 0.492, y: 0.485, width: 0.016, height: 0.03 }, (x, y) =>
     x === 1 || y === 2 ? [240, 240, 240] : [25, 25, 25]);
@@ -293,6 +330,27 @@ function sleepingMinecraftFrame(): SampledPixelFrame {
     if (y < 2 || y > 4 || x % 9 === 0) return [220, 220, 220];
     return [55, 55, 55];
   });
+  return frame;
+}
+
+function pauseMinecraftFrame(input: { readonly health?: number; readonly hunger?: number } = {}): SampledPixelFrame {
+  const frame = minecraftHudFrame({
+    width: 640,
+    height: 360,
+    healthWidth: 0.15625,
+    health: input.health ?? 10,
+    hunger: input.hunger ?? 9,
+    armor: 7.5,
+  });
+  for (let offset = 0; offset < frame.rgba.length; offset += 4) {
+    frame.rgba[offset] = Math.round(frame.rgba[offset] * 0.58);
+    frame.rgba[offset + 1] = Math.round(frame.rgba[offset + 1] * 0.58);
+    frame.rgba[offset + 2] = Math.round(frame.rgba[offset + 2] * 0.58);
+  }
+  for (const y of [0.2, 0.34, 0.48]) {
+    paintNormalizedBox(frame, { x: 0.24, y, width: 0.52, height: 0.075 }, (x, row) =>
+      x <= 2 || row <= 2 ? [205, 205, 205] : [82, 82, 82]);
+  }
   return frame;
 }
 
@@ -570,17 +628,52 @@ describe("Minecraft vanilla and modded HUD capability detection", () => {
 
   it("detects armor and a selected hotbar category only when visually distinct", () => {
     const plain = fingerprintMinecraftHud(vanillaLikeMinecraftFrame(), minecraftJavaGameProfile);
-    expect(plain.facts.armorPoints).toMatchObject({ status: "unknown" });
+    expect(plain.facts.armorPoints).toMatchObject({ status: "known", value: 0 });
     expect(plain.facts.selectedHotbarCategory).toMatchObject({ status: "unknown" });
 
     const fingerprint = fingerprintMinecraftHud(armoredSelectedBlockMinecraftFrame(), minecraftJavaGameProfile);
     expect(["vanilla-like", "minecraft-like"]).toContain(fingerprint.status);
-    expect(fingerprint.facts.armorPoints).toMatchObject({ status: "known" });
-    expect(fingerprint.facts.armorPoints.value).toBeGreaterThan(0);
+    expect(fingerprint.facts.armorPoints).toMatchObject({ status: "known", value: 8 });
     expect(fingerprint.facts.selectedHotbarCategory).toMatchObject({
       status: "known",
       value: "block",
     });
+  });
+
+  it("counts armor on the same ten-icon scale as hearts and hunger", () => {
+    const fingerprint = fingerprintMinecraftHud(
+      minecraftHudFrame({ armor: 5.5 }),
+      minecraftJavaGameProfile,
+    );
+
+    expect(["vanilla-like", "minecraft-like"]).toContain(fingerprint.status);
+    expect(fingerprint.facts.armorPoints).toMatchObject({ status: "known", value: 5.5 });
+  });
+
+  it("reports the maximum vanilla armor row as ten icons", () => {
+    const fingerprint = fingerprintMinecraftHud(
+      minecraftHudFrame({ armor: 10 }),
+      minecraftJavaGameProfile,
+    );
+
+    expect(fingerprint.facts.armorPoints).toMatchObject({ status: "known", value: 10 });
+  });
+
+  it("keeps health, hunger, and armor aligned at a resampled GUI scale", () => {
+    const fingerprint = fingerprintMinecraftHud(
+      minecraftHudFrame({
+        width: 640,
+        height: 360,
+        healthWidth: 0.15625,
+        health: 10,
+        hunger: 9,
+        armor: 7.5,
+      }),
+      minecraftJavaGameProfile,
+    );
+    expect(fingerprint.facts.healthHearts).toMatchObject({ status: "known", value: 10 });
+    expect(fingerprint.facts.hungerShanks).toMatchObject({ status: "known", value: 9 });
+    expect(fingerprint.facts.armorPoints).toMatchObject({ status: "known", value: 7.5 });
   });
 
   it("detects the independent air row without confusing it with hunger or armor", () => {
@@ -590,7 +683,7 @@ describe("Minecraft vanilla and modded HUD capability detection", () => {
     expect(fingerprint.facts.submerged).toMatchObject({ status: "known", value: true });
     expect(fingerprint.facts.airBubbles).toMatchObject({ status: "known", value: 7 });
     expect(fingerprint.facts.hungerShanks).toMatchObject({ status: "known", value: 10 });
-    expect(fingerprint.facts.armorPoints).toMatchObject({ status: "unknown" });
+    expect(fingerprint.facts.armorPoints).toMatchObject({ status: "known", value: 0 });
   });
 
   it("keeps universal signals but withholds calibrated facts for hidden or modified HUDs", () => {
@@ -970,6 +1063,70 @@ describe("canonical multi-game snapshot projection", () => {
       .toMatchObject({ status: "unknown" });
   });
 
+  it("publishes ten hearts and ten hunger icons after paired colour confirmation without a hotbar", () => {
+    const analyzer = new MultiGameVisionAnalyzer();
+    analyzer.analyse({
+      frame: minecraftHudFrame({ hotbar: false }),
+      observedAt: 1_000,
+      selection: selection("minecraft"),
+    });
+    const assessment = analyzer.analyse({
+      frame: minecraftHudFrame({ hotbar: false }),
+      observedAt: 1_200,
+      selection: selection("minecraft"),
+    });
+    const snapshot = buildMultiGameGameplaySnapshot({
+      frame: observation(32, 1_200),
+      assessment,
+    });
+
+    expect(snapshot.capabilities.supportedSignals).toContain("minecraft-health-hearts");
+    expect(snapshot.capabilities.supportedSignals).toContain("minecraft-hunger-shanks");
+    expect(snapshot.signals.find(({ signalId }) => signalId === "minecraft-health-hearts")?.observation)
+      .toMatchObject({ status: "known", value: 10 });
+    expect(snapshot.signals.find(({ signalId }) => signalId === "minecraft-hunger-shanks")?.observation)
+      .toMatchObject({ status: "known", value: 10 });
+  });
+
+  it("projects a temporally confirmed Minecraft day/night signal", () => {
+    const analyzer = new MultiGameVisionAnalyzer();
+    for (const observedAt of [1_000, 2_000]) {
+      analyzer.analyse({
+        frame: brightDaylightFrame(),
+        observedAt,
+        selection: selection("minecraft"),
+      });
+    }
+    const assessment = analyzer.analyse({
+      frame: brightDaylightFrame(),
+      observedAt: 3_000,
+      selection: selection("minecraft"),
+    });
+    const snapshot = buildMultiGameGameplaySnapshot({
+      frame: observation(33, 3_000),
+      assessment,
+    });
+    expect(snapshot.capabilities.supportedSignals).toContain("minecraft-day-night");
+    expect(snapshot.signals.find(({ signalId }) => signalId === "minecraft-day-night")?.observation)
+      .toMatchObject({ status: "known", value: "day" });
+  });
+
+  it("projects supported Minecraft scene classifications through the snapshot confidence gate", () => {
+    const assessment = new MultiGameVisionAnalyzer().analyse({
+      frame: frameFromPixel(() => [55, 150, 45]),
+      observedAt: 1_000,
+      selection: selection("minecraft"),
+    });
+    const snapshot = buildMultiGameGameplaySnapshot({
+      frame: observation(34, 1_000),
+      assessment,
+    });
+
+    expect(snapshot.capabilities.supportedSignals).toContain("minecraft-environment");
+    expect(snapshot.signals.find(({ signalId }) => signalId === "minecraft-environment")?.observation)
+      .toMatchObject({ status: "known", value: "field" });
+  });
+
   it("projects confirmed Minecraft armor and selected hotbar category after temporal agreement", () => {
     const analyzer = new MultiGameVisionAnalyzer();
     analyzer.analyse({
@@ -989,7 +1146,7 @@ describe("canonical multi-game snapshot projection", () => {
     expect(snapshot.capabilities.supportedSignals).toContain("minecraft-armor-points");
     expect(snapshot.capabilities.supportedSignals).toContain("minecraft-selected-hotbar-category");
     expect(snapshot.signals.find(({ signalId }) => signalId === "minecraft-armor-points")?.observation)
-      .toMatchObject({ status: "known" });
+      .toMatchObject({ status: "known", value: 8 });
     expect(snapshot.signals.find(({ signalId }) => signalId === "minecraft-selected-hotbar-category")?.observation)
       .toMatchObject({ status: "known", value: "block" });
   });
@@ -1091,6 +1248,96 @@ describe("canonical multi-game snapshot projection", () => {
       .toMatchObject({ status: "unknown" });
     expect(snapshot.signals.find(({ signalId }) => signalId === "minecraft-recent-damage")?.observation)
       .toMatchObject({ status: "unknown" });
+  });
+
+  it("holds the last gameplay HUD while pause is open and reacquires after resume", () => {
+    const analyzer = new MultiGameVisionAnalyzer();
+    const gameplay = minecraftHudFrame({
+      width: 640,
+      height: 360,
+      healthWidth: 0.15625,
+      health: 10,
+      hunger: 9,
+      armor: 7.5,
+    });
+    analyzer.analyse({ frame: gameplay, observedAt: 1_000, selection: selection("minecraft") });
+    analyzer.analyse({ frame: gameplay, observedAt: 1_200, selection: selection("minecraft") });
+
+    const pausedAssessment = analyzer.analyse({
+      frame: pauseMinecraftFrame({ health: 9, hunger: 8 }),
+      observedAt: 1_400,
+      selection: selection("minecraft"),
+    });
+    const pausedSnapshot = buildMultiGameGameplaySnapshot({
+      frame: observation(31, 1_400),
+      assessment: pausedAssessment,
+    });
+    expect(pausedSnapshot.signals.find(({ signalId }) => signalId === "minecraft-screen")?.observation)
+      .toMatchObject({ status: "known", value: "pause" });
+    expect(pausedSnapshot.signals.find(({ signalId }) => signalId === "minecraft-health-hearts")?.observation)
+      .toMatchObject({ status: "known", value: 10 });
+    expect(pausedSnapshot.signals.find(({ signalId }) => signalId === "minecraft-hunger-shanks")?.observation)
+      .toMatchObject({ status: "known", value: 9 });
+
+    const resumedAssessment = analyzer.analyse({
+      frame: gameplay,
+      observedAt: 1_800,
+      selection: selection("minecraft"),
+    });
+    expect(resumedAssessment.minecraftBasicStateFacts?.screen)
+      .toMatchObject({ status: "known", value: "gameplay" });
+  });
+
+  it("expires a disappeared menu instead of suppressing every detector indefinitely", () => {
+    const analyzer = new MultiGameVisionAnalyzer();
+    analyzer.analyse({
+      frame: pauseMinecraftFrame(),
+      observedAt: 1_000,
+      selection: selection("minecraft"),
+    });
+
+    const ambiguous = frameFromPixel(() => [45, 45, 45], 640, 360);
+    analyzer.analyse({ frame: ambiguous, observedAt: 1_500, selection: selection("minecraft") });
+    const expired = analyzer.analyse({
+      frame: ambiguous,
+      observedAt: 2_100,
+      selection: selection("minecraft"),
+    });
+
+    expect(expired.minecraftBasicStateFacts?.screen)
+      .not.toMatchObject({ status: "known", value: "pause" });
+  });
+
+  it("does not suppress the HUD when the gameplay view merely becomes darker", () => {
+    const analyzer = new MultiGameVisionAnalyzer();
+    const gameplay = minecraftHudFrame({
+      width: 640,
+      height: 360,
+      healthWidth: 0.15625,
+      health: 10,
+      hunger: 9,
+      armor: 7.5,
+      brightness: 110,
+    });
+    analyzer.analyse({ frame: gameplay, observedAt: 1_000, selection: selection("minecraft") });
+    analyzer.analyse({ frame: gameplay, observedAt: 1_200, selection: selection("minecraft") });
+
+    const darkerAssessment = analyzer.analyse({
+      frame: dimmed(gameplay, 0.62),
+      observedAt: 1_400,
+      selection: selection("minecraft"),
+    });
+    const darkerSnapshot = buildMultiGameGameplaySnapshot({
+      frame: observation(35, 1_400),
+      assessment: darkerAssessment,
+    });
+
+    expect(darkerAssessment.minecraftBasicStateFacts?.screen)
+      .not.toMatchObject({ status: "known", value: "pause" });
+    expect(darkerSnapshot.signals.find(({ signalId }) => signalId === "minecraft-health-hearts")?.observation)
+      .toMatchObject({ status: "known", value: 10 });
+    expect(darkerSnapshot.signals.find(({ signalId }) => signalId === "minecraft-hunger-shanks")?.observation)
+      .toMatchObject({ status: "known", value: 9 });
   });
 
   it("does not place Minecraft signals in a generic-game snapshot", () => {

@@ -11,6 +11,7 @@ const nonEmptySecretSchema = z.string().trim().min(1);
 const environmentInputSchema = z
   .object({
     NEXT_PUBLIC_APP_ENV: z.string().optional(),
+    CHATXPT_PERSISTENCE_MODE: z.string().optional(),
     NEXT_PUBLIC_SUPABASE_URL: z.string().optional(),
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().optional(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
@@ -83,6 +84,45 @@ export function resolveServerPersistenceEnvironment(
     };
   }
   const deployment = deploymentResult.data;
+  const requestedMode = parsed.CHATXPT_PERSISTENCE_MODE?.trim() || "auto";
+  if (requestedMode !== "auto" && requestedMode !== "memory") {
+    return {
+      mode: "misconfigured",
+      deployment,
+      missing: ["CHATXPT_PERSISTENCE_MODE(auto|memory)"],
+      health: health(
+        "misconfigured",
+        checkedAt,
+        "Persistence mode must be auto or memory",
+        false,
+      ),
+    };
+  }
+  if (requestedMode === "memory") {
+    if (deployment !== "local") {
+      return {
+        mode: "misconfigured",
+        deployment,
+        missing: ["CHATXPT_PERSISTENCE_MODE(auto in preview|production)"],
+        health: health(
+          "misconfigured",
+          checkedAt,
+          "Process-local memory persistence is available only in local development",
+          false,
+        ),
+      };
+    }
+    return {
+      mode: "memory",
+      deployment,
+      health: health(
+        "degraded",
+        checkedAt,
+        "Local fallback persistence is active; Supabase is bypassed",
+        false,
+      ),
+    };
+  }
   const url = normalise(parsed.NEXT_PUBLIC_SUPABASE_URL);
   const publishableKey = normalise(
     parsed.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? parsed.NEXT_PUBLIC_SUPABASE_ANON_KEY,

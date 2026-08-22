@@ -36,9 +36,44 @@ describe("OBS browser frame source", () => {
     await capture.start();
     expect(capture.width).toBe(1280);
     expect(capture.height).toBe(720);
-    expect(capture.captureFrame()).toBe(preview);
+    await expect(capture.captureFrame()).resolves.toBe(preview);
     expect(play).toHaveBeenCalledOnce();
     expect(documentRef.createElement).not.toHaveBeenCalled();
+  });
+
+  it("waits for a presented video frame before exposing it to the sampler", async () => {
+    const stream = { getTracks: () => [] } as unknown as MediaStream;
+    const frameCallback: { present?: () => void } = {};
+    const preview = {
+      muted: false,
+      autoplay: false,
+      playsInline: false,
+      srcObject: stream,
+      videoWidth: 1280,
+      videoHeight: 720,
+      play: vi.fn(async () => undefined),
+      pause: vi.fn(),
+      requestVideoFrameCallback: vi.fn((callback: () => void) => {
+        frameCallback.present = callback;
+        return 1;
+      }),
+      cancelVideoFrameCallback: vi.fn(),
+    } as unknown as HTMLVideoElement;
+    const capture = new MediaStreamVideoFrameCapture(stream, { video: preview });
+    await capture.start();
+
+    let resolved = false;
+    const pending = capture.captureFrame().then((frame) => {
+      resolved = true;
+      return frame;
+    });
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+    if (frameCallback.present === undefined) throw new Error("frame callback was not registered");
+    frameCallback.present();
+
+    await expect(pending).resolves.toBe(preview);
+    expect(preview.requestVideoFrameCallback).toHaveBeenCalledOnce();
   });
 
   it("opens the browser-native display picker for a selected screen or window", async () => {

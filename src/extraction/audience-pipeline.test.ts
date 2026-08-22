@@ -222,9 +222,11 @@ describe("AudienceAnalyticsAccumulator", () => {
     expect(signalValue(returned!.snapshot, "audience-newly-active-participants")).toBe(1);
   });
 
-  it("does not promote one viewer's repeated topic as audience consensus", () => {
+  it("promotes a topic repeated in separate messages by one viewer", () => {
     const accumulator = new AudienceAnalyticsAccumulator({ minimumConfidence: 0.3 });
-    accumulator.ingest(event(0, { viewerId: "session-viewer-a", text: "diamonds next please" }));
+    const first = accumulator.ingest(
+      event(0, { viewerId: "session-viewer-a", text: "diamonds diamonds diamonds next please" }),
+    );
     const repeated = accumulator.ingest(
       event(1, { viewerId: "session-viewer-a", text: "diamonds diamonds again" }),
     );
@@ -232,10 +234,15 @@ describe("AudienceAnalyticsAccumulator", () => {
       event(2, { viewerId: "session-viewer-b", text: "diamonds would be great" }),
     );
 
-    expect(repeated?.primaryTopic).toBeNull();
-    expect(consensus?.primaryTopic).toMatchObject({
+    expect(first?.primaryTopic).toBeNull();
+    expect(repeated?.primaryTopic).toMatchObject({
       topic: "diamonds",
       count: 2,
+      participantKeys: ["session-viewer-a"],
+    });
+    expect(consensus?.primaryTopic).toMatchObject({
+      topic: "diamonds",
+      count: 3,
       participantKeys: ["session-viewer-a", "session-viewer-b"],
     });
   });

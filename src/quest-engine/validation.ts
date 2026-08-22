@@ -313,6 +313,7 @@ const factDependencies = [
   { pattern: /\b(?:fall damage|lava|fire damage|drowning|suffocat|starv|damage cause|mob damage)\b/i, kinds: ["minecraft-likely-damage-cause"] },
   { pattern: /\b(?:skeleton|zombie|creeper|spider|enderman|hostile mob|monster)\b/i, kinds: ["minecraft-visible-hostile"] },
   { pattern: /\b(?:biome|nether|overworld|end dimension|desert|forest|village|cave|ocean)\b/i, kinds: ["minecraft-biome-environment"] },
+  { pattern: /\b(?:daytime|nighttime|daylight|sunrise|sunset|dawn|dusk|before night|during the day|at night)\b/i, kinds: ["minecraft-day-night"] },
 ] as const;
 
 const durationRangeByDifficulty = {

@@ -20,6 +20,10 @@ export const DEFAULT_STREAMER_REWARD_PREFERENCES = {
   monetaryRewards: false,
 } as const;
 
+export const DEFAULT_STREAMER_DESKTOP_DIRECTOR_PREFERENCES = {
+  setupMode: "automatic",
+} as const;
+
 export const DEFAULT_STREAM_PRESETS = [
   {
     presetId: "competitive",
@@ -84,6 +88,12 @@ export const streamerRewardPreferencesSchema = z
   })
   .strict();
 
+export const streamerDesktopDirectorPreferencesSchema = z
+  .object({
+    setupMode: z.enum(["automatic", "manual"]).default("automatic"),
+  })
+  .strict();
+
 export const streamPresetSchema = z
   .object({
     presetId: identifierSchema,
@@ -130,6 +140,9 @@ export const streamerProfileSchema = z
       })),
     ),
     selectedPresetId: identifierSchema.nullable().default("community"),
+    desktopDirector: streamerDesktopDirectorPreferencesSchema.default(
+      DEFAULT_STREAMER_DESKTOP_DIRECTOR_PREFERENCES,
+    ),
     voting: streamerVotingPreferencesSchema.default(DEFAULT_STREAMER_VOTING_PREFERENCES),
     rewards: streamerRewardPreferencesSchema.default(DEFAULT_STREAMER_REWARD_PREFERENCES),
   })
@@ -182,6 +195,9 @@ export const streamerSessionOverrideSchema = z
 export type StreamerProfile = z.infer<typeof streamerProfileSchema>;
 export type StreamerVotingPreferences = z.infer<typeof streamerVotingPreferencesSchema>;
 export type StreamerRewardPreferences = z.infer<typeof streamerRewardPreferencesSchema>;
+export type StreamerDesktopDirectorPreferences = z.infer<
+  typeof streamerDesktopDirectorPreferencesSchema
+>;
 export type StreamPreset = z.infer<typeof streamPresetSchema>;
 export type StreamerSessionOverride = z.infer<typeof streamerSessionOverrideSchema>;
 

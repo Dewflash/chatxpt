@@ -58,8 +58,11 @@ export class BrowserMediaFrameSource implements FrameSource {
     try {
       while (!signal?.aborted) {
         sequence += 1;
-        const capturedAt = this.now();
         const image = await this.options.capture.captureFrame();
+        // Stamp the observation after the browser has presented the sampled
+        // media frame. This keeps freshness checks honest when Safari delays
+        // display-capture delivery while the Studio tab is in the background.
+        const capturedAt = this.now();
         const observation = this.observation(sequence, capturedAt);
         let released = false;
 
@@ -315,10 +318,11 @@ export class MediaStreamVideoFrameCapture implements BrowserFrameCapture {
     this.video = video;
   }
 
-  captureFrame(): CanvasImageSource {
+  async captureFrame(): Promise<CanvasImageSource> {
     if (this.video === null) {
       throw new Error("Frame capture has not started");
     }
+    await waitForPresentedVideoFrame(this.video);
     return this.video;
   }
 
@@ -331,6 +335,34 @@ export class MediaStreamVideoFrameCapture implements BrowserFrameCapture {
       }
     }
   }
+}
+
+/**
+ * Aligns canvas sampling with a frame the media element has actually
+ * presented. Browsers without requestVideoFrameCallback retain the previous
+ * timer-based behaviour. The timeout prevents a muted or frozen capture track
+ * from blocking shutdown forever.
+ */
+function waitForPresentedVideoFrame(video: HTMLVideoElement): Promise<void> {
+  if (typeof video.requestVideoFrameCallback !== "function") return Promise.resolve();
+
+  return new Promise((resolve) => {
+    let settled = false;
+    let timeout: ReturnType<typeof globalThis.setTimeout> | null = null;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (timeout !== null) globalThis.clearTimeout(timeout);
+      resolve();
+    };
+    const callbackId = video.requestVideoFrameCallback(finish);
+    timeout = globalThis.setTimeout(() => {
+      if (typeof video.cancelVideoFrameCallback === "function") {
+        video.cancelVideoFrameCallback(callbackId);
+      }
+      finish();
+    }, 1_500);
+  });
 }
 
 function sleep(durationMs: number, signal?: AbortSignal): Promise<void> {

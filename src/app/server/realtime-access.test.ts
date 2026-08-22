@@ -7,6 +7,7 @@ describe("realtime public configuration", () => {
 
   it("keeps credential-free local mode on the recovery read path", () => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "local");
+    vi.stubEnv("CHATXPT_PERSISTENCE_MODE", "auto");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "");
     vi.stubEnv("SUPABASE_SECRET_KEY", "");
@@ -16,6 +17,7 @@ describe("realtime public configuration", () => {
 
   it("returns only the public Supabase connection values", () => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "preview");
+    vi.stubEnv("CHATXPT_PERSISTENCE_MODE", "auto");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://fixture.supabase.co");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_fixture");
     vi.stubEnv("SUPABASE_SECRET_KEY", "sb_secret_must-never-leak");
@@ -27,5 +29,15 @@ describe("realtime public configuration", () => {
       publishableKey: "sb_publishable_fixture",
     });
     expect(JSON.stringify(config)).not.toContain("sb_secret");
+  });
+
+  it("turns off Supabase realtime when the explicit local fallback is active", () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "local");
+    vi.stubEnv("CHATXPT_PERSISTENCE_MODE", "memory");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://fixture.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_fixture");
+    vi.stubEnv("SUPABASE_SECRET_KEY", "sb_secret_must-never-leak");
+
+    expect(realtimePublicConfiguration()).toEqual({ enabled: false });
   });
 });

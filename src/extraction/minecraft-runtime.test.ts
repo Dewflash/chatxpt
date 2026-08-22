@@ -202,6 +202,18 @@ describe("Minecraft runtime fact derivation", () => {
     expect(facts.recentDamage).toMatchObject({ status: "unknown", value: null });
   });
 
+  it("publishes scene environment even when the full HUD is not confirmed", () => {
+    const facts = deriveMinecraftRuntimeFacts({
+      previousHud: null,
+      hud: null,
+      menuState: unknownMenu(),
+      interpretation: interpretation("stable"),
+      sceneFacts: sceneFacts({ environment: "forest" }),
+    });
+
+    expect(facts.biomeOrEnvironment).toMatchObject({ status: "known", value: "forest" });
+  });
+
   it("gates health deltas while a generic container screen is open", () => {
     const facts = deriveMinecraftRuntimeFacts({
       previousHud: hud(10),

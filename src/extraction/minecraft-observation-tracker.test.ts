@@ -57,6 +57,20 @@ function missedHud(): MinecraftHudFingerprint {
   };
 }
 
+function vitalOnlyHud(health: number, hunger: number): MinecraftHudFingerprint {
+  const raw = missedHud();
+  return {
+    ...raw,
+    status: "modified-or-unknown",
+    supportedSignals: ["minecraft-health-hearts", "minecraft-hunger-shanks"],
+    facts: {
+      ...raw.facts,
+      healthHearts: known(health),
+      hungerShanks: known(hunger),
+    },
+  };
+}
+
 describe("Minecraft rolling observation tracker", () => {
   it("uses two-of-three agreement and does not flicker on one changed reading", () => {
     const tracker = new MinecraftObservationTracker();
@@ -108,6 +122,31 @@ describe("Minecraft rolling observation tracker", () => {
       status: "hud-hidden",
       trackingStatus: "unknown",
       facts: { healthHearts: { status: "unknown", value: null } },
+    });
+  });
+
+  it("confirms the ten-slot health and hunger pair without claiming a full HUD layout", () => {
+    const tracker = new MinecraftObservationTracker();
+
+    expect(tracker.observe(vitalOnlyHud(10, 10), 1_000)).toMatchObject({
+      status: "candidate-unconfirmed",
+      facts: {
+        healthHearts: { status: "unknown" },
+        hungerShanks: { status: "unknown" },
+      },
+    });
+    expect(tracker.observe(vitalOnlyHud(10, 10), 1_200)).toMatchObject({
+      status: "modified-or-unknown",
+      trackingStatus: "confirmed",
+      supportedSignals: expect.arrayContaining([
+        "minecraft-health-hearts",
+        "minecraft-hunger-shanks",
+      ]),
+      facts: {
+        healthHearts: { status: "known", value: 10 },
+        hungerShanks: { status: "known", value: 10 },
+        hotbarVisible: { status: "unknown" },
+      },
     });
   });
 });

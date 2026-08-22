@@ -79,8 +79,8 @@ Use these branches in order:
 
 - Role 3 remains deterministic authority. AI/provider provenance never grants trust or bypasses validation.
 - Hard safety, lifecycle, emergency, freshness, confidence, support, and `unknown` gates run before any suitability score.
-- Manual streamer approval remains the default before exactly three options become viewer voting.
-- `Turn into vote` does not publish directly and never exposes fewer or more than three options.
+- D-095 makes proposed-cycle routing mode-specific: Automatic pushes all three validated options to viewer voting without a streamer candidate choice, while Manual starts one streamer-selected option directly without a voting state.
+- Automatic voting never exposes fewer or more than three options; Manual direct activation still requires the selected option to belong to the current exactly-three validated proposal.
 - Unsafe, impossible, malformed, missing, stale, duplicated, or rejected candidates use separately validated replacements; validation rules are never relaxed.
 - The provider-unavailable path remains operational: Role 2 has a credential-free algorithmic route and Role 3 retains deterministic fallback assembly.
 - Role 1 owns command authentication, idempotency, expected/current revisions, server time, persistence, scheduling, broadcast, and public/private projection.

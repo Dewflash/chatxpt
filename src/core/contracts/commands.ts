@@ -10,7 +10,7 @@ import {
 } from "./common";
 import { streamerQuestActionSchema } from "./quests";
 import { participationSourceModeSchema } from "./participation";
-import { streamPresetSchema } from "./profile";
+import { streamPresetSchema, streamerDesktopDirectorPreferencesSchema } from "./profile";
 import { streamSessionGameSchema } from "./session";
 import {
   audienceSnapshotSchema,
@@ -175,6 +175,7 @@ export const streamerProfileSettingsCommandSchema = z
     keywordWatchlist: profileKeywordWatchlistPatchSchema.optional(),
     streamPresets: z.array(streamPresetSchema).min(1).max(24).optional(),
     selectedPresetId: identifierSchema.nullable().optional(),
+    desktopDirector: streamerDesktopDirectorPreferencesSchema.optional(),
     voting: streamerVotingPreferencesPatchSchema.optional(),
     rewards: streamerRewardPreferencesPatchSchema.optional(),
   })
@@ -190,6 +191,7 @@ export const streamerProfileSettingsCommandSchema = z
       command.keywordWatchlist,
       command.streamPresets,
       command.selectedPresetId,
+      command.desktopDirector,
     ].filter((value) => value !== undefined).length;
     const votingChangeCount = Object.keys(command.voting ?? {}).length;
     const rewardChangeCount = Object.keys(command.rewards ?? {}).length;

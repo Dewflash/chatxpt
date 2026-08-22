@@ -57,11 +57,17 @@ describe("Role 5 viewer surfaces", () => {
       }),
     );
 
-    expect(html).toContain("Choose the sidequest");
+    expect(html).toContain("Audience vote");
+    expect(html).toContain("Vote now");
+    expect(html).toContain('data-broadcast-frame="true"');
     expect(html).toContain("30s left");
     expect(html.match(/Option [123]\./g)).toHaveLength(3);
     expect(html.match(/<button/g)).toHaveLength(4);
     expect(html).toContain("Vote");
+    expect(html).toContain(options[0].instruction);
+    expect(html).toContain("easy");
+    expect(html).toContain("30 sec");
+    expect(html).toContain("100 pts");
     expect(html.indexOf("Community hype")).toBeLessThan(html.indexOf(">Vote<"));
     expect(html).not.toContain("4 votes");
     expect(html).not.toContain("2 votes");
@@ -371,7 +377,8 @@ describe("Role 5 OBS overlay surface", () => {
     expect(html).toContain("Overlay connected");
     expect(html).toContain("Stream offline");
     expect(html).toContain("permanent Browser Source is ready");
-    expect(html).toContain("There is no active ChatXPT stream session");
+    expect(html).not.toContain("What this means");
+    expect(html).not.toContain("There is no active ChatXPT stream session");
     expect(html).not.toContain("Sidequest pending");
   });
 
@@ -380,8 +387,8 @@ describe("Role 5 OBS overlay surface", () => {
 
     expect(html).toContain("Sidequest pending");
     expect(html).toContain("Waiting for the next safe, validated sidequest and viewer vote.");
-    expect(html).toContain("What this means");
-    expect(html).toContain("No sidequest is active");
+    expect(html).not.toContain("What this means");
+    expect(html).not.toContain("No sidequest is active");
     expect(html).not.toContain("Overlay connected");
   });
 
@@ -420,7 +427,8 @@ describe("Role 5 OBS overlay surface", () => {
     expect(html).toContain("45s left");
     expect(html).toContain("Progress");
     expect(html).toContain("Live game progress");
-    expect(html).toContain("This is the current active sidequest for the stream.");
+    expect(html).not.toContain("What this means");
+    expect(html).not.toContain("This is the current active sidequest for the stream.");
     expect(html).not.toContain("<button");
   });
 
@@ -434,13 +442,15 @@ describe("Role 5 OBS overlay surface", () => {
     );
 
     expect(html).toContain("Audience vote");
+    expect(html).toContain('data-broadcast-frame="true"');
     expect(html).toContain("Winning quest goes live");
     expect(html).toContain("Vote now");
     expect(html).toContain(options[0].title);
     expect(html).toContain(options[1].title);
     expect(html).toContain(options[2].title);
     expect(html).toContain("2 votes");
-    expect(html).toContain("Viewers are choosing between three safe, validated sidequests.");
+    expect(html).not.toContain("What this means");
+    expect(html).not.toContain("Viewers are choosing between three safe, validated sidequests.");
     expect(html).not.toContain("<button");
   });
 
@@ -497,6 +507,7 @@ describe("Role 5 OBS overlay surface", () => {
     expect(html).toContain("Next vote soon");
     expect(html).toContain("ChatXPT is waiting for another safe sidequest moment.");
     expect(html).toContain("120s left");
+    expect(html).not.toContain("What this means");
     expect(html).not.toContain("<button");
   });
 });

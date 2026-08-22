@@ -65,6 +65,7 @@ export {
   editableDefaultsFromProfile,
   editableDefaultsFromView,
   profileDefaultsChanged,
+  resolveDesktopDirectorSetupMode,
 } from "./streamer-commands";
 export type {
   EditableProfileDefaults,

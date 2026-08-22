@@ -96,6 +96,7 @@ describe("Minecraft state schema", () => {
       healthTrend: unknown("Health trend is not classified."),
       screen: unknown("Screen state is not classified."),
       environment: unknown("Land versus water is not classified."),
+      dayNight: unknown("Day versus night is not classified."),
       life: unknown("Life state is not classified."),
     });
 

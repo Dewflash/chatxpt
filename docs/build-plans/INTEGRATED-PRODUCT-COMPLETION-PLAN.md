@@ -51,7 +51,7 @@ The implementation must not reopen these choices unless the owner explicitly cha
 - Live Analytics compares categorical states with the previous meaningful state, compares numeric metrics with the preceding equal-length window, and may show privacy-safe newly active, returning, recently inactive, and active-now participation. `Returning` is current-session only unless a later accepted privacy boundary permits more.
 - Live Analytics includes automatically detected topics and an optional streamer watchlist while retaining only aggregates, not raw viewer messages or usernames.
 - Official voting requires exactly three validated, game-aware quests. Idle previews may show zero to three pre-approved options.
-- Manual streamer approval remains the MVP default before a proposed batch reaches voting.
+- Quest routing follows the effective profile mode under D-095: Automatic pushes the whole exactly-three batch to viewer voting without a streamer candidate choice; Manual starts one streamer-selected candidate directly without viewer voting or a voting countdown.
 - Audio and speech capture are deferred. The product exposes no microphone or transcript controls and makes no audio claim.
 - OBS may show one concise `Up next` line sourced from a typed Current Objective or authoritative active quest. It does not show `Now`, transcripts, or private reasoning; insufficient evidence hides the line.
 - Test Lab remains available to every streamer through normal Studio navigation.

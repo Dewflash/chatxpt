@@ -21,6 +21,45 @@ describe("Role 1 persistence environment", () => {
     expect(environment.health.status).toBe("ready");
   });
 
+  it("lets local development explicitly bypass configured Supabase with the memory fallback", () => {
+    const environment = resolveServerPersistenceEnvironment(
+      {
+        NEXT_PUBLIC_APP_ENV: "local",
+        CHATXPT_PERSISTENCE_MODE: "memory",
+        NEXT_PUBLIC_SUPABASE_URL: "https://fixture.supabase.co",
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_fixture",
+        SUPABASE_SECRET_KEY: "sb_secret_fixture",
+      },
+      CHECKED_AT,
+    );
+
+    expect(environment).toMatchObject({
+      mode: "memory",
+      deployment: "local",
+      health: {
+        status: "degraded",
+        message: "Local fallback persistence is active; Supabase is bypassed",
+      },
+    });
+    expect(createConfiguredPersistenceRuntime(environment).mode).toBe("memory");
+  });
+
+  it("does not allow process-local persistence to be forced in hosted environments", () => {
+    const environment = resolveServerPersistenceEnvironment(
+      {
+        NEXT_PUBLIC_APP_ENV: "preview",
+        CHATXPT_PERSISTENCE_MODE: "memory",
+      },
+      CHECKED_AT,
+    );
+
+    expect(environment).toMatchObject({
+      mode: "misconfigured",
+      deployment: "preview",
+      missing: ["CHATXPT_PERSISTENCE_MODE(auto in preview|production)"],
+    });
+  });
+
   it("fails closed when Supabase configuration is partial", () => {
     const environment = resolveServerPersistenceEnvironment(
       {

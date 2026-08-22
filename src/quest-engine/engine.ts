@@ -555,6 +555,51 @@ function activateSelectedWinner(input: QuestEngineInput): QuestEngineResult {
   );
 }
 
+function activateStreamerSelectedCandidate(
+  input: QuestEngineInput,
+  candidateId: string,
+): QuestEngineResult {
+  const candidate = input.currentState.options.find(
+    (option) => option.candidateId === candidateId,
+  );
+  if (input.currentState.status !== "proposed" || candidate === undefined) {
+    return error("validation", "Manual quest selection must reference a current recommendation");
+  }
+  const questEndsAt = input.now + candidate.durationSeconds * 1_000;
+  if (!Number.isSafeInteger(questEndsAt)) {
+    return error("validation", "Selected quest end time exceeds supported range");
+  }
+  return accept(
+    input.currentState,
+    {
+      status: "active",
+      activeCandidateId: candidate.candidateId,
+      availableStreamerActions: [...actionsByStatus.active],
+      voteTallies: [],
+      startsAt: input.now,
+      endsAt: questEndsAt,
+      progress: {
+        value: 0,
+        updatedAt: input.now,
+        method: "unknown",
+        evidenceSignalIds: [],
+      },
+      completionRule: candidate.completionRule ?? null,
+      result: null,
+    },
+    [
+      event("quest-cycle.streamer-selected", {
+        candidateId: candidate.candidateId,
+        selectionMode: "manual",
+      }),
+      event("quest-cycle.activated", {
+        candidateId: candidate.candidateId,
+        selectionMode: "manual",
+      }),
+    ],
+  );
+}
+
 function transitionVoteClose(input: QuestEngineInput): QuestEngineResult {
   if (input.command.type !== "system.vote-close") {
     return error("internal", "Vote-close transition received another command type");
@@ -743,6 +788,13 @@ function transitionStreamerCommand(input: QuestEngineInput): QuestEngineResult {
       : streamerProfileSchema.safeParse(input.profile);
     if (profile !== null && !profile.success) {
       return error("validation", "Voting preferences are invalid");
+    }
+    const activationMode = profile?.data.voting.winnerActivationMode ?? "automatic";
+    if (activationMode === "streamer-approval") {
+      if (input.command.candidateId === null) {
+        return error("validation", "Manual mode requires one selected recommendation");
+      }
+      return activateStreamerSelectedCandidate(input, input.command.candidateId);
     }
     const voteDurationSeconds = profile?.data.voting.voteDurationSeconds ??
       DEFAULT_VOTING_MILLISECONDS / 1_000;

@@ -8,11 +8,14 @@
   const submitButton = document.getElementById("submit-vote");
   const voteStatus = document.getElementById("vote-status");
   const connectionState = document.getElementById("connection-state");
-  const apiBaseLabel = document.getElementById("api-base-label");
   const countdown = document.getElementById("countdown");
   const communityHype = document.getElementById("community-hype");
   const sessionPoints = document.getElementById("session-points");
   const sendHypeButton = document.getElementById("send-hype");
+  const viewerEngagement = document.getElementById("viewer-engagement");
+  const surfaceLabel = document.getElementById("surface-label");
+  const surfaceTitle = document.getElementById("surface-title");
+  const stateExplanation = document.getElementById("state-explanation");
 
   let apiBase = null;
   let token = null;
@@ -35,7 +38,6 @@
   }
 
   apiBase = trustedApiBase(configuredOrigin);
-  apiBaseLabel.textContent = apiBase || "not configured";
 
   function setStatus(message, state) {
     voteStatus.textContent = message;
@@ -61,16 +63,18 @@
     if (view.session.status === "ended") return "ended";
     if (view.session.status === "offline") return "offline";
     if (view.questCycle.status === "voting") return "voting";
+    if (view.questCycle.status === "selected") return "selected";
     if (view.questCycle.status === "active") return "active";
     if (["succeeded", "failed", "cancelled", "skipped", "expired"].includes(view.questCycle.status)) {
       return "result";
     }
+    if (view.questCycle.status === "cooldown") return "cooldown";
     return "waiting";
   }
 
   function voteCount(candidateId) {
     if (!view) return null;
-    const reveal = view.acceptedCandidateId !== null || ["active", "result"].includes(phase());
+    const reveal = view.acceptedCandidateId !== null || ["selected", "active", "result"].includes(phase());
     if (!reveal) return null;
     const tally = view.questCycle.voteTallies.find((item) => item.candidateId === candidateId);
     return tally ? tally.votes : 0;
@@ -79,10 +83,75 @@
   function visibleOptions() {
     if (!view) return [];
     const options = Array.isArray(view.questCycle.options) ? view.questCycle.options : [];
-    if (["active", "result"].includes(phase()) && view.questCycle.activeCandidateId) {
+    if (["selected", "active", "result"].includes(phase()) && view.questCycle.activeCandidateId) {
       return options.filter((option) => option.candidateId === view.questCycle.activeCandidateId);
     }
     return options;
+  }
+
+  function surfacePresentation() {
+    const currentPhase = phase();
+    const active = view && view.questCycle.activeCandidateId
+      ? view.questCycle.options.find(
+        (option) => option.candidateId === view.questCycle.activeCandidateId,
+      )
+      : null;
+    const result = view ? view.questCycle.result : null;
+    if (currentPhase === "voting") {
+      return {
+        label: "Audience vote",
+        title: "Vote now",
+        explanation: view && view.acceptedCandidateId
+          ? "Your vote is locked in. The server-supplied tallies are now visible."
+          : "Choose one of the three safe sidequests, review its details, then confirm your vote.",
+      };
+    }
+    if (currentPhase === "selected") {
+      return {
+        label: "Winning sidequest",
+        title: active ? active.title : "Winner selected",
+        explanation: "The audience winner is confirmed and is waiting to start.",
+      };
+    }
+    if (currentPhase === "active") {
+      return {
+        label: "Sidequest active",
+        title: active ? active.title : "Sidequest active",
+        explanation: "This is the same active sidequest now shown on the broadcast.",
+      };
+    }
+    if (currentPhase === "result") {
+      const resultTitles = {
+        succeeded: "Sidequest completed",
+        failed: "Sidequest attempt ended",
+        cancelled: "Sidequest cancelled",
+        skipped: "Sidequest skipped",
+        expired: "Sidequest expired",
+      };
+      return {
+        label: "Sidequest result",
+        title: result ? resultTitles[result.outcome] || "Sidequest result" : "Sidequest result",
+        explanation: "The official sidequest result and any awarded reward are shown below.",
+      };
+    }
+    if (currentPhase === "cooldown") {
+      return {
+        label: "ChatXPT viewer",
+        title: "Next vote soon",
+        explanation: "ChatXPT is waiting for another safe moment before opening the next vote.",
+      };
+    }
+    const titles = {
+      loading: "Loading sidequest",
+      offline: "Stream offline",
+      ended: "Stream ended",
+      waiting: "Waiting for sidequests",
+    };
+    return {
+      label: "ChatXPT viewer",
+      title: titles[currentPhase] || "Waiting for sidequests",
+      explanation: "Keep this panel open for the next audience sidequest.",
+    };
   }
 
   function renderCountdown() {
@@ -98,7 +167,11 @@
 
   function render() {
     const options = visibleOptions();
+    const presentation = surfacePresentation();
     const acceptedCandidateId = view ? view.acceptedCandidateId : null;
+    surfaceLabel.textContent = presentation.label;
+    surfaceTitle.textContent = presentation.title;
+    stateExplanation.textContent = presentation.explanation;
     if (acceptedCandidateId !== null) selectedCandidateId = acceptedCandidateId;
     const canVote = Boolean(
       view &&
@@ -111,8 +184,10 @@
     const canReact = Boolean(view && view.canReact && token && apiBase);
     communityHype.textContent = view ? String(view.communityHype) : "0";
     sessionPoints.textContent = view ? String(view.sessionPoints) : "0";
+    viewerEngagement.hidden = !view;
     sendHypeButton.disabled = !canReact || reactionPending;
     sendHypeButton.textContent = reactionPending ? "Sending hype…" : "Send hype";
+    submitButton.hidden = phase() !== "voting";
     submitButton.disabled =
       !canVote || pendingCandidateId !== null || selectedCandidateId === null;
     submitButton.textContent = acceptedCandidateId
@@ -143,15 +218,22 @@
         const active = view.questCycle.activeCandidateId === candidate.candidateId;
         const votes = voteCount(candidate.candidateId);
         const disabled = !canVote || pendingCandidateId !== null ? "disabled" : "";
-        const tally = votes === null ? "" : ` · ${votes} votes`;
+        const selectedState = selected ? ' aria-pressed="true"' : ' aria-pressed="false"';
+        const tally = votes === null ? "" : `<span>${votes} votes</span>`;
         return [
-          `<button class="quest-choice${selected ? " selected" : ""}${active ? " active" : ""}" data-candidate-id="${escapeHtml(candidate.candidateId)}" ${disabled} type="button">`,
+          `<button class="quest-choice${selected ? " selected" : ""}${active ? " active" : ""}" data-candidate-id="${escapeHtml(candidate.candidateId)}"${selectedState} ${disabled} type="button">`,
           `<b>${originalIndex + 1}</b>`,
-          "<span>",
+          '<span class="quest-copy">',
           `<strong>${escapeHtml(candidate.title)}</strong>`,
           `<small>${escapeHtml(candidate.instruction)}</small>`,
-          `<em>${escapeHtml(candidate.difficulty)} · ${candidate.durationSeconds}s · ${candidate.rewardPoints} pts${tally}</em>`,
-          active ? "<mark>Winning sidequest</mark>" : "",
+          '<em class="quest-meta">',
+          `<span>${escapeHtml(candidate.difficulty)}</span>`,
+          `<span>${candidate.durationSeconds}s</span>`,
+          `<span>${candidate.rewardPoints} pts</span>`,
+          tally,
+          selected && !active ? "<span>Selected</span>" : "",
+          active ? "<span>Winner</span>" : "",
+          "</em>",
           "</span>",
           "</button>",
         ].join("");

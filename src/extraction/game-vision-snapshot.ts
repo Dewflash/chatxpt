@@ -297,6 +297,12 @@ export function buildMultiGameGameplaySnapshot(input: {
         minecraftHudFactObservation(input.assessment.minecraftBasicStateFacts?.environment),
       ),
       group(
+        "minecraft-day-night",
+        "minecraft-day-night",
+        factProvenance,
+        minecraftHudFactObservation(input.assessment.minecraftBasicStateFacts?.dayNight),
+      ),
+      group(
         "minecraft-life",
         "minecraft-life",
         factProvenance,

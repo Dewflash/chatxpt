@@ -81,6 +81,7 @@ async function minecraftCandidateInput(): Promise<CandidateInput> {
         "minecraft-hunger-shanks",
         "minecraft-hotbar-visible",
         "minecraft-recent-damage",
+        "minecraft-day-night",
       ],
     },
     signals: [
@@ -112,6 +113,11 @@ async function minecraftCandidateInput(): Promise<CandidateInput> {
         signalId: "minecraft-recent-damage",
         kind: "minecraft-recent-damage",
         observation: { status: "known", value: true, provenance: { ...provenance, method: "minecraft-runtime-facts-v1" } },
+      },
+      {
+        signalId: "minecraft-day-night",
+        kind: "minecraft-day-night",
+        observation: { status: "known", value: "day", provenance: { ...provenance, method: "minecraft-daylight-temporal-v1" } },
       },
     ],
   });
@@ -433,12 +439,17 @@ describe("OpenAI-compatible candidate strategy", () => {
       value: true,
       sourceSignalIds: ["minecraft-recent-damage"],
     });
+    expect(context.minecraft.gameFacts.dayNight).toMatchObject({
+      status: "known",
+      value: "day",
+      sourceSignalIds: ["minecraft-day-night"],
+    });
     expect(context.minecraft.gameFacts.likelyDamageCause).toMatchObject({
       status: "unknown",
       value: null,
     });
     expect(context.minecraft.supportedFacts).toEqual(
-      expect.arrayContaining(["edition", "hudLayout", "healthHearts", "hungerShanks", "recentDamage"]),
+      expect.arrayContaining(["edition", "hudLayout", "healthHearts", "hungerShanks", "recentDamage", "dayNight"]),
     );
     expect(context.minecraft.unknownFacts).toEqual(
       expect.arrayContaining(["mode", "menuState", "likelyDamageCause", "visibleHostile"]),

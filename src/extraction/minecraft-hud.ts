@@ -10,6 +10,9 @@ export interface RegionVisualFeatures {
   readonly horizontalRepeatScore: number;
   readonly redPixelRatio: number;
   readonly greenPixelRatio: number;
+  readonly yellowPixelRatio: number;
+  readonly neutralPixelRatio: number;
+  readonly silverPixelRatio: number;
   readonly warmPixelRatio: number;
   readonly bluePixelRatio: number;
   readonly darkPixelRatio: number;
@@ -200,6 +203,9 @@ export function measureRegionVisualFeatures(
   let edgeComparisons = 0;
   let redPixels = 0;
   let greenPixels = 0;
+  let yellowPixels = 0;
+  let neutralPixels = 0;
+  let silverPixels = 0;
   let warmPixels = 0;
   let bluePixels = 0;
   let darkPixels = 0;
@@ -226,6 +232,32 @@ export function measureRegionVisualFeatures(
         pixel.green >= pixel.blue * 1.12
       ) {
         greenPixels += 1;
+      }
+      if (
+        pixel.alpha >= 96 &&
+        pixel.red >= 110 &&
+        pixel.green >= 90 &&
+        pixel.blue <= pixel.red * 0.78 &&
+        pixel.blue <= pixel.green * 0.82 &&
+        pixel.red <= pixel.green * 1.45
+      ) {
+        yellowPixels += 1;
+      }
+      if (
+        pixel.alpha >= 96 &&
+        Math.max(pixel.red, pixel.green, pixel.blue) - Math.min(pixel.red, pixel.green, pixel.blue) <= 18 &&
+        value >= 0.12 &&
+        value <= 0.82
+      ) {
+        neutralPixels += 1;
+      }
+      if (
+        pixel.alpha >= 96 &&
+        Math.max(pixel.red, pixel.green, pixel.blue) - Math.min(pixel.red, pixel.green, pixel.blue) <= 24 &&
+        value >= 0.36 &&
+        value <= 0.92
+      ) {
+        silverPixels += 1;
       }
       if (
         pixel.alpha >= 96 &&
@@ -277,6 +309,9 @@ export function measureRegionVisualFeatures(
     horizontalRepeatScore: horizontalRepeatScore(lumas, regionWidth, regionHeight),
     redPixelRatio: pixelCount === 0 ? 0 : redPixels / pixelCount,
     greenPixelRatio: pixelCount === 0 ? 0 : greenPixels / pixelCount,
+    yellowPixelRatio: pixelCount === 0 ? 0 : yellowPixels / pixelCount,
+    neutralPixelRatio: pixelCount === 0 ? 0 : neutralPixels / pixelCount,
+    silverPixelRatio: pixelCount === 0 ? 0 : silverPixels / pixelCount,
     warmPixelRatio: pixelCount === 0 ? 0 : warmPixels / pixelCount,
     bluePixelRatio: pixelCount === 0 ? 0 : bluePixels / pixelCount,
     darkPixelRatio: pixelCount === 0 ? 0 : darkPixels / pixelCount,
@@ -315,6 +350,7 @@ interface FastFeatureIntegral {
   readonly stride: number;
   readonly red: Uint32Array;
   readonly green: Uint32Array;
+  readonly silver: Uint32Array;
   readonly warm: Uint32Array;
   readonly blue: Uint32Array;
   readonly dark: Uint32Array;
@@ -326,6 +362,7 @@ interface FastRegionFeatures {
   readonly pixelCount: number;
   readonly redPixelRatio: number;
   readonly greenPixelRatio: number;
+  readonly silverPixelRatio: number;
   readonly warmPixelRatio: number;
   readonly bluePixelRatio: number;
   readonly darkPixelRatio: number;
@@ -369,6 +406,7 @@ function buildFastFeatureIntegral(frame: SampledPixelFrame): FastFeatureIntegral
   const length = stride * (frame.height + 1);
   const red = new Uint32Array(length);
   const green = new Uint32Array(length);
+  const silver = new Uint32Array(length);
   const warm = new Uint32Array(length);
   const blue = new Uint32Array(length);
   const dark = new Uint32Array(length);
@@ -378,6 +416,7 @@ function buildFastFeatureIntegral(frame: SampledPixelFrame): FastFeatureIntegral
   for (let y = 0; y < frame.height; y += 1) {
     let rowRed = 0;
     let rowGreen = 0;
+    let rowSilver = 0;
     let rowWarm = 0;
     let rowBlue = 0;
     let rowDark = 0;
@@ -398,6 +437,12 @@ function buildFastFeatureIntegral(frame: SampledPixelFrame): FastFeatureIntegral
         pixel.green >= 75 &&
         pixel.green >= pixel.red * 1.12 &&
         pixel.green >= pixel.blue * 1.12,
+      );
+      rowSilver += Number(
+        opaque &&
+        Math.max(pixel.red, pixel.green, pixel.blue) - Math.min(pixel.red, pixel.green, pixel.blue) <= 24 &&
+        luma >= 0.36 &&
+        luma <= 0.92,
       );
       rowWarm += Number(
         opaque &&
@@ -429,6 +474,7 @@ function buildFastFeatureIntegral(frame: SampledPixelFrame): FastFeatureIntegral
       const aboveIndex = index - stride;
       red[index] = red[aboveIndex] + rowRed;
       green[index] = green[aboveIndex] + rowGreen;
+      silver[index] = silver[aboveIndex] + rowSilver;
       warm[index] = warm[aboveIndex] + rowWarm;
       blue[index] = blue[aboveIndex] + rowBlue;
       dark[index] = dark[aboveIndex] + rowDark;
@@ -436,7 +482,7 @@ function buildFastFeatureIntegral(frame: SampledPixelFrame): FastFeatureIntegral
       edge[index] = edge[aboveIndex] + rowEdge;
     }
   }
-  return { stride, red, green, warm, blue, dark, bright, edge };
+  return { stride, red, green, silver, warm, blue, dark, bright, edge };
 }
 
 function integralCount(
@@ -463,6 +509,7 @@ function fastRegionFeatures(
     pixelCount,
     redPixelRatio: ratio(integral.red),
     greenPixelRatio: ratio(integral.green),
+    silverPixelRatio: ratio(integral.silver),
     warmPixelRatio: ratio(integral.warm),
     bluePixelRatio: ratio(integral.blue),
     darkPixelRatio: ratio(integral.dark),
@@ -475,6 +522,20 @@ function ramp(value: number, minimum: number, full: number): number {
   if (value <= minimum) return 0;
   if (value >= full) return 1;
   return (value - minimum) / (full - minimum);
+}
+
+function independentlySupportedVitalFacts(facts: MinecraftHudFacts): MinecraftHudFacts {
+  const pairKnown =
+    facts.healthHearts.status === "known" &&
+    facts.healthHearts.value !== null &&
+    facts.hungerShanks.status === "known" &&
+    facts.hungerShanks.value !== null;
+  if (!pairKnown) return UNKNOWN_HUD_FACTS;
+  return {
+    ...UNKNOWN_HUD_FACTS,
+    healthHearts: facts.healthHearts,
+    hungerShanks: facts.hungerShanks,
+  };
 }
 
 function fastSlotRegion(
@@ -609,6 +670,31 @@ function iconBandScore(input: {
   );
 }
 
+function iconBandFilledCoverage(input: {
+  readonly frame: SampledPixelFrame;
+  readonly integral: FastFeatureIntegral;
+  readonly region: NormalizedVisualRegion;
+  readonly colour: "health" | "hunger";
+}): number {
+  const band = fastRegionFeatures(input.frame, input.integral, input.region);
+  const healthFamily = healthColourFamily(band);
+  const ratios = Array.from({ length: 10 }, (_, slotIndex) => {
+    const slot = fastRegionFeatures(
+      input.frame,
+      input.integral,
+      fastSlotRegion(`minecraft-fill-coverage-slot-${slotIndex}`, input.region, slotIndex, 10),
+    );
+    return input.colour === "health"
+      ? slot[healthFamily]
+      : clampUnit(slot.redPixelRatio + slot.warmPixelRatio);
+  });
+  const strongest = [...ratios].sort((left, right) => right - left).slice(0, 5);
+  const reference = strongest[Math.floor(strongest.length / 2)] ?? 0;
+  if (reference < 0.012) return 0;
+  const threshold = Math.max(0.012, reference * 0.24);
+  return ratios.filter((ratio) => ratio >= threshold).length / 10;
+}
+
 function hotbarBandScore(input: {
   readonly frame: SampledPixelFrame;
   readonly integral: FastFeatureIntegral;
@@ -731,13 +817,47 @@ function airBandScore(input: {
   );
 }
 
+function armorBandScore(input: {
+  readonly frame: SampledPixelFrame;
+  readonly integral: FastFeatureIntegral;
+  readonly region: NormalizedVisualRegion;
+}): number {
+  const features = fastRegionFeatures(input.frame, input.integral, input.region);
+  const structure = slotStructureScore({
+    frame: input.frame,
+    integral: input.integral,
+    region: input.region,
+    slotCount: 10,
+  });
+  const slotSilver = Array.from({ length: 10 }, (_, slotIndex) =>
+    fastRegionFeatures(
+      input.frame,
+      input.integral,
+      fastSlotRegion(`minecraft-armor-slot-${slotIndex}`, input.region, slotIndex, 10),
+    ).silverPixelRatio,
+  );
+  const reference = Math.max(...slotSilver);
+  const visibleThreshold = Math.max(0.012, reference * 0.3);
+  const visibleSlots = reference < 0.018
+    ? 0
+    : slotSilver.filter((ratio) => ratio >= visibleThreshold).length;
+  const leftAligned = visibleSlots === 0 ? 0 : Number(slotSilver[0] >= visibleThreshold);
+  return clampUnit(
+    ramp(features.silverPixelRatio, 0.012, 0.13) * 0.42 +
+    ramp(features.edgeDensity, 0.035, 0.18) * 0.18 +
+    structure * 0.2 +
+    (visibleSlots / 10) * 0.12 +
+    leftAligned * 0.08,
+  );
+}
+
 function searchMinecraftHudLayout(
   frame: SampledPixelFrame,
   integral: FastFeatureIntegral,
   previous?: MinecraftHudFingerprint["locatedRegions"],
 ): MinecraftHudLayoutSearchResult {
   const aspectRatio = frame.width / frame.height;
-  const healthWidths = [0.055, 0.075, 0.095, 0.12, 0.135, 0.15, 0.165, 0.185, 0.205, 0.225];
+  const healthWidths = [0.055, 0.075, 0.095, 0.12, 0.135, 0.15, 0.16, 0.165, 0.185, 0.205, 0.225];
   const centers = [0.25, 0.33, 0.42, 0.5, 0.58, 0.67, 0.75];
   const bottoms = [0.64, 0.72, 0.78, 0.83, 0.87, 0.91, 0.95, 0.98, 0.995];
   const geometryModels = [
@@ -827,12 +947,12 @@ function searchMinecraftHudLayout(
         );
         const healthScore = iconBandScore({ frame, integral, region: healthRegion, colour: "health" });
         const hungerScore = iconBandScore({ frame, integral, region: hungerRegion, colour: "hunger" });
-        const hotbarScore = hotbarBandScore({ frame, integral, region: hotbarRegion });
-        const armorFeatures = fastRegionFeatures(frame, integral, armorRegion);
-        const armorScore = clampUnit(
-          ramp(armorFeatures.bluePixelRatio, 0.02, 0.13) * 0.7 +
-          ramp(armorFeatures.edgeDensity, 0.035, 0.18) * 0.3,
+        const maximumVitalFillCoverage = Math.max(
+          iconBandFilledCoverage({ frame, integral, region: healthRegion, colour: "health" }),
+          iconBandFilledCoverage({ frame, integral, region: hungerRegion, colour: "hunger" }),
         );
+        const hotbarScore = hotbarBandScore({ frame, integral, region: hotbarRegion });
+        const armorScore = armorBandScore({ frame, integral, region: armorRegion });
         const airScore = airBandScore({ frame, integral, region: airRegion });
         const weakestRequiredAnchor = Math.min(healthScore, hungerScore, hotbarScore);
         const slotResolution = Math.min(
@@ -848,11 +968,25 @@ function searchMinecraftHudLayout(
         // HUD when its visual evidence is otherwise comparable, while still
         // allowing genuinely small GUI scales to win on evidence.
         const completeBandPrior = ramp(healthWidth, 0.075, 0.15);
-        const evidenceScore = clampUnit(
+        const fullLayoutEvidence = clampUnit(
           (healthScore * 0.4 + hungerScore * 0.4 + hotbarScore * 0.2) *
           ramp(weakestRequiredAnchor, 0.28, 0.58) *
-          slotResolution,
+          slotResolution *
+          (0.55 + ramp(maximumVitalFillCoverage, 0.1, 0.6) * 0.45),
         );
+        // Health and hunger are a mirrored ten-slot pair and remain useful
+        // even when a window crop, transparent hotbar, or selected item makes
+        // the nine-slot hotbar anchor weak. Keep that paired colour/structure
+        // evidence in candidate selection; the full-layout status below still
+        // requires the hotbar independently.
+        const weakestVitalAnchor = Math.min(healthScore, hungerScore);
+        const vitalPairEvidence = clampUnit(
+          (healthScore * 0.5 + hungerScore * 0.5) *
+          ramp(weakestVitalAnchor, 0.32, 0.58) *
+          slotResolution *
+          ramp(maximumVitalFillCoverage, 0.1, 0.6),
+        );
+        const evidenceScore = Math.max(fullLayoutEvidence, vitalPairEvidence * 0.94);
         const previousPrior = previous === undefined
           ? 0
           : clampUnit(
@@ -889,7 +1023,248 @@ function searchMinecraftHudLayout(
   }
   }
   if (best === null) throw new Error("Minecraft HUD layout search produced no candidates");
-  return best;
+  return refineMinecraftHudLayout(frame, integral, best);
+}
+
+type HudPixelFamily = "health" | "hunger" | "armor";
+
+interface HorizontalColourRun {
+  readonly start: number;
+  readonly end: number;
+}
+
+function hudPixelMatches(
+  family: HudPixelFamily,
+  pixel: ReturnType<typeof rgbaAt>,
+): boolean {
+  if (pixel.alpha < 96) return false;
+  if (family === "health") {
+    return pixel.red >= 80 && pixel.green <= pixel.red * 0.5 && pixel.blue <= pixel.red * 0.5;
+  }
+  if (family === "hunger") {
+    return pixel.red >= 75 &&
+      pixel.green >= 35 &&
+      pixel.red >= pixel.green * 1.2 &&
+      pixel.green >= pixel.blue * 1.15;
+  }
+  const luma = normalizedLuma(pixel.red, pixel.green, pixel.blue, pixel.alpha);
+  return Math.max(pixel.red, pixel.green, pixel.blue) - Math.min(pixel.red, pixel.green, pixel.blue) <= 32 &&
+    luma >= 0.3 &&
+    luma <= 0.96;
+}
+
+function colourColumnRuns(
+  frame: SampledPixelFrame,
+  region: NormalizedVisualRegion,
+  family: HudPixelFamily,
+): readonly HorizontalColourRun[] {
+  const bounds = pixelBounds(frame, region);
+  const minimumPixels = Math.max(1, Math.floor((bounds.bottom - bounds.top) * 0.12));
+  const runs: HorizontalColourRun[] = [];
+  let start: number | null = null;
+  for (let x = bounds.left; x < bounds.right; x += 1) {
+    let matching = 0;
+    for (let y = bounds.top; y < bounds.bottom; y += 1) {
+      matching += Number(hudPixelMatches(family, rgbaAt(frame, x, y)));
+    }
+    if (matching >= minimumPixels) {
+      start ??= x;
+    } else if (start !== null) {
+      runs.push({ start, end: x - 1 });
+      start = null;
+    }
+  }
+  if (start !== null) runs.push({ start, end: bounds.right - 1 });
+  return runs;
+}
+
+function median(values: readonly number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2
+    : sorted[middle] ?? null;
+}
+
+function inferIconPitch(
+  runs: readonly HorizontalColourRun[],
+  candidatePitch: number,
+): number | null {
+  const centers = runs.map(({ start, end }) => (start + end) / 2);
+  const plausibleSteps = centers.slice(1).map((center, index) => center - (centers[index] ?? center))
+    .filter((step) => step >= candidatePitch * 0.65 && step <= candidatePitch * 1.45);
+  if (plausibleSteps.length < 2) return null;
+  const pitch = median(plausibleSteps);
+  if (pitch === null) return null;
+  const matchingSteps = plausibleSteps.filter((step) => Math.abs(step - pitch) <= pitch * 0.22);
+  return matchingSteps.length >= 2 ? pitch : null;
+}
+
+function bestVerticalOffset(input: {
+  readonly frame: SampledPixelFrame;
+  readonly regions: readonly NormalizedVisualRegion[];
+  readonly families: readonly HudPixelFamily[];
+}): number {
+  const reference = input.regions[0];
+  if (reference === undefined) return 0;
+  const heightPixels = Math.max(2, Math.round(reference.height * input.frame.height));
+  const maximumShift = Math.max(1, Math.round(heightPixels * 0.8));
+  let bestShift = 0;
+  let bestCount = -1;
+  for (let shift = -maximumShift; shift <= maximumShift; shift += 1) {
+    let count = 0;
+    input.regions.forEach((candidate, index) => {
+      const shifted = dynamicRegion(
+        `${candidate.regionId}-vertical-probe`,
+        candidate.x,
+        Math.max(0, Math.min(1 - candidate.height, candidate.y + shift / input.frame.height)),
+        candidate.width,
+        candidate.height,
+      );
+      const bounds = pixelBounds(input.frame, shifted);
+      for (let y = bounds.top; y < bounds.bottom; y += 1) {
+        for (let x = bounds.left; x < bounds.right; x += 1) {
+          count += Number(hudPixelMatches(input.families[index] ?? input.families[0] ?? "health", rgbaAt(input.frame, x, y)));
+        }
+      }
+    });
+    if (count > bestCount || (count === bestCount && Math.abs(shift) < Math.abs(bestShift))) {
+      bestCount = count;
+      bestShift = shift;
+    }
+  }
+  return bestShift / input.frame.height;
+}
+
+/**
+ * The coarse layout search intentionally spans many GUI scales. Once a
+ * repeated hunger cadence is visible, use its right-aligned vanilla geometry
+ * to remove the one-slot horizontal drift that otherwise turns 9 hunger into
+ * 8 and a half armor icon into a single point.
+ */
+function refineMinecraftHudLayout(
+  frame: SampledPixelFrame,
+  integral: FastFeatureIntegral,
+  layout: MinecraftHudLayoutSearchResult,
+): MinecraftHudLayoutSearchResult {
+  if (layout.hungerScore < 0.48) return layout;
+  // Do not perturb an already strong paired lock. The refinement exists for
+  // real resampled feeds where one coloured row is strong but the mirrored
+  // row is clipped by a fraction of an icon.
+  if (layout.healthScore >= 0.82 && layout.hungerScore >= 0.82) return layout;
+  const candidatePitch = layout.hungerRegion.width * frame.width / 10;
+  if (candidatePitch < 2) return layout;
+  const horizontalPadding = candidatePitch * 1.5 / frame.width;
+  const verticalPadding = layout.hungerRegion.height * 0.65;
+  const hungerProbe = dynamicRegion(
+    "minecraft-hunger-cadence-probe",
+    Math.max(0, layout.hungerRegion.x - horizontalPadding),
+    Math.max(0, layout.hungerRegion.y - verticalPadding),
+    Math.min(
+      1 - Math.max(0, layout.hungerRegion.x - horizontalPadding),
+      layout.hungerRegion.width + horizontalPadding * 2,
+    ),
+    Math.min(
+      1 - Math.max(0, layout.hungerRegion.y - verticalPadding),
+      layout.hungerRegion.height + verticalPadding * 2,
+    ),
+  );
+  const runs = colourColumnRuns(frame, hungerProbe, "hunger");
+  const pitch = inferIconPitch(runs, candidatePitch);
+  if (pitch === null) return layout;
+  const lastRun = runs.at(-1);
+  if (lastRun === undefined) return layout;
+  const candidateRight = (layout.hungerRegion.x + layout.hungerRegion.width) * frame.width;
+  const typicalFillWidth = median(
+    runs.map(({ start, end }) => end - start + 1).filter((width) => width >= pitch * 0.25),
+  ) ?? pitch * 0.5;
+  const outlinePadding = Math.max(
+    pitch * 0.15,
+    Math.min(pitch * 0.5, (pitch - typicalFillWidth) / 2 + 0.75),
+  );
+  const inferredRight = lastRun.end + 1 + outlinePadding;
+  if (Math.abs(inferredRight - candidateRight) > pitch * 1.75) return layout;
+
+  const rowWidth = pitch * 10 / frame.width;
+  const hotbarMultiplier = layout.hotbarRegion.width / layout.healthRegion.width;
+  const hotbarWidth = rowWidth * hotbarMultiplier;
+  const right = inferredRight / frame.width;
+  const hotbarX = right - hotbarWidth;
+  const hungerX = right - rowWidth;
+  if (hotbarX < 0 || right > 1 || hungerX < 0) return layout;
+
+  let healthRegion = dynamicRegion(
+    layout.healthRegion.regionId,
+    hotbarX,
+    layout.healthRegion.y,
+    rowWidth,
+    layout.healthRegion.height,
+  );
+  let hungerRegion = dynamicRegion(
+    layout.hungerRegion.regionId,
+    hungerX,
+    layout.hungerRegion.y,
+    rowWidth,
+    layout.hungerRegion.height,
+  );
+  const vitalOffset = bestVerticalOffset({
+    frame,
+    regions: [healthRegion, hungerRegion],
+    families: ["health", "hunger"],
+  });
+  healthRegion = dynamicRegion(
+    healthRegion.regionId,
+    healthRegion.x,
+    Math.max(0, Math.min(1 - healthRegion.height, healthRegion.y + vitalOffset)),
+    healthRegion.width,
+    healthRegion.height,
+  );
+  hungerRegion = dynamicRegion(
+    hungerRegion.regionId,
+    hungerRegion.x,
+    Math.max(0, Math.min(1 - hungerRegion.height, hungerRegion.y + vitalOffset)),
+    hungerRegion.width,
+    hungerRegion.height,
+  );
+  const armorRegion = dynamicRegion(
+    layout.armorRegion.regionId,
+    hotbarX,
+    layout.armorRegion.y + vitalOffset,
+    rowWidth,
+    layout.armorRegion.height,
+  );
+  const airRegion = dynamicRegion(
+    layout.airRegion.regionId,
+    hungerX,
+    armorRegion.y,
+    rowWidth,
+    layout.airRegion.height,
+  );
+  const hotbarRegion = dynamicRegion(
+    layout.hotbarRegion.regionId,
+    hotbarX,
+    layout.hotbarRegion.y,
+    hotbarWidth,
+    layout.hotbarRegion.height,
+  );
+  const healthScore = iconBandScore({ frame, integral, region: healthRegion, colour: "health" });
+  const hungerScore = iconBandScore({ frame, integral, region: hungerRegion, colour: "hunger" });
+  if (healthScore < 0.5 || hungerScore < 0.48) return layout;
+  return {
+    ...layout,
+    score: Math.max(layout.score, Math.min(healthScore, hungerScore) * 0.72),
+    healthScore,
+    hungerScore,
+    armorScore: armorBandScore({ frame, integral, region: armorRegion }),
+    airScore: airBandScore({ frame, integral, region: airRegion }),
+    hotbarScore: hotbarBandScore({ frame, integral, region: hotbarRegion }),
+    healthRegion,
+    hungerRegion,
+    armorRegion,
+    airRegion,
+    hotbarRegion,
+  };
 }
 
 function estimateTenIconValue(input: {
@@ -960,21 +1335,68 @@ function estimateTenIconValue(input: {
   );
 }
 
-function estimateArmorValue(features: RegionVisualFeatures, confidence: number): MinecraftHudFact<number> {
-  const armourPixelRatio = Math.max(features.bluePixelRatio, features.brightPixelRatio * 0.75);
-  if (confidence < 0.68 || armourPixelRatio < 0.05) {
-    return unknownHudFact(
-      "The armor band did not meet the confidence threshold.",
-      confidence,
-      [features.regionId],
+function estimateArmorValue(input: {
+  readonly frame: SampledPixelFrame;
+  readonly region: NormalizedVisualRegion;
+  readonly confidence: number;
+  readonly confirmedVitalsConfidence: number;
+}): MinecraftHudFact<number> {
+  const ratios = Array.from({ length: 10 }, (_, slotIndex) =>
+    measureRegionVisualFeatures(
+      input.frame,
+      fastSlotRegion(`${input.region.regionId}-slot-${slotIndex + 1}`, input.region, slotIndex, 10),
+    ).silverPixelRatio,
+  );
+  const reference = Math.max(...ratios);
+  if (reference < 0.018 && input.confirmedVitalsConfidence >= 0.65) {
+    return knownHudFact(
+      0,
+      input.confirmedVitalsConfidence,
+      "The confirmed Minecraft health and hunger rows are visible without any armor icons above the hearts.",
+      [input.region.regionId],
     );
   }
-  const calibratedFullBandRatio = 0.22;
+  if (
+    (input.confidence < 0.48 && input.confirmedVitalsConfidence < 0.65) ||
+    reference < 0.018
+  ) {
+    return unknownHudFact(
+      "No reliable silver Minecraft armor icons were detected above the heart row.",
+      input.confidence,
+      [input.region.regionId],
+    );
+  }
+  const fullThreshold = Math.max(0.015, reference * 0.66);
+  const halfThreshold = Math.max(0.008, reference * 0.24);
+  let value = 0;
+  for (const ratio of ratios) {
+    if (ratio >= fullThreshold) {
+      value += 1;
+      continue;
+    }
+    if (ratio >= halfThreshold) value += 0.5;
+    break;
+  }
+  if (value === 0) {
+    if (input.confirmedVitalsConfidence >= 0.65) {
+      return knownHudFact(
+        0,
+        input.confirmedVitalsConfidence,
+        "The confirmed Minecraft HUD does not contain a left-aligned armor icon row.",
+        [input.region.regionId],
+      );
+    }
+    return unknownHudFact(
+      "Silver pixels were present above the hearts, but they did not form a left-aligned Minecraft armor row.",
+      input.confidence,
+      [input.region.regionId],
+    );
+  }
   return knownHudFact(
-    Math.max(0, Math.min(10, Math.round((armourPixelRatio / calibratedFullBandRatio) * 10))),
-    Math.max(confidence, 0.7 + 0.3 * Math.min(1, armourPixelRatio / calibratedFullBandRatio)),
-    "A repeated Minecraft-like armor band was detected above the lower HUD.",
-    [features.regionId],
+    Math.max(0, Math.min(10, value)),
+    Math.max(input.confidence, 0.72 + 0.28 * Math.min(1, reference / 0.18)),
+    "Ten Minecraft armor icons were measured as one unit for a full icon and half a unit for a half icon.",
+    [input.region.regionId],
   );
 }
 
@@ -1148,6 +1570,7 @@ function minecraftHudFacts(input: {
   readonly hotbar: RegionVisualFeatures;
   readonly hotbarRegion: NormalizedVisualRegion;
   readonly armor: RegionVisualFeatures;
+  readonly armorRegion: NormalizedVisualRegion;
   readonly airRegion: NormalizedVisualRegion;
   readonly healthScore: number;
   readonly hungerScore: number;
@@ -1172,13 +1595,15 @@ function minecraftHudFacts(input: {
     region: input.airRegion,
     confidence: input.airScore,
   });
-  const armor = air.submerged.status === "known" && air.submerged.value === true
-    ? unknownHudFact<number>(
-        "Armor is withheld while the blue underwater scene can contaminate the armor band.",
-        input.armorScore,
-        [input.armor.regionId],
-      )
-    : estimateArmorValue(input.armor, input.armorScore);
+  const armor = estimateArmorValue({
+    frame: input.frame,
+    region: input.armorRegion,
+    confidence: input.armorScore,
+    confirmedVitalsConfidence:
+      health.status === "known" && hunger.status === "known"
+        ? Math.min(health.confidence, hunger.confidence)
+        : 0,
+  });
   const hotbar =
     input.hotbarScore >= 0.65
       ? knownHudFact(
@@ -1264,6 +1689,7 @@ export function fingerprintMinecraftHud(
     hunger: searchedHunger,
     hungerRegion: layout.hungerRegion,
     armor: searchedArmor,
+    armorRegion: layout.armorRegion,
     airRegion: layout.airRegion,
     hotbar: searchedHotbar,
     hotbarRegion: layout.hotbarRegion,
@@ -1299,6 +1725,10 @@ export function fingerprintMinecraftHud(
     layout.healthScore >= 0.54 &&
     layout.hungerScore >= 0.5 &&
     layout.hotbarScore >= 0.5;
+  const independentlySupportedFacts = independentlySupportedVitalFacts(facts);
+  const independentVitalsKnown =
+    independentlySupportedFacts.healthHearts.status === "known" &&
+    independentlySupportedFacts.hungerShanks.status === "known";
 
   if (confidence >= 0.62 && requiredLayoutAnchors && vanillaGeometry) {
     return {
@@ -1353,13 +1783,17 @@ export function fingerprintMinecraftHud(
     confidence: clampUnit(1 - confidence),
     detectedAnchors,
     missingAnchors,
-    supportedSignals: profile.universalSignals,
+    supportedSignals: independentVitalsKnown
+      ? [...profile.universalSignals, "minecraft-health-hearts", "minecraft-hunger-shanks"]
+      : profile.universalSignals,
     reasons: [
       "No scale-matched health, hunger, and hotbar layout crossed the confidence boundary.",
-      "Universal motion analysis remains available; calibrated health and hunger facts are unknown.",
+      independentVitalsKnown
+        ? "The paired ten-slot health and hunger colour bands remain candidates for temporal confirmation."
+        : "Universal motion analysis remains available; calibrated health and hunger facts are unknown.",
     ],
     features: [...features, ...searchedFeatures],
-    facts: UNKNOWN_HUD_FACTS,
+    facts: independentlySupportedFacts,
     locatedRegions,
     anchorScores,
   };

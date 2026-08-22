@@ -14,17 +14,26 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  desktopProtocolClientAction,
+  isPackagedDesktopRuntime,
   normalizeDirectorUrl,
   normalizePreferences,
   parseDesktopLinkUrl,
   redactDirectorUrl,
+  migrateLegacyPreferences,
+  isDesktopDirectorOpenUrl,
 } from "./link.mjs";
 
 const runtimeDirectory = path.dirname(fileURLToPath(import.meta.url));
+const packagedDesktopRuntime = isPackagedDesktopRuntime({
+  electronPackaged: app.isPackaged,
+  platform: process.platform,
+  runtimeDirectory,
+});
 const smokeTest = process.argv.includes("--smoke-test");
 const smokeUserDataPath = path.join(tmpdir(), `chatxpt-live-director-smoke-${process.pid}`);
 const defaultStudioOrigin = process.env.CHATXPT_STUDIO_ORIGIN ?? "http://localhost:3000";
-const SETTINGS_VERSION = 1;
+const SETTINGS_VERSION = 2;
 const SETTINGS_FILENAME = "live-director-settings.json";
 const SHOW_HIDE_SHORTCUT = "CommandOrControl+Shift+H";
 const CLICK_THROUGH_SHORTCUT = "CommandOrControl+Shift+L";
@@ -43,6 +52,9 @@ let pendingDesktopLink = process.argv.find((argument) => argument.startsWith("ch
 let shortcutsRegistered = false;
 let quitSaveStarted = false;
 let quitReady = false;
+let settingsMigrationNeeded = false;
+let windowMode = "director";
+let protocolClientResult = { action: "none", succeeded: true };
 
 function isLoopbackUrl(input) {
   try {
@@ -99,7 +111,7 @@ function publicState() {
     alwaysOnTop: preferences.alwaysOnTop,
     allWorkspaces: preferences.allWorkspaces,
     autoLaunch: preferences.autoLaunch,
-    autoLaunchSupported: app.isPackaged,
+    autoLaunchSupported: packagedDesktopRuntime,
     opacity: preferences.opacity,
     clickThrough,
     visible: mainWindow?.isVisible() ?? false,
@@ -113,8 +125,9 @@ function publicState() {
 async function loadSettings() {
   try {
     const parsed = JSON.parse(await readFile(settingsPath(), "utf8"));
-    if (parsed.version !== SETTINGS_VERSION) return;
-    preferences = normalizePreferences(parsed.preferences);
+    if (parsed.version !== 1 && parsed.version !== SETTINGS_VERSION) return;
+    preferences = migrateLegacyPreferences(parsed.preferences, parsed.version);
+    settingsMigrationNeeded = parsed.version !== SETTINGS_VERSION;
     if (typeof parsed.encryptedDirectorUrl === "string" && safeStorage.isEncryptionAvailable()) {
       const decrypted = safeStorage.decryptString(Buffer.from(parsed.encryptedDirectorUrl, "base64"));
       directorUrl = normalizeDirectorUrl(decrypted);
@@ -127,7 +140,7 @@ async function loadSettings() {
 }
 
 async function saveSettings() {
-  const bounds = mainWindow && !mainWindow.isDestroyed()
+  const bounds = mainWindow && !mainWindow.isDestroyed() && windowMode === "director"
     ? mainWindow.getBounds()
     : preferences.bounds;
   preferences = normalizePreferences({ ...preferences, bounds });
@@ -198,9 +211,9 @@ function setOpacity(value) {
 }
 
 function setAutoLaunch(enabled) {
-  const autoLaunch = app.isPackaged && enabled === true;
+  const autoLaunch = packagedDesktopRuntime && enabled === true;
   preferences = normalizePreferences({ ...preferences, autoLaunch });
-  if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: autoLaunch, openAsHidden: false });
+  if (packagedDesktopRuntime) app.setLoginItemSettings({ openAtLogin: autoLaunch, openAsHidden: false });
   scheduleSettingsSave();
   rebuildMenu();
   return publicState();
@@ -257,23 +270,50 @@ function requireSetupRenderer(event) {
 
 async function loadSetup(error = lastLoadError) {
   if (mainWindow === null || mainWindow.isDestroyed()) return;
+  if (windowMode === "director") {
+    preferences = normalizePreferences({ ...preferences, bounds: mainWindow.getBounds() });
+  }
+  windowMode = "setup";
+  mainWindow.setMinimumSize(320, 420);
+  const current = mainWindow.getBounds();
+  mainWindow.setBounds({
+    ...current,
+    width: Math.max(current.width, 420),
+    height: Math.max(current.height, 700),
+  });
   lastLoadError = error;
   await mainWindow.loadFile(path.join(runtimeDirectory, "setup.html"));
   mainWindow.show();
   mainWindow.focus();
 }
 
-async function loadDirector() {
+function revealDirectorWindow(activate) {
+  if (mainWindow === null || mainWindow.isDestroyed()) return;
+  if (process.platform === "darwin" && app.isHidden()) app.show();
+  if (clickThrough) {
+    mainWindow.showInactive();
+    return;
+  }
+  mainWindow.show();
+  if (!activate) return;
+  if (process.platform === "darwin") app.focus({ steal: true });
+  else app.focus();
+  mainWindow.focus();
+}
+
+async function loadDirector({ activate = false } = {}) {
   if (mainWindow === null || mainWindow.isDestroyed()) return publicState();
   if (directorUrl === null) {
     await loadSetup(null);
     return publicState();
   }
   try {
+    windowMode = "director";
+    mainWindow.setMinimumSize(320, 200);
+    mainWindow.setBounds(preferences.bounds);
     await mainWindow.loadURL(directorNavigationUrl());
     lastLoadError = null;
-    if (clickThrough) mainWindow.showInactive();
-    else mainWindow.show();
+    revealDirectorWindow(activate);
   } catch {
     await loadSetup("ChatXPT is not reachable yet. Start the app, then retry this linked Live Director.");
   }
@@ -284,12 +324,15 @@ async function saveAndLoadDirector(input) {
   directorUrl = normalizeDirectorUrl(input);
   lastLoadError = null;
   await saveSettings();
-  await loadDirector();
+  await loadDirector({ activate: true });
   return publicState();
 }
 
 async function handleDesktopLink(input) {
   try {
+    if (isDesktopDirectorOpenUrl(input)) {
+      return await loadDirector({ activate: true });
+    }
     return await saveAndLoadDirector(parseDesktopLinkUrl(input));
   } catch {
     await loadSetup("That ChatXPT desktop link is invalid or incomplete. Create a new private link in Studio.");
@@ -364,7 +407,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     ...preferences.bounds,
     minWidth: 320,
-    minHeight: 420,
+    minHeight: 200,
     maxWidth: 1600,
     maxHeight: 1400,
     show: false,
@@ -375,12 +418,12 @@ function createWindow() {
     backgroundColor: "#09070e",
     title: "ChatXPT Live Director",
     webPreferences: {
-      preload: path.join(runtimeDirectory, "preload.mjs"),
+      preload: path.join(runtimeDirectory, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
       webSecurity: true,
-      devTools: !app.isPackaged,
+      devTools: !packagedDesktopRuntime,
     },
   });
 
@@ -479,11 +522,21 @@ function registerShortcuts() {
   shortcutsRegistered = visibilityRegistered && clickThroughRegistered;
 }
 
-function registerProtocolClient() {
-  if (process.defaultApp) {
-    return app.setAsDefaultProtocolClient("chatxpt", process.execPath, [fileURLToPath(import.meta.url)]);
+function configureProtocolClient() {
+  const action = desktopProtocolClientAction({
+    isPackaged: packagedDesktopRuntime,
+    platform: process.platform,
+    isDefaultClient: !packagedDesktopRuntime
+      && process.platform === "darwin"
+      && app.isDefaultProtocolClient("chatxpt"),
+  });
+  if (action === "register-packaged-client") {
+    return { action, succeeded: app.setAsDefaultProtocolClient("chatxpt") };
   }
-  return app.setAsDefaultProtocolClient("chatxpt");
+  if (action === "remove-development-client") {
+    return { action, succeeded: app.removeAsDefaultProtocolClient("chatxpt") };
+  }
+  return { action, succeeded: true };
 }
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
@@ -513,11 +566,15 @@ if (!hasSingleInstanceLock) {
   });
 
   void app.whenReady().then(async () => {
-    registerProtocolClient();
+    protocolClientResult = configureProtocolClient();
     registerIpc();
     session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
     await loadSettings();
     createWindow();
+    if (settingsMigrationNeeded) {
+      settingsMigrationNeeded = false;
+      await saveSettings();
+    }
     registerShortcuts();
     rebuildMenu();
     if (pendingDesktopLink !== null) {
@@ -529,12 +586,16 @@ if (!hasSingleInstanceLock) {
     }
 
     if (smokeTest) {
+      const preloadBridge = await mainWindow?.webContents.executeJavaScript(
+        "Boolean(window.chatxptDesktop && typeof window.chatxptDesktop.link === 'function')",
+      ) ?? false;
       const clickThroughToggled = toggleClickThrough().clickThrough;
       toggleClickThrough();
       const hiddenToggled = toggleVisibility().visible === false;
       toggleVisibility();
       process.stdout.write(`${JSON.stringify({
-        ok: true,
+        ok: preloadBridge,
+        preloadBridge,
         windowCreated: mainWindow !== null,
         visible: mainWindow?.isVisible() ?? false,
         alwaysOnTop: mainWindow?.isAlwaysOnTop() ?? false,
@@ -542,8 +603,10 @@ if (!hasSingleInstanceLock) {
         hiddenToggled,
         linked: directorUrl !== null,
         secureStorage: safeStorage.isEncryptionAvailable(),
+        protocolClientAction: protocolClientResult.action,
+        protocolClientSucceeded: protocolClientResult.succeeded,
       })}\n`);
-      setTimeout(() => app.quit(), 300);
+      setTimeout(() => app.exit(preloadBridge ? 0 : 1), 300);
     }
   });
 

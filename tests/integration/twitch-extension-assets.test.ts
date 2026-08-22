@@ -65,6 +65,9 @@ describe("Twitch Extension upload package", () => {
     const css = readAsset("assets/extension.css");
 
     expect(css).toContain(".shell");
+    expect(css).toContain(".broadcast-card");
+    expect(css).toContain(".state-explainer");
+    expect(css).toContain(".quest-meta");
     expect(css).not.toMatch(/@import/i);
     expect(css).not.toMatch(/url\(/i);
     expect(css).not.toMatch(/https?:\/\//i);
@@ -86,6 +89,8 @@ describe("Twitch Extension upload package", () => {
     expect(viewerJs).toContain("/api/twitch/extension/viewer");
     expect(viewerJs).toContain("/api/twitch/extension/commands");
     expect(viewerJs).toContain("authorization: `Bearer ${token}`");
+    expect(viewerJs).toContain('label: "Audience vote"');
+    expect(viewerJs).toContain('title: "Vote now"');
     expect(viewerJs).not.toContain("/api/demo-participation");
     expect(viewerJs).not.toContain("localStorage");
     expect(viewerJs).not.toContain("voterKey");
@@ -98,7 +103,9 @@ describe("Twitch Extension upload package", () => {
     expect(broadcasterJs).toContain('type: "streamer.session-override"');
     expect(broadcasterJs).toContain("Apply for this stream");
     expect(broadcasterJs).not.toContain("remains unavailable until the canonical override contract lands");
-    expect(combinedHtml).toContain("Vote for the sidequest");
+    expect(combinedHtml).toContain("Audience vote");
+    expect(combinedHtml).toContain("What this means");
+    expect(combinedHtml).not.toContain("Backend:");
     expect(combinedHtml).not.toContain("Role 1");
     expect(combinedHtml).not.toContain("Role 4");
     expect(combinedHtml).not.toContain("Role 5");

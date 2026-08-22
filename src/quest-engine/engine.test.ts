@@ -452,6 +452,76 @@ describe("DefaultQuestEngine", () => {
     ]);
   });
 
+  it("starts the streamer-selected quest directly in manual mode without viewer voting", () => {
+    const proposed = questCycleStateSchema.parse({
+      ...role3FixtureIdleState,
+      status: "proposed",
+      options: role3FixtureCandidateBatch.candidates,
+      availableStreamerActions: ["approve", "reject", "skip", "emergency-pause"],
+    });
+    const selected = role3FixtureCandidateBatch.candidates[1];
+    const manualProfile = streamerProfileSchema.parse({
+      ...voteCloseProfile,
+      voting: {
+        ...voteCloseProfile.voting,
+        winnerActivationMode: "streamer-approval",
+      },
+    });
+    const result = decision(new DefaultQuestEngine().decide({
+      currentState: proposed,
+      command: role3StreamerCommand("approve", { candidateId: selected.candidateId }),
+      candidateBatch: null,
+      profile: manualProfile,
+      now: ROLE_3_FIXTURE_TIME + 1_000,
+    }));
+
+    expect(result.nextState).toMatchObject({
+      status: "active",
+      activeCandidateId: selected.candidateId,
+      voteTallies: [],
+      startsAt: ROLE_3_FIXTURE_TIME + 1_000,
+      endsAt: ROLE_3_FIXTURE_TIME + 1_000 + selected.durationSeconds * 1_000,
+    });
+    expect(result.events.map((entry) => entry.eventType)).toEqual([
+      "quest-cycle.streamer-selected",
+      "quest-cycle.activated",
+    ]);
+    expect(result.events).not.toContainEqual(
+      expect.objectContaining({ eventType: "quest-cycle.voting-started" }),
+    );
+  });
+
+  it("requires a candidate only for manual mode", () => {
+    const proposed = questCycleStateSchema.parse({
+      ...role3FixtureIdleState,
+      status: "proposed",
+      options: role3FixtureCandidateBatch.candidates,
+      availableStreamerActions: ["approve", "reject", "skip", "emergency-pause"],
+    });
+    const manualProfile = streamerProfileSchema.parse({
+      ...voteCloseProfile,
+      voting: {
+        ...voteCloseProfile.voting,
+        winnerActivationMode: "streamer-approval",
+      },
+    });
+
+    expect(new DefaultQuestEngine().decide({
+      currentState: proposed,
+      command: role3StreamerCommand("approve", { candidateId: null }),
+      candidateBatch: null,
+      profile: manualProfile,
+      now: ROLE_3_FIXTURE_TIME + 1_000,
+    })).toMatchObject({ ok: false, error: { code: "validation" } });
+    expect(decision(new DefaultQuestEngine().decide({
+      currentState: proposed,
+      command: role3StreamerCommand("approve", { candidateId: null }),
+      candidateBatch: null,
+      profile: voteCloseProfile,
+      now: ROLE_3_FIXTURE_TIME + 1_000,
+    })).nextState.status).toBe("voting");
+  });
+
   it("rejects votes at or after the authoritative voting deadline", () => {
     const voting = questCycleStateSchema.parse({
       ...role3FixtureIdleState,

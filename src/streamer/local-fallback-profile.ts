@@ -4,6 +4,7 @@ import {
   createDefaultStreamerProfile,
   identifierSchema,
   streamPresetSchema,
+  streamerDesktopDirectorPreferencesSchema,
   streamerProfileSchema,
   streamerRewardPreferencesSchema,
   streamerVotingPreferencesSchema,
@@ -31,6 +32,7 @@ const editableProfileDefaultsSchema = z
     keywordWatchlist: z.array(z.string().trim().min(1).max(80)).max(32),
     streamPresets: z.array(streamPresetSchema).min(1).max(24),
     selectedPresetId: identifierSchema.nullable(),
+    desktopDirector: streamerDesktopDirectorPreferencesSchema,
     voting: streamerVotingPreferencesSchema,
     rewards: streamerRewardPreferencesSchema,
   })

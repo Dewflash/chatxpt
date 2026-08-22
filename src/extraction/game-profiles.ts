@@ -120,6 +120,7 @@ export const minecraftJavaGameProfile = gameCalibrationProfileSchema.parse({
     "minecraft-likely-damage-cause",
     "minecraft-visible-hostile",
     "minecraft-biome-environment",
+    "minecraft-day-night",
   ],
   regions: [
     { regionId: "minecraft-health", x: 0.3, y: 0.79, width: 0.2, height: 0.1, purpose: "hud-anchor" },

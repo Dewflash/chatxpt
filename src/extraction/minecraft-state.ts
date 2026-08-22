@@ -89,6 +89,7 @@ export const minecraftGameFactsSchema = z
     healthTrend: minecraftFactSchema,
     screen: minecraftFactSchema,
     environment: minecraftFactSchema,
+    dayNight: minecraftFactSchema,
     life: minecraftFactSchema,
   })
   .strict();

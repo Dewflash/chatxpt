@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { detectMinecraftMenuState } from "./minecraft-menu";
+import {
+  detectMinecraftGameplayResumeTransition,
+  detectMinecraftMenuState,
+  detectMinecraftPauseTransition,
+} from "./minecraft-menu";
 import type { SampledPixelFrame } from "./visual-measurements";
 
 const WIDTH = 96;
@@ -83,6 +87,37 @@ function highDetailPauseFrame(): SampledPixelFrame {
   return frame;
 }
 
+function brightInventoryWithLowerGridFrame(): SampledPixelFrame {
+  const frame = frameFromPixel(() => [35, 42, 38]);
+  paintBox(frame, { x: 0.24, y: 0.16, width: 0.52, height: 0.58 }, (x, y) => {
+    if (x % 6 === 0 || y % 6 === 0) return [235, 235, 235];
+    return (x + y) % 3 === 0 ? [170, 170, 170] : [32, 32, 32];
+  });
+  paintBox(frame, { x: 0.2, y: 0.68, width: 0.6, height: 0.22 }, (x, y) =>
+    x % 6 === 0 || y % 5 === 0 ? [205, 205, 205] : [30, 30, 30],
+  );
+  return frame;
+}
+
+function hudVisiblePauseFrame(): SampledPixelFrame {
+  const frame = frameFromPixel((x, y) => [22 + (x + y) % 8, 42 + (x * 3 + y) % 12, 24]);
+  const drawButton = (box: { readonly x: number; readonly y: number; readonly width: number; readonly height: number }) => {
+    paintBox(frame, box, (x, y) => {
+      if (x <= 1 || y <= 1) return [25, 25, 25];
+      if (y === 2 || x % 17 === 0) return [190, 190, 190];
+      return [92, 92, 92];
+    });
+  };
+  drawButton({ x: 0.3, y: 0.21, width: 0.4, height: 0.08 });
+  drawButton({ x: 0.3, y: 0.34, width: 0.4, height: 0.08 });
+  drawButton({ x: 0.3, y: 0.47, width: 0.4, height: 0.08 });
+  paintBox(frame, { x: 0.2, y: 0.68, width: 0.6, height: 0.22 }, (x, y) => {
+    const value = (x * 37 + y * 53) % 220;
+    return [value + 20, (value * 2) % 230, (value * 3) % 230];
+  });
+  return frame;
+}
+
 function deathFrame(): SampledPixelFrame {
   const frame = frameFromPixel((x, y) => {
     const red = 80 + ((x + y) % 30);
@@ -98,12 +133,30 @@ function deathFrame(): SampledPixelFrame {
   return frame;
 }
 
+function uniformlyDimmed(frame: SampledPixelFrame, factor: number): SampledPixelFrame {
+  const rgba = new Uint8ClampedArray(frame.rgba);
+  for (let offset = 0; offset < rgba.length; offset += 4) {
+    rgba[offset] = Math.round(rgba[offset] * factor);
+    rgba[offset + 1] = Math.round(rgba[offset + 1] * factor);
+    rgba[offset + 2] = Math.round(rgba[offset + 2] * factor);
+  }
+  return { width: frame.width, height: frame.height, rgba };
+}
+
 describe("Minecraft menu-state detector", () => {
   it("detects a generic container without inventing its exact inventory/crafting/furnace subtype", () => {
     expect(detectMinecraftMenuState(inventoryFrame())).toMatchObject({
       status: "known",
       value: "container",
       reason: expect.stringContaining("exact inventory, crafting, or furnace subtype remains unknown"),
+    });
+  });
+
+  it("does not mistake a bright inventory and its lower slot grid for pause buttons", () => {
+    const frame = brightInventoryWithLowerGridFrame();
+    expect(detectMinecraftMenuState(frame)).toMatchObject({
+      status: "known",
+      value: "container",
     });
   });
 
@@ -126,6 +179,35 @@ describe("Minecraft menu-state detector", () => {
       status: "known",
       value: "pause",
     });
+  });
+
+  it("detects the centered pause button stack even when the lower HUD remains visible", () => {
+    const frame = hudVisiblePauseFrame();
+    expect(detectMinecraftMenuState(frame)).toMatchObject({
+      status: "known",
+      value: "pause",
+    });
+  });
+
+  it("does not treat ordinary uniform scene darkening as a pause transition", () => {
+    const gameplay = frameFromPixel((x, y) => {
+      const red = 35 + ((x * 17 + y * 29) % 170);
+      const green = 45 + ((x * 31 + y * 13) % 160);
+      const blue = 30 + ((x * 11 + y * 23) % 130);
+      return [red, green, blue];
+    });
+    const paused = uniformlyDimmed(gameplay, 0.58);
+
+    expect(detectMinecraftPauseTransition(gameplay, paused)).toMatchObject({ status: "unknown" });
+    expect(detectMinecraftGameplayResumeTransition(paused, gameplay)).toBe(true);
+  });
+
+  it("does not call ordinary scene motion a uniform pause transition", () => {
+    const previous = frameFromPixel((x, y) => [40 + x, 35 + y, 55 + ((x + y) % 20)]);
+    const current = frameFromPixel((x, y) => [55 + ((x * 3) % 120), 30 + ((y * 5) % 150), 40]);
+
+    expect(detectMinecraftPauseTransition(previous, current)).toMatchObject({ status: "unknown" });
+    expect(detectMinecraftGameplayResumeTransition(previous, current)).toBe(false);
   });
 
   it("detects the red-tinted death title and respawn controls", () => {

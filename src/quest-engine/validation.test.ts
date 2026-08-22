@@ -441,6 +441,67 @@ describe("DefaultCandidateValidator", () => {
     });
   });
 
+  it("requires fresh day/night evidence for a current Minecraft time-of-day claim", () => {
+    const candidate = changedCandidate(role3FixtureCandidateBatch.candidates[0], {
+      candidateId: "minecraft-night-specific-candidate",
+      title: "Night Route",
+      instruction: "Travel only at night for the next 30 seconds.",
+      rationale: "This claims the current Minecraft time of day.",
+      sourceSignalIds: [],
+    });
+    const minecraftProfile = streamerProfileSchema.parse({
+      ...profile,
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    });
+    const withoutEvidence = new DefaultCandidateValidator().validate(candidate, {
+      intelligence: intelligence(),
+      profile: minecraftProfile,
+      currentState: role3FixtureIdleState,
+      recentQuests: [],
+      acceptedCandidates: [],
+      now: ROLE_3_FIXTURE_TIME,
+    });
+    const daylightSignal = {
+      signalId: "known-minecraft-night",
+      kind: "minecraft-day-night",
+      observation: {
+        status: "known" as const,
+        value: "night",
+        provenance: {
+          source: "test-fixture" as const,
+          method: "minecraft-daylight-temporal-v1",
+          confidence: 0.9,
+          observedAt: ROLE_3_FIXTURE_TIME,
+          receivedAt: ROLE_3_FIXTURE_TIME,
+          evidenceClass: "fixture" as const,
+        },
+      },
+    };
+    const withEvidence = new DefaultCandidateValidator().validate(
+      changedCandidate(candidate, { sourceSignalIds: [daylightSignal.signalId] }),
+      {
+        intelligence: intelligence([daylightSignal]),
+        profile: minecraftProfile,
+        currentState: role3FixtureIdleState,
+        recentQuests: [],
+        acceptedCandidates: [],
+        now: ROLE_3_FIXTURE_TIME,
+      },
+    );
+
+    expect(withoutEvidence).toMatchObject({
+      accepted: false,
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: "unknown-dependent",
+          evidence: expect.arrayContaining(["minecraft-day-night"]),
+        }),
+      ]),
+    });
+    expect(withEvidence.accepted).toBe(true);
+  });
+
   it("accepts a fresh known audience signal as candidate citation evidence", () => {
     const audienceSignal = {
       signalId: "known-audience-hype",

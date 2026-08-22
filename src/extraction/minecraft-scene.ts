@@ -12,6 +12,8 @@ export interface MinecraftSceneFacts {
   readonly damageCauseHint: MinecraftHudFact<"mob" | "fire" | "drowning" | "lava">;
 }
 
+export type MinecraftSceneEnvironment = "field" | "forest" | "water" | "sand" | "building";
+
 function clampUnit(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
@@ -55,52 +57,90 @@ function region(
   return { regionId, x, y, width, height, purpose: "template" };
 }
 
-function environmentFact(features: readonly RegionVisualFeatures[]): MinecraftHudFact<string> {
-  const [upper, center, lower] = features;
+function environmentFact(features: readonly RegionVisualFeatures[]): MinecraftHudFact<MinecraftSceneEnvironment> {
+  const [, center, lower] = features;
   const sceneIds = features.map(({ regionId }) => regionId);
-  const blue = Math.max(upper?.bluePixelRatio ?? 0, center?.bluePixelRatio ?? 0, lower?.bluePixelRatio ?? 0);
-  const lava = Math.max(
-    lower === undefined ? 0 : lower.warmPixelRatio * 0.65 + lower.redPixelRatio * 0.35,
-    center === undefined ? 0 : center.warmPixelRatio * 0.55 + center.redPixelRatio * 0.45,
-  );
-  const green = Math.max(upper?.greenPixelRatio ?? 0, center?.greenPixelRatio ?? 0, lower?.greenPixelRatio ?? 0);
-  const darkness = Math.max(upper?.darkPixelRatio ?? 0, center?.darkPixelRatio ?? 0);
+  const centerBlue = center?.bluePixelRatio ?? 0;
+  const lowerBlue = lower?.bluePixelRatio ?? 0;
+  const centerGreen = center?.greenPixelRatio ?? 0;
+  const lowerGreen = lower?.greenPixelRatio ?? 0;
+  const centerDark = center?.darkPixelRatio ?? 0;
+  const lowerDark = lower?.darkPixelRatio ?? 0;
+  const centerYellow = center?.yellowPixelRatio ?? 0;
+  const lowerYellow = lower?.yellowPixelRatio ?? 0;
+  const centerNeutral = center?.neutralPixelRatio ?? 0;
+  const lowerNeutral = lower?.neutralPixelRatio ?? 0;
 
-  if (lava >= 0.22 && (lower?.warmPixelRatio ?? 0) >= 0.24) {
+  // Sky occupies the upper band, so blue there is deliberately excluded from
+  // water classification. Water must cover both the play area and its lower
+  // foreground, as it does while swimming or looking at nearby water.
+  const waterScore = centerBlue * 0.55 + lowerBlue * 0.45;
+  if (centerBlue >= 0.12 && lowerBlue >= 0.2 && waterScore >= 0.18) {
     return knownSceneFact(
-      "lava-or-fire-nearby",
-      Math.min(0.9, 0.72 + lava),
-      "Large warm/red bright regions suggest nearby lava or fire; do not infer exact block or damage without corroboration.",
+      "water",
+      Math.min(0.92, 0.76 + waterScore * 0.3),
+      "Blue coverage spans the central gameplay area and lower foreground; upper-screen sky alone cannot trigger water.",
       sceneIds,
     );
   }
-  if (blue >= 0.42 && (center?.bluePixelRatio ?? 0) >= 0.25) {
+
+  const greenScore = centerGreen * 0.35 + lowerGreen * 0.65;
+  const forestDarkness = centerDark * 0.65 + lowerDark * 0.35;
+  if (
+    greenScore >= 0.22 &&
+    (centerDark >= 0.55 || lowerDark >= 0.3) &&
+    forestDarkness >= 0.42
+  ) {
     return knownSceneFact(
-      "water-or-rain",
-      Math.min(0.86, 0.6 + blue * 0.45),
-      "Large blue scene coverage suggests water, rain, or underwater visibility.",
+      "forest",
+      Math.min(0.9, 0.76 + greenScore * 0.18 + forestDarkness * 0.12),
+      "Dark green coverage across the central scene and lower foreground supports a forest environment.",
       sceneIds,
     );
   }
-  if (darkness >= 0.68 && (center?.edgeDensity ?? 0) >= 0.04) {
+
+  if (lowerGreen >= 0.25 && greenScore >= 0.2 && centerDark < 0.55 && lowerDark < 0.3) {
     return knownSceneFact(
-      "dark-cave-or-night",
-      Math.min(0.82, 0.55 + darkness * 0.35),
-      "A dark, high-contrast scene suggests a cave, night, or another low-light Minecraft environment.",
+      "field",
+      Math.min(0.9, 0.76 + greenScore * 0.22),
+      "Bright green coverage across the lower gameplay area supports an open field environment.",
       sceneIds,
     );
   }
-  if (green >= 0.32 && blue < 0.28 && lava < 0.12) {
+
+  const sandScore = centerYellow * 0.35 + lowerYellow * 0.65;
+  if (
+    lowerYellow >= 0.22 &&
+    sandScore >= 0.2 &&
+    (lower?.meanLuma ?? 0) >= 0.38 &&
+    lowerGreen < 0.18
+  ) {
     return knownSceneFact(
-      "grassy-overworld",
-      Math.min(0.78, 0.58 + green * 0.35),
-      "Broad green coverage suggests a grassy overworld scene.",
+      "sand",
+      Math.min(0.9, 0.76 + sandScore * 0.22),
+      "Broad bright yellow-beige coverage in the lower gameplay area supports a sandy environment.",
       sceneIds,
     );
   }
+
+  const buildingScore = centerNeutral * 0.45 + lowerNeutral * 0.55;
+  if (
+    centerNeutral >= 0.22 &&
+    lowerNeutral >= 0.22 &&
+    buildingScore >= 0.26 &&
+    Math.max(center?.edgeDensity ?? 0, lower?.edgeDensity ?? 0) >= 0.025
+  ) {
+    return knownSceneFact(
+      "building",
+      Math.min(0.88, 0.76 + buildingScore * 0.2),
+      "Structured neutral-toned coverage across the central and lower scene supports a building or constructed interior.",
+      sceneIds,
+    );
+  }
+
   return unknownSceneFact(
-    "Scene colours are insufficient to classify a Minecraft biome or environment.",
-    Math.max(blue, lava, green, darkness),
+    "Scene pixels do not meet the supported field, forest, water, sand, or building rules.",
+    Math.max(waterScore, greenScore, sandScore, buildingScore),
     sceneIds,
   );
 }
@@ -165,16 +205,9 @@ function damageCauseHint(input: {
   if (input.environment.status !== "known" || typeof input.environment.value !== "string") {
     return unknownSceneFact("No supported environment or hostile evidence can suggest a Minecraft damage cause.");
   }
-  if (input.environment.value === "lava-or-fire-nearby") {
+  if (input.environment.value === "water") {
     return unknownSceneFact(
-      "Nearby warm/red scene evidence cannot distinguish lava from fire or prove the damage source.",
-      input.environment.confidence,
-      input.environment.sourceRegionIds,
-    );
-  }
-  if (input.environment.value === "water-or-rain") {
-    return unknownSceneFact(
-      "Blue scene coverage cannot distinguish rain, surface water, or drowning.",
+      "Water-like scene coverage does not by itself prove drowning damage.",
       input.environment.confidence,
       input.environment.sourceRegionIds,
     );

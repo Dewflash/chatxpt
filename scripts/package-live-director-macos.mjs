@@ -43,7 +43,7 @@ for (const filename of [
   "link.mjs",
   "main.mjs",
   "package.json",
-  "preload.mjs",
+  "preload.cjs",
   "setup.css",
   "setup.html",
   "setup.js",

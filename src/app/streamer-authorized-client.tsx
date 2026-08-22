@@ -11,6 +11,10 @@ import { connectRealtimeSnapshot } from "@/app/realtime-snapshot-client";
 import { StudioGameplayCaptureClient } from "@/app/studio/gameplay/capture/StudioGameplayCaptureClient";
 import { createLiveDirectorDesktopLinkUrl } from "@/integrations";
 import {
+  StudioObsOverlayLivePreview,
+  StudioTwitchExtensionLivePreview,
+} from "@/app/studio-live-surface-preview";
+import {
   PersistentStreamOverlaySurface,
   StudioManagementSurface,
   StudioProductPageSurface,
@@ -30,7 +34,7 @@ import {
 
 import styles from "./streamer-authorized-client.module.css";
 
-type Surface =
+export type StreamerAuthorizedSurface =
   | "studio"
   | "studio-home"
   | "studio-gameplay"
@@ -235,7 +239,7 @@ const studioProductPages: Readonly<Record<string, StudioProductPage>> = {
   "studio-test-lab": "test-lab",
 };
 
-function isStudioAuthenticatedSurface(surface: Surface): boolean {
+function isStudioAuthenticatedSurface(surface: StreamerAuthorizedSurface): boolean {
   return surface === "studio" ||
     surface === "studio-live-config" ||
     surface === "studio-live-director" ||
@@ -374,7 +378,8 @@ function StudioCaptureAndOverlaySetup() {
         <h2>Desktop Live Director</h2>
         <p>
           Link the desktop companion once for a small private window that stays above your game.
-          ChatXPT then follows this broadcaster into every future session without another login or setup key.
+          ChatXPT then follows this broadcaster into every future session without another login or setup key,
+          and recommendation approval uses the same authoritative quest state as Studio.
         </p>
         <form onSubmit={generateDirectorDock}>
           <button type="submit" disabled={directorPending}>{directorPending ? "Creating…" : "Create permanent Live Director link"}</button>
@@ -390,7 +395,7 @@ function StudioCaptureAndOverlaySetup() {
               <button type="button" onClick={() => void copyDirectorUrl()}>Copy for manual linking</button>
             </div>
             <small>
-              {directorDescriptor.width}×{directorDescriptor.height}; private; read-only; reusable across streams.
+              {directorDescriptor.width}×{directorDescriptor.height}; private; scoped quest approval; reusable across streams.
               The same link remains available as an OBS Custom Dock fallback. If it is exposed, rotate the
               server overlay secret and generate a replacement.
             </small>
@@ -403,7 +408,7 @@ function StudioCaptureAndOverlaySetup() {
   );
 }
 
-export function StreamerAuthorizedClient({ surface }: { readonly surface: Surface }) {
+export function StreamerAuthorizedClient({ surface }: { readonly surface: StreamerAuthorizedSurface }) {
   const [localAccountChecked, setLocalAccountChecked] = useState(!localPreviewAccountRequired);
   const [localAccount, setLocalAccount] = useState<LocalPreviewAccount | null>(null);
   const [localProfileEnvelope, setLocalProfileEnvelope] = useState<LocalFallbackProfileEnvelope | null>(null);
@@ -792,9 +797,14 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
             setLocalProfileEnvelope(null);
             setLocalProfileDiagnostic(null);
           }}
-        >
-          {productPage === "gameplay" ? <StudioGameplayCaptureClient /> : undefined}
-        </StudioProductPageSurface>
+          viewerLiveSurface={
+            view === null ? undefined : <StudioTwitchExtensionLivePreview view={view} />
+          }
+          obsLiveSurface={
+            view === null ? undefined : <StudioObsOverlayLivePreview view={view} />
+          }
+          persistentGameplayCapture={<StudioGameplayCaptureClient />}
+        />
         {productPage === "test-lab" && view !== null
           ? <StudioCaptureAndOverlaySetup />
           : null}
@@ -836,6 +846,9 @@ export function StreamerAuthorizedClient({ surface }: { readonly surface: Surfac
       <PersistentStreamOverlaySurface
         view={view}
         readiness={readiness}
+        pendingCommandId={pendingCommandId}
+        commandMessage={commandMessage}
+        onCommand={(command) => void dispatchCommand(command)}
       />
     );
   }
