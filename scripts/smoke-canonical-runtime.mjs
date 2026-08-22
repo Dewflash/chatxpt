@@ -86,22 +86,28 @@ checks.push("Studio creates and recovers one signed channel-bound preparing sess
 const overlayGrant = await json(
   "/api/obs/overlay/grant",
   postJson(
-    { sessionId, width: 1920, height: 1080 },
-    { "x-chatxpt-obs-overlay-setup-key": overlaySetupKey },
+    { width: 1920, height: 1080 },
+    {
+      "x-chatxpt-obs-overlay-setup-key": overlaySetupKey,
+      cookie: studioCookie,
+    },
   ),
   201,
 );
 const overlayUrl = new URL(overlayGrant.payload.descriptor.url);
 const overlayToken = new URLSearchParams(overlayUrl.hash.slice(1)).get("overlayAccessToken");
+const overlayBroadcasterId = overlayUrl.searchParams.get("broadcasterId");
 assert.ok(overlayToken);
+assert.equal(overlayBroadcasterId, studioStart.payload.view.session.broadcasterId);
 assert.equal(overlayUrl.searchParams.has("overlayAccessToken"), false);
 assert.equal(overlayGrant.payload.descriptor.readOnly, true);
+assert.equal(overlayGrant.payload.descriptor.reusableAcrossSessions, true);
 const { payload: overlayState } = await json(
-  `/api/obs/overlay/state?sessionId=${encodeURIComponent(sessionId)}`,
+  `/api/obs/overlay/state?broadcasterId=${encodeURIComponent(overlayBroadcasterId)}`,
   { headers: { authorization: `Bearer ${overlayToken}` } },
 );
 assert.equal(overlayState.view.envelope.sessionId, sessionId);
-checks.push("OBS grant keeps its read-only token in the fragment and returns canonical state");
+checks.push("OBS installation keeps its read-only token in the fragment and resolves the broadcaster's active session");
 
 const gameplayGrant = await json(
   "/api/gameplay/ingress/grant",
@@ -167,7 +173,7 @@ for (const path of [
   "/live-config.html",
   "/viewer.html",
   `/quest-board/${encodeURIComponent(roomCode)}`,
-  `/obs-overlay?sessionId=${encodeURIComponent(sessionId)}`,
+  `/obs-overlay?broadcasterId=${encodeURIComponent(overlayBroadcasterId)}`,
   "/diagnostics/gameplay-extraction",
 ]) {
   const page = await response(path);
