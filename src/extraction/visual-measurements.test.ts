@@ -171,4 +171,20 @@ describe("FrameSource visual measurement stream", () => {
       createBrowserCanvasPixelSampler().sample({} as CanvasImageSource, { width: 2, height: 2 }),
     ).toThrow("Browser canvas sampling is unavailable");
   });
+
+  it("keeps generic sampling small while allowing an explicit bounded calibrated sample", () => {
+    expect(() =>
+      createBrowserCanvasPixelSampler().sample(
+        {} as CanvasImageSource,
+        { width: 640, height: 360 },
+      ),
+    ).toThrow("sample size must not exceed 16384 pixels");
+
+    expect(() =>
+      createBrowserCanvasPixelSampler({ maximumPixels: 640 * 360 }).sample(
+        {} as CanvasImageSource,
+        { width: 640, height: 360 },
+      ),
+    ).toThrow("Browser canvas sampling is unavailable");
+  });
 });

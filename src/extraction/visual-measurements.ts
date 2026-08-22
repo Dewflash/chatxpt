@@ -44,6 +44,16 @@ export interface VisualMeasurementOptions extends PixelSampleSize {
 }
 
 const MAX_SAMPLE_PIXELS = 16_384;
+const MAX_BROWSER_SAMPLE_PIXELS = 262_144;
+
+export interface BrowserCanvasPixelSamplerOptions {
+  /**
+   * Generic visual measurements retain the 16,384-pixel default. Calibrated
+   * adapters may opt into a larger bounded sample when their detector needs
+   * more spatial detail, up to the multi-game analyser's 262,144-pixel cap.
+   */
+  readonly maximumPixels?: number;
+}
 
 function throwIfAborted(signal?: AbortSignal): void {
   if (!signal?.aborted) return;
@@ -68,6 +78,18 @@ function assertSampleSize(size: PixelSampleSize): void {
   }
   if (size.width * size.height > MAX_SAMPLE_PIXELS) {
     throw new RangeError(`sample size must not exceed ${MAX_SAMPLE_PIXELS} pixels`);
+  }
+}
+
+function assertSampleSizeWithin(size: PixelSampleSize, maximumPixels: number): void {
+  if (!Number.isInteger(size.width) || size.width <= 0) {
+    throw new RangeError("sample width must be a positive integer");
+  }
+  if (!Number.isInteger(size.height) || size.height <= 0) {
+    throw new RangeError("sample height must be a positive integer");
+  }
+  if (size.width * size.height > maximumPixels) {
+    throw new RangeError(`sample size must not exceed ${maximumPixels} pixels`);
   }
 }
 
@@ -196,11 +218,23 @@ function canvasUnavailable(): Error {
 }
 
 /** Copies an ephemeral CanvasImageSource into a bounded RGBA sample. */
-export function createBrowserCanvasPixelSampler(): FramePixelSampler {
+export function createBrowserCanvasPixelSampler(
+  options: BrowserCanvasPixelSamplerOptions = {},
+): FramePixelSampler {
+  const maximumPixels = options.maximumPixels ?? MAX_SAMPLE_PIXELS;
+  if (
+    !Number.isInteger(maximumPixels) ||
+    maximumPixels < 1 ||
+    maximumPixels > MAX_BROWSER_SAMPLE_PIXELS
+  ) {
+    throw new RangeError(
+      `maximumPixels must be an integer from 1 to ${MAX_BROWSER_SAMPLE_PIXELS}`,
+    );
+  }
   return {
     sample(image, size, signal) {
       throwIfAborted(signal);
-      assertSampleSize(size);
+      assertSampleSizeWithin(size, maximumPixels);
 
       if (typeof OffscreenCanvas === "function") {
         const canvas = new OffscreenCanvas(size.width, size.height);
