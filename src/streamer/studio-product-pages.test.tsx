@@ -655,6 +655,54 @@ describe("StudioProductPageSurface", () => {
     expect(html).not.toContain("Current rolling aggregates update during this stream");
   });
 
+  it("renders several ranked automatic topics without duplicating a matching watchlist keyword", () => {
+    const snapshot = createFixtureUiGatewaySnapshot();
+    const audience = snapshot.views.streamer.audience!;
+    const provenance = audience.signals[0].observation.provenance;
+    const expiresAt = snapshot.views.streamer.envelope.receivedAt + 30_000;
+    const topicSignal = (kind: string, value: string | number) => ({
+      signalId: kind,
+      kind,
+      observation: { status: "known" as const, value, expiresAt, provenance },
+    });
+    const view = {
+      ...snapshot.views.streamer,
+      session: { ...snapshot.views.streamer.session, status: "live" as const },
+      profile: { ...snapshot.views.streamer.profile, keywordWatchlist: ["diamonds"] },
+      audience: {
+        ...audience,
+        envelope: {
+          ...audience.envelope,
+          occurredAt: snapshot.views.streamer.envelope.receivedAt,
+          receivedAt: snapshot.views.streamer.envelope.receivedAt,
+        },
+        signals: [
+          ...audience.signals,
+          topicSignal("audience-topic-1", "diamonds"),
+          topicSignal("audience-topic-1-count", 4),
+          topicSignal("audience-topic-1-participant-count", 3),
+          topicSignal("audience-topic-2", "emeralds"),
+          topicSignal("audience-topic-2-count", 3),
+          topicSignal("audience-topic-2-participant-count", 2),
+          topicSignal("audience-topic-3", "redstone"),
+          topicSignal("audience-topic-3-count", 2),
+          topicSignal("audience-topic-3-participant-count", 2),
+        ],
+      },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-analytics",
+      view,
+      readiness: twitchVerifiedReadiness(),
+    }));
+
+    expect(html.match(/<strong>diamonds<\/strong>/gu)).toHaveLength(1);
+    expect(html).toContain("<strong>emeralds</strong>");
+    expect(html).toContain("<strong>redstone</strong>");
+    expect(html).toContain("3 session participants");
+    expect(html).not.toContain("<strong>please</strong>");
+  });
+
   it("links Gameplay Engine capture setup to the Studio product route", () => {
     const html = renderToStaticMarkup(h(StudioProductPageSurface, {
       page: "gameplay",

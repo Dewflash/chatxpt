@@ -264,6 +264,26 @@ function knownSignalValue(snapshot: SignalSnapshot | null, ...kinds: readonly st
   return signal?.observation.status === "known" ? signal.observation.value : null;
 }
 
+interface RankedAudienceTopic {
+  readonly label: string;
+  readonly count: number;
+  readonly participants: number;
+}
+
+function rankedAudienceTopics(snapshot: SignalSnapshot | null): readonly RankedAudienceTopic[] {
+  const topics: RankedAudienceTopic[] = [];
+  for (let rank = 1; rank <= 3; rank += 1) {
+    const label = knownSignalValue(snapshot, `audience-topic-${rank}`);
+    const count = knownSignalValue(snapshot, `audience-topic-${rank}-count`);
+    const participants = knownSignalValue(snapshot, `audience-topic-${rank}-participant-count`);
+    if (typeof label !== "string" || typeof count !== "number" || typeof participants !== "number") {
+      continue;
+    }
+    topics.push({ label, count, participants });
+  }
+  return topics;
+}
+
 function signalStatusText(snapshot: SignalSnapshot | null, kind: string): string {
   const signal = signalByKind(snapshot, kind);
   if (signal === null) return "Unknown";
@@ -1016,10 +1036,20 @@ function LiveAnalyticsPage({ view, readiness }: {
     : knownPointer?.uniqueParticipants ?? (presentation.mode === "awaiting-chat" ? 0 : null);
   const questResult = view?.questCycle.result ?? null;
   const topicRows: Array<{ readonly label: string; readonly count: number | null; readonly detail: string }> = [];
-  if (knownPointer !== null) {
+  const automaticTopics = rankedAudienceTopics(audience);
+  for (const topic of automaticTopics) {
+    topicRows.push({
+      label: topic.label,
+      count: topic.count,
+      detail: `${topic.participants} session ${topic.participants === 1 ? "participant" : "participants"}`,
+    });
+  }
+  if (automaticTopics.length === 0 && knownPointer !== null) {
     topicRows.push({ label: knownPointer.topic, count: knownPointer.qualifyingMessages, detail: `${knownPointer.uniqueParticipants} session participants` });
   }
+  const automaticTopicLabels = new Set(topicRows.map((topic) => topic.label.trim().toLocaleLowerCase()));
   for (const keyword of view?.profile.keywordWatchlist ?? []) {
+    if (automaticTopicLabels.has(keyword.trim().toLocaleLowerCase())) continue;
     const count = knownSignalValue(audience, `audience-watchlist-${gameIdFromName(keyword)}`);
     topicRows.push({ label: keyword, count: typeof count === "number" ? count : null, detail: "Streamer watchlist" });
   }

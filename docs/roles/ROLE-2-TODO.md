@@ -65,6 +65,7 @@ Provider/model adoption is settled by D-072 for the bounded OpenAI `gpt-5.6-terr
 
 - D2-12 through D2-15 were approved as one batch on 8 August 2026 and recorded in the Role 2 build plan.
 - `codex/role-2-audience-snapshot-pipeline` adds a 30-second rolling window with explicit sample size, freshness, expiry, confidence, in-memory raw-chat processing, duplicate-message controls, repeated requests across multiple qualifying messages (temporarily allowing one session participant across separate messages under the 23 August owner refinement), conservative unknown handling, unsafe-intent suppression, and strict evidence-class partitioning.
+- The current `main` follow-up filters request filler from automatic topics, ranks up to three qualifying topics, and publishes only their labels, counts, and session-participant counts for Studio while retaining the top topic as Live Director's pointer. Focused fixture/component tests cover `please find diamonds`, three-topic ranking, and raw-chat/privacy exclusion; no new real Twitch-chat claim is made.
 - Required regressions cover sparse, spammy, repeated-request, sarcastic/conflicting, unsafe, and multilingual or unrecognised inputs. No real Twitch-chat execution is claimed yet.
 
 ## Current real-input evidence pass

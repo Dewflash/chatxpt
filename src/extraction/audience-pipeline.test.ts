@@ -247,6 +247,45 @@ describe("AudienceAnalyticsAccumulator", () => {
     });
   });
 
+  it("filters request filler and publishes up to three ranked automatic topics", () => {
+    const accumulator = new AudienceAnalyticsAccumulator({ minimumConfidence: 0.3 });
+    accumulator.ingest(event(0, {
+      viewerId: "session-viewer-a",
+      text: "Please find diamonds and emeralds next",
+    }));
+    accumulator.ingest(event(1, {
+      viewerId: "session-viewer-b",
+      text: "Keep asking for diamonds near the caves please",
+    }));
+    accumulator.ingest(event(2, {
+      viewerId: "session-viewer-c",
+      text: "Emeralds from villagers would be great",
+    }));
+    accumulator.ingest(event(3, {
+      viewerId: "session-viewer-d",
+      text: "Redstone powers useful machines",
+    }));
+    const update = accumulator.ingest(event(4, {
+      viewerId: "session-viewer-e",
+      text: "Use redstone for the doors",
+    }));
+
+    expect(update?.topics.map((topic) => topic.topic)).toEqual([
+      "diamonds",
+      "emeralds",
+      "redstone",
+    ]);
+    expect(update?.primaryTopic?.topic).toBe("diamonds");
+    expect(signalValue(update!.snapshot, "audience-topic-1")).toBe("diamonds");
+    expect(signalValue(update!.snapshot, "audience-topic-2")).toBe("emeralds");
+    expect(signalValue(update!.snapshot, "audience-topic-3")).toBe("redstone");
+    expect(signalValue(update!.snapshot, "audience-topic-1-count")).toBe(2);
+    expect(signalValue(update!.snapshot, "audience-topic-1-participant-count")).toBe(2);
+    expect(update?.topics.map((topic) => topic.topic)).not.toContain("please");
+    expect(update?.topics.map((topic) => topic.topic)).not.toContain("find");
+    expect(update?.topics.map((topic) => topic.topic)).not.toContain("asking");
+  });
+
   it("deduplicates message fingerprints and does not retain raw text or raw viewer fields", () => {
     const accumulator = new AudienceAnalyticsAccumulator({ minimumConfidence: 0.3 });
     const raw = event(0, {

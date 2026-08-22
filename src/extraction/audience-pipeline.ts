@@ -37,14 +37,17 @@ interface AudienceSample {
 const DEFAULT_ROLLING_WINDOW_MS = 30_000;
 const DEFAULT_MINIMUM_CONFIDENCE = 0.45;
 const DEFAULT_CONFLICT_DELTA = 0.05;
+const MAX_AUTOMATIC_TOPICS = 3;
 
 const cheeringWords = /\b(?:go|hype|pog|clutch|nice|lets go|let's go|lol|lmao|wow|win)\b/i;
 const askingWords = /\b(?:quest|challenge|sidequest|do it|try|please|pls|make him|make her)\b/i;
 const negativeWords = /\b(?:boring|nope|stop|bad|throw|threw|hate|fail)\b/i;
 const topicStopWords = new Set([
-  "about", "after", "again", "also", "because", "before", "being", "could", "from",
-  "have", "into", "just", "more", "really", "should", "that", "their", "there", "they",
-  "this", "very", "want", "what", "when", "where", "which", "with", "would", "your",
+  "about", "after", "again", "also", "asking", "because", "before", "being", "challenge",
+  "chat", "could", "find", "from", "game", "have", "into", "just", "keep", "make", "more",
+  "need", "next", "please", "quest", "really", "should", "sidequest", "stream", "that", "their",
+  "there", "they", "thing", "things", "this", "very", "want", "what", "when", "where", "which",
+  "with", "would", "your",
 ]);
 
 function topicTokens(text: string | null): string[] {
@@ -297,6 +300,7 @@ export interface AudienceAnalyticsTopicEvidence {
 
 export interface AudienceAnalyticsUpdate {
   readonly snapshot: AudienceSnapshot;
+  readonly topics: readonly AudienceAnalyticsTopic[];
   readonly primaryTopic: AudienceAnalyticsTopic | null;
 }
 
@@ -365,17 +369,17 @@ export class AudienceAnalyticsAccumulator {
         topicCounts.set(topic, existing);
       }
     }
-    const primaryEntry = [...topicCounts.entries()]
+    const rankedEntries = [...topicCounts.entries()]
       .filter(([, value]) => value.evidence.length >= 2)
-      .sort((left, right) => right[1].count - left[1].count || right[1].participants.size - left[1].participants.size)[0] ?? null;
-    const primaryTopic: AudienceAnalyticsTopic | null = primaryEntry === null
-      ? null
-      : {
-          topic: primaryEntry[0],
-          count: primaryEntry[1].count,
-          participantKeys: [...primaryEntry[1].participants],
-          evidence: primaryEntry[1].evidence.slice(0, 128),
-        };
+      .sort((left, right) => right[1].count - left[1].count || right[1].participants.size - left[1].participants.size)
+      .slice(0, MAX_AUTOMATIC_TOPICS);
+    const topics: readonly AudienceAnalyticsTopic[] = rankedEntries.map(([topic, value]) => ({
+      topic,
+      count: value.count,
+      participantKeys: [...value.participants],
+      evidence: value.evidence.slice(0, 128),
+    }));
+    const primaryTopic = topics[0] ?? null;
     const watchlistCounts = new Map(keywordWatchlist.map((keyword) => [keyword, 0]));
     for (const item of current) {
       for (const keyword of item.watchlistHits) {
@@ -395,6 +399,18 @@ export class AudienceAnalyticsAccumulator {
         { signalId: "audience-primary-topic", kind: "audience-primary-topic", value: primaryTopic.topic },
         { signalId: "audience-primary-topic-count", kind: "audience-primary-topic-count", value: primaryTopic.count },
       ]),
+      ...topics.flatMap((topic, index) => {
+        const rank = index + 1;
+        return [
+          { signalId: `audience-topic-${rank}`, kind: `audience-topic-${rank}`, value: topic.topic },
+          { signalId: `audience-topic-${rank}-count`, kind: `audience-topic-${rank}-count`, value: topic.count },
+          {
+            signalId: `audience-topic-${rank}-participant-count`,
+            kind: `audience-topic-${rank}-participant-count`,
+            value: topic.participantKeys.length,
+          },
+        ];
+      }),
       ...[...watchlistCounts].map(([keyword, count]) => ({
         signalId: `audience-watchlist-${slug(keyword)}`,
         kind: `audience-watchlist-${slug(keyword)}`,
@@ -411,6 +427,7 @@ export class AudienceAnalyticsAccumulator {
         conflictConfidenceDelta: this.options.conflictConfidenceDelta ?? DEFAULT_CONFLICT_DELTA,
         additionalSignals,
       }),
+      topics,
       primaryTopic,
     };
   }
