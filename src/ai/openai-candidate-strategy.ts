@@ -74,7 +74,6 @@ export const candidateDraftJsonSchema = {
           sourceSignalIds: {
             type: "array",
             maxItems: 8,
-            uniqueItems: true,
             items: { type: "string", minLength: 1, maxLength: 80 },
           },
         },
