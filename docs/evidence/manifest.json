@@ -915,6 +915,113 @@
         "Role 3 accepted two of three candidates and rejected one as unknown-dependent, so the provider quality hard gate failed and no batch was eligible for viewers or overlay.",
         "This used local recording replay with no audience sample. It does not prove OBS Virtual Camera, Minecraft calibration, Twitch activity, repeated provider reliability, or end-to-end golden workflow behavior."
       ]
+    },
+    {
+      "id": "E-20260822-R2-002",
+      "capturedAt": "2026-08-22T19:19:29+08:00",
+      "owner": { "role": "role-2", "github": "joelyrk" },
+      "reviewer": null,
+      "evidenceClass": "unverified",
+      "result": "partial",
+      "claim": "An owner-authorised Brawl Stars recording produced four bounded generic visual signals and one production-parameter GPT-5.6 Terra response inside eight seconds with exactly three structured candidates; two passed Role 3 validation.",
+      "resourceIds": ["role-2-authorized-gameplay-recordings", "openai-provider-evaluation"],
+      "surfaces": [
+        {
+          "name": "Role 2 production-parameter provider diagnostic",
+          "deviceClass": "server",
+          "viewport": null
+        }
+      ],
+      "source": {
+        "gitCommit": "7c88187",
+        "branch": "role-2/openai-structured-output-fix",
+        "prNumber": 168
+      },
+      "authoritativeState": {
+        "sessionRef": "diagnostic-brawl-provider-session",
+        "questCycleRef": "diagnostic-brawl-provider-cycle",
+        "revision": 1
+      },
+      "inputs": [
+        {
+          "kind": "unverified",
+          "description": "An owner-authorised local Brawl Stars recording was replayed through the production analyzer at 160x90 and 10 fps; four confidence-qualified generic visual signals entered 3,300 bytes of normalised provider context."
+        }
+      ],
+      "commands": [
+        "Decode a bounded 12-second recording segment to 120 temporary low-resolution frames",
+        "Run the production recording analyzer in generic-action mode and select one four-signal visual snapshot",
+        "Run one provider-only gpt-5.6-terra Responses request with store false, reasoning low, an 8-second abort limit, zero SDK retries, one attempt, and no fallback",
+        "Apply the public Role 3 deterministic candidate validator to all three provider candidates"
+      ],
+      "artifacts": [
+        {
+          "storage": "local-only",
+          "reference": "local-artifact:codex-runtime-transcript-20260822-role-2-provider-production-parameters",
+          "mediaType": "text/plain",
+          "privacyReviewed": true,
+          "sha256": null
+        }
+      ],
+      "limitations": [
+        "The request completed in 6,733 milliseconds and returned exactly three schema-valid candidates, but Role 3 accepted only two and rejected one as difficulty-mismatch; the provider quality hard gate therefore failed.",
+        "This isolated provider-only diagnostic did not exercise production fallback after failure, repeated-call reliability, or end-to-end publication.",
+        "This used local Brawl Stars recording replay with no audience sample. It does not prove OBS Virtual Camera, Minecraft calibration, Twitch activity, or end-to-end golden workflow behavior."
+      ]
+    },
+    {
+      "id": "E-20260822-R2-003",
+      "capturedAt": "2026-08-22T21:04:15+08:00",
+      "owner": { "role": "role-2", "github": "joelyrk" },
+      "reviewer": null,
+      "evidenceClass": "unverified",
+      "result": "partial",
+      "claim": "The integrated post-fix GPT-5.6 Terra prompt and transport returned exactly three structured candidates inside eight seconds, and Role 3 accepted all three for one owner-authorised bounded Brawl Stars replay case.",
+      "resourceIds": ["role-2-authorized-gameplay-recordings", "openai-provider-evaluation"],
+      "surfaces": [
+        {
+          "name": "Role 2 post-fix provider-only confirmation",
+          "deviceClass": "server",
+          "viewport": null
+        }
+      ],
+      "source": {
+        "gitCommit": "3e4ff4a",
+        "branch": "role-2/openai-structured-output-fix",
+        "prNumber": 169
+      },
+      "authoritativeState": {
+        "sessionRef": "diagnostic-brawl-provider-session",
+        "questCycleRef": "diagnostic-brawl-provider-cycle",
+        "revision": 1
+      },
+      "inputs": [
+        {
+          "kind": "unverified",
+          "description": "An owner-authorised local Brawl Stars recording was replayed through the production analyzer at 160x90 and 10 fps; four confidence-qualified generic visual signals entered 3,300 bytes of normalised provider context."
+        }
+      ],
+      "commands": [
+        "Decode a bounded 12-second recording segment to 120 temporary low-resolution frames",
+        "Run the production recording analyzer in generic-action mode and select one four-signal visual snapshot",
+        "Run one provider-only gpt-5.6-terra Responses request with store false, reasoning low, an 8-second abort limit, zero SDK retries, one attempt, and no fallback",
+        "Apply the public Role 3 deterministic candidate validator to all three provider candidates"
+      ],
+      "artifacts": [
+        {
+          "storage": "local-only",
+          "reference": "local-artifact:codex-runtime-transcript-20260822-role-2-provider-post-fix",
+          "mediaType": "text/plain",
+          "privacyReviewed": true,
+          "sha256": null
+        }
+      ],
+      "limitations": [
+        "This is one passing deterministic case, not the representative weighted provider-quality matrix or repeated p50/p95 reliability evidence.",
+        "Two accepted candidates carried non-blocking quality-warning confidence notices; no candidate carried a rejection issue.",
+        "This isolated provider-only diagnostic did not exercise production fallback, Role 1 runtime publication, viewer voting, or overlay output.",
+        "This used local Brawl Stars recording replay with no audience sample. It does not prove Minecraft calibration, OBS Virtual Camera ingestion, Twitch activity, or the end-to-end golden workflow."
+      ]
     }
   ]
 }

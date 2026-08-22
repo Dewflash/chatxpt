@@ -44,9 +44,12 @@ import {
   type ChatXptPersistenceRuntime,
   type VerifiedCommandActor,
 } from "@/realtime";
-import { resolveServerPersistenceEnvironment } from "@/realtime/server";
+import {
+  resolveServerPersistenceEnvironment,
+  type ConfiguredPersistenceRuntime,
+} from "@/realtime/server";
 
-import { getChatXptServerRuntime } from "./runtime";
+import { ChatXptServerRuntime, getChatXptServerRuntime } from "./runtime";
 
 export const twitchExtensionVoteRequestSchema = z
   .object({
@@ -127,7 +130,8 @@ export type TwitchExtensionVoteResult =
     };
 
 interface ApplicationDependencies {
-  readonly persistence: ChatXptPersistenceRuntime;
+  readonly persistence: ConfiguredPersistenceRuntime;
+  readonly runtime?: ChatXptServerRuntime;
   readonly extensionSecret: string;
   readonly now?: () => number;
   readonly nextId?: () => string;
@@ -191,6 +195,7 @@ function applicationError(
 
 export class TwitchExtensionViewerApplication {
   private readonly persistence: ChatXptPersistenceRuntime;
+  private readonly runtime: ChatXptServerRuntime;
   private readonly extensionSecret: string;
   private readonly now: () => number;
   private readonly nextId: () => string;
@@ -206,6 +211,10 @@ export class TwitchExtensionViewerApplication {
     this.persistence = dependencies.persistence;
     this.extensionSecret = dependencies.extensionSecret;
     this.now = dependencies.now ?? Date.now;
+    this.runtime = dependencies.runtime ?? new ChatXptServerRuntime({
+      persistence: dependencies.persistence,
+      clock: { now: this.now },
+    });
     this.nextId = dependencies.nextId ?? randomUUID;
     this.localDiagnostics = dependencies.localDiagnostics ?? false;
   }
@@ -570,7 +579,7 @@ export class TwitchExtensionViewerApplication {
       state.questCycle.endsAt > this.now() ||
       state.questCycle.envelope.questCycleId === null
     ) {
-      return state;
+      return this.runtime.advanceQuestLifecycleIfDue(state);
     }
     const systemActor: VerifiedCommandActor = {
       kind: "system",
@@ -595,9 +604,10 @@ export class TwitchExtensionViewerApplication {
       systemActor,
       null,
     );
-    if (result.ok) return result.receipt.state;
+    if (result.ok) return this.runtime.advanceQuestLifecycleIfDue(result.receipt.state);
     if (result.error.code === "stale-revision") {
-      return (await this.persistence.sessions.load(state.session.sessionId)) ?? state;
+      const latest = (await this.persistence.sessions.load(state.session.sessionId)) ?? state;
+      return this.runtime.advanceQuestLifecycleIfDue(latest);
     }
     throw applicationError("dependency-unavailable", result.error.message, result.error.retryable);
   }
@@ -925,8 +935,10 @@ const globalApplication = globalThis as typeof globalThis & {
 export function getTwitchExtensionViewerApplication(): TwitchExtensionViewerApplication {
   if (globalApplication[applicationKey] !== undefined) return globalApplication[applicationKey];
   const environment = resolveServerPersistenceEnvironment(process.env);
+  const runtime = getChatXptServerRuntime();
   globalApplication[applicationKey] = new TwitchExtensionViewerApplication({
-    persistence: getChatXptServerRuntime().persistence,
+    persistence: runtime.persistence,
+    runtime,
     extensionSecret: process.env.TWITCH_EXTENSION_SECRET ?? "",
     localDiagnostics: environment.mode === "memory" && environment.deployment === "local",
   });

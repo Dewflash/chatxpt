@@ -64,6 +64,15 @@ const MAX_VISUAL_MEASUREMENT_SAMPLE_PIXELS = 16_384;
 // analyzer so a valid bounded request is not rejected before analysis.
 export const MAX_BROWSER_CANVAS_SAMPLE_PIXELS = 262_144;
 
+export interface BrowserCanvasPixelSamplerOptions {
+  /**
+   * Generic visual measurements retain the 16,384-pixel default. Calibrated
+   * adapters may opt into a larger bounded sample when their detector needs
+   * more spatial detail, up to the multi-game analyser's 262,144-pixel cap.
+   */
+  readonly maximumPixels?: number;
+}
+
 function throwIfAborted(signal?: AbortSignal): void {
   if (!signal?.aborted) return;
   if (signal.reason instanceof Error) throw signal.reason;
@@ -302,11 +311,23 @@ function canvasUnavailable(): Error {
 }
 
 /** Copies an ephemeral CanvasImageSource into a bounded RGBA sample. */
-export function createBrowserCanvasPixelSampler(): FramePixelSampler {
+export function createBrowserCanvasPixelSampler(
+  options: BrowserCanvasPixelSamplerOptions = {},
+): FramePixelSampler {
+  const maximumPixels = options.maximumPixels ?? MAX_VISUAL_MEASUREMENT_SAMPLE_PIXELS;
+  if (
+    !Number.isInteger(maximumPixels) ||
+    maximumPixels < 1 ||
+    maximumPixels > MAX_BROWSER_CANVAS_SAMPLE_PIXELS
+  ) {
+    throw new RangeError(
+      `maximumPixels must be an integer from 1 to ${MAX_BROWSER_CANVAS_SAMPLE_PIXELS}`,
+    );
+  }
   return {
     sample(image, size, signal) {
       throwIfAborted(signal);
-      assertSampleSize(size, MAX_BROWSER_CANVAS_SAMPLE_PIXELS);
+      assertSampleSize(size, maximumPixels);
 
       if (typeof OffscreenCanvas === "function") {
         const canvas = new OffscreenCanvas(size.width, size.height);

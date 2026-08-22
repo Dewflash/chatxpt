@@ -393,7 +393,7 @@ export class HostedBoardApplication {
       state.questCycle.endsAt > this.now() ||
       state.questCycle.envelope.questCycleId === null
     ) {
-      return state;
+      return this.dependencies.runtime.advanceQuestLifecycleIfDue(state);
     }
     const actor: VerifiedCommandActor = {
       kind: "system",
@@ -418,9 +418,12 @@ export class HostedBoardApplication {
       actor,
       new HostedBoardProjectionContext(this.persistence, actor, this.now),
     );
-    if (result.ok) return result.receipt.state;
+    if (result.ok) {
+      return this.dependencies.runtime.advanceQuestLifecycleIfDue(result.receipt.state);
+    }
     if (result.error.code === "stale-revision") {
-      return (await this.persistence.sessions.load(state.session.sessionId)) ?? state;
+      const latest = (await this.persistence.sessions.load(state.session.sessionId)) ?? state;
+      return this.dependencies.runtime.advanceQuestLifecycleIfDue(latest);
     }
     throw new HostedBoardApplicationError(
       "dependency-unavailable",

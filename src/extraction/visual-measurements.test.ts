@@ -189,10 +189,9 @@ describe("FrameSource visual measurement stream", () => {
 
     try {
       const image = {} as CanvasImageSource;
-      const sample = await createBrowserCanvasPixelSampler().sample(image, {
-        width: 640,
-        height: 360,
-      });
+      const sample = await createBrowserCanvasPixelSampler({
+        maximumPixels: 640 * 360,
+      }).sample(image, { width: 640, height: 360 });
 
       expect(sample).toMatchObject({ width: 640, height: 360 });
       expect(sample.rgba).toHaveLength(640 * 360 * 4);
@@ -220,7 +219,9 @@ describe("FrameSource visual measurement stream", () => {
 
     try {
       const image = {} as CanvasImageSource;
-      const sample = await createBrowserCanvasPixelSampler().sample(image, {
+      const sample = await createBrowserCanvasPixelSampler({
+        maximumPixels: 640 * 360,
+      }).sample(image, {
         width: 640,
         height: 360,
         sourceWidth: 3024,
@@ -270,10 +271,26 @@ describe("FrameSource visual measurement stream", () => {
 
   it("still rejects browser samples above the multi-game processing ceiling", () => {
     expect(() =>
-      createBrowserCanvasPixelSampler().sample({} as CanvasImageSource, {
-        width: 640,
-        height: 480,
-      }),
+      createBrowserCanvasPixelSampler({ maximumPixels: 262_144 }).sample(
+        {} as CanvasImageSource,
+        { width: 640, height: 480 },
+      ),
     ).toThrow("sample size must not exceed 262144 pixels");
+  });
+
+  it("keeps generic sampling small while allowing an explicit bounded calibrated sample", () => {
+    expect(() =>
+      createBrowserCanvasPixelSampler().sample(
+        {} as CanvasImageSource,
+        { width: 640, height: 360 },
+      ),
+    ).toThrow("sample size must not exceed 16384 pixels");
+
+    expect(() =>
+      createBrowserCanvasPixelSampler({ maximumPixels: 640 * 360 }).sample(
+        {} as CanvasImageSource,
+        { width: 640, height: 360 },
+      ),
+    ).toThrow("Browser canvas sampling is unavailable");
   });
 });

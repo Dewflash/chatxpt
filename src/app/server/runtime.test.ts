@@ -3,7 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import { createAlgorithmicCandidateStrategy, createValidatingCandidateProvider } from "@/ai";
 import {
   authoritativeSessionStateSchema,
+  commandFingerprint,
   serviceHealthSchema,
+  systemQuestTickCommandSchema,
   type CandidateInput,
   type CandidateProvider,
   type ProjectionContextResolver,
@@ -15,6 +17,7 @@ import {
   contractFixtureProfile,
   contractFixtureQuestCycle,
   contractFixtureSession,
+  contractFixtureUiX06QuestStateCatalog,
 } from "@/core/testing";
 import { createMemoryPersistenceRuntime } from "@/realtime";
 
@@ -104,5 +107,80 @@ describe("ChatXptServerRuntime eligible proposal coordination", () => {
 
     expect(generate).toHaveBeenCalledTimes(1);
     expect(secondResult).toEqual(firstResult);
+  });
+
+  it("advances a terminal quest through its elapsed cooldown into a new idle cycle", async () => {
+    const persistence = createMemoryPersistenceRuntime();
+    const terminalCycle = structuredClone(
+      contractFixtureUiX06QuestStateCatalog["r5.quest.succeeded-reward.v1"],
+    );
+    const resultAt = terminalCycle.result?.occurredAt;
+    if (resultAt === undefined) throw new Error("Expected terminal fixture result");
+    const initial = authoritativeSessionStateSchema.parse({
+      ...eligibleState(),
+      session: {
+        ...eligibleState().session,
+        status: "preparing",
+        revision: 0,
+        startedAt: null,
+      },
+      questCycle: {
+        ...contractFixtureQuestCycle,
+        envelope: { ...contractFixtureQuestCycle.envelope, revision: 0 },
+      },
+    });
+    const state = authoritativeSessionStateSchema.parse({
+      ...eligibleState(),
+      session: {
+        ...eligibleState().session,
+        revision: 1,
+      },
+      questCycle: {
+        ...terminalCycle,
+        envelope: { ...terminalCycle.envelope, revision: 1 },
+      },
+    });
+    await persistence.lifecycle.bootstrap({
+      roomCode: "TCKTST23",
+      state: initial,
+      createdAt: initial.session.createdAt,
+    });
+    const seedCommand = systemQuestTickCommandSchema.parse({
+        contractVersion: state.questCycle.envelope.contractVersion,
+        sessionId: state.session.sessionId,
+        questCycleId: state.questCycle.envelope.questCycleId,
+        commandId: "seed-terminal-cycle",
+        correlationId: "seed-terminal-cycle",
+        expectedRevision: 0,
+        issuedAt: resultAt,
+        actor: { kind: "system", actorId: "runtime-test-seed" },
+        type: "system.quest-tick",
+      });
+    await persistence.sessions.commit({
+      command: seedCommand,
+      commandFingerprint: commandFingerprint(seedCommand),
+      expectedRevision: 0,
+      nextState: state,
+      events: [],
+      acceptedAt: resultAt,
+    });
+    const runtime = new ChatXptServerRuntime({
+      persistence,
+      clock: { now: () => resultAt + 121_000 },
+    });
+
+    const advanced = await runtime.advanceQuestLifecycleIfDue(state);
+
+    expect(advanced.questCycle).toMatchObject({
+      status: "idle",
+      options: [],
+      activeCandidateId: null,
+      startsAt: null,
+      endsAt: null,
+      result: null,
+    });
+    await expect(persistence.sessions.load(state.session.sessionId)).resolves.toMatchObject({
+      questCycle: { status: "idle" },
+    });
   });
 });

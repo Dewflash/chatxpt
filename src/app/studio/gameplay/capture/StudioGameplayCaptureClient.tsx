@@ -556,7 +556,9 @@ export function StudioGameplayCaptureClient() {
       setIngressStatus("Preview is live; sampling the first frame locally");
       try {
         for await (const output of streamMultiGameVisionAssessments(source, {
-          sampler: createBrowserCanvasPixelSampler(),
+          sampler: createBrowserCanvasPixelSampler({
+            maximumPixels: captureProfile.requestedGameId === "minecraft" ? 640 * 360 : 160 * 90,
+          }),
           sampleWidth: captureProfile.requestedGameId === "minecraft" ? 640 : 160,
           sampleHeight: captureProfile.requestedGameId === "minecraft" ? 360 : 90,
           selection: captureProfile,

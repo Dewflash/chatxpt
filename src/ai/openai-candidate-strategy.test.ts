@@ -216,6 +216,9 @@ describe("OpenAI-compatible candidate strategy", () => {
     expect(JSON.stringify(context)).not.toContain(minecraftProfile.displayName);
     expect(JSON.stringify(requests[0])).not.toMatch(/api[_-]?key/i);
     expect(requests[0].instructions).toContain("Every option must explicitly name the selected game");
+    expect(requests[0].instructions).toContain(
+      "easy must be 15-90 seconds, medium 30-150 seconds, and hard 45-180 seconds",
+    );
   });
 
   it("rejects provider output that does not name the selected game", async () => {
