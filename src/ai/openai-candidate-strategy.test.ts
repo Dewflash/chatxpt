@@ -541,6 +541,9 @@ describe("OpenAI-compatible candidate strategy", () => {
       expect.arrayContaining(["hudLayout", "objectiveState", "matchTimer", "scoreState"]),
     );
     expect(context.gameState.unknownGenericFacts).toContain("playerHealth");
+    expect(requests[0].instructions).toContain(
+      "In rationale, describe that constraint generically as not relying on unsupported state.",
+    );
   });
 
   it("classifies refusal, rate limiting, and malformed JSON without leaking payloads", async () => {
