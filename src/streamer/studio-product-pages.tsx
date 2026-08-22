@@ -1006,7 +1006,6 @@ function LiveAnalyticsPage({ view, readiness }: {
   const returning = knownSignalValue(audience, "audience-returning-participants");
   const newlyActive = knownSignalValue(audience, "audience-newly-active-participants");
   const recentlyInactive = knownSignalValue(audience, "audience-recently-inactive-participants");
-  const previousMood = knownSignalValue(audience, "audience-previous-mood");
   const previousRate = knownSignalValue(audience, "audience-previous-message-rate");
   const questVotes = view?.questCycle.voteTallies.reduce((sum, tally) => sum + tally.votes, 0) ?? 0;
   const currentRateValue = typeof messageRate === "number" ? messageRate : null;
