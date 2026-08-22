@@ -16,6 +16,10 @@ describe("deployment configuration", () => {
     expect(nextConfig.allowedDevOrigins).toContain("127.0.0.1");
   });
 
+  it("keeps Next.js development indicators out of OBS browser captures", () => {
+    expect(nextConfig.devIndicators).toBe(false);
+  });
+
   it("allows Next development hydration without weakening the production policy", () => {
     expect(createContentSecurityPolicy("development").split(/\s+/)).toContain("'unsafe-eval'");
     expect(createContentSecurityPolicy("production").split(/\s+/)).not.toContain("'unsafe-eval'");
