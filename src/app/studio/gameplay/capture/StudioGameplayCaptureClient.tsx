@@ -31,6 +31,9 @@ import {
   connectGameplayCapturePreview,
   describeSelectedGameplaySource,
   editableDefaultsFromView,
+  STUDIO_GAME_PROFILE_OPTIONS,
+  studioGameProfileOption,
+  type StudioGameProfileId,
 } from "@/streamer";
 
 import styles from "./studio-gameplay-capture.module.css";
@@ -39,7 +42,7 @@ import {
   captureSnapshotIsStale,
 } from "./capture-delivery-policy";
 
-export type CaptureGame = "brawl-stars" | "minecraft" | "generic";
+export type CaptureGame = StudioGameProfileId;
 type CaptureSource = "screen-window" | "obs-virtual-camera";
 
 const CAPTURE_PREFERENCE_KEY = "chatxpt.studio.gameplayCapture.v1";
@@ -218,15 +221,11 @@ function selectionFor(game: CaptureGame): GameProfileSelection {
 }
 
 function savedGameFor(game: CaptureGame): { readonly gameId: string; readonly gameName: string } | null {
-  if (game === "minecraft") return { gameId: "minecraft", gameName: "Minecraft" };
-  if (game === "brawl-stars") return { gameId: "brawl-stars", gameName: "Brawl Stars" };
-  return null;
+  return game === "generic" ? null : studioGameProfileOption(game);
 }
 
 function captureGameLabel(game: CaptureGame): string {
-  if (game === "brawl-stars") return "Brawl Stars";
-  if (game === "minecraft") return "Minecraft";
-  return "Generic";
+  return game === "generic" ? "Generic" : studioGameProfileOption(game).label;
 }
 
 function assertCaptureSession(authority: GameplayIngressAuthority) {
@@ -352,14 +351,14 @@ export function StudioGameplayCaptureClient() {
         }
         setView(payload.view);
         setReadiness(payload.readiness);
+        const platformGame = captureGameFromView(payload.view);
         if (!capturePreferenceLoadedRef.current) {
           const savedPreference = readCapturePreference();
-          const platformGame = captureGameFromView(payload.view);
           capturePreferenceLoadedRef.current = true;
           setCapturePreference(savedPreference);
           setCaptureSource(savedPreference?.source ?? "screen-window");
-          setGame(savedPreference?.game ?? platformGame);
         }
+        setGame(platformGame);
         if (controllerRef.current === null) setIngressStatus("Studio session ready");
         setSessionError(null);
       } catch {
@@ -971,9 +970,9 @@ export function StudioGameplayCaptureClient() {
                 disabled={running || savingGameProfile || view === null}
                 onChange={(event) => void selectGameProfile(event.target.value as CaptureGame)}
               >
-                <option value="minecraft">Minecraft</option>
-                <option value="brawl-stars">Brawl Stars</option>
-                <option value="generic">Generic game</option>
+                {STUDIO_GAME_PROFILE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
             </label>
             {running ? (

@@ -32,7 +32,7 @@ const requiredPageSections: Readonly<Record<StudioProductPage, readonly string[]
   gameplay: ["Overview", "Game Capture", "Understanding", "Health &amp; Recovery"],
   "live-analytics": ["Overview", "Activity", "Topics", "Session History"],
   "live-quests": ["Now", "Recommendations", "Why", "Voting", "Results"],
-  profile: ["Personality", "Stream Presets", "Safety", "Accessibility"],
+  profile: ["Personality", "Stream Presets", "Community", "Safety &amp; Accessibility"],
   "stream-settings": ["Saved Source", "Session Override", "Reset to Saved"],
   "test-lab": ["Clean Start Reset", "Sample / Live Source", "Capture Controls", "Observed / Unknown", "Recovery"],
 };
@@ -170,6 +170,17 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("Local Streamer");
     expect(html).toContain("Competitive");
     expect(html).toContain("Save default game");
+    expect(html).toContain('<select name="gameProfile"');
+    expect(html).toContain('<option value="minecraft">Minecraft</option>');
+    expect(html).toContain('<option value="brawl-stars">Brawl Stars</option>');
+    expect(html).toContain('<option value="generic" selected="">Generic game</option>');
+    expect(html).toContain("Community");
+    expect(html).toContain('type="radio" name="winnerActivationMode" checked="" value="automatic"');
+    expect(html).toContain('type="radio" name="winnerActivationMode" value="streamer-approval"');
+    expect(html).not.toContain("Extension with hosted board and chat fallbacks");
+    const communityPanel = html.slice(html.indexOf('id="community"'), html.indexOf('id="safety-accessibility"'));
+    expect(communityPanel).not.toContain("Viewer-led choices");
+    expect(communityPanel).not.toContain("Preset description");
     expect(html).toContain("Saved on device");
     expect(html).toContain("Local profile");
     expect(html).toContain("This device only");
@@ -370,9 +381,34 @@ describe("StudioProductPageSurface", () => {
       view,
     }));
 
-    expect(html).toContain("Deterministic fallback shown");
-    expect(html).toContain("without gameplay or audience evidence");
-    expect(html).toContain("Evidence-driven recommendations use trusted signals later");
+    expect(html).toContain("Deterministic fallback");
+    expect(html).not.toContain("Deterministic fallback shown");
+    expect(html).not.toContain("without gameplay or audience evidence");
+    expect(html).toContain("Why these were recommended");
+    expect(html).toContain("Provider output becomes official only after deterministic validation.");
+    expect(html).toContain("Mode: Automatic");
+  });
+
+  it("shows the effective selected preset activation mode in Live Quests", () => {
+    const base = createFixtureUiGatewaySnapshot().views.streamer;
+    const view = {
+      ...base,
+      profile: {
+        ...base.profile,
+        voting: { ...base.profile.voting, winnerActivationMode: "streamer-approval" as const },
+        streamPresets: base.profile.streamPresets.map((preset) => ({
+          ...preset,
+          voting: { ...preset.voting, winnerActivationMode: "streamer-approval" as const },
+        })),
+      },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-quests",
+      view,
+    }));
+
+    expect(html).toContain("Mode: Manual");
+    expect(html).not.toContain(">Proposed</span></div><div");
   });
 
   it.each(pages)("renders the required ICP-01 sections for %s", (page) => {

@@ -73,6 +73,12 @@ export type {
   StreamerUiCommand,
 } from "./streamer-commands";
 export {
+  STUDIO_GAME_PROFILE_OPTIONS,
+  studioGameProfileIdFor,
+  studioGameProfileOption,
+} from "./game-profile-options";
+export type { StudioGameProfileId } from "./game-profile-options";
+export {
   GameplayCapturePreviewError,
   connectGameplayCapturePreview,
   describeSelectedGameplaySource,

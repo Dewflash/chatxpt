@@ -535,7 +535,6 @@
 .participationPanel,
 .questResultPanel,
 .nowQuest,
-.whyPanel,
 .questControls,
 .profileIdentity,
 .presetLibrary,
@@ -707,7 +706,7 @@
 .topicList small,
 .participationPanel p,
 .nowQuest p,
-.whyPanel p,
+.recommendationInfo p,
 .presetEditor p,
 .presetRules small,
 .testGrid p {
@@ -795,7 +794,6 @@
 .topicPanel,
 .participationPanel,
 .questResultPanel,
-.whyPanel,
 .questControls,
 .presetLibrary,
 .presetEditor,
@@ -1020,11 +1018,18 @@
 }
 
 .engineColumns,
-.presetWorkspace {
+.profileWorkspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--cx-space-md);
+}
+
+.engineColumns {
   align-items: start;
+}
+
+.profileWorkspace {
+  align-items: stretch;
 }
 
 .captureCard,
@@ -1353,6 +1358,11 @@
   gap: var(--cx-space-md);
 }
 
+.recommendationsPanel {
+  display: grid;
+  gap: var(--cx-space-sm);
+}
+
 .questCard,
 .selectedQuest {
   min-width: 0;
@@ -1369,6 +1379,13 @@
   cursor: pointer;
 }
 
+.questCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cx-space-md);
+}
+
 .selectedQuest {
   border-color: var(--cx-color-primary);
   background: var(--cx-color-primary-soft);
@@ -1379,6 +1396,22 @@
 .questCard p,
 .selectedQuest p {
   margin: 0;
+}
+
+.recommendationInfo {
+  display: grid;
+  gap: 0.3rem;
+  padding-top: var(--cx-space-sm);
+  border-top: 1px solid var(--cx-color-border);
+}
+
+.recommendationInfo p,
+.recommendationInfo small {
+  margin: 0;
+}
+
+.recommendationInfo small {
+  color: var(--cx-color-text-muted);
 }
 
 .dangerAction,
@@ -1401,11 +1434,20 @@
 }
 
 .profileIdentity {
+  display: grid;
+  align-content: start;
   padding: var(--cx-space-lg);
 }
 
-.presetWorkspace {
-  grid-template-columns: minmax(16rem, 0.72fr) minmax(0, 1.28fr);
+.defaultGameRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--cx-space-md);
+}
+
+.defaultGameRow button {
+  white-space: nowrap;
 }
 
 .presetList {
@@ -1462,6 +1504,67 @@
 .presetRules span {
   display: grid;
   gap: 0.2rem;
+}
+
+.modeField {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.modeField legend {
+  margin-bottom: var(--cx-space-xs);
+  color: var(--cx-color-text-muted);
+  font-size: var(--cx-font-size-sm);
+  font-weight: var(--cx-font-weight-medium);
+}
+
+.modeToggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 0.2rem;
+  border: 1px solid var(--cx-color-border);
+  border-radius: var(--cx-radius-md);
+  background: var(--cx-color-surface-raised);
+}
+
+.modeToggle label {
+  position: relative;
+  min-width: 0;
+}
+
+.modeToggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.modeToggle span {
+  min-height: 2.1rem;
+  display: grid;
+  place-items: center;
+  padding: 0.35rem 0.65rem;
+  border-radius: calc(var(--cx-radius-md) - 2px);
+  color: var(--cx-color-text-muted);
+  font-size: var(--cx-font-size-sm);
+  font-weight: var(--cx-font-weight-medium);
+  cursor: pointer;
+}
+
+.modeToggle input:checked + span {
+  color: var(--cx-color-primary-contrast);
+  background: var(--cx-color-primary);
+}
+
+.modeToggle input:focus-visible + span {
+  box-shadow: var(--cx-focus-ring);
+}
+
+.modeToggle input:disabled + span {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .globalBoundaries {
@@ -1543,7 +1646,7 @@
   .readyHero,
   .engagementGrid,
   .engineColumns,
-  .presetWorkspace,
+  .profileWorkspace,
   .globalBoundaries {
     grid-template-columns: 1fr;
   }
@@ -1646,6 +1749,7 @@
   .questCards,
   .presetBalance,
   .presetRules,
+  .defaultGameRow,
   .testGrid {
     grid-template-columns: 1fr;
   }
