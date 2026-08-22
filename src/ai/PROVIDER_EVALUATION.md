@@ -1,6 +1,6 @@
 # Role 2 provider reliability evaluation
 
-Status: **D-072 approves OpenAI `gpt-5.6-terra`; fixture harness implemented; real credited-provider evidence still pending.**
+Status: **D-072 approves OpenAI `gpt-5.6-terra`; fixture harness implemented; one partial diagnostic provider run recorded; production-quality evidence remains pending.**
 
 Role 2 measures provider integration, structured-output reliability, latency, timeout, rate-limit behaviour, privacy/retention, credited-account availability, and algorithmic recovery. Role 3 independently applies the hard gates and weighted quest-quality rubric in `src/quest-engine/PROVIDER_QUALITY_RUBRIC.md`. D-072 settles adoption; the two roles still provide execution and quality evidence to Role 1 without treating it as permission to implement or push.
 
@@ -31,6 +31,14 @@ Run every pinned provider/model configuration against the same versioned cases:
 
 Repository cases remain synthetic and explicitly fixture-only. D-072 allows real provider trials with sanitised bounded inputs and a private server-side team credential when existing prepaid/promotional credit is available. No contributor must buy quota; adding a payment method or new spend requires a separate owner decision.
 
+## Recorded diagnostic provider run
+
+On 22 August 2026, commit `7962f8d` was exercised with 120 locally decoded frames from an owner-authorised Brawl Stars recording. The production analyzer reduced those frames to four known generic visual signals; the request contained 3,332 bytes of normalised context, zero audience events, no raw frames, no chat, and no identities. The provider-only request used exact model `gpt-5.6-terra`, `store: false`, `reasoning.effort: none`, zero SDK retries, and a diagnostic-only 30-second cap. Production remains configured for its accepted 8-second timeout and fallback policy.
+
+The provider completed in 5,091 milliseconds and returned exactly three schema-valid `ai-provider` candidates. Usage was 1,358 input tokens, 270 output tokens, zero reasoning tokens, and 1,628 total tokens; the estimate from the documented token rates was USD 0.005956. Role 3 accepted two candidates. It rejected one with `unknown-dependent` because the producer-only rationale named an unsupported fact category while disclaiming reliance on it. The derived rejection prompted a Role 2 instruction regression: rationales must describe unsupported-state avoidance generically instead of naming unknown fact categories.
+
+This is partial diagnostic evidence, not a passing D-072 quality trial. The request cap and reasoning effort differed from the current production transport, the test used recording replay rather than OBS Virtual Camera, Brawl Stars remains evaluation-only, and the hard gate failed because not all three candidates passed Role 3. Prompt text, provider output, credentials, raw pixels, and private identifiers were not retained in the repository.
+
 ## Role 2 operational report
 
 For each pinned configuration record:
@@ -54,4 +62,4 @@ Role 3 scores each canonical batch for feasibility, clarity, diversity, novelty,
 - `evaluation only`
 - `do not adopt`
 
-D-072 resolves D23-01, D23-03, and D2-17 for the approved path. D23-02 and D2-16 remain open, while D2-18 is resolved by the credential-free algorithmic candidate strategy. Fixture tests establish the evaluation and recovery plumbing only; they do not prove provider availability, model quality, real-input candidate generation, or end-to-end integration.
+D-072 resolves D23-01, D23-03, and D2-17 for the approved path. D23-02 and D2-16 remain open, while D2-18 is resolved by the credential-free algorithmic candidate strategy. The recorded diagnostic proves provider availability and one real-input exactly-three response, but it fails the Role 3 hard gate and does not prove production reliability, representative model quality, OBS/Twitch execution, or end-to-end integration.
