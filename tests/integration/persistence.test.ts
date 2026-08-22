@@ -4,6 +4,7 @@ import {
   ChatXptOrchestrator,
   audiencePointerAggregateSchema,
   commandFingerprint,
+  createDefaultStreamerProfile,
   streamerLiveDirectorIntentCommandSchema,
   streamerQuestCommandSchema,
   systemLiveDirectorContextCommandSchema,
@@ -132,6 +133,77 @@ async function preparedRuntime() {
 }
 
 describe("production-shaped memory persistence integration", () => {
+  it("creates each streamer profile once and rejects a stale bootstrap profile", async () => {
+    const runtime = createMemoryPersistenceRuntime();
+    const defaults = createDefaultStreamerProfile({
+      profileId: "profile-memory-owner",
+      streamerId: "memory-owner",
+      displayName: "Memory Owner",
+    });
+    const [first, second] = await Promise.all([
+      runtime.profiles.getOrCreateForVerifiedIdentity({
+        provider: "twitch",
+        providerSubjectId: "memory-owner",
+        displayName: "Memory Owner",
+        verifiedAt: FIXTURE_NOW,
+      }, defaults),
+      runtime.profiles.getOrCreateForVerifiedIdentity({
+        provider: "twitch",
+        providerSubjectId: "memory-owner",
+        displayName: "Renamed Owner",
+        verifiedAt: FIXTURE_NOW + 1,
+      }, { ...defaults, displayName: "Renamed Owner" }),
+    ]);
+
+    expect([first.created, second.created]).toEqual([true, false]);
+    expect(second.profile).toEqual(first.profile);
+
+    const state = persistenceState();
+    await runtime.profiles.getOrCreateForDiagnostic({
+      ...state.profile,
+      revision: state.profile.revision + 1,
+      selectedPresetId: "chill",
+    }, FIXTURE_NOW);
+    await expect(runtime.lifecycle.bootstrap({
+      roomCode: "ABCDEFGH",
+      state,
+      createdAt: FIXTURE_NOW,
+    })).rejects.toMatchObject({ kind: "profile" });
+  });
+
+  it("keeps verified Twitch identities mapped to separate profile records", async () => {
+    const runtime = createMemoryPersistenceRuntime();
+    const profileA = createDefaultStreamerProfile({
+      profileId: "profile-memory-a",
+      streamerId: "memory-a",
+      displayName: "Memory A",
+    });
+    const profileB = createDefaultStreamerProfile({
+      profileId: "profile-memory-b",
+      streamerId: "memory-b",
+      displayName: "Memory B",
+    });
+
+    const accountA = await runtime.profiles.getOrCreateForVerifiedIdentity({
+      provider: "twitch",
+      providerSubjectId: "memory-a",
+      displayName: "Memory A",
+      verifiedAt: FIXTURE_NOW,
+    }, profileA);
+    const accountB = await runtime.profiles.getOrCreateForVerifiedIdentity({
+      provider: "twitch",
+      providerSubjectId: "memory-b",
+      displayName: "Memory B",
+      verifiedAt: FIXTURE_NOW,
+    }, profileB);
+
+    expect(accountA.accountId).not.toBe(accountB.accountId);
+    await expect(runtime.profiles.loadByStreamerId("memory-a"))
+      .resolves.toMatchObject({ accountId: accountA.accountId, profile: profileA });
+    await expect(runtime.profiles.loadByStreamerId("memory-b"))
+      .resolves.toMatchObject({ accountId: accountB.accountId, profile: profileB });
+  });
+
   it("keeps one monotonic gameplay snapshot per matching active session", async () => {
     const runtime = await preparedRuntime();
     const first = {

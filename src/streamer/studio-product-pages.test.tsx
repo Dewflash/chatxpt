@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { createFixtureUiGatewaySnapshot } from "../core";
 import { contractFixtureUiX01ReadinessCatalog } from "../core/testing";
 import { StudioProductPageSurface, type StudioProductPage } from "./studio-product-pages";
+import { seedLocalFallbackProfile } from "./local-fallback-profile";
 
 const pages: readonly StudioProductPage[] = [
   "home",
@@ -36,7 +37,11 @@ describe("StudioProductPageSurface", () => {
       readiness,
     }));
 
-    expect(html).toContain("ChatXPT Studio");
+    expect(html).toContain("ChatXPT");
+    expect(html).toContain("<h1>Home</h1>");
+    expect(html).toContain("Account");
+    expect(html).toContain("Twitch");
+    expect(html).toContain("Game Capture");
     expect(html).toContain("Gameplay Engine");
     expect(html).toContain("Live Analytics");
     expect(html).toContain("Live Quests");
@@ -73,8 +78,9 @@ describe("StudioProductPageSurface", () => {
       readiness: null,
     }));
 
-    expect(html).toContain("Connect Studio");
-    expect(html).toContain("Unavailable controls stay visible only when ChatXPT can explain what is needed next.");
+    expect(html).toContain("Disconnected");
+    expect(html).toContain("Game Capture");
+    expect(html).toContain("None");
     expect(html).not.toContain("Not live workflow evidence");
     expect(html).not.toContain("revision label");
     expect(html).not.toContain("Open diagnostics");
@@ -91,6 +97,138 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain('href="/api/twitch/oauth/start"');
     expect(html).toContain("Connect Twitch");
     expect(html).not.toContain("Connect Twitch to continue");
+  });
+
+  it("keeps Profile & Defaults editable from the established device fallback", () => {
+    const local = seedLocalFallbackProfile("Local Streamer", 100);
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "profile",
+      view: null,
+      readiness: null,
+      localProfile: local.profile,
+      onLocalProfileChange: () => undefined,
+    }));
+
+    expect(html).toContain("Local profile · This device only");
+    expect(html).toContain("Local Streamer");
+    expect(html).toContain("Competitive");
+    expect(html).toContain("Save default game");
+    expect(html).toContain("Saved on device");
+    expect(html).toContain("Local profile");
+    expect(html).toContain("This device only");
+  });
+
+  it("shows the local account inside Studio navigation instead of floating over content", () => {
+    const local = seedLocalFallbackProfile("Local Streamer", 100);
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "home",
+      view: null,
+      readiness: null,
+      localProfile: local.profile,
+      localAccountDisplayName: "Local Streamer",
+      onLocalAccountSignOut: () => undefined,
+    }));
+
+    expect(html).toContain('aria-label="Local ChatXPT account"');
+    expect(html).toContain("Sign out");
+  });
+
+  it("shows saved default and active Twitch game as separate settings", () => {
+    const base = createFixtureUiGatewaySnapshot().views.streamer;
+    const view = {
+      ...base,
+      profile: { ...base.profile, gameId: "brawl-stars", gameName: "Brawl Stars" },
+      session: {
+        ...base.session,
+        currentGame: {
+          gameId: "minecraft-java",
+          gameName: "Minecraft Java Edition",
+          source: "twitch" as const,
+        },
+      },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "stream-settings",
+      view,
+    }));
+
+    expect(html).toContain("Default game: Brawl Stars");
+    expect(html).toContain("Current stream: Minecraft Java Edition");
+    expect(html).toContain("active game may still come from Twitch or Gameplay Capture");
+  });
+
+  it("reports account, Twitch lifecycle, and profile persistence health independently", () => {
+    const snapshot = createFixtureUiGatewaySnapshot();
+    const view = {
+      ...snapshot.views.streamer,
+      profileConnection: {
+        accountStatus: "twitch-verified" as const,
+        profileOrigin: "supabase" as const,
+        persistenceStatus: "synced" as const,
+        checkedAt: 1_000,
+        lastPersistedAt: 900,
+        message: "Twitch is verified and profile changes are saved to your account.",
+      },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "home",
+      view,
+      readiness: contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"],
+    }));
+
+    expect(html).toContain("Twitch verified");
+    expect(html).toContain("Twitch");
+    expect(html).toContain("Saved to account");
+  });
+
+  it("uses the same page header and real capture source across Studio pages", () => {
+    const snapshot = createFixtureUiGatewaySnapshot();
+    const gameplay = snapshot.views.streamer.gameplay;
+    const view = {
+      ...snapshot.views.streamer,
+      session: { ...snapshot.views.streamer.session, status: "live" as const },
+      gameplay: gameplay === null ? null : {
+        ...gameplay,
+        envelope: { ...gameplay.envelope, source: "obs-virtual-camera" as const },
+        signals: gameplay.signals.map((signal) => ({
+          ...signal,
+          observation: {
+            ...signal.observation,
+            provenance: { ...signal.observation.provenance, source: "obs-virtual-camera" as const },
+          },
+        })),
+      },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-analytics",
+      view,
+      readiness: contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"],
+    }));
+
+    expect(html).toContain("<h1>Live Analytics</h1>");
+    expect(html).toContain('data-state="live">Live</dd>');
+    expect(html).toContain("OBS Capture");
+  });
+
+  it("labels a connected non-live Twitch session as Preparing and direct capture as Screen Capture", () => {
+    const snapshot = createFixtureUiGatewaySnapshot();
+    const gameplay = snapshot.views.streamer.gameplay;
+    const view = {
+      ...snapshot.views.streamer,
+      session: { ...snapshot.views.streamer.session, status: "preparing" as const },
+      gameplay: gameplay === null ? null : {
+        ...gameplay,
+        envelope: { ...gameplay.envelope, source: "browser-display-capture" as const },
+      },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "gameplay",
+      view,
+      readiness: contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"],
+    }));
+
+    expect(html).toContain('data-state="preparing">Preparing</dd>');
+    expect(html).toContain("Screen Capture");
   });
 
   it("keeps Test Lab sample/live distinction outside ordinary product pages", () => {
@@ -253,7 +391,7 @@ describe("StudioProductPageSurface", () => {
     }));
 
     expect(html).toContain("Twitch connected — waiting for the stream");
-    expect(html).toContain("Change current game");
+    expect(html).toContain("Change stream game");
     expect(html).toContain("Waiting for Twitch stream");
     expect(html).not.toContain("Start ChatXPT");
   });

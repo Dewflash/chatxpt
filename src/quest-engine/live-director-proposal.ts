@@ -126,6 +126,7 @@ export class DefaultLiveDirectorProposalCoordinator
     const effectiveProfile = resolveEffectiveStreamerProfile(
       input.current.profile,
       input.current.sessionOverride,
+      input.current.session.currentGame,
     );
     try {
       const generated = candidateBatchSchema.safeParse(

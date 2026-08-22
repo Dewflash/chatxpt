@@ -32,7 +32,28 @@ export type {
   TwitchLiveConfigSurfaceProps,
 } from "./twitch-config";
 export {
+  acceptLocalFallbackProfile,
+  cacheCloudProfileForFallback,
+  LOCAL_FALLBACK_ACCOUNT_ID,
+  LOCAL_FALLBACK_MAX_BYTES,
+  LOCAL_FALLBACK_PROFILE_KEY,
+  localFallbackProfileEnvelopeSchema,
+  localProfileCloudStatus,
+  readLocalFallbackProfile,
+  seedLocalFallbackProfile,
+  updateLocalFallbackProfile,
+  writeLocalFallbackProfile,
+} from "./local-fallback-profile";
+export type {
+  LocalFallbackProfileEnvelope,
+  LocalFallbackProfileRead,
+  LocalFallbackStorage,
+} from "./local-fallback-profile";
+export {
+  applyEditableDefaultsToProfile,
   buildEmergencyClearCommand,
+  buildCurrentGameProfileSettingsCommand,
+  buildCurrentStreamGameCommand,
   buildLiveDirectorCueCommand,
   buildLiveDirectorIntentCommand,
   buildProfileSettingsCommand,
@@ -41,6 +62,7 @@ export {
   buildSetupCommand,
   defaultStreamerCommandFactory,
   DEFAULT_LIVE_DIRECTOR_INTENT_LIFETIME_MILLISECONDS,
+  editableDefaultsFromProfile,
   editableDefaultsFromView,
   profileDefaultsChanged,
 } from "./streamer-commands";

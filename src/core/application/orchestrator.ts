@@ -249,8 +249,32 @@ function authoritativeProfileSettingsUpdate(
   current: AuthoritativeSessionState,
   acceptedAt: number,
 ): { state: AuthoritativeSessionState; events: AcceptedCommandReceipt["events"] } | DomainError {
+  if (
+    command.expectedProfileRevision === undefined ||
+    command.expectedProfileRevision !== current.profile.revision
+  ) {
+    return error(
+      "stale-revision",
+      "Streamer profile changed; refresh before replacing saved defaults",
+      true,
+    );
+  }
   const votingChangeCount = Object.keys(command.voting ?? {}).length;
   const rewardChangeCount = Object.keys(command.rewards ?? {}).length;
+  const changesCurrentGame =
+    command.gameApplication === "saved-and-current" &&
+    command.game !== undefined &&
+    (current.session.currentGame?.gameId !== command.game.gameId ||
+      current.session.currentGame.gameName !== command.game.gameName);
+  if (
+    changesCurrentGame &&
+    ["proposed", "voting", "active"].includes(current.questCycle.status)
+  ) {
+    return error(
+      "unavailable-capability",
+      "Finish or cancel the current quest cycle before changing the capture game",
+    );
+  }
   const revision = current.session.revision + 1;
   const selectedPresetId =
     command.selectedPresetId === undefined
@@ -294,6 +318,17 @@ function authoritativeProfileSettingsUpdate(
     return error("validation", "Profile settings update is invalid");
   }
 
+  let currentGame = current.session.currentGame;
+  if (command.gameApplication === "saved-and-current" && command.game !== undefined) {
+    currentGame = command.game.gameId !== null && command.game.gameName !== null
+      ? {
+          gameId: command.game.gameId,
+          gameName: command.game.gameName,
+          source: "streamer" as const,
+        }
+      : null;
+  }
+
   const questCycle = questCycleStateSchema.parse({
     ...current.questCycle,
     envelope: authoritativeEnvelope(
@@ -308,9 +343,20 @@ function authoritativeProfileSettingsUpdate(
   });
   const state: AuthoritativeSessionState = {
     ...current,
-    session: { ...current.session, revision },
+    session: { ...current.session, revision, currentGame },
     profile: profile.data,
     questCycle,
+    gameplay: changesCurrentGame ? null : current.gameplay,
+    liveDirector:
+      changesCurrentGame && current.liveDirector !== undefined && current.liveDirector !== null
+        ? liveDirectorStateSchema.parse({
+            ...current.liveDirector,
+            liveContext: null,
+            cue: null,
+            publicContext: null,
+            updatedAt: acceptedAt,
+          })
+        : current.liveDirector,
   };
   const event = questEngineEventSchema.safeParse({
     envelope: authoritativeEnvelope(dependencies, command, state, null, revision, acceptedAt, "quest-event"),
@@ -318,6 +364,7 @@ function authoritativeProfileSettingsUpdate(
       eventType: "profile.settings-updated",
       attributes: {
         experienceKeysChanged: Object.keys(command.experiencePatch).length,
+        gameApplication: command.gameApplication,
         votingChanged: votingChangeCount > 0,
         rewardsChanged: rewardChangeCount > 0,
       },
@@ -1223,6 +1270,30 @@ export class ChatXptOrchestrator {
     }
     if ("code" in authoritative) {
       return { ok: false, error: authoritative };
+    }
+    if (command.type === "streamer.current-game" || command.type === "system.current-game") {
+      const source = command.type === "system.current-game" ? "twitch" as const : "streamer" as const;
+      authoritative = {
+        ...authoritative,
+        state: {
+          ...authoritative.state,
+          session: {
+            ...authoritative.state.session,
+            currentGame: { ...command.game, source },
+          },
+          gameplay: null,
+          liveDirector:
+            authoritative.state.liveDirector === undefined || authoritative.state.liveDirector === null
+              ? authoritative.state.liveDirector
+              : liveDirectorStateSchema.parse({
+                  ...authoritative.state.liveDirector,
+                  liveContext: null,
+                  cue: null,
+                  publicContext: null,
+                  updatedAt: acceptedAt,
+                }),
+        },
+      };
     }
     const nonTerminalHypeDelta = authoritative.events.reduce((total, event) => {
       const value = event.event.attributes.hypeDelta;

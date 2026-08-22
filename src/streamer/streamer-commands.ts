@@ -1,8 +1,10 @@
 import {
   CONTRACT_VERSION,
   streamerEmergencyClearCommandSchema,
+  streamerCurrentGameCommandSchema,
   streamerLiveDirectorCueCommandSchema,
   streamerLiveDirectorIntentCommandSchema,
+  streamerProfileSchema,
   streamerProfileSettingsCommandSchema,
   streamerQuestGenerationCommandSchema,
   streamerSessionOverrideCommandSchema,
@@ -10,6 +12,7 @@ import {
   streamerQuestProgressCommandSchema,
   streamerServiceCommandSchema,
   type StreamerEmergencyClearCommand,
+  type StreamerCurrentGameCommand,
   type DirectorCueAction,
   type StreamerLiveDirectorCueCommand,
   type StreamerLiveDirectorIntentCommand,
@@ -20,6 +23,7 @@ import {
   type StreamerQuestCommand,
   type StreamerQuestProgressCommand,
   type StreamerRewardPreferences,
+  type StreamerProfile,
   type StreamPreset,
   type StreamerServiceCommand,
   type StreamerSetupAction,
@@ -30,6 +34,7 @@ import {
 
 export type StreamerUiCommand =
   | StreamerProfileSettingsCommand
+  | StreamerCurrentGameCommand
   | StreamerQuestGenerationCommand
   | StreamerSessionOverrideCommand
   | StreamerLiveDirectorIntentCommand
@@ -103,27 +108,58 @@ function metadata(
   };
 }
 
-export function editableDefaultsFromView(view: StreamerViewModel): EditableProfileDefaults {
+export function editableDefaultsFromProfile(profile: StreamerProfile): EditableProfileDefaults {
   return {
-    gameId: view.profile.gameId,
-    gameName: view.profile.gameName,
-    experience: { ...view.profile.experience },
-    restrictions: [...view.profile.restrictions],
-    preferredQuestTypes: [...view.profile.preferredQuestTypes],
-    forbiddenQuestTypes: [...view.profile.forbiddenQuestTypes],
-    accessibilityNeeds: [...view.profile.accessibilityNeeds],
-    keywordWatchlist: [...view.profile.keywordWatchlist],
-    streamPresets: view.profile.streamPresets.map((preset) => ({
+    gameId: profile.gameId,
+    gameName: profile.gameName,
+    experience: { ...profile.experience },
+    restrictions: [...profile.restrictions],
+    preferredQuestTypes: [...profile.preferredQuestTypes],
+    forbiddenQuestTypes: [...profile.forbiddenQuestTypes],
+    accessibilityNeeds: [...profile.accessibilityNeeds],
+    keywordWatchlist: [...profile.keywordWatchlist],
+    streamPresets: profile.streamPresets.map((preset) => ({
       ...preset,
       experience: { ...preset.experience },
       preferredQuestTypes: [...preset.preferredQuestTypes],
       voting: { ...preset.voting },
       rewards: { ...preset.rewards },
     })),
-    selectedPresetId: view.profile.selectedPresetId,
-    voting: { ...view.profile.voting },
-    rewards: { ...view.profile.rewards },
+    selectedPresetId: profile.selectedPresetId,
+    voting: { ...profile.voting },
+    rewards: { ...profile.rewards },
   };
+}
+
+export function editableDefaultsFromView(view: StreamerViewModel): EditableProfileDefaults {
+  return editableDefaultsFromProfile(view.profile);
+}
+
+export function applyEditableDefaultsToProfile(
+  profile: StreamerProfile,
+  defaults: EditableProfileDefaults,
+  revision = profile.revision + 1,
+): StreamerProfile {
+  return streamerProfileSchema.parse({
+    ...profile,
+    ...defaults,
+    revision,
+    experience: { ...defaults.experience },
+    restrictions: [...defaults.restrictions],
+    preferredQuestTypes: [...defaults.preferredQuestTypes],
+    forbiddenQuestTypes: [...defaults.forbiddenQuestTypes],
+    accessibilityNeeds: [...defaults.accessibilityNeeds],
+    keywordWatchlist: [...defaults.keywordWatchlist],
+    streamPresets: defaults.streamPresets.map((preset) => ({
+      ...preset,
+      experience: { ...preset.experience },
+      preferredQuestTypes: [...preset.preferredQuestTypes],
+      voting: { ...preset.voting },
+      rewards: { ...preset.rewards },
+    })),
+    voting: { ...defaults.voting },
+    rewards: { ...defaults.rewards },
+  });
 }
 
 export function profileDefaultsChanged(
@@ -144,6 +180,8 @@ export function buildProfileSettingsCommand(
     ...metadata(view, factory, "profile-settings"),
     questCycleId: null,
     type: "streamer.profile-settings",
+    expectedProfileRevision: view.profile.revision,
+    gameApplication: "saved-only",
     game: {
       gameId: draft.gameId,
       gameName: draft.gameName,
@@ -170,6 +208,30 @@ export function buildProfileSettingsCommand(
     selectedPresetId: draft.selectedPresetId,
     voting: draft.voting,
     rewards: draft.rewards,
+  });
+}
+
+export function buildCurrentGameProfileSettingsCommand(
+  view: StreamerViewModel,
+  draft: EditableProfileDefaults,
+  factory: StreamerCommandFactory = defaultStreamerCommandFactory,
+): StreamerProfileSettingsCommand {
+  return streamerProfileSettingsCommandSchema.parse({
+    ...buildProfileSettingsCommand(view, draft, factory),
+    gameApplication: "saved-and-current",
+  });
+}
+
+export function buildCurrentStreamGameCommand(
+  view: StreamerViewModel,
+  game: { readonly gameId: string; readonly gameName: string },
+  factory: StreamerCommandFactory = defaultStreamerCommandFactory,
+): StreamerCurrentGameCommand {
+  return streamerCurrentGameCommandSchema.parse({
+    ...metadata(view, factory, "current-game"),
+    questCycleId: view.questCycle.envelope.questCycleId,
+    type: "streamer.current-game",
+    game,
   });
 }
 

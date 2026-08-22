@@ -4,23 +4,15 @@
 }
 
 .shell > * {
+  box-sizing: border-box;
   width: 100%;
 }
 
-.intro,
 .panel p,
 .panel li,
-.boundary {
+.lastCapture {
   color: #aeb8d4;
   line-height: 1.6;
-}
-
-.intro {
-  padding: 0 2px;
-}
-
-.intro p {
-  margin: 0;
 }
 
 .eyebrow {
@@ -33,7 +25,6 @@
 
 .panel,
 .proofPanel,
-.metric,
 .error {
   border: 1px solid #293149;
   border-radius: 12px;
@@ -57,33 +48,84 @@
   margin: 0;
 }
 
-.proofGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
+.proofHeading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
 }
 
-.proofGrid span {
+.proofHeading > div {
   display: grid;
   gap: 6px;
+}
+
+.proofHeading > p {
+  max-width: 34rem;
+  color: #aeb8d4;
+  text-align: right;
+}
+
+.proofColumns {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   min-width: 0;
-  padding: 12px;
   border: 1px solid rgba(126, 231, 194, 0.24);
-  border-radius: 9px;
+  border-radius: 8px;
   background: rgba(4, 10, 13, 0.58);
+  overflow: hidden;
 }
 
-.proofGrid small,
-.detectorReason {
-  color: #9eabc8;
+.proofColumn {
+  min-width: 0;
+  padding: 16px;
 }
 
-.proofGrid strong {
+.proofColumn + .proofColumn {
+  border-left: 1px solid rgba(126, 231, 194, 0.18);
+}
+
+.proofColumn h3 {
+  margin: 0 0 10px;
   color: #f3fff9;
+  font-size: 0.9rem;
+}
+
+.proofColumn dl {
+  display: grid;
+  margin: 0;
+}
+
+.proofColumn dl > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(126, 231, 194, 0.14);
+}
+
+.proofColumn dt,
+.proofColumn dd {
+  margin: 0;
+}
+
+.proofColumn dt {
+  color: #9eabc8;
+  font-size: 0.78rem;
+}
+
+.proofColumn dd {
+  color: #f3fff9;
+  font-weight: 800;
   overflow-wrap: anywhere;
 }
 
+.proofColumn [data-availability="coming-soon"] dd {
+  color: #f3ca72;
+}
+
 .detectorReason {
+  color: #9eabc8;
   line-height: 1.5;
 }
 
@@ -91,10 +133,76 @@
   margin-top: 0;
 }
 
+.setupHeading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.setupHeading h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.captureInfo {
+  position: relative;
+  display: inline-flex;
+}
+
+.captureInfo > button {
+  width: 1.45rem;
+  height: 1.45rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #52617f;
+  border-radius: 50%;
+  color: #c9d4ef;
+  background: transparent;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: help;
+}
+
+.captureInfo > button:focus-visible {
+  outline: 3px solid rgba(126, 231, 194, 0.42);
+  outline-offset: 2px;
+}
+
+.captureInfo [role="tooltip"] {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 8px);
+  left: 0;
+  width: min(19rem, 75vw);
+  padding: 12px 14px;
+  border: 1px solid #3a4564;
+  border-radius: 8px;
+  color: #eef2ff;
+  background: #090c14;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.captureInfo [role="tooltip"] ol {
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+.captureInfo:hover [role="tooltip"],
+.captureInfo:focus-within [role="tooltip"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .field {
   display: grid;
   gap: 8px;
-  margin-top: 18px;
+  margin-top: 12px;
   color: #dce4ff;
   font-weight: 700;
 }
@@ -102,11 +210,10 @@
 .field select,
 .field input,
 .sourcePicker button,
-.actions button,
-.actions a {
+.stopCapture {
   min-height: 44px;
   border: 1px solid #3a4564;
-  border-radius: 10px;
+  border-radius: 8px;
   color: #eef2ff;
   background: #171d2e;
   font: inherit;
@@ -118,35 +225,13 @@
   padding: 0 12px;
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.actions button,
-.actions a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 18px;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.actions button:first-child {
-  font-weight: 700;
-}
-
 .sourcePicker button:disabled,
-.actions button:disabled {
+.stopCapture:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
 
-.actions a:focus-visible,
-.actions button:focus-visible,
+.stopCapture:focus-visible,
 .sourcePicker button:focus-visible,
 .field input:focus-visible,
 .field select:focus-visible {
@@ -158,7 +243,7 @@
   display: grid;
   gap: 10px;
   min-width: 0;
-  margin: 18px 0 0;
+  margin: 14px 0 0;
   padding: 0;
   border: 0;
 }
@@ -171,44 +256,33 @@
 
 .sourcePicker > div {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
 .sourcePicker button {
-  min-height: 94px;
-  display: grid;
-  gap: 7px;
-  align-content: center;
-  padding: 15px 17px;
+  min-height: 48px;
+  padding: 10px 12px;
   border-color: #6bdab6;
   color: #07130f;
   background: #7ee7c2;
-  text-align: left;
+  font-weight: 800;
+  text-align: center;
   cursor: pointer;
 }
 
-.sourcePicker button strong {
-  font-size: 1rem;
-}
-
-.sourcePicker button span {
-  color: #18352c;
-  font-size: 0.86rem;
-  font-weight: 600;
-  line-height: 1.35;
-}
-
-.sourcePicker > small {
-  color: #9eabc8;
-}
-
-.boundary {
-  margin-bottom: 0;
-  font-size: 0.9rem;
+.stopCapture {
+  width: 100%;
+  margin-top: 14px;
+  border-color: #914a57;
+  color: #ffd6dc;
+  background: #2a151a;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .preview {
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(260px, 1.4fr) minmax(220px, 1fr);
   gap: 16px;
@@ -233,27 +307,26 @@
   object-fit: contain;
 }
 
-.preview div {
+.captureControls,
+.selectedSource {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
-.preview span,
-.preview small {
+.selectedSource span,
+.selectedSource small {
   color: #8792b1;
 }
 
-.preview strong {
+.selectedSource strong {
   color: #eef2ff;
   overflow-wrap: anywhere;
 }
 
-.keepOpen {
+.lastCapture {
   margin: 12px 0 0;
-  padding: 12px 14px;
-  border-left: 3px solid #7ee7c2;
-  color: #dce4ff !important;
-  background: rgba(126, 231, 194, 0.08);
+  font-size: 0.86rem;
 }
 
 .error {
@@ -263,27 +336,84 @@
   color: #ffd6dc;
 }
 
-.grid {
+.statsPanel {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 12px;
+  gap: 16px;
 }
 
-.metric {
-  min-width: 0;
-  min-height: 96px;
+.statsPanel h2 {
+  margin: 0;
+}
+
+.statsColumns {
   display: grid;
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-width: 0;
+  border-block: 1px solid #293149;
+}
+
+.statsColumn {
+  min-width: 0;
   padding: 16px;
 }
 
-.metric span {
-  color: #8792b1;
-  font-size: 0.82rem;
+.statsColumn + .statsColumn {
+  border-left: 1px solid #293149;
 }
 
-.metric strong {
+.statsColumn h3 {
+  margin: 0 0 10px;
+  color: #eef2ff;
+  font-size: 0.9rem;
+}
+
+.statsColumn dl {
+  display: grid;
+  margin: 0;
+}
+
+.statsColumn dl > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(82, 97, 127, 0.34);
+}
+
+.statsColumn dt,
+.statsColumn dd {
+  margin: 0;
+}
+
+.statsColumn dt {
+  color: #8792b1;
+  font-size: 0.78rem;
+}
+
+.statsColumn dd {
+  color: #eef2ff;
+  font-weight: 800;
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 1050px) {
+  .proofColumns,
+  .statsColumns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .proofColumn:nth-child(3),
+  .statsColumn:nth-child(3) {
+    border-left: 0;
+  }
+
+  .proofColumn:nth-child(n + 3) {
+    border-top: 1px solid rgba(126, 231, 194, 0.18);
+  }
+
+  .statsColumn:nth-child(n + 3) {
+    border-top: 1px solid #293149;
+  }
 }
 
 @media (max-width: 560px) {
@@ -293,6 +423,30 @@
 
   .preview {
     grid-template-columns: 1fr;
+  }
+
+  .proofHeading {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .proofHeading > p {
+    text-align: left;
+  }
+
+  .proofColumns,
+  .statsColumns {
+    grid-template-columns: 1fr;
+  }
+
+  .proofColumn + .proofColumn {
+    border-top: 1px solid rgba(126, 231, 194, 0.18);
+    border-left: 0;
+  }
+
+  .statsColumn + .statsColumn {
+    border-top: 1px solid #293149;
+    border-left: 0;
   }
 
   .sourcePicker > div {

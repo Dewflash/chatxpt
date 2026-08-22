@@ -10,6 +10,7 @@ import type {
   SessionHistorySnapshot,
   SessionStateRepository,
   StatePublisher,
+  StreamerProfile,
   ViewerRecoveryReader,
 } from "../core";
 
@@ -210,8 +211,36 @@ export interface SessionHistoryReader {
   readSessionHistory(input: SessionHistoryReadInput): Promise<SessionHistorySnapshot>;
 }
 
+export interface VerifiedStreamerIdentity {
+  readonly provider: "twitch";
+  readonly providerSubjectId: string;
+  readonly displayName: string;
+  readonly verifiedAt: number;
+}
+
+export interface StreamerProfileRecord {
+  readonly accountId: string;
+  readonly profile: StreamerProfile;
+  readonly createdAt: number;
+  readonly updatedAt: number;
+}
+
+export interface StreamerProfileResolution extends StreamerProfileRecord {
+  readonly created: boolean;
+}
+
+export interface StreamerProfileRepository {
+  loadByStreamerId(streamerId: string): Promise<StreamerProfileRecord | null>;
+  getOrCreateForVerifiedIdentity(
+    identity: VerifiedStreamerIdentity,
+    defaults: StreamerProfile,
+  ): Promise<StreamerProfileResolution>;
+  getOrCreateForDiagnostic(defaults: StreamerProfile, at: number): Promise<StreamerProfileResolution>;
+}
+
 export interface ChatXptPersistenceRuntime {
   readonly mode: "memory" | "supabase";
+  readonly profiles: StreamerProfileRepository;
   readonly sessions: SessionStateRepository;
   readonly lifecycle: SessionLifecycleStore;
   readonly hostedBoardSessions: HostedBoardSessionDirectory;
@@ -230,7 +259,7 @@ export interface ChatXptPersistenceRuntime {
 
 export class PersistenceConflictError extends Error {
   constructor(
-    readonly kind: "room-code" | "active-broadcaster" | "session-id" | "unknown",
+    readonly kind: "room-code" | "active-broadcaster" | "session-id" | "profile" | "unknown",
     message: string,
   ) {
     super(message);

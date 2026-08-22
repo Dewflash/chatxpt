@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import type { GameplaySnapshot, StreamerReadinessView, StreamerViewModel } from "@/core";
+import {
+  resolveCurrentStreamGame,
+  type GameplaySnapshot,
+  type StreamerReadinessView,
+  type StreamerViewModel,
+} from "@/core";
 import {
   buildMultiGameGameplaySnapshot,
   MultiGameVisionAnalyzer,
@@ -21,7 +26,8 @@ import {
   type ObsVirtualCameraFailureReason,
 } from "@/integrations";
 import {
-  buildProfileSettingsCommand,
+  buildCurrentGameProfileSettingsCommand,
+  buildCurrentStreamGameCommand,
   connectGameplayCapturePreview,
   describeSelectedGameplaySource,
   editableDefaultsFromView,
@@ -29,7 +35,7 @@ import {
 
 import styles from "./studio-gameplay-capture.module.css";
 
-type CaptureGame = "brawl-stars" | "minecraft" | "generic";
+export type CaptureGame = "brawl-stars" | "minecraft" | "generic";
 type CaptureSource = "screen-window" | "obs-virtual-camera";
 
 const CAPTURE_PREFERENCE_KEY = "chatxpt.studio.gameplayCapture.v1";
@@ -79,18 +85,28 @@ interface LatestCapture {
   readonly supportedSignals: readonly string[];
   readonly detectedFacts: readonly string[];
   readonly unknownFactCount: number;
-  readonly health: string;
-  readonly hunger: string;
-  readonly recentDamage: string;
-  readonly movement: string;
-  readonly turning: string;
-  readonly combat: string;
-  readonly eating: string;
-  readonly healthTrend: string;
-  readonly screen: string;
-  readonly environment: string;
-  readonly life: string;
+  readonly profileReadings: readonly CaptureReading[];
 }
+
+export interface CaptureReading {
+  readonly signalId: string;
+  readonly label: string;
+  readonly value: string;
+  readonly category: CaptureReadingCategory;
+  readonly availability: "supported" | "coming-soon";
+}
+
+export type CaptureReadingCategory = "condition" | "activity" | "environment" | "others";
+
+const CAPTURE_READING_CATEGORIES: readonly {
+  readonly id: CaptureReadingCategory;
+  readonly label: string;
+}[] = [
+  { id: "condition", label: "Condition" },
+  { id: "activity", label: "Activity" },
+  { id: "environment", label: "Environment" },
+  { id: "others", label: "Others" },
+];
 
 interface CapturePreference {
   readonly game: CaptureGame;
@@ -164,11 +180,15 @@ function customerSafeLabel(label: string | null | undefined, fallback: string): 
   return label;
 }
 
-function gameFromProfile(view: StreamerViewModel | null): CaptureGame {
-  const gameId = view?.profile.gameId?.toLowerCase() ?? "";
-  const gameName = view?.profile.gameName?.toLowerCase() ?? "";
+export function captureGameFromView(view: StreamerViewModel | null): CaptureGame {
+  const currentGame = view === null
+    ? null
+    : resolveCurrentStreamGame(view.profile, view.session.currentGame);
+  const gameId = currentGame?.gameId.toLowerCase() ?? "";
+  const gameName = currentGame?.gameName.toLowerCase() ?? "";
   if (gameId.includes("minecraft") || gameName.includes("minecraft")) return "minecraft";
   if (gameId.includes("brawl") || gameName.includes("brawl")) return "brawl-stars";
+  if (gameId === "generic") return "generic";
   // Vanilla Minecraft is the accepted calibrated MVP demonstration target.
   // Keep it as the visible ChatXPT default rather than silently trapping a
   // new capture in universal, stat-free Generic mode.
@@ -197,6 +217,12 @@ function savedGameFor(game: CaptureGame): { readonly gameId: string; readonly ga
   if (game === "minecraft") return { gameId: "minecraft", gameName: "Minecraft" };
   if (game === "brawl-stars") return { gameId: "brawl-stars", gameName: "Brawl Stars" };
   return null;
+}
+
+function captureGameLabel(game: CaptureGame): string {
+  if (game === "brawl-stars") return "Brawl Stars";
+  if (game === "minecraft") return "Minecraft";
+  return "Generic";
 }
 
 function assertCaptureSession(authority: GameplayIngressAuthority) {
@@ -231,6 +257,65 @@ function signalValue(snapshot: GameplaySnapshot, signalId: string): string {
   return "Unknown";
 }
 
+const CAPTURE_READING_DEFINITIONS: Readonly<Record<CaptureGame, readonly Omit<CaptureReading, "value">[]>> = {
+  minecraft: [
+    { signalId: "minecraft-health-hearts", label: "Health", category: "condition", availability: "supported" },
+    { signalId: "minecraft-hunger-shanks", label: "Hunger", category: "condition", availability: "supported" },
+    { signalId: "minecraft-armor-points", label: "Armor", category: "condition", availability: "supported" },
+    { signalId: "minecraft-recent-damage", label: "Recent damage", category: "condition", availability: "supported" },
+    { signalId: "minecraft-health-trend", label: "Health trend", category: "condition", availability: "supported" },
+    { signalId: "minecraft-life", label: "Alive / dead", category: "condition", availability: "supported" },
+    { signalId: "minecraft-turning", label: "Turning", category: "activity", availability: "supported" },
+    { signalId: "minecraft-movement", label: "Movement", category: "activity", availability: "supported" },
+    { signalId: "minecraft-combat", label: "Combat", category: "activity", availability: "supported" },
+    { signalId: "minecraft-eating", label: "Eating", category: "activity", availability: "supported" },
+    { signalId: "minecraft-time-of-day", label: "Day / night", category: "environment", availability: "coming-soon" },
+    { signalId: "minecraft-environment", label: "Land / water", category: "environment", availability: "supported" },
+    { signalId: "minecraft-biome-environment", label: "Scene / environment", category: "environment", availability: "supported" },
+    { signalId: "minecraft-screen", label: "Screen state", category: "others", availability: "supported" },
+    { signalId: "minecraft-selected-hotbar-category", label: "Selected item", category: "others", availability: "supported" },
+  ],
+  "brawl-stars": [
+    { signalId: "brawl-match-active", label: "Match active", category: "condition", availability: "supported" },
+    { signalId: "brawl-player-health", label: "Player health", category: "condition", availability: "coming-soon" },
+    { signalId: "brawl-player-life", label: "Alive / eliminated", category: "condition", availability: "coming-soon" },
+    { signalId: "game-vision-activity", label: "Activity intensity", category: "activity", availability: "supported" },
+    { signalId: "game-global-motion-pattern", label: "Global motion", category: "activity", availability: "supported" },
+    { signalId: "brawl-combat-state", label: "Combat state", category: "activity", availability: "coming-soon" },
+    { signalId: "brawl-arena-map", label: "Arena / map", category: "environment", availability: "coming-soon" },
+    { signalId: "game-scene-transition", label: "Scene transition", category: "environment", availability: "supported" },
+    { signalId: "brawl-match-mode", label: "Match mode", category: "environment", availability: "coming-soon" },
+    { signalId: "brawl-hud-layout", label: "HUD layout", category: "others", availability: "supported" },
+    { signalId: "game-vision-state", label: "Visual state", category: "others", availability: "supported" },
+  ],
+  generic: [
+    { signalId: "generic-player-condition", label: "Player condition", category: "condition", availability: "coming-soon" },
+    { signalId: "generic-player-life", label: "Alive / eliminated", category: "condition", availability: "coming-soon" },
+    { signalId: "game-vision-activity", label: "Activity intensity", category: "activity", availability: "supported" },
+    { signalId: "game-global-motion-pattern", label: "Global motion", category: "activity", availability: "supported" },
+    { signalId: "generic-action-type", label: "Action type", category: "activity", availability: "coming-soon" },
+    { signalId: "generic-time-of-day", label: "Day / night", category: "environment", availability: "coming-soon" },
+    { signalId: "game-scene-transition", label: "Scene transition", category: "environment", availability: "supported" },
+    { signalId: "generic-environment", label: "Environment type", category: "environment", availability: "coming-soon" },
+    { signalId: "game-vision-state", label: "Visual state", category: "others", availability: "supported" },
+  ],
+};
+
+export function captureReadingsForSnapshot(
+  game: CaptureGame,
+  snapshot: GameplaySnapshot | null,
+): readonly CaptureReading[] {
+  return CAPTURE_READING_DEFINITIONS[game].map((reading) => ({
+    ...reading,
+    value:
+      reading.availability === "coming-soon"
+        ? "Coming soon"
+        : snapshot === null
+          ? "Waiting"
+          : signalValue(snapshot, reading.signalId),
+  }));
+}
+
 function readableSignalName(value: string): string {
   return value
     .replace(/^minecraft-/u, "")
@@ -254,6 +339,7 @@ export function StudioGameplayCaptureClient() {
   const [ingressStatus, setIngressStatus] = useState("Waiting for Studio session");
   const [captureDeviceLabel, setCaptureDeviceLabel] = useState<string | null>(null);
   const [acceptedSnapshots, setAcceptedSnapshots] = useState(0);
+  const [savingGameProfile, setSavingGameProfile] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
   const previewRef = useRef<HTMLVideoElement | null>(null);
   const capturePreferenceLoadedRef = useRef(false);
@@ -280,16 +366,11 @@ export function StudioGameplayCaptureClient() {
         setReadiness(payload.readiness);
         if (!capturePreferenceLoadedRef.current) {
           const savedPreference = readCapturePreference();
-          const platformGame = gameFromProfile(payload.view);
+          const platformGame = captureGameFromView(payload.view);
           capturePreferenceLoadedRef.current = true;
           setCapturePreference(savedPreference);
           setCaptureSource(savedPreference?.source ?? "screen-window");
-          setGame(
-            savedPreference?.game === undefined ||
-              (savedPreference.game === "generic" && platformGame !== "generic")
-              ? platformGame
-              : savedPreference.game,
-          );
+          setGame(savedPreference?.game ?? platformGame);
         }
         if (controllerRef.current === null) setIngressStatus("Studio session ready");
         setSessionError(null);
@@ -338,6 +419,96 @@ export function StudioGameplayCaptureClient() {
     } satisfies CapturePreference;
     setCapturePreference(next);
     writeCapturePreference(next);
+  }
+
+  async function persistGameProfile(
+    selectedCaptureGame: CaptureGame,
+    currentView: StreamerViewModel,
+    signal?: AbortSignal,
+  ): Promise<StreamerViewModel> {
+    const selectedGame = savedGameFor(selectedCaptureGame);
+    const currentGame = resolveCurrentStreamGame(
+      currentView.profile,
+      currentView.session.currentGame,
+    );
+    if (selectedGame === null) {
+      if (currentGame?.gameId === "generic" && currentGame.gameName === "Current Game") {
+        return currentView;
+      }
+      const response = await fetch("/api/studio/commands", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        cache: "no-store",
+        signal,
+        body: JSON.stringify(buildCurrentStreamGameCommand(currentView, {
+          gameId: "generic",
+          gameName: "Current Game",
+        })),
+      });
+      const payload = (await response.json()) as StudioSessionPayload;
+      if (!response.ok || !payload.ok || payload.view === undefined) {
+        throw new CaptureRequestError(
+          payload.error?.message ?? "ChatXPT could not apply the Generic stream profile.",
+          payload.error?.retryable === true || response.status >= 500 || response.status === 409,
+        );
+      }
+      setView(payload.view);
+      if (payload.readiness !== undefined) setReadiness(payload.readiness);
+      return payload.view;
+    }
+    if (
+      currentView.profile.gameId === selectedGame.gameId &&
+      currentView.profile.gameName === selectedGame.gameName &&
+      currentGame?.gameId === selectedGame.gameId &&
+      currentGame.gameName === selectedGame.gameName
+    ) {
+      return currentView;
+    }
+    const response = await fetch("/api/studio/commands", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      credentials: "include",
+      cache: "no-store",
+      signal,
+      body: JSON.stringify(buildCurrentGameProfileSettingsCommand(currentView, {
+        ...editableDefaultsFromView(currentView),
+        gameId: selectedGame.gameId,
+        gameName: selectedGame.gameName,
+      })),
+    });
+    const payload = (await response.json()) as StudioSessionPayload;
+    if (!response.ok || !payload.ok || payload.view === undefined) {
+      throw new CaptureRequestError(
+        payload.error?.message ?? "ChatXPT could not save the selected game profile.",
+        payload.error?.retryable === true || response.status >= 500 || response.status === 409,
+      );
+    }
+    setView(payload.view);
+    if (payload.readiness !== undefined) setReadiness(payload.readiness);
+    return payload.view;
+  }
+
+  async function selectGameProfile(nextGame: CaptureGame): Promise<void> {
+    setGame(nextGame);
+    rememberCapturePreference({ game: nextGame, source: captureSource, connected: false });
+    if (view === null) return;
+    setSavingGameProfile(true);
+    setError(null);
+    setIngressStatus(`Saving ${captureGameLabel(nextGame)} profile`);
+    try {
+      await persistGameProfile(nextGame, view);
+      setIngressStatus(
+        nextGame === "generic"
+          ? "Generic analysis selected for this stream"
+          : `${captureGameLabel(nextGame)} profile selected and saved`,
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "ChatXPT could not save the selected game profile.");
+      setIngressStatus("Game profile could not be saved");
+    } finally {
+      setSavingGameProfile(false);
+    }
   }
 
   async function start(selectedSource: CaptureSource) {
@@ -390,47 +561,8 @@ export function StudioGameplayCaptureClient() {
       };
     }
 
-    async function persistCaptureGame(): Promise<void> {
-      const selectedGame = savedGameFor(game);
-      if (
-        selectedGame === null ||
-        (currentView.profile.gameId === selectedGame.gameId &&
-          currentView.profile.gameName === selectedGame.gameName)
-      ) {
-        return;
-      }
-      setIngressStatus(`Saving ${selectedGame.gameName} as the current ChatXPT game`);
-      const response = await fetch("/api/studio/commands", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        credentials: "include",
-        cache: "no-store",
-        signal: controller.signal,
-        body: JSON.stringify(buildProfileSettingsCommand(currentView, {
-          ...editableDefaultsFromView(currentView),
-          gameId: selectedGame.gameId,
-          gameName: selectedGame.gameName,
-        })),
-      });
-      const payload = (await response.json()) as StudioSessionPayload;
-      if (!response.ok || !payload.ok || payload.view === undefined) {
-        throw new CaptureRequestError(
-          payload.error?.message ?? "ChatXPT could not save the selected game profile.",
-          payload.error?.retryable === true || response.status >= 500 || response.status === 409,
-        );
-      }
-      currentView = payload.view;
-      setView(payload.view);
-      if (payload.readiness !== undefined) setReadiness(payload.readiness);
-      setIngressStatus(
-        selectedSource === "obs-virtual-camera"
-          ? `${selectedGame.gameName} is saved; waiting for OBS Virtual Camera`
-          : `${selectedGame.gameName} is saved; waiting for screen or window selection`,
-      );
-    }
-
     try {
-      await persistCaptureGame();
+      currentView = await persistGameProfile(game, currentView, controller.signal);
       const issued = await issueIngressGrant();
       ingressGrant = issued.grant;
       ingressAuthority = issued.authority;
@@ -645,17 +777,7 @@ export function StudioGameplayCaptureClient() {
                 : [],
             ),
             unknownFactCount,
-            health: signalValue(builtSnapshot, "minecraft-health-hearts"),
-            hunger: signalValue(builtSnapshot, "minecraft-hunger-shanks"),
-            recentDamage: signalValue(builtSnapshot, "minecraft-recent-damage"),
-            movement: signalValue(builtSnapshot, "minecraft-movement"),
-            turning: signalValue(builtSnapshot, "minecraft-turning"),
-            combat: signalValue(builtSnapshot, "minecraft-combat"),
-            eating: signalValue(builtSnapshot, "minecraft-eating"),
-            healthTrend: signalValue(builtSnapshot, "minecraft-health-trend"),
-            screen: signalValue(builtSnapshot, "minecraft-screen"),
-            environment: signalValue(builtSnapshot, "minecraft-environment"),
-            life: signalValue(builtSnapshot, "minecraft-life"),
+            profileReadings: captureReadingsForSnapshot(game, builtSnapshot),
           });
           snapshotDelivery.push(snapshot);
         }
@@ -684,30 +806,123 @@ export function StudioGameplayCaptureClient() {
     }
   }
 
+  const detectorReadings = latest?.profileReadings ?? captureReadingsForSnapshot(game, null);
+  const captureStatsColumns = [
+    {
+      id: "connection",
+      label: "Connection",
+      stats: [
+        { label: "Capture health", value: captureHealthCopy(running, latest !== null, error, failureReason, captureSource) },
+        { label: "Studio connection", value: ingressStatus },
+        { label: "Support tier", value: latest?.supportTier ?? "Waiting" },
+      ],
+    },
+    {
+      id: "processing",
+      label: "Processing",
+      stats: [
+        { label: "Snapshots accepted", value: acceptedSnapshots },
+        { label: "Frames analysed", value: latest?.frameCount ?? 0 },
+        { label: "Local analysis rate", value: latest?.analysisRateFps === null || latest === null ? "Starting" : `${latest.analysisRateFps.toFixed(1)} / sec` },
+        { label: "Last observation", value: latest === null ? "-" : new Date(latest.capturedAt).toLocaleTimeString() },
+        { label: "Signal confidence", value: latest === null ? "-" : latest.confidence.toFixed(2) },
+      ],
+    },
+    {
+      id: "gameplay",
+      label: "Gameplay",
+      stats: [
+        { label: "Gameplay activity", value: latest === null ? "Unknown" : `${latest.gameplayActivity[0].toUpperCase()}${latest.gameplayActivity.slice(1)}` },
+        { label: "Detected game facts", value: latest?.hudStatus ?? "Waiting" },
+        { label: "Game profile", value: latest?.gameProfile ?? (view === null ? "Waiting" : resolveCurrentStreamGame(view.profile, view.session.currentGame)?.gameName ?? "Waiting") },
+        { label: "Confidence", value: latest?.confidenceLabel ?? "Unavailable" },
+      ],
+    },
+    {
+      id: "others",
+      label: "Others",
+      stats: [
+        { label: "Cadence", value: latest === null ? "Waiting" : `${latest.cadence} - ${latest.cadenceReason}` },
+        { label: "Capture source", value: previewConnected ? captureDeviceLabel ?? "Connected source" : running ? "Connecting" : "None" },
+        { label: "Analysis sample", value: latest?.sampleResolution ?? "Waiting" },
+        { label: "Unknown facts", value: latest?.unknownFactCount ?? "Waiting" },
+      ],
+    },
+  ] as const;
+
   return (
     <div className={styles.shell}>
-        <section className={styles.intro}>
-          <p className={styles.eyebrow}>Gameplay Capture</p>
-          <p>
-            Choose OBS Virtual Camera or select a screen, window, or browser tab directly. Frames stay in the
-            browser; ChatXPT sends only normalized game facts, timestamps, confidence, and supported-signal status.
-          </p>
-        </section>
-
         {sessionError !== null ? <p className={styles.error} role="alert">{sessionError}</p> : null}
         {error !== null ? <p className={styles.error} role="alert">{error}</p> : null}
 
+        <section className={styles.proofPanel} aria-live="polite" aria-labelledby="proof-heading">
+          <div className={styles.proofHeading}>
+            <div>
+              <p className={styles.eyebrow}>{captureGameLabel(game)} profile</p>
+              <h2 id="proof-heading">Live Detector Proof</h2>
+            </div>
+            <p>
+              {latest === null
+                ? "Waiting for a captured feed. Planned reads remain marked Coming soon."
+                : `${latest.frameCount} frames analysed locally at ${latest.analysisRateFps?.toFixed(1) ?? "starting"} frames/sec.`}
+            </p>
+          </div>
+          <div className={styles.proofColumns}>
+            {CAPTURE_READING_CATEGORIES.map((category) => (
+              <section className={styles.proofColumn} key={category.id} aria-labelledby={`proof-${category.id}`}>
+                <h3 id={`proof-${category.id}`}>{category.label}</h3>
+                <dl>
+                  {detectorReadings
+                    .filter((reading) => reading.category === category.id)
+                    .map((reading) => (
+                      <div key={reading.signalId} data-availability={reading.availability}>
+                        <dt>{reading.label}</dt>
+                        <dd>{reading.value}</dd>
+                      </div>
+                    ))}
+                  {category.id === "others" ? (
+                    <>
+                      <div>
+                        <dt>HUD detector</dt>
+                        <dd>{latest?.hudStatus ?? "Waiting"}</dd>
+                      </div>
+                      <div>
+                        <dt>Analysis sample</dt>
+                        <dd>{latest?.sampleResolution ?? "Waiting"}</dd>
+                      </div>
+                      <div>
+                        <dt>Unknown facts</dt>
+                        <dd>{latest?.unknownFactCount ?? "Waiting"}</dd>
+                      </div>
+                    </>
+                  ) : null}
+                </dl>
+              </section>
+            ))}
+          </div>
+          <p className={styles.detectorReason}>{latest?.hudReason ?? `Connect the ${captureGameLabel(game)} gameplay feed to begin.`}</p>
+          {game === "minecraft" ? (
+            <details>
+              <summary>HUD anchor confidence</summary>
+              <p>{latest?.hudAnchorScores ?? "Waiting for the first analysed frame."}</p>
+            </details>
+          ) : null}
+        </section>
+
         <section className={styles.panel} aria-labelledby="setup-heading">
-        <h2 id="setup-heading">Connect capture</h2>
-        <ol>
-          <li>Select the capture source and matching game profile below.</li>
-          <li>
-            {captureSource === "obs-virtual-camera"
-              ? <>Start Virtual Camera in OBS, then click <strong>Connect OBS Virtual Camera</strong>.</>
-              : <>Click <strong>Select Screen or Window</strong> and choose the gameplay feed.</>}
-          </li>
-          <li>Keep this Gameplay Engine page open while you play.</li>
-        </ol>
+        <div className={styles.setupHeading}>
+          <h2 id="setup-heading">Stream Capture</h2>
+          <div className={styles.captureInfo}>
+            <button type="button" aria-label="Stream Capture instructions" aria-describedby="capture-instructions">i</button>
+            <div id="capture-instructions" role="tooltip">
+              <ol>
+                <li>Select the matching game profile.</li>
+                <li>Choose a screen or connect OBS Virtual Camera.</li>
+                <li>Keep Gameplay Engine open while capturing.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
         <div className={styles.preview} data-active={previewConnected ? "true" : "false"}>
           <video
             ref={previewRef}
@@ -717,151 +932,98 @@ export function StudioGameplayCaptureClient() {
             suppressHydrationWarning
             aria-label="Exact gameplay feed watched by ChatXPT"
           />
-          <div aria-live="polite">
-            <span>Current selected source</span>
-            <strong>
-              {previewConnected
-                ? captureDeviceLabel
-                : running
-                  ? captureSource === "obs-virtual-camera"
-                    ? "Connecting to OBS Virtual Camera…"
-                    : "Waiting for your screen or window selection…"
-                : captureSource === "obs-virtual-camera"
-                  ? "None selected — connect OBS Virtual Camera"
-                  : "None selected — select a screen or window"}
-            </strong>
-            <small>
-              {previewConnected
-                ? latest === null
-                  ? "Preview is live; waiting for the first analysed frame"
-                  : `Live heartbeat: frame ${latest.frameCount} analysed at ${new Date(latest.capturedAt).toLocaleTimeString()}`
-                : running
-                  ? "ChatXPT will not start analysis until this exact preview is live."
-                  : "After you connect, this preview shows the exact feed ChatXPT analyzes."}
-            </small>
-          </div>
-        </div>
-        <form onSubmit={(event) => event.preventDefault()}>
-          <label className={styles.field}>
-            Current Studio session
-            <input
-              value={view?.session.sessionId ?? (sessionError === null ? "Loading Studio session" : "Studio session unavailable — retrying")}
-              readOnly
-            />
-          </label>
-          <label className={styles.field}>
-            Game profile
-            <select
-              value={game}
-              disabled={running || view === null}
-              onChange={(event) => {
-                const nextGame = event.target.value as CaptureGame;
-                setGame(nextGame);
-                rememberCapturePreference({ game: nextGame, source: captureSource, connected: false });
-              }}
-            >
-              <option value="minecraft">Minecraft Java - default vanilla HUD calibration</option>
-              <option value="brawl-stars">Brawl Stars - calibrated when HUD confirms</option>
-              <option value="generic">Generic - universal visual signals only</option>
-            </select>
-          </label>
-          <fieldset className={styles.sourcePicker}>
-            <legend>Choose how ChatXPT watches your game</legend>
-            <div>
-              <button
-                type="button"
-                disabled={running || view === null}
-                onClick={() => void start("screen-window")}
-              >
-                <strong>Select Screen or Window</strong>
-                <span>Open the browser picker and choose the gameplay feed.</span>
-              </button>
-              <button
-                type="button"
-                disabled={running || view === null}
-                onClick={() => void start("obs-virtual-camera")}
-              >
-                <strong>Connect OBS Virtual Camera</strong>
-                <span>Analyze the active scene sent by OBS Virtual Camera.</span>
-              </button>
+          <form className={styles.captureControls} onSubmit={(event) => event.preventDefault()}>
+            <div className={styles.selectedSource} aria-live="polite">
+              <span>Current selected source</span>
+              <strong>
+                {previewConnected
+                  ? captureDeviceLabel
+                  : running
+                    ? captureSource === "obs-virtual-camera"
+                      ? "Connecting to OBS Virtual Camera…"
+                      : "Waiting for screen selection…"
+                    : "None"}
+              </strong>
+              {previewConnected ? (
+                <small>
+                  {latest === null
+                    ? "Waiting for the first analysed frame"
+                    : `Frame ${latest.frameCount} analysed at ${new Date(latest.capturedAt).toLocaleTimeString()}`}
+                </small>
+              ) : null}
             </div>
-            <small>
-              {running
-                ? "Stop the current capture before switching sources."
-                : "Both choices use the same local gameplay analysis engine."}
-            </small>
-          </fieldset>
-          <div className={styles.actions}>
-            <button type="button" disabled={!running} onClick={stop}>Stop</button>
-            <a href="/studio">Back to Studio home</a>
-          </div>
-        </form>
-        <p className={styles.boundary}>
-          This page connects the product capture path. It still reports unsupported or low-confidence
-          game facts as unknown instead of guessing.
-        </p>
-        <p className={styles.keepOpen}>
-          Keep this Gameplay Engine page open while you play. Navigating away stops access to the
-          selected gameplay feed, and returning here lets you reconnect it.
-        </p>
-        <p className={styles.boundary}>
+            <label className={styles.field}>
+              Current Studio session
+              <input
+                value={view?.session.sessionId ?? (sessionError === null ? "Loading Studio session" : "Studio session unavailable - retrying")}
+                readOnly
+              />
+            </label>
+            <label className={styles.field}>
+              Game profile
+              <select
+                value={game}
+                disabled={running || savingGameProfile || view === null}
+                onChange={(event) => void selectGameProfile(event.target.value as CaptureGame)}
+              >
+                <option value="minecraft">Minecraft</option>
+                <option value="brawl-stars">Brawl Stars</option>
+                <option value="generic">Generic game</option>
+              </select>
+            </label>
+            {running ? (
+              <button className={styles.stopCapture} type="button" onClick={stop}>Stop capture</button>
+            ) : (
+              <fieldset className={styles.sourcePicker}>
+                <legend>Capture source</legend>
+                <div>
+                  <button
+                    type="button"
+                    disabled={savingGameProfile || view === null}
+                    onClick={() => void start("screen-window")}
+                  >
+                    Select Screen or Window
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingGameProfile || view === null}
+                    onClick={() => void start("obs-virtual-camera")}
+                  >
+                    Connect OBS Virtual Camera
+                  </button>
+                </div>
+              </fieldset>
+            )}
+          </form>
+        </div>
+        <p className={styles.lastCapture}>
           {capturePreference?.lastConnectedAt === null || capturePreference === null
-            ? "No saved capture preference yet. The selected game profile is remembered in this browser after setup."
-            : `Last successful capture in this browser: ${new Date(capturePreference.lastConnectedAt).toLocaleString()}.`}
+            ? "Last successful capture: None"
+            : `Last successful capture: ${new Date(capturePreference.lastConnectedAt).toLocaleString()}`}
         </p>
+        </section>
+
+        <section className={`${styles.panel} ${styles.statsPanel}`} aria-live="polite" aria-labelledby="capture-stats-heading">
+          <h2 id="capture-stats-heading">Capture Stats</h2>
+          <div className={styles.statsColumns}>
+            {captureStatsColumns.map((column) => (
+              <section className={styles.statsColumn} key={column.id} aria-labelledby={`capture-stats-${column.id}`}>
+                <h3 id={`capture-stats-${column.id}`}>{column.label}</h3>
+                <dl>
+                  {column.stats.map((stat) => (
+                    <div key={stat.label}>
+                      <dt>{stat.label}</dt>
+                      <dd>{stat.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            ))}
+          </div>
         </section>
 
         {previewConnected ? (
           <>
-        <section className={styles.proofPanel} aria-live="polite" aria-labelledby="proof-heading">
-        <div>
-          <p className={styles.eyebrow}>Live detector proof</p>
-          <h2 id="proof-heading">What ChatXPT reads from this exact feed</h2>
-          <p>
-            {latest === null
-              ? "Waiting for the first analysed frame."
-              : `${latest.frameCount} frames analysed locally at ${latest.analysisRateFps?.toFixed(1) ?? "starting"} frames/sec.`}
-          </p>
-        </div>
-        <div className={styles.proofGrid}>
-          <span><small>Health hearts</small><strong>{latest?.health ?? "Waiting"}</strong></span>
-          <span><small>Hunger shanks</small><strong>{latest?.hunger ?? "Waiting"}</strong></span>
-          <span><small>Recent damage</small><strong>{latest?.recentDamage ?? "Waiting"}</strong></span>
-          <span><small>Movement</small><strong>{latest?.movement ?? "Waiting"}</strong></span>
-          <span><small>Turning</small><strong>{latest?.turning ?? "Waiting"}</strong></span>
-          <span><small>Combat</small><strong>{latest?.combat ?? "Waiting"}</strong></span>
-          <span><small>Eating</small><strong>{latest?.eating ?? "Waiting"}</strong></span>
-          <span><small>Health trend</small><strong>{latest?.healthTrend ?? "Waiting"}</strong></span>
-          <span><small>Screen state</small><strong>{latest?.screen ?? "Waiting"}</strong></span>
-          <span><small>Land / water</small><strong>{latest?.environment ?? "Waiting"}</strong></span>
-          <span><small>Alive / dead</small><strong>{latest?.life ?? "Waiting"}</strong></span>
-          <span><small>HUD detector</small><strong>{latest?.hudStatus ?? "Waiting"}</strong></span>
-          <span><small>Analysis sample</small><strong>{latest?.sampleResolution ?? "Waiting"}</strong></span>
-          <span><small>Unknown facts</small><strong>{latest?.unknownFactCount ?? "Waiting"}</strong></span>
-        </div>
-        <p className={styles.detectorReason}>{latest?.hudReason ?? "Connect the Minecraft gameplay feed to begin."}</p>
-        <details>
-          <summary>HUD anchor confidence</summary>
-          <p>{latest?.hudAnchorScores ?? "Waiting for the first analysed frame."}</p>
-        </details>
-        </section>
-
-        <section className={styles.grid} aria-live="polite" aria-label="Gameplay Capture status">
-        <article className={styles.metric}><span>Capture Health</span><strong>{captureHealthCopy(running, latest !== null, error, failureReason, captureSource)}</strong></article>
-        <article className={styles.metric}><span>Studio connection</span><strong>{ingressStatus}</strong></article>
-        <article className={styles.metric}><span>Snapshots accepted</span><strong>{acceptedSnapshots}</strong></article>
-        <article className={styles.metric}><span>Frames analyzed</span><strong>{latest?.frameCount ?? 0}</strong></article>
-        <article className={styles.metric}><span>Local analysis rate</span><strong>{latest?.analysisRateFps === null || latest === null ? "Starting" : `${latest.analysisRateFps.toFixed(1)} / sec`}</strong></article>
-        <article className={styles.metric}><span>Game Profile</span><strong>{latest?.gameProfile ?? (view?.profile.gameName ?? "Waiting")}</strong></article>
-        <article className={styles.metric}><span>Support tier</span><strong>{latest?.supportTier ?? "Waiting"}</strong></article>
-        <article className={styles.metric}><span>Detected Game Facts</span><strong>{latest?.hudStatus ?? "Waiting"}</strong></article>
-        <article className={styles.metric}><span>Gameplay Activity</span><strong>{latest === null ? "Unknown" : `${latest.gameplayActivity[0].toUpperCase()}${latest.gameplayActivity.slice(1)}`}</strong></article>
-        <article className={styles.metric}><span>Confidence</span><strong>{latest?.confidenceLabel ?? "Unavailable"}</strong></article>
-        <article className={styles.metric}><span>Signal Confidence</span><strong>{latest === null ? "-" : latest.confidence.toFixed(2)}</strong></article>
-        <article className={styles.metric}><span>Cadence</span><strong>{latest === null ? "Waiting" : `${latest.cadence} - ${latest.cadenceReason}`}</strong></article>
-        <article className={styles.metric}><span>Last observation</span><strong>{latest === null ? "-" : new Date(latest.capturedAt).toLocaleTimeString()}</strong></article>
-        </section>
-
         <section className={styles.panel}>
         <h2>Observed and unknown facts</h2>
         <p>

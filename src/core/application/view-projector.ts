@@ -1,5 +1,6 @@
 import {
   overlayViewModelSchema,
+  resolveCurrentStreamGame,
   streamerViewModelSchema,
   viewerViewModelSchema,
   type OverlayUpNext,
@@ -47,8 +48,13 @@ function resultTitle(outcome: NonNullable<QuestCycleState["result"]>["outcome"])
 
 function hasFreshCompatibleGameplay(input: ViewModelProjectionInput): boolean {
   if (input.gameplay === null) return false;
-  if (input.profile.gameId === null || input.gameplay.capabilities.gameId === null) return false;
-  if (input.profile.gameId !== input.gameplay.capabilities.gameId) return false;
+  const game = resolveCurrentStreamGame(input.profile, input.session.currentGame);
+  if (game === null) return false;
+  const gameplayGameId = input.gameplay.capabilities.gameId;
+  const compatibleGame =
+    game.gameId === gameplayGameId ||
+    (game.gameId === "generic" && gameplayGameId === null);
+  if (!compatibleGame) return false;
   if (input.envelope.receivedAt - input.gameplay.envelope.occurredAt > GAMEPLAY_SNAPSHOT_STALE_AFTER_MS) {
     return false;
   }

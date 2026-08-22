@@ -6,6 +6,7 @@ import {
   streamerLiveDirectorCueCommandSchema,
   streamerLiveDirectorIntentCommandSchema,
   systemLiveDirectorContextCommandSchema,
+  systemCurrentGameCommandSchema,
   systemQuestProgressCommandSchema,
   systemQuestTickCommandSchema,
   systemVoteCloseCommandSchema,
@@ -90,6 +91,38 @@ describe("server-authoritative command permissions", () => {
         ).authorize(command, state)
       )?.code,
     ).toBe("unauthenticated");
+  });
+
+  it("allows only the verified system path to apply Twitch current-game metadata", async () => {
+    const state = liveState();
+    const command = systemCurrentGameCommandSchema.parse({
+      contractVersion: "1.0.0",
+      sessionId: state.session.sessionId,
+      questCycleId: state.questCycle.envelope.questCycleId,
+      commandId: "system-current-game",
+      correlationId: "system-current-game-correlation",
+      expectedRevision: state.session.revision,
+      issuedAt: FIXTURE_NOW,
+      actor: { kind: "system", actorId: "verified-twitch" },
+      type: "system.current-game",
+      game: { gameId: "minecraft", gameName: "Minecraft" },
+    });
+    const authorizer = new ServerCommandAuthorizer(
+      new StaticVerifiedActorResolver(
+        new Map([[command.commandId, grant("system", "verified-twitch")]]),
+      ),
+      () => FIXTURE_NOW,
+    );
+
+    expect(await authorizer.authorize(command, state)).toBeNull();
+    expect(
+      await new ServerCommandAuthorizer(
+        new StaticVerifiedActorResolver(
+          new Map([[command.commandId, grant("system", "different-system")]]),
+        ),
+        () => FIXTURE_NOW,
+      ).authorize(command, state),
+    ).toMatchObject({ code: "unauthenticated" });
   });
 
   it("authorizes trusted timer/progress identities without widening viewer authority", async () => {

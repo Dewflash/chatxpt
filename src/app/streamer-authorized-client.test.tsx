@@ -2,9 +2,13 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { streamerViewModelSchema } from "@/core";
+import { contractFixtureStreamerView } from "@/core/testing";
+
 import {
   clearCleanStartBrowserState,
   LocalPreviewAccountGate,
+  mergeStreamerRealtimeView,
   twitchOauthErrorMessage,
 } from "./streamer-authorized-client";
 
@@ -33,14 +37,17 @@ describe("LocalPreviewAccountGate", () => {
       onSignIn: () => undefined,
     }));
 
-    expect(html).toContain("Demo account preview");
-    expect(html).toContain("Sign in to ChatXPT");
+    expect(html).toContain("Local recovery");
+    expect(html).toContain("Use local demo account");
     expect(html).toContain("streamer@chatxpt.local");
     expect(html).toContain("Local Streamer");
     expect(html).toContain("chatxpt-demo");
     expect(html).toContain("The preview password is not transmitted or stored.");
     expect(html).toContain("must be completed before connecting Twitch or entering Studio");
+    expect(html).toContain("device-only");
+    expect(html).toContain("does not create cloud access or connect Twitch by itself");
     expect(html).not.toContain("Connect Twitch without demo account");
+    expect(html).not.toContain("Connect Twitch without local account");
   });
 });
 
@@ -64,6 +71,7 @@ describe("clearCleanStartBrowserState", () => {
       "chatxpt.local-preview-account.v1": "preview",
       "chatxpt.local-preview-account-bypass.v1": "true",
       "chatxpt.studio.gameplayCapture.v1": "capture",
+      "chatxpt.local-fallback-profile.v1": "saved-profile",
       "chatxpt.unrelated": "keep",
     });
 
@@ -72,6 +80,57 @@ describe("clearCleanStartBrowserState", () => {
     expect(storage.getItem("chatxpt.local-preview-account.v1")).toBeNull();
     expect(storage.getItem("chatxpt.local-preview-account-bypass.v1")).toBeNull();
     expect(storage.getItem("chatxpt.studio.gameplayCapture.v1")).toBeNull();
+    expect(storage.getItem("chatxpt.local-fallback-profile.v1")).toBe("saved-profile");
     expect(storage.getItem("chatxpt.unrelated")).toBe("keep");
+  });
+});
+
+describe("mergeStreamerRealtimeView", () => {
+  it("preserves server-only profile health on a same-account realtime snapshot", () => {
+    const previous = streamerViewModelSchema.parse({
+      ...contractFixtureStreamerView,
+      profileConnection: {
+        accountStatus: "twitch-verified",
+        profileOrigin: "supabase",
+        persistenceStatus: "synced",
+        checkedAt: contractFixtureStreamerView.envelope.receivedAt,
+        lastPersistedAt: contractFixtureStreamerView.envelope.receivedAt,
+        message: "Profile loaded from account storage.",
+      },
+    });
+    const realtime = streamerViewModelSchema.parse({
+      ...contractFixtureStreamerView,
+    });
+
+    expect(mergeStreamerRealtimeView(previous, realtime).profileConnection)
+      .toEqual(previous.profileConnection);
+  });
+
+  it("does not carry profile health across streamer boundaries", () => {
+    const previous = streamerViewModelSchema.parse({
+      ...contractFixtureStreamerView,
+      profileConnection: {
+        accountStatus: "twitch-verified",
+        profileOrigin: "supabase",
+        persistenceStatus: "synced",
+        checkedAt: contractFixtureStreamerView.envelope.receivedAt,
+        lastPersistedAt: contractFixtureStreamerView.envelope.receivedAt,
+        message: "Profile loaded from account storage.",
+      },
+    });
+    const next = streamerViewModelSchema.parse({
+      ...contractFixtureStreamerView,
+      session: {
+        ...contractFixtureStreamerView.session,
+        broadcasterId: "different-streamer",
+      },
+      profile: {
+        ...contractFixtureStreamerView.profile,
+        profileId: "different-profile",
+        streamerId: "different-streamer",
+      },
+    });
+
+    expect(mergeStreamerRealtimeView(previous, next).profileConnection).toBeUndefined();
   });
 });
