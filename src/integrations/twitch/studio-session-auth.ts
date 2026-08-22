@@ -12,6 +12,7 @@ const studioSessionGrantSchema = z
     grantId: identifierSchema,
     sessionId: identifierSchema,
     broadcasterId: identifierSchema,
+    twitchVerified: z.boolean().optional(),
     expiresAt: timestampSchema,
   })
   .strict();
@@ -50,7 +51,7 @@ function sign(payload: string, secret: Buffer): Buffer {
     .digest();
 }
 
-/** Server-only authority for the manual broadcaster bootstrap in D-065. */
+/** Server-only authority for an OAuth-verified or diagnostic broadcaster session. */
 export class StudioSessionGrantAuthority {
   constructor(private readonly setupKey: string) {}
 

@@ -441,6 +441,60 @@ p {
   background: rgba(255, 255, 255, .03);
 }
 
+.quick-intensity {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .03);
+}
+
+.quick-intensity label {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.quick-intensity input {
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: var(--lime);
+}
+
+.quick-intensity output {
+  color: var(--lime);
+}
+
+.quick-intensity-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.quick-intensity-actions button {
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid var(--lime);
+  border-radius: 8px;
+  color: #0c0912;
+  background: var(--lime);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.quick-intensity-actions button:last-child {
+  color: var(--text);
+  background: transparent;
+}
+
+.quick-intensity-actions button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
 .manual-progress label {
   display: grid;
   grid-template-columns: 1fr auto;

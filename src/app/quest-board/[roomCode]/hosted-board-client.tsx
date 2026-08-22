@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { domainErrorSchema, type DomainError, type ViewerViewModel } from "@/core";
+import { connectRealtimeSnapshot } from "@/app/realtime-snapshot-client";
 import { HostedQuestBoardSurface } from "@/viewer";
 
 interface HostedResponse {
@@ -114,7 +115,7 @@ export function HostedBoardClient({ roomCode }: { readonly roomCode: string }) {
       }
     };
     void open();
-    const interval = window.setInterval(() => void refresh(controller.signal), 1_500);
+    const interval = window.setInterval(() => void refresh(controller.signal), 10_000);
     return () => {
       stopped = true;
       accessReady.current = false;
@@ -122,6 +123,37 @@ export function HostedBoardClient({ roomCode }: { readonly roomCode: string }) {
       window.clearInterval(interval);
     };
   }, [refresh, roomCode]);
+
+  useEffect(() => {
+    const sessionId = view?.session.sessionId;
+    if (!accessReady.current || sessionId === undefined) return;
+    let stopped = false;
+    let disconnect: (() => Promise<void>) | null = null;
+    void connectRealtimeSnapshot({
+      role: "viewer",
+      sessionId,
+      loadLatest: async () => {
+        const response = await fetch("/api/hosted-board/viewer", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const payload = (await response.json()) as HostedResponse;
+        return response.ok && payload.ok ? payload.view ?? null : null;
+      },
+      onSnapshot: () => {
+        if (!stopped) void refresh();
+      },
+    }).then((release) => {
+      if (stopped) void release?.();
+      else disconnect = release;
+    }).catch(() => {
+      // Polling restores authoritative state if private Realtime is unavailable.
+    });
+    return () => {
+      stopped = true;
+      void disconnect?.();
+    };
+  }, [refresh, view?.session.sessionId]);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 250);

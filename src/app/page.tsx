@@ -1,5 +1,5 @@
-import { ControlRoom } from "@/components/control-room";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return <ControlRoom />;
+  redirect("/studio");
 }

@@ -26,12 +26,12 @@ The EBS destination is build-owned in `assets/environment.js` and defaults to th
 https://localhost:3000
 ```
 
-Before a Hosted Test upload, replace that exact origin with the deployed HTTPS ChatXPT origin and add the same domain to Twitch's URL-fetching allowlist. Do not source the origin from a Viewer Path query, local storage, or viewer input; the bearer token must never be redirectable to an untrusted host.
+Before a Hosted Test upload, replace that exact origin with the deployed HTTPS ChatXPT origin and add the same domain to Twitch's URL-fetching allowlist. The EBS accepts broadcaster preflights from the registered `https://<extension-id>.ext-twitch.tv` origin. When these files are served from a separate Local Test base origin, set that exact origin as the server-only `TWITCH_EXTENSION_ASSET_ORIGIN`. Do not source either origin from a Viewer Path query, local storage, or viewer input; the bearer token must never be redirectable to an untrusted host.
 
 ```text
 ebsOrigin: "https://your-chatxpt-host.example"
 ```
 
-The backend must hold `TWITCH_EXTENSION_SECRET`, validate the JWT signature and expiry, and resolve the token's channel to an active ChatXPT session. No voter key, actor, channel, or session authority comes from browser input. The uploaded package and automated signed-token tests do not by themselves prove a real Twitch Local Test, Hosted Test, Extension review, or production Supabase run; capture those separately.
+The backend must hold `TWITCH_EXTENSION_SECRET`, validate the JWT signature and expiry, and resolve the token's channel to an active ChatXPT session. No voter key, actor, channel, or session authority comes from browser input. Live Config can apply or reset current-stream intensity through the canonical session-override command while leaving saved profile defaults untouched. The standalone Asset Hosting viewer deliberately uses authorised 1.5-second EBS recovery reads; the Next-hosted viewer and other ChatXPT clients use private push-first realtime. The uploaded package and automated signed-token tests do not by themselves prove a real Twitch Local Test, Hosted Test, Extension review, or production Supabase run; capture those separately.
 
 Role 1 owns the package shape, EBS boundary, and Twitch registration. The Next.js `/viewer.html` route mounts Role 5's canonical viewer surface, while `/config.html` and `/live-config.html` mount Role 4's compact surfaces. This dependency-free static build preserves their core authority and interaction boundaries for Twitch Asset Hosting; the Next modules remain the canonical UI implementations.

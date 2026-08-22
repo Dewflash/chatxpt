@@ -28,6 +28,10 @@ interface AudienceSample {
   readonly asking: boolean;
   readonly voting: boolean;
   readonly negative: boolean;
+  readonly participantKey: string | null;
+  readonly messageFingerprint: string;
+  readonly topics: readonly string[];
+  readonly watchlistHits: readonly string[];
 }
 
 const DEFAULT_ROLLING_WINDOW_MS = 30_000;
@@ -37,6 +41,20 @@ const DEFAULT_CONFLICT_DELTA = 0.05;
 const cheeringWords = /\b(?:go|hype|pog|clutch|nice|lets go|let's go|lol|lmao|wow|win)\b/i;
 const askingWords = /\b(?:quest|challenge|sidequest|do it|try|please|pls|make him|make her)\b/i;
 const negativeWords = /\b(?:boring|nope|stop|bad|throw|threw|hate|fail)\b/i;
+const topicStopWords = new Set([
+  "about", "after", "again", "also", "because", "before", "being", "could", "from",
+  "have", "into", "just", "more", "really", "should", "that", "their", "there", "they",
+  "this", "very", "want", "what", "when", "where", "which", "with", "would", "your",
+]);
+
+function topicTokens(text: string | null): string[] {
+  if (text === null) return [];
+  const tokens = text
+    .normalize("NFKC")
+    .toLocaleLowerCase()
+    .match(/[\p{L}\p{N}][\p{L}\p{N}'-]{2,31}/gu) ?? [];
+  return [...new Set(tokens.filter((token) => token.length >= 4 && !topicStopWords.has(token)))].slice(0, 12);
+}
 
 function throwIfAborted(signal?: AbortSignal): void {
   if (!signal?.aborted) return;
@@ -60,8 +78,9 @@ function classifyText(text: string | null) {
   };
 }
 
-function sampleFromEvent(event: AudienceEvent): AudienceSample {
+function sampleFromEvent(event: AudienceEvent, keywordWatchlist: readonly string[] = []): AudienceSample {
   const text = classifyText(event.text);
+  const normalizedText = event.text?.normalize("NFKC").toLocaleLowerCase() ?? "";
   const voting = event.eventType === "chat-vote";
   const reaction = event.eventType === "reaction";
   const energy = clampUnit(
@@ -84,6 +103,12 @@ function sampleFromEvent(event: AudienceEvent): AudienceSample {
     asking: text.asking,
     voting,
     negative: text.negative,
+    participantKey: event.viewerId,
+    messageFingerprint: event.envelope.messageId,
+    topics: topicTokens(event.text),
+    watchlistHits: keywordWatchlist.filter((keyword) =>
+      normalizedText.includes(keyword.normalize("NFKC").toLocaleLowerCase()),
+    ),
   };
 }
 
@@ -155,6 +180,11 @@ function buildSnapshot(input: {
   readonly rollingWindowMs: number;
   readonly minimumConfidence: number;
   readonly conflictConfidenceDelta: number;
+  readonly additionalSignals?: readonly {
+    readonly signalId: string;
+    readonly kind: string;
+    readonly value: string | number | boolean;
+  }[];
 }): AudienceSnapshot {
   const provenance = makeProvenance(input.latest, input.samples.length);
   const repeatedRequests = input.samples.filter((sample) => sample.asking).length;
@@ -220,8 +250,173 @@ function buildSnapshot(input: {
           observed(negativeMessages, input.latest, input.samples.length, input.rollingWindowMs),
         ],
       },
+      ...(input.additionalSignals ?? []).map((signal) => ({
+        signalId: signal.signalId,
+        kind: signal.kind,
+        fallbackProvenance: provenance,
+        candidates: [
+          observed(
+            signal.value,
+            input.latest,
+            input.samples.length,
+            input.rollingWindowMs,
+          ),
+        ],
+      })),
     ],
   });
+}
+
+function moodFromSamples(samples: readonly AudienceSample[]): string {
+  if (samples.length === 0) return "unknown";
+  const intent = majorityIntent(samples);
+  const energy = averageEnergy(samples);
+  if (intent === "concerned") return "concerned";
+  if (intent === "cheering" && energy >= 0.55) return "excited";
+  if (intent === "requesting") return energy >= 0.5 ? "playful" : "curious";
+  if (intent === "voting") return "engaged";
+  return energy >= 0.65 ? "excited" : energy >= 0.4 ? "engaged" : energy >= 0.2 ? "curious" : "quiet";
+}
+
+function slug(value: string): string {
+  return value.toLocaleLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-|-$/gu, "").slice(0, 64) || "keyword";
+}
+
+export interface AudienceAnalyticsTopic {
+  readonly topic: string;
+  readonly count: number;
+  readonly participantKeys: readonly string[];
+  readonly evidence: readonly AudienceAnalyticsTopicEvidence[];
+}
+
+export interface AudienceAnalyticsTopicEvidence {
+  readonly participantKey: string;
+  readonly messageFingerprint: string;
+  readonly observedAt: number;
+}
+
+export interface AudienceAnalyticsUpdate {
+  readonly snapshot: AudienceSnapshot;
+  readonly primaryTopic: AudienceAnalyticsTopic | null;
+}
+
+/**
+ * Process-local rolling analytics. It immediately discards raw message text and
+ * retains only bounded classifications, topic tokens, and session-scoped keys.
+ */
+export class AudienceAnalyticsAccumulator {
+  private readonly samples: AudienceSample[] = [];
+  private readonly messageFingerprints = new Set<string>();
+  private readonly participantFirstSeen = new Map<string, number>();
+
+  constructor(private readonly options: AudienceSignalPipelineOptions = {}) {}
+
+  ingest(rawEvent: AudienceEvent, keywordWatchlist: readonly string[] = []): AudienceAnalyticsUpdate | null {
+    const event = audienceEventSchema.parse(rawEvent);
+    if (this.messageFingerprints.has(event.envelope.messageId)) return null;
+    this.messageFingerprints.add(event.envelope.messageId);
+    const rollingWindowMs = this.options.rollingWindowMs ?? DEFAULT_ROLLING_WINDOW_MS;
+    const sample = sampleFromEvent(event, keywordWatchlist);
+    this.samples.push(sample);
+    const oldestRetainedAt = event.envelope.receivedAt - rollingWindowMs * 2;
+    while (this.samples[0] !== undefined && this.samples[0].receivedAt < oldestRetainedAt) {
+      const removed = this.samples.shift();
+      if (removed !== undefined) this.messageFingerprints.delete(removed.messageFingerprint);
+    }
+    if (sample.participantKey !== null) {
+      if (!this.participantFirstSeen.has(sample.participantKey)) {
+        this.participantFirstSeen.set(sample.participantKey, sample.receivedAt);
+      }
+    }
+
+    const currentStartedAt = event.envelope.receivedAt - rollingWindowMs;
+    const previousStartedAt = currentStartedAt - rollingWindowMs;
+    const current = this.samples.filter((item) => item.receivedAt >= currentStartedAt);
+    const previous = this.samples.filter(
+      (item) => item.receivedAt >= previousStartedAt && item.receivedAt < currentStartedAt,
+    );
+    const activeKeys = new Set(current.flatMap((item) => item.participantKey === null ? [] : [item.participantKey]));
+    const previousKeys = new Set(previous.flatMap((item) => item.participantKey === null ? [] : [item.participantKey]));
+    const newlyActive = [...activeKeys].filter((key) => (this.participantFirstSeen.get(key) ?? Infinity) >= currentStartedAt).length;
+    const returning = [...activeKeys].filter(
+      (key) => (this.participantFirstSeen.get(key) ?? Infinity) < currentStartedAt,
+    ).length;
+    const recentlyInactive = [...previousKeys].filter((key) => !activeKeys.has(key)).length;
+    const messagesPerMinute = Number(((current.length * 60_000) / rollingWindowMs).toFixed(1));
+    const previousMessagesPerMinute = Number(((previous.length * 60_000) / rollingWindowMs).toFixed(1));
+
+    const topicCounts = new Map<string, {
+      count: number;
+      participants: Set<string>;
+      evidence: AudienceAnalyticsTopicEvidence[];
+    }>();
+    for (const item of current) {
+      for (const topic of item.topics) {
+        const existing = topicCounts.get(topic) ?? { count: 0, participants: new Set<string>(), evidence: [] };
+        if (item.participantKey !== null && existing.participants.has(item.participantKey)) {
+          continue;
+        }
+        existing.count += 1;
+        if (item.participantKey !== null) {
+          existing.participants.add(item.participantKey);
+          existing.evidence.push({
+            participantKey: item.participantKey,
+            messageFingerprint: item.messageFingerprint,
+            observedAt: item.occurredAt,
+          });
+        }
+        topicCounts.set(topic, existing);
+      }
+    }
+    const primaryEntry = [...topicCounts.entries()]
+      .filter(([, value]) => value.participants.size >= 2)
+      .sort((left, right) => right[1].count - left[1].count || right[1].participants.size - left[1].participants.size)[0] ?? null;
+    const primaryTopic: AudienceAnalyticsTopic | null = primaryEntry === null
+      ? null
+      : {
+          topic: primaryEntry[0],
+          count: primaryEntry[1].count,
+          participantKeys: [...primaryEntry[1].participants],
+          evidence: primaryEntry[1].evidence.slice(0, 128),
+        };
+    const watchlistCounts = new Map(keywordWatchlist.map((keyword) => [keyword, 0]));
+    for (const item of current) {
+      for (const keyword of item.watchlistHits) {
+        watchlistCounts.set(keyword, (watchlistCounts.get(keyword) ?? 0) + 1);
+      }
+    }
+    const additionalSignals = [
+      { signalId: "audience-mood", kind: "audience-mood", value: moodFromSamples(current) },
+      { signalId: "audience-message-rate", kind: "audience-message-rate", value: messagesPerMinute },
+      { signalId: "audience-previous-mood", kind: "audience-previous-mood", value: moodFromSamples(previous) },
+      { signalId: "audience-previous-message-rate", kind: "audience-previous-message-rate", value: previousMessagesPerMinute },
+      { signalId: "audience-active-participants", kind: "audience-active-participants", value: activeKeys.size },
+      { signalId: "audience-newly-active-participants", kind: "audience-newly-active-participants", value: newlyActive },
+      { signalId: "audience-returning-participants", kind: "audience-returning-participants", value: returning },
+      { signalId: "audience-recently-inactive-participants", kind: "audience-recently-inactive-participants", value: recentlyInactive },
+      ...(primaryTopic === null ? [] : [
+        { signalId: "audience-primary-topic", kind: "audience-primary-topic", value: primaryTopic.topic },
+        { signalId: "audience-primary-topic-count", kind: "audience-primary-topic-count", value: primaryTopic.count },
+      ]),
+      ...[...watchlistCounts].map(([keyword, count]) => ({
+        signalId: `audience-watchlist-${slug(keyword)}`,
+        kind: `audience-watchlist-${slug(keyword)}`,
+        value: count,
+      })),
+    ];
+    return {
+      snapshot: buildSnapshot({
+        latest: event,
+        samples: current,
+        sequence: this.messageFingerprints.size,
+        rollingWindowMs,
+        minimumConfidence: this.options.minimumConfidence ?? DEFAULT_MINIMUM_CONFIDENCE,
+        conflictConfidenceDelta: this.options.conflictConfidenceDelta ?? DEFAULT_CONFLICT_DELTA,
+        additionalSignals,
+      }),
+      primaryTopic,
+    };
+  }
 }
 
 export function createAudienceSignalPipeline(

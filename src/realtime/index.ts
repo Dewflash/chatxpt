@@ -59,6 +59,8 @@ export {
   type HostedBoardSessionDirectory,
   type HostedBoardSessionRecord,
   type LifecycleStoreCommitResult,
+  type ObsOverlayConnectionRecord,
+  type ObsOverlayConnectionStore,
   type RealtimeAccessGrant,
   type RealtimeAccessGrantStore,
   type RoleSnapshotPublisher,

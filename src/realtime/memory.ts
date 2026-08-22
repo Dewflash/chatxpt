@@ -36,6 +36,8 @@ import {
   type HostedBoardSessionDirectory,
   type HostedBoardSessionRecord,
   type LifecycleStoreCommitResult,
+  type ObsOverlayConnectionRecord,
+  type ObsOverlayConnectionStore,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
   type RealtimeAccessGrantStore,
@@ -72,6 +74,7 @@ export class MemoryChatXptPersistence
     CurrentGameplaySnapshotRepository,
     DueVoteCycleReader,
     HostedBoardSessionDirectory,
+    ObsOverlayConnectionStore,
     RoleSnapshotPublisher,
     RealtimeAccessGrantStore,
     SessionHistoryReader,
@@ -86,6 +89,7 @@ export class MemoryChatXptPersistence
   private readonly snapshots = new Map<string, RoleViewModels>();
   private readonly roomSessions = new Map<string, string>();
   private readonly broadcasterActiveSessions = new Map<string, string>();
+  private readonly obsOverlayConnections = new Map<string, ObsOverlayConnectionRecord>();
   private readonly lifecycle = new Map<string, MemoryLifecycleMetadata>();
   private readonly lifecycleOperations = new Map<string, SessionLifecycleCommitResult>();
   private readonly accessGrants = new Map<string, RealtimeAccessGrant>();
@@ -100,6 +104,8 @@ export class MemoryChatXptPersistence
       sourceMode: "twitch-extension" | "hosted-board" | "twitch-chat";
     }
   >();
+  private readonly sessionPointsByVoter = new Map<string, number>();
+  private readonly rewardedCycleVoters = new Set<string>();
 
   async bootstrap(input: BootstrapSessionInput): Promise<void> {
     const state = authoritativeSessionStateSchema.parse(input.state);
@@ -206,6 +212,7 @@ export class MemoryChatXptPersistence
         },
       );
     }
+    this.awardTerminalRewards(receipt);
     const updatedLifecycle = this.lifecycle.get(input.command.sessionId);
     if (updatedLifecycle !== undefined) {
       updatedLifecycle.lastActivityAt = input.acceptedAt;
@@ -253,6 +260,9 @@ export class MemoryChatXptPersistence
     const vote = this.voteLedger.get(
       this.voteKey(input.sessionId, input.questCycleId, input.voterKey),
     );
+    const sessionPoints = this.sessionPointsByVoter.get(
+      this.sessionVoterKey(input.sessionId, input.voterKey),
+    ) ?? 0;
     return viewerRecoveryStateSchema.parse(
       vote === undefined
         ? {
@@ -260,7 +270,7 @@ export class MemoryChatXptPersistence
             questCycleId: input.questCycleId,
             acceptedCandidateId: null,
             acceptedAt: null,
-            sessionPoints: 0,
+            sessionPoints,
             sourceMode: null,
           }
         : {
@@ -268,7 +278,7 @@ export class MemoryChatXptPersistence
             questCycleId: input.questCycleId,
             acceptedCandidateId: vote.candidateId,
             acceptedAt: vote.acceptedAt,
-            sessionPoints: 0,
+            sessionPoints,
             sourceMode: vote.sourceMode,
           },
     );
@@ -396,6 +406,52 @@ export class MemoryChatXptPersistence
       status: state.session.status,
       revision: state.session.revision,
     };
+  }
+
+  async replaceObsOverlayConnection(
+    input: Omit<ObsOverlayConnectionRecord, "lastSeenAt" | "lastSessionId" | "revokedAt">,
+  ): Promise<ObsOverlayConnectionRecord> {
+    const record: ObsOverlayConnectionRecord = {
+      ...input,
+      lastSeenAt: null,
+      lastSessionId: null,
+      revokedAt: null,
+    };
+    this.obsOverlayConnections.set(input.broadcasterId, record);
+    return clone(record);
+  }
+
+  async findObsOverlayConnection(
+    broadcasterId: string,
+  ): Promise<ObsOverlayConnectionRecord | null> {
+    const record = this.obsOverlayConnections.get(broadcasterId);
+    return record === undefined ? null : clone(record);
+  }
+
+  async touchObsOverlayConnection(
+    broadcasterId: string,
+    grantId: string,
+    sessionId: string | null,
+    seenAt: number,
+  ): Promise<ObsOverlayConnectionRecord | null> {
+    const current = this.obsOverlayConnections.get(broadcasterId);
+    if (current === undefined || current.grantId !== grantId || current.revokedAt !== null) {
+      return null;
+    }
+    const next = { ...current, lastSeenAt: seenAt, lastSessionId: sessionId };
+    this.obsOverlayConnections.set(broadcasterId, next);
+    return clone(next);
+  }
+
+  async revokeObsOverlayConnection(
+    broadcasterId: string,
+    revokedAt: number,
+  ): Promise<ObsOverlayConnectionRecord | null> {
+    const current = this.obsOverlayConnections.get(broadcasterId);
+    if (current === undefined) return null;
+    const next = { ...current, revokedAt };
+    this.obsOverlayConnections.set(broadcasterId, next);
+    return clone(next);
   }
 
   async grant(input: Omit<RealtimeAccessGrant, "revokedAt">): Promise<RealtimeAccessGrant> {
@@ -586,6 +642,42 @@ export class MemoryChatXptPersistence
   private voteKey(sessionId: string, questCycleId: string, voterKey: string): string {
     return JSON.stringify([sessionId, questCycleId, voterKey]);
   }
+
+  private sessionVoterKey(sessionId: string, voterKey: string): string {
+    return JSON.stringify([sessionId, voterKey]);
+  }
+
+  private awardTerminalRewards(receipt: AcceptedCommandReceipt): void {
+    for (const event of receipt.events) {
+      const attributes = event.event.attributes;
+      const rewardPoints = attributes.rewardPointsAwarded;
+      if (
+        attributes.outcome !== "succeeded" ||
+        typeof rewardPoints !== "number" ||
+        !Number.isSafeInteger(rewardPoints) ||
+        rewardPoints <= 0 ||
+        event.envelope.questCycleId === null
+      ) {
+        continue;
+      }
+      for (const vote of this.voteLedger.values()) {
+        if (
+          vote.sessionId !== receipt.state.session.sessionId ||
+          vote.questCycleId !== event.envelope.questCycleId
+        ) {
+          continue;
+        }
+        const rewardedKey = this.voteKey(vote.sessionId, vote.questCycleId, vote.voterKey);
+        if (this.rewardedCycleVoters.has(rewardedKey)) continue;
+        this.rewardedCycleVoters.add(rewardedKey);
+        const sessionKey = this.sessionVoterKey(vote.sessionId, vote.voterKey);
+        this.sessionPointsByVoter.set(
+          sessionKey,
+          Math.min(100_000, (this.sessionPointsByVoter.get(sessionKey) ?? 0) + rewardPoints),
+        );
+      }
+    }
+  }
 }
 
 export function createMemoryPersistenceRuntime() {
@@ -596,6 +688,7 @@ export function createMemoryPersistenceRuntime() {
     lifecycle: backend,
     hostedBoardSessions: backend,
     twitchChannelSessions: backend,
+    obsOverlayConnections: backend,
     candidates: backend,
     audiencePointers: new EphemeralAudiencePointerAggregateRepository(),
     acceptedVotes: backend,

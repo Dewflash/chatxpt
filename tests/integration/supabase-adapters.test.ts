@@ -38,6 +38,7 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
   persisted: RoleViewModels | null = null;
   acceptedVoteRows: readonly unknown[] = [];
   viewerAcceptedVoteRow: unknown | null = null;
+  viewerSessionPointsRow: unknown | null = null;
   hostedBoardSessionRow: unknown | null = null;
   twitchChannelSessionRow: unknown | null = null;
   dueVoteStates: readonly unknown[] = [];
@@ -66,6 +67,10 @@ class RecordingDataApi extends SupabaseChatXptDataApi {
 
   override async loadViewerAcceptedVote(): Promise<unknown | null> {
     return this.viewerAcceptedVoteRow;
+  }
+
+  override async loadViewerSessionPoints(): Promise<unknown | null> {
+    return this.viewerSessionPointsRow;
   }
 
   override async loadHostedBoardSession(): Promise<unknown | null> {
@@ -201,6 +206,7 @@ describe("Supabase production adapters", () => {
         sourceMode: "hosted-board",
       },
     };
+    api.viewerSessionPointsRow = { session_points: 100 };
 
     expect(
       await reader.readViewerRecovery({
@@ -213,7 +219,7 @@ describe("Supabase production adapters", () => {
       questCycleId: "fixture-cycle",
       acceptedCandidateId: "candidate-2",
       acceptedAt: Date.parse("2026-08-07T22:31:00.000Z"),
-      sessionPoints: 0,
+      sessionPoints: 100,
       sourceMode: "hosted-board",
     });
   });

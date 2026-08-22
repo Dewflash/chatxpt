@@ -90,7 +90,7 @@ describe("TwitchChatApplication", () => {
     expect(await chat.ingest({ ...message, chatterId: "raw-twitch-viewer-2", messageId: "chat-message-3", text: "3" }))
       .toEqual({ status: "counted", choice: 3 });
     expect(await chat.ingest({ ...message, messageId: "chat-message-4", text: "vote 1" }))
-      .toEqual({ status: "ignored", reason: "not-a-chat-vote" });
+      .toEqual({ status: "aggregated", sampleSize: 1 });
 
     const diagnostic = await extension.readLocalDiagnosticSnapshot();
     expect(diagnostic?.votes).toEqual({
@@ -98,5 +98,57 @@ describe("TwitchChatApplication", () => {
       "candidate-two": 1,
       "candidate-three": 1,
     });
+  });
+
+  it("aggregates ordinary chat into canonical analytics without retaining raw Twitch identity or text", async () => {
+    let sequence = 0;
+    const persistence = createMemoryPersistenceRuntime();
+    const extension = new TwitchExtensionViewerApplication({
+      persistence,
+      extensionSecret: EXTENSION_SECRET,
+      localDiagnostics: true,
+      now: () => NOW,
+      nextId: () => `ordinary-chat-${++sequence}`,
+    });
+    extension.stageLocalDiagnosticQuests(candidates);
+    await extension.readViewer(`Bearer ${signedToken()}`);
+    const chat = new TwitchChatApplication({
+      runtime: new ChatXptServerRuntime({ persistence, clock: { now: () => NOW + 1_000 } }),
+      eventSubSecret: EVENTSUB_SECRET,
+      now: () => NOW + 1_000,
+    });
+    const first = {
+      broadcasterId: "channel-1",
+      chatterId: "raw-twitch-viewer-secret-a",
+      messageId: "raw-twitch-message-secret-a",
+      text: "A uniquely private sentence says diamonds are the next challenge",
+      occurredAt: NOW,
+      receivedAt: NOW,
+    };
+    const second = {
+      ...first,
+      chatterId: "raw-twitch-viewer-secret-b",
+      messageId: "raw-twitch-message-secret-b",
+      text: "Diamonds diamonds, please find diamonds next!",
+      occurredAt: NOW + 100,
+      receivedAt: NOW + 100,
+    };
+
+    expect(await chat.ingest(first)).toEqual({ status: "aggregated", sampleSize: 1 });
+    expect(await chat.ingest(second)).toEqual({ status: "aggregated", sampleSize: 2 });
+    expect(await chat.ingest(second)).toEqual({ status: "duplicate-message", sampleSize: 2 });
+
+    const record = await persistence.twitchChannelSessions.findTwitchChannelSession("channel-1");
+    const state = await persistence.sessions.load(record!.sessionId);
+    expect(state?.audience?.sampleSize).toBe(2);
+    expect(state?.liveDirector?.audiencePointer).toMatchObject({
+      status: "known",
+      topic: "diamonds",
+      uniqueParticipants: 2,
+    });
+    const serialized = JSON.stringify(state);
+    expect(serialized).not.toContain("raw-twitch-viewer-secret");
+    expect(serialized).not.toContain("raw-twitch-message-secret");
+    expect(serialized).not.toContain("uniquely private sentence");
   });
 });

@@ -17,7 +17,7 @@ const pages: readonly StudioProductPage[] = [
 ];
 
 const requiredPageSections: Readonly<Record<StudioProductPage, readonly string[]>> = {
-  home: ["Ready to start ChatXPT", "Twitch", "Game Capture", "Viewer Voting", "Broadcast Overlay"],
+  home: ["Stream engagement", "Live Quests", "Chat Analytics", "Live surfaces", "Viewer Voting", "Broadcast Overlay"],
   gameplay: ["Overview", "Game Capture", "Understanding", "Health &amp; Recovery"],
   "live-analytics": ["Overview", "Activity", "Topics", "Session History"],
   "live-quests": ["Now", "Recommendations", "Why", "Voting", "Results"],
@@ -43,8 +43,8 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("Profile &amp; Defaults");
     expect(html).toContain("Stream Settings");
     expect(html).toContain("Test Lab");
-    expect(html).toContain("Open the right workspace");
-    expect(html).toContain("Ready to start ChatXPT");
+    expect(html).toContain("Stream engagement");
+    expect(html).toContain("What your stream sees");
     expect(html).toContain("Viewer Voting");
     expect(html).toContain("Broadcast Overlay");
     expect(html).not.toContain("fixture");
@@ -68,6 +68,18 @@ describe("StudioProductPageSurface", () => {
     expect(html).not.toContain("scheduled for");
   });
 
+  it("renders an active Twitch OAuth link before the Studio session exists", () => {
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "home",
+      view: null,
+      readiness: null,
+    }));
+
+    expect(html).toContain('href="/api/twitch/oauth/start"');
+    expect(html).toContain("Connect Twitch");
+    expect(html).not.toContain("Connect Twitch to continue");
+  });
+
   it("keeps Test Lab sample/live distinction outside ordinary product pages", () => {
     const home = renderToStaticMarkup(h(StudioProductPageSurface, {
       page: "home",
@@ -79,7 +91,9 @@ describe("StudioProductPageSurface", () => {
     }));
 
     expect(home).not.toContain("Sample checks and live source checks");
-    expect(lab).toContain("Sample checks and live source checks are not connected yet");
+    expect(lab).toContain("Sample checks stay separate from live state");
+    expect(lab).toContain("A direct browser tab cannot create a Twitch viewer identity");
+    expect(lab).not.toContain('href="/viewer.html"');
   });
 
   it.each(pages)("renders the required ICP-01 sections for %s", (page) => {
@@ -115,8 +129,10 @@ describe("StudioProductPageSurface", () => {
       onCommand: () => undefined,
     }));
 
-    expect(html).toContain("Resolve the highlighted setup blocker before starting ChatXPT.");
-    expect(html).toContain("Resolve setup first");
+    expect(html).toContain("Resolve the highlighted setup blocker so ChatXPT can monitor the stream.");
+    expect(html).toContain("Waiting for Twitch stream");
+    expect(html).toContain('href="/studio/gameplay/capture"');
+    expect(html).toContain("Allow camera");
     expect(html).not.toContain("<button");
   });
 
@@ -133,8 +149,27 @@ describe("StudioProductPageSurface", () => {
       onCommand: () => undefined,
     }));
 
-    expect(html).toContain("ChatXPT is live for this stream");
+    expect(html).toContain("Live Director · OBS + Game Engine");
     expect(html).toContain("End unavailable");
-    expect(html).toContain("Open Live Quests");
+    expect(html).toContain("Open quests");
+  });
+
+  it("renders the connected waiting-for-Twitch composition without a manual start", () => {
+    const snapshot = createFixtureUiGatewaySnapshot();
+    const view = {
+      ...snapshot.views.streamer,
+      session: { ...snapshot.views.streamer.session, status: "offline" as const },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "home",
+      view,
+      readiness: contractFixtureUiX01ReadinessCatalog["r4.setup.ready.v1"],
+      onCommand: () => undefined,
+    }));
+
+    expect(html).toContain("Twitch connected — waiting for the stream");
+    expect(html).toContain("Change current game");
+    expect(html).toContain("Waiting for Twitch stream");
+    expect(html).not.toContain("Start ChatXPT");
   });
 });

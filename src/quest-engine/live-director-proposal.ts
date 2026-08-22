@@ -6,6 +6,7 @@ import {
   domainErrorSchema,
   gameplaySnapshotSchema,
   intelligenceSnapshotSchema,
+  resolveEffectiveStreamerProfile,
   systemIntelligenceCommandSchema,
   type CandidateProvider,
   type DirectorCueProposalCoordinator,
@@ -38,6 +39,14 @@ function inputEnvelope(input: DirectorCueProposalInput) {
   });
 }
 
+function activeQuestSummary(input: DirectorCueProposalInput): string | null {
+  const { questCycle } = input.current;
+  if (questCycle.activeCandidateId === null) return null;
+  const active = questCycle.options.find(
+    ({ candidateId }) => candidateId === questCycle.activeCandidateId,
+  );
+  return active === undefined ? null : `${active.title}: ${active.instruction}`.trim().slice(0, 240);
+}
 /**
  * Work-conserving R3-014 adapter. It invokes Role 2 generation when canonical
  * gameplay is available, treats provider failure as normal fallback input,
@@ -109,14 +118,18 @@ export class DefaultLiveDirectorProposalCoordinator
     }
 
     let generatedCandidates: readonly unknown[] | null = null;
+    const effectiveProfile = resolveEffectiveStreamerProfile(
+      input.current.profile,
+      input.current.sessionOverride,
+    );
     try {
       const generated = candidateBatchSchema.safeParse(
         await this.candidates.generate({
           envelope,
           intelligence: intelligence.data,
-          profile: input.current.profile,
+          profile: effectiveProfile,
           recentQuestTitles: (input.current.recentQuests ?? []).map(({ title }) => title),
-          activeChatXptQuest: null,
+          activeChatXptQuest: activeQuestSummary(input),
         }),
       );
       if (
@@ -149,7 +162,7 @@ export class DefaultLiveDirectorProposalCoordinator
       envelope,
       candidates: generatedCandidates,
       intelligence: intelligence.data,
-      profile: input.current.profile,
+      profile: effectiveProfile,
       currentState: input.current.questCycle,
       recentQuests: input.current.recentQuests ?? [],
       now: input.now,

@@ -106,4 +106,3 @@ describe("ChatXptServerRuntime eligible proposal coordination", () => {
     expect(secondResult).toEqual(firstResult);
   });
 });
-

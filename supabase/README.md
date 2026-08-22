@@ -36,6 +36,13 @@ snapshots only; all commands go through ChatXPT's server authority. Anonymous
 viewers may use Supabase anonymous Auth, but ChatXPT still grants their topic
 membership server-side.
 
+Enable Supabase anonymous sign-ins for the project. Studio, viewer, and OBS
+clients use an anonymous Supabase session only as a short-lived private-channel
+principal. ChatXPT separately verifies the Studio, Twitch, hosted-board, or OBS
+surface authority before granting that principal one session/role topic. A
+shared broadcast never contains a viewer's accepted choice or personal points;
+viewer push events trigger the viewer-authorised recovery read.
+
 ## Reality boundary
 
 Committed SQL and application tests are not proof that the shared cloud project

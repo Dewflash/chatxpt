@@ -43,6 +43,61 @@
   cursor: pointer;
 }
 .bootstrapCard button:disabled { opacity: 0.58; cursor: wait; }
+.accountEyebrow {
+  margin-bottom: 6px !important;
+  color: #d7ff52 !important;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.accountNote { color: #aaa2bd; line-height: 1.4; }
+.accountBadge {
+  position: fixed;
+  z-index: 30;
+  top: 14px;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(215, 255, 82, .28);
+  border-radius: 10px;
+  color: #f8f6ff;
+  background: rgba(12, 9, 18, .94);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .3);
+}
+.accountBadge span { display: grid; gap: 1px; }
+.accountBadge small { color: #aaa2bd; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.accountBadge strong { font-size: 12px; }
+.accountBadge button {
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 7px;
+  color: #f8f6ff;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+.oauthButton {
+  display: grid;
+  min-height: 48px;
+  place-items: center;
+  border-radius: 10px;
+  color: #0c0912;
+  background: #d7ff52;
+  font-weight: 900;
+  text-decoration: none;
+}
+.manualFallback {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(12, 9, 18, 0.52);
+}
+.manualFallback summary { cursor: pointer; color: #d6d0e4; font-weight: 800; }
+.manualFallback[open] { display: grid; gap: 14px; }
 .error { color: #ff887d !important; }
 .grantNote {
   padding: 12px;
@@ -123,5 +178,6 @@
 @media (max-width: 560px) {
   .bootstrap { padding: 14px; }
   .bootstrapCard { padding: 20px; }
+  .accountBadge { top: 8px; right: 8px; }
   .integrationSetup { width: min(100% - 28px, 1420px); grid-template-columns: 1fr; }
 }

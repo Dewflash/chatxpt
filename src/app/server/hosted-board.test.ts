@@ -9,8 +9,8 @@ import {
   type ProjectionContextResolver,
 } from "@/core";
 import {
-  createMemoryPersistenceRuntime,
   SessionLifecycleService,
+  createMemoryPersistenceRuntime,
   type VerifiedCommandActor,
 } from "@/realtime";
 
@@ -44,7 +44,7 @@ async function createContext() {
     started.view.session.sessionId,
     started.view.session.revision,
     NOW,
-    "hosted-board-test-start",
+    `hosted-session-start-${++id}`,
   );
   if (!live.ok) throw new Error(live.error.message);
   const hosted = new HostedBoardApplication({

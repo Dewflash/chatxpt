@@ -164,7 +164,7 @@ describe("StudioManagementSurface", () => {
     expect(html).toContain("Turn into vote");
     expect(html).toContain(">Later<");
     expect(html).toContain(">Dismiss<");
-    expect(html).toContain("does not publish candidates by itself");
+    expect(html).toContain("prepares exactly three private quest options for approval");
   });
 
   it("keeps stale and permission-denied context honest and removes stale cue actions", () => {

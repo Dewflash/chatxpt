@@ -36,7 +36,7 @@ function twitchJwt(role: "broadcaster" | "viewer", channelId = "channel-1"): str
   return `${header}.${payload}.${signature}`;
 }
 
-function application() {
+function application(environment: Record<string, string | undefined> = {}) {
   let id = 0;
   const persistence = createMemoryPersistenceRuntime();
   return {
@@ -51,6 +51,7 @@ function application() {
         TWITCH_EXTENSION_CLIENT_ID: "extension-client-id",
         TWITCH_EXTENSION_SECRET: EXTENSION_SECRET,
         TWITCH_EVENTSUB_SECRET: "eventsub-secret",
+        ...environment,
       },
       now: () => NOW,
       nextId: () => `id-${++id}`,
@@ -104,6 +105,138 @@ async function ingestGameplaySnapshot(context: ReturnType<typeof application>, s
 }
 
 describe("StudioSessionApplication", () => {
+  it("creates and resumes a Twitch-verified session without the diagnostic setup key", async () => {
+    const context = application();
+    const connected = await context.application.startFromVerifiedTwitch({
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    });
+
+    expect(connected.view.session.status).toBe("preparing");
+    expect(connected.view.session.broadcasterId).toBe("channel-1");
+    expect(connected.view.profile.displayName).toBe("Streamer One");
+    expect(connected.view.profile.gameName).toBe("Minecraft");
+    expect(connected.readiness.services.find((service) => service.service === "twitch")?.health.message)
+      .toContain("Twitch broadcaster authorization");
+
+    await ingestGameplaySnapshot(context, connected);
+    const connectedReady = await context.application.read(connected.grant, null);
+    expect(connectedReady.readiness.label).toBe("Twitch connected — waiting for the stream");
+    expect(connectedReady.readiness.recommendedAction).toBeNull();
+    expect(connectedReady.readiness.services.find((service) => service.service === "session")?.allowedActions)
+      .not.toContain("start-session");
+
+    const resumed = await context.application.startFromVerifiedTwitch({
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    });
+    expect(resumed.view.session.sessionId).toBe(connected.view.session.sessionId);
+    await expect(context.application.read(resumed.grant, null)).resolves.toMatchObject({
+      view: { session: { broadcasterId: "channel-1", status: "preparing" } },
+    });
+
+    await expect(context.application.start("wrong-diagnostic-key", {
+      channelId: "attacker-channel",
+      displayName: "Attacker",
+      gameId: null,
+      gameName: null,
+    })).rejects.toMatchObject({ code: "unauthenticated" });
+  });
+
+  it("keeps connected Twitch ready when only Extension credentials are absent", async () => {
+    const context = application({
+      TWITCH_EXTENSION_CLIENT_ID: undefined,
+      TWITCH_EXTENSION_SECRET: undefined,
+    });
+    const connected = await context.application.startFromVerifiedTwitch({
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    });
+
+    expect(connected.view.session.capabilities.twitchExtension).toBe(false);
+    const twitch = connected.readiness.services.find((service) => service.service === "twitch");
+    expect(twitch).toMatchObject({ configured: true, health: { status: "ready" } });
+    expect(twitch?.health.message).toContain("viewer fallbacks remain available");
+    expect(connected.readiness.blockerCodes).not.toContain("twitch-configuration");
+    expect(twitch?.allowedActions).toContain("install-extension");
+
+    await ingestGameplaySnapshot(context, connected);
+    const ready = await context.application.read(connected.grant, null);
+    expect(ready.readiness.ready).toBe(true);
+    expect(ready.readiness.blockerCodes).toEqual([]);
+  });
+
+  it("synchronizes signed Twitch online and offline events with the authoritative session", async () => {
+    const context = application();
+    const connected = await context.application.startFromVerifiedTwitch({
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    });
+
+    await expect(context.application.synchronizeVerifiedTwitchOnline({
+      broadcasterId: "channel-1",
+      displayName: "Streamer One",
+      deliveryId: "eventsub-online-1",
+      occurredAt: NOW,
+    })).resolves.toMatchObject({
+      status: "started",
+      sessionId: connected.view.session.sessionId,
+      revision: connected.view.session.revision + 1,
+    });
+    await expect(context.application.read(connected.grant, null)).resolves.toMatchObject({
+      view: { session: { status: "live" } },
+    });
+    await expect(context.application.synchronizeVerifiedTwitchOnline({
+      broadcasterId: "channel-1",
+      displayName: "Streamer One",
+      deliveryId: "eventsub-online-duplicate",
+      occurredAt: NOW,
+    })).resolves.toMatchObject({ status: "already-live" });
+
+    await expect(context.application.synchronizeVerifiedTwitchOffline({
+      broadcasterId: "channel-1",
+      displayName: "Streamer One",
+      deliveryId: "eventsub-offline-1",
+      occurredAt: NOW + 60_000,
+    })).resolves.toMatchObject({ status: "ended" });
+    await expect(context.application.read(connected.grant, null)).resolves.toMatchObject({
+      view: { session: { status: "ended" } },
+    });
+    await expect(context.persistence.twitchChannelSessions.findTwitchChannelSession("channel-1"))
+      .resolves.toBeNull();
+    await expect(context.application.resumeExistingFromVerifiedTwitch({
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    })).resolves.toBeNull();
+
+    const nextStream = await context.application.synchronizeVerifiedTwitchOnline({
+      broadcasterId: "channel-1",
+      displayName: "Streamer One",
+      deliveryId: "eventsub-online-2",
+      occurredAt: NOW + 120_000,
+    });
+    expect(nextStream).toMatchObject({ status: "started" });
+    expect(nextStream.sessionId).not.toBe(connected.view.session.sessionId);
+    await expect(context.application.resumeExistingFromVerifiedTwitch({
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    })).resolves.toMatchObject({
+      view: { session: { sessionId: nextStream.sessionId, status: "live" } },
+    });
+  });
+
   it("creates one mapped preparing session and returns only a scoped server grant", async () => {
     const context = application();
     const started = await context.application.start(SETUP_KEY, {
@@ -174,6 +307,11 @@ describe("StudioSessionApplication", () => {
     expect(result.view.session.status).toBe("live");
     expect(result.readiness.services.find((service) => service.service === "session")?.allowedActions)
       .toContain("end-session");
+
+    await expect(context.application.presence(started.grant, null, { action: "heartbeat" }))
+      .resolves.toMatchObject({ status: "live", reconnectDeadlineAt: null });
+    await expect(context.application.presence(started.grant, null, { action: "disconnect" }))
+      .resolves.toMatchObject({ status: "live", reconnectDeadlineAt: NOW + 10 * 60 * 1_000 });
   });
 
   it("accepts authoritative profile commands through the HttpOnly grant identity", async () => {
@@ -195,12 +333,21 @@ describe("StudioSessionApplication", () => {
       actor: { kind: "broadcaster", actorId: "channel-1" },
       type: "streamer.profile-settings",
       experiencePatch: { intensity: 0.7 },
+      keywordWatchlist: ["diamonds", "food supplies"],
+      streamPresets: started.view.profile.streamPresets,
+      selectedPresetId: "chill",
     });
 
     const result = await context.application.execute(started.grant, null, command);
     expect(result.outcome).toBe("committed");
     expect(result.view.profile.experience.intensity).toBe(0.7);
+    expect(result.view.profile.keywordWatchlist).toEqual(["diamonds", "food supplies"]);
+    expect(result.view.profile.selectedPresetId).toBe("chill");
     expect(result.view.session.revision).toBe(started.view.session.revision + 1);
+
+    const restored = await context.application.read(started.grant, null);
+    expect(restored.view.profile.selectedPresetId).toBe("chill");
+    expect(restored.view.profile.keywordWatchlist).toEqual(["diamonds", "food supplies"]);
   });
 
   it("persists private declared intent through the same broadcaster-authorised command path", async () => {
@@ -259,6 +406,21 @@ describe("StudioSessionApplication", () => {
     await expect(
       context.application.read(null, `Bearer ${twitchJwt("viewer")}`),
     ).rejects.toMatchObject({ code: "forbidden" } satisfies Partial<StudioSessionApplicationError>);
+  });
+
+  it("keeps OAuth verification in the signed HttpOnly Studio grant", async () => {
+    const context = application();
+    const started = await context.application.start(SETUP_KEY, {
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "minecraft",
+      gameName: "Minecraft",
+    }, true);
+
+    const reopened = await context.application.read(started.grant, null);
+    expect(reopened.readiness.liveInputsUsed).toBe(true);
+    expect(reopened.readiness.services.find((service) => service.service === "twitch")?.health.message)
+      .toContain("authorization is verified");
   });
 
   it("rejects an invalid bootstrap key before creating state", async () => {

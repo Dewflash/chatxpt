@@ -1,6 +1,6 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { z } from "zod";
 
@@ -21,6 +21,7 @@ import {
 import type { ChatXptPersistenceRuntime } from "@/realtime";
 
 import { getChatXptServerRuntime, type ChatXptServerRuntime } from "./runtime";
+import { studioSessionSecret } from "./twitch-connection-grant";
 
 const grantRequestSchema = z.object({ sessionId: identifierSchema }).strict();
 
@@ -63,9 +64,10 @@ export interface GameplayIngressApplicationDependencies {
   readonly persistence: ChatXptPersistenceRuntime;
   readonly runtime?: Pick<
     ChatXptServerRuntime,
-    "requestEligibleCycleProposal" | "requestLiveDirectorContextRefresh"
+    "execute" | "requestEligibleCycleProposal" | "requestLiveDirectorContextRefresh"
   >;
   readonly setupKey: string;
+  readonly grantSecret?: string;
   readonly now?: () => number;
   readonly nextId?: () => string;
 }
@@ -96,7 +98,7 @@ export type GameplayIngressLiveDirectorResult =
   | { readonly status: "failed"; readonly message: string; readonly retryable: boolean };
 
 export type GameplayIngressProposalResult =
-  | { readonly status: "not-requested"; readonly reason: "duplicate-snapshot" | "rejected-snapshot" | "preparing-session" | "runtime-unavailable" }
+  | { readonly status: "not-requested"; readonly reason: "duplicate-snapshot" | "rejected-snapshot" | "preparing-session" | "runtime-unavailable" | "publication-throttled" }
   | { readonly status: "not-eligible" }
   | { readonly status: "submitted" | "duplicate" }
   | { readonly status: "failed"; readonly message: string; readonly retryable: boolean };
@@ -155,9 +157,10 @@ function authApplicationError(caught: unknown): GameplayIngressApplicationError 
 export class GameplayIngressApplication {
   private readonly persistence: ChatXptPersistenceRuntime;
   private readonly grants: GameplayIngressGrantAuthority;
+  private readonly diagnosticSetup: GameplayIngressGrantAuthority;
   private readonly runtime?: Pick<
     ChatXptServerRuntime,
-    "requestEligibleCycleProposal" | "requestLiveDirectorContextRefresh"
+    "execute" | "requestEligibleCycleProposal" | "requestLiveDirectorContextRefresh"
   >;
   private readonly now: () => number;
   private readonly nextId: () => string;
@@ -165,24 +168,41 @@ export class GameplayIngressApplication {
     string,
     { messageId: string; acceptedAt: number; expiresAt: number }
   >();
+  private readonly lastPublishedBySession = new Map<string, number>();
 
   constructor(dependencies: GameplayIngressApplicationDependencies) {
     this.persistence = dependencies.persistence;
     this.runtime = dependencies.runtime;
-    this.grants = new GameplayIngressGrantAuthority(dependencies.setupKey);
+    this.grants = new GameplayIngressGrantAuthority(
+      dependencies.grantSecret ?? dependencies.setupKey,
+    );
+    this.diagnosticSetup = new GameplayIngressGrantAuthority(dependencies.setupKey);
     this.now = dependencies.now ?? Date.now;
     this.nextId = dependencies.nextId ?? randomUUID;
   }
 
   async issueGrant(setupKey: string | null, input: unknown): Promise<GameplayIngressGrantResult> {
     try {
-      this.grants.authenticateSetupKey(setupKey);
+      this.diagnosticSetup.authenticateSetupKey(setupKey);
     } catch (caught) {
       throw authApplicationError(caught);
     }
+    return this.issueGrantForStudio(input);
+  }
+
+  async issueGrantForStudio(
+    input: unknown,
+    authorizedSessionId?: string,
+  ): Promise<GameplayIngressGrantResult> {
     const parsed = grantRequestSchema.safeParse(input);
     if (!parsed.success) {
       throw new GameplayIngressApplicationError("validation", "Gameplay ingress grant is invalid");
+    }
+    if (authorizedSessionId !== undefined && parsed.data.sessionId !== authorizedSessionId) {
+      throw new GameplayIngressApplicationError(
+        "forbidden",
+        "Studio authorization does not belong to the requested capture session",
+      );
     }
     const state = await this.loadActiveSession(parsed.data.sessionId);
     const expiresAt = this.now() + GRANT_TTL_MS;
@@ -277,18 +297,16 @@ export class GameplayIngressApplication {
       });
     }
     const proposal = await this.maybeRequestEligibleCycleProposal(state, result);
+    const stateAfterProposal = await this.loadActiveSession(grant.sessionId);
     const liveDirector =
       proposal.status === "submitted" || proposal.status === "duplicate"
         ? { status: "not-requested" as const, reason: "proposal-submitted" as const }
-        : await this.maybeRefreshLiveDirectorContext(state, result);
+        : await this.maybeRefreshLiveDirectorContext(stateAfterProposal, result);
     const latestState =
-      (result.status === "rejected" && result.reason === "state-mismatch") ||
-      proposal.status === "submitted" ||
-      proposal.status === "duplicate" ||
       liveDirector.status === "submitted" ||
       liveDirector.status === "duplicate"
         ? await this.loadActiveSession(grant.sessionId)
-        : state;
+        : stateAfterProposal;
     return { result, authority: authoritySnapshot(latestState), liveDirector, proposal };
   }
 
@@ -330,11 +348,61 @@ export class GameplayIngressApplication {
     if (result.status === "duplicate") return { status: "not-requested", reason: "duplicate-snapshot" };
     if (state.session.status !== "live") return { status: "not-requested", reason: "preparing-session" };
     if (this.runtime === undefined) return { status: "not-requested", reason: "runtime-unavailable" };
+    const publishedAt = this.lastPublishedBySession.get(state.session.sessionId);
+    if (publishedAt !== undefined && this.now() - publishedAt < 1_000) {
+      return { status: "not-requested", reason: "publication-throttled" };
+    }
+    const actor = {
+      kind: "system" as const,
+      actorId: "gameplay-snapshot-ingress",
+      expiresAt: null,
+      moderatorForBroadcasterIds: [],
+      voterKey: null,
+      participationModes: [],
+    };
+    const projectionContext = new GameplayIngressProjectionContext(this.now);
+    const commandId = `gameplay-snapshot-${createHash("sha256")
+      .update(`${state.session.sessionId}:${result.snapshot.envelope.messageId}`)
+      .digest("hex")
+      .slice(0, 32)}`;
+    let promoted: Awaited<ReturnType<ChatXptServerRuntime["execute"]>>;
+    try {
+      promoted = await this.runtime.execute(
+        {
+          contractVersion: "1.0.0",
+          sessionId: state.session.sessionId,
+          questCycleId: state.questCycle.envelope.questCycleId,
+          commandId,
+          correlationId: result.snapshot.envelope.correlationId,
+          expectedRevision: state.session.revision,
+          issuedAt: this.now(),
+          actor: { kind: actor.kind, actorId: actor.actorId },
+          type: "system.gameplay-snapshot-ready",
+          snapshot: result.snapshot,
+        },
+        actor,
+        projectionContext,
+      );
+    } catch {
+      return {
+        status: "failed",
+        message: "Gameplay snapshot publication failed",
+        retryable: true,
+      };
+    }
+    if (!promoted.ok) {
+      return {
+        status: "failed",
+        message: promoted.error.message,
+        retryable: promoted.error.retryable,
+      };
+    }
+    this.lastPublishedBySession.set(state.session.sessionId, this.now());
     let proposal: Awaited<ReturnType<ChatXptServerRuntime["requestEligibleCycleProposal"]>>;
     try {
       proposal = await this.runtime.requestEligibleCycleProposal(
-        { ...state, gameplay: result.snapshot },
-        new GameplayIngressProjectionContext(this.now),
+        promoted.receipt.state,
+        projectionContext,
       );
     } catch {
       return {
@@ -406,10 +474,12 @@ const globalApplication = globalThis as typeof globalThis & {
 export function getGameplayIngressApplication(): GameplayIngressApplication {
   if (globalApplication[applicationKey] !== undefined) return globalApplication[applicationKey];
   const runtime = getChatXptServerRuntime();
+  const setupKey = process.env.CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY ?? "";
   globalApplication[applicationKey] = new GameplayIngressApplication({
     persistence: runtime.persistence,
     runtime,
-    setupKey: process.env.CHATXPT_GAMEPLAY_INGRESS_SETUP_KEY ?? "",
+    setupKey,
+    grantSecret: setupKey.trim() || studioSessionSecret(process.env),
   });
   return globalApplication[applicationKey];
 }

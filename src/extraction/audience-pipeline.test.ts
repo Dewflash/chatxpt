@@ -5,7 +5,7 @@ import {
   type AudienceEvent,
   type AudienceEventSource,
 } from "../core";
-import { createAudienceSignalPipeline } from "./audience-pipeline";
+import { AudienceAnalyticsAccumulator, createAudienceSignalPipeline } from "./audience-pipeline";
 
 const NOW = 1_786_300_000_000;
 
@@ -168,5 +168,91 @@ describe("createAudienceSignalPipeline", () => {
         evidenceClass: "live",
       },
     });
+  });
+});
+
+describe("AudienceAnalyticsAccumulator", () => {
+  it("turns ordinary messages into mood, activity, topic, and watchlist aggregates", () => {
+    const accumulator = new AudienceAnalyticsAccumulator({
+      rollingWindowMs: 30_000,
+      minimumConfidence: 0.3,
+    });
+
+    accumulator.ingest(event(0, { viewerId: "session-viewer-a", text: "Diamonds please, find diamonds!" }), ["diamonds"]);
+    const update = accumulator.ingest(
+      event(1, { viewerId: "session-viewer-b", text: "Go find diamonds, that would be hype!!" }),
+      ["diamonds"],
+    );
+
+    expect(update).not.toBeNull();
+    expect(signalValue(update!.snapshot, "audience-message-rate")).toBe(4);
+    expect(signalValue(update!.snapshot, "audience-active-participants")).toBe(2);
+    expect(signalValue(update!.snapshot, "audience-watchlist-diamonds")).toBe(2);
+    expect(update!.primaryTopic).toMatchObject({ topic: "diamonds", count: 2 });
+  });
+
+  it("counts a participant as returning only after prior session activity", () => {
+    const accumulator = new AudienceAnalyticsAccumulator({
+      rollingWindowMs: 1_000,
+      minimumConfidence: 0.3,
+    });
+    accumulator.ingest(event(0, { viewerId: "session-viewer-a", text: "first visit" }));
+    accumulator.ingest(event(1, {
+      envelope: {
+        ...event(1).envelope,
+        messageId: "later-viewer-b",
+        occurredAt: NOW + 1_100,
+        receivedAt: NOW + 1_100,
+      },
+      viewerId: "session-viewer-b",
+      text: "hello room",
+    }));
+    const returned = accumulator.ingest(event(2, {
+      envelope: {
+        ...event(2).envelope,
+        messageId: "viewer-a-returned",
+        occurredAt: NOW + 1_200,
+        receivedAt: NOW + 1_200,
+      },
+      viewerId: "session-viewer-a",
+      text: "back again",
+    }));
+
+    expect(signalValue(returned!.snapshot, "audience-returning-participants")).toBe(1);
+    expect(signalValue(returned!.snapshot, "audience-newly-active-participants")).toBe(1);
+  });
+
+  it("does not promote one viewer's repeated topic as audience consensus", () => {
+    const accumulator = new AudienceAnalyticsAccumulator({ minimumConfidence: 0.3 });
+    accumulator.ingest(event(0, { viewerId: "session-viewer-a", text: "diamonds next please" }));
+    const repeated = accumulator.ingest(
+      event(1, { viewerId: "session-viewer-a", text: "diamonds diamonds again" }),
+    );
+    const consensus = accumulator.ingest(
+      event(2, { viewerId: "session-viewer-b", text: "diamonds would be great" }),
+    );
+
+    expect(repeated?.primaryTopic).toBeNull();
+    expect(consensus?.primaryTopic).toMatchObject({
+      topic: "diamonds",
+      count: 2,
+      participantKeys: ["session-viewer-a", "session-viewer-b"],
+    });
+  });
+
+  it("deduplicates message fingerprints and does not retain raw text or raw viewer fields", () => {
+    const accumulator = new AudienceAnalyticsAccumulator({ minimumConfidence: 0.3 });
+    const raw = event(0, {
+      viewerId: "session-pseudonym-123",
+      text: "a uniquely private raw sentence about emeralds",
+    });
+    const first = accumulator.ingest(raw, ["emeralds"]);
+    const duplicate = accumulator.ingest(raw, ["emeralds"]);
+    const serialized = JSON.stringify(first);
+
+    expect(duplicate).toBeNull();
+    expect(serialized).not.toContain("uniquely private raw sentence");
+    expect(serialized).not.toContain('"viewerId"');
+    expect(serialized).not.toContain('"text"');
   });
 });

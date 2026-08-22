@@ -24,6 +24,7 @@ Public client-safe values:
 
 ```text
 NEXT_PUBLIC_APP_ENV=preview
+NEXT_PUBLIC_CHATXPT_PREVIEW_ACCOUNT_ENABLED=true
 NEXT_PUBLIC_SUPABASE_URL=<Supabase project URL>
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<Supabase publishable key>
 TWITCH_CLIENT_ID=<Twitch app client ID>
@@ -60,6 +61,15 @@ NEXT_PUBLIC_APP_ENV=production
 Keep every server-only value out of client-prefixed names. Never prefix Supabase
 secret keys, Twitch secrets, the OBS overlay key, gameplay ingress key, or Studio
 bootstrap key with `NEXT_PUBLIC_`.
+
+`NEXT_PUBLIC_CHATXPT_PREVIEW_ACCOUNT_ENABLED=true` enables only the clearly
+labelled browser-local demo-account gate. It is not production authentication
+and grants no server authority; Twitch OAuth and every Studio command retain
+their existing server-side authorization boundaries.
+
+The committed `.vercelignore` excludes `.env*`, `.private/`, local encrypted
+Twitch authorizations, build output, and installed dependencies from deployment
+uploads. Hosted secrets must be configured in Vercel's environment store.
 
 ## Post-Deploy Checks
 

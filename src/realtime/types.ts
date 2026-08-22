@@ -80,6 +80,31 @@ export interface TwitchChannelSessionDirectory {
   findTwitchChannelSession(channelId: string): Promise<TwitchChannelSessionRecord | null>;
 }
 
+/** Persistent, revocable pairing between one broadcaster and one OBS Browser Source. */
+export interface ObsOverlayConnectionRecord {
+  readonly broadcasterId: string;
+  readonly grantId: string;
+  readonly issuedAt: number;
+  readonly lastSeenAt: number | null;
+  readonly lastSessionId: string | null;
+  readonly revokedAt: number | null;
+}
+
+export interface ObsOverlayConnectionStore {
+  replaceObsOverlayConnection(input: Omit<ObsOverlayConnectionRecord, "lastSeenAt" | "lastSessionId" | "revokedAt">): Promise<ObsOverlayConnectionRecord>;
+  findObsOverlayConnection(broadcasterId: string): Promise<ObsOverlayConnectionRecord | null>;
+  touchObsOverlayConnection(
+    broadcasterId: string,
+    grantId: string,
+    sessionId: string | null,
+    seenAt: number,
+  ): Promise<ObsOverlayConnectionRecord | null>;
+  revokeObsOverlayConnection(
+    broadcasterId: string,
+    revokedAt: number,
+  ): Promise<ObsOverlayConnectionRecord | null>;
+}
+
 export interface HostedBoardAccessRequest {
   readonly roomCode: string;
   readonly principalId: string;
@@ -191,6 +216,7 @@ export interface ChatXptPersistenceRuntime {
   readonly lifecycle: SessionLifecycleStore;
   readonly hostedBoardSessions: HostedBoardSessionDirectory;
   readonly twitchChannelSessions: TwitchChannelSessionDirectory;
+  readonly obsOverlayConnections: ObsOverlayConnectionStore;
   readonly candidates: CandidateBatchRepository;
   readonly audiencePointers: AudiencePointerAggregateRepository;
   readonly acceptedVotes: AcceptedVoteTallyReader;

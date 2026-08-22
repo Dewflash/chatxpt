@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { domainErrorSchema, type DomainError, type ViewerViewModel } from "@/core";
+import { connectRealtimeSnapshot } from "@/app/realtime-snapshot-client";
 import { TwitchExtensionViewerSurface } from "@/viewer";
 
 interface TwitchAuthorization {
@@ -146,13 +147,45 @@ export function TwitchExtensionViewerClient() {
     const initial = window.setTimeout(() => void refresh(token, controller.signal), 0);
     const interval = window.setInterval(() => {
       if (latestToken.current !== null) void refresh(latestToken.current, controller.signal);
-    }, 1_500);
+    }, 10_000);
     return () => {
       controller.abort();
       window.clearTimeout(initial);
       window.clearInterval(interval);
     };
   }, [refresh, token]);
+
+  useEffect(() => {
+    const sessionId = view?.session.sessionId;
+    if (token === null || sessionId === undefined) return;
+    let stopped = false;
+    let disconnect: (() => Promise<void>) | null = null;
+    void connectRealtimeSnapshot({
+      role: "viewer",
+      sessionId,
+      surfaceAuthorization: token,
+      loadLatest: async () => {
+        const response = await fetch("/api/twitch/extension/viewer", {
+          headers: { authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        const payload = (await response.json()) as ViewerResponse;
+        return response.ok && payload.ok ? payload.view ?? null : null;
+      },
+      onSnapshot: () => {
+        if (!stopped) void refresh(token);
+      },
+    }).then((release) => {
+      if (stopped) void release?.();
+      else disconnect = release;
+    }).catch(() => {
+      // The signed EBS read remains the recovery path.
+    });
+    return () => {
+      stopped = true;
+      void disconnect?.();
+    };
+  }, [refresh, token, view?.session.sessionId]);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 250);

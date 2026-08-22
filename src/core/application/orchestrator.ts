@@ -264,6 +264,12 @@ function authoritativeProfileSettingsUpdate(
     preferredQuestTypes: command.preferredQuestTypes ?? current.profile.preferredQuestTypes,
     forbiddenQuestTypes: command.forbiddenQuestTypes ?? current.profile.forbiddenQuestTypes,
     accessibilityNeeds: command.accessibilityNeeds ?? current.profile.accessibilityNeeds,
+    keywordWatchlist: command.keywordWatchlist ?? current.profile.keywordWatchlist,
+    streamPresets: command.streamPresets ?? current.profile.streamPresets,
+    selectedPresetId:
+      command.selectedPresetId === undefined
+        ? current.profile.selectedPresetId
+        : command.selectedPresetId,
     voting: {
       ...current.profile.voting,
       ...command.voting,
@@ -324,6 +330,7 @@ function authoritativeSessionOverrideUpdate(
       ? null
       : streamerSessionOverrideSchema.parse({
           appliedAt: acceptedAt,
+          presetId: command.presetId,
           experiencePatch: command.experiencePatch,
         });
   const questCycle = questCycleStateSchema.parse({
@@ -401,6 +408,179 @@ function authoritativeLiveDirectorUpdate(
   });
   if (!parsedEvent.success) {
     return error("internal", "Authoritative Live Director event stamping failed", true);
+  }
+  return { state, events: [parsedEvent.data] };
+}
+
+function authoritativeAudienceSnapshotUpdate(
+  dependencies: OrchestratorDependencies,
+  command: Extract<CommandEnvelope, { type: "system.audience-snapshot-ready" }>,
+  current: AuthoritativeSessionState,
+  acceptedAt: number,
+): { state: AuthoritativeSessionState; events: AcceptedCommandReceipt["events"] } | DomainError {
+  if (
+    command.snapshot.envelope.sessionId !== current.session.sessionId ||
+    command.snapshot.envelope.questCycleId !== current.questCycle.envelope.questCycleId ||
+    command.snapshot.envelope.revision !== command.expectedRevision ||
+    command.snapshot.envelope.evidenceClass !== current.questCycle.envelope.evidenceClass
+  ) {
+    return error("validation", "Audience snapshot belongs to different session state");
+  }
+  const revision = current.session.revision + 1;
+  const audience = audienceSnapshotSchema.safeParse({
+    ...command.snapshot,
+    envelope: authoritativeEnvelope(
+      dependencies,
+      command,
+      current,
+      current.questCycle.envelope.questCycleId,
+      revision,
+      acceptedAt,
+      "quest-event",
+    ),
+  });
+  if (!audience.success) {
+    return error("validation", "Audience snapshot is invalid");
+  }
+  const questCycle = questCycleStateSchema.parse({
+    ...current.questCycle,
+    envelope: authoritativeEnvelope(
+      dependencies,
+      command,
+      current,
+      current.questCycle.envelope.questCycleId,
+      revision,
+      acceptedAt,
+      "quest-state",
+    ),
+  });
+  const state: AuthoritativeSessionState = {
+    ...current,
+    session: { ...current.session, revision },
+    questCycle,
+    gameplay:
+      current.gameplay === null
+        ? null
+        : gameplaySnapshotSchema.parse({
+            ...current.gameplay,
+            envelope: authoritativeEnvelope(
+              dependencies,
+              command,
+              current,
+              current.questCycle.envelope.questCycleId,
+              revision,
+              acceptedAt,
+              "quest-event",
+            ),
+          }),
+    audience: audience.data,
+  };
+  const parsedEvent = questEngineEventSchema.safeParse({
+    envelope: authoritativeEnvelope(
+      dependencies,
+      command,
+      state,
+      questCycle.envelope.questCycleId,
+      revision,
+      acceptedAt,
+      "quest-event",
+    ),
+    event: {
+      eventType: "audience.snapshot-updated",
+      attributes: {
+        sampleSize: audience.data.sampleSize,
+        signalCount: audience.data.signals.length,
+        rawChatRetained: false,
+      },
+    },
+  });
+  if (!parsedEvent.success) {
+    return error("internal", "Authoritative audience event stamping failed", true);
+  }
+  return { state, events: [parsedEvent.data] };
+}
+
+function authoritativeGameplaySnapshotUpdate(
+  dependencies: OrchestratorDependencies,
+  command: Extract<CommandEnvelope, { type: "system.gameplay-snapshot-ready" }>,
+  current: AuthoritativeSessionState,
+  acceptedAt: number,
+): { state: AuthoritativeSessionState; events: AcceptedCommandReceipt["events"] } | DomainError {
+  if (
+    command.snapshot.envelope.sessionId !== current.session.sessionId ||
+    command.snapshot.envelope.questCycleId !== current.questCycle.envelope.questCycleId ||
+    command.snapshot.envelope.revision !== command.expectedRevision ||
+    command.snapshot.envelope.evidenceClass !== current.questCycle.envelope.evidenceClass
+  ) {
+    return error("validation", "Gameplay snapshot belongs to different session state");
+  }
+  const revision = current.session.revision + 1;
+  const gameplay = gameplaySnapshotSchema.safeParse({
+    ...command.snapshot,
+    envelope: authoritativeEnvelope(
+      dependencies,
+      command,
+      current,
+      current.questCycle.envelope.questCycleId,
+      revision,
+      acceptedAt,
+      "quest-event",
+    ),
+  });
+  if (!gameplay.success) return error("validation", "Gameplay snapshot is invalid");
+  const questCycle = questCycleStateSchema.parse({
+    ...current.questCycle,
+    envelope: authoritativeEnvelope(
+      dependencies,
+      command,
+      current,
+      current.questCycle.envelope.questCycleId,
+      revision,
+      acceptedAt,
+      "quest-state",
+    ),
+  });
+  const state: AuthoritativeSessionState = {
+    ...current,
+    session: { ...current.session, revision },
+    questCycle,
+    gameplay: gameplay.data,
+    audience:
+      current.audience === null
+        ? null
+        : audienceSnapshotSchema.parse({
+            ...current.audience,
+            envelope: authoritativeEnvelope(
+              dependencies,
+              command,
+              current,
+              current.questCycle.envelope.questCycleId,
+              revision,
+              acceptedAt,
+              "quest-event",
+            ),
+          }),
+  };
+  const parsedEvent = questEngineEventSchema.safeParse({
+    envelope: authoritativeEnvelope(
+      dependencies,
+      command,
+      state,
+      questCycle.envelope.questCycleId,
+      revision,
+      acceptedAt,
+      "quest-event",
+    ),
+    event: {
+      eventType: "gameplay.snapshot-updated",
+      attributes: {
+        signalCount: gameplay.data.signals.length,
+        framesProcessed: gameplay.data.captureMetrics?.framesProcessed ?? null,
+      },
+    },
+  });
+  if (!parsedEvent.success) {
+    return error("internal", "Authoritative gameplay event stamping failed", true);
   }
   return { state, events: [parsedEvent.data] };
 }
@@ -771,6 +951,28 @@ export class ChatXptOrchestrator {
           error: error("internal", "Authoritative declared intent update failed", true),
         };
       }
+    } else if (command.type === "system.audience-snapshot-ready") {
+      try {
+        authoritative = authoritativeAudienceSnapshotUpdate(
+          this.dependencies,
+          command,
+          current,
+          acceptedAt,
+        );
+      } catch {
+        return { ok: false, error: error("internal", "Authoritative audience update failed", true) };
+      }
+    } else if (command.type === "system.gameplay-snapshot-ready") {
+      try {
+        authoritative = authoritativeGameplaySnapshotUpdate(
+          this.dependencies,
+          command,
+          current,
+          acceptedAt,
+        );
+      } catch {
+        return { ok: false, error: error("internal", "Authoritative gameplay update failed", true) };
+      }
     } else if (command.type === "system.live-director-context-ready") {
       try {
         const liveDirector = composeLiveDirectorContext({
@@ -1010,8 +1212,17 @@ export class ChatXptOrchestrator {
     if ("code" in authoritative) {
       return { ok: false, error: authoritative };
     }
-    if (command.type === "viewer.react") {
-      const communityHype = authoritative.state.communityHype + 1;
+    const nonTerminalHypeDelta = authoritative.events.reduce((total, event) => {
+      const value = event.event.attributes.hypeDelta;
+      return typeof event.event.attributes.outcome !== "string" &&
+        typeof value === "number" &&
+        Number.isSafeInteger(value) &&
+        value > 0
+        ? total + value
+        : total;
+    }, 0);
+    if (nonTerminalHypeDelta > 0) {
+      const communityHype = authoritative.state.communityHype + nonTerminalHypeDelta;
       if (!Number.isSafeInteger(communityHype)) {
         return { ok: false, error: error("validation", "Community hype limit has been reached") };
       }

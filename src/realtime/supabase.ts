@@ -46,6 +46,8 @@ import {
   type HostedBoardSessionDirectory,
   type HostedBoardSessionRecord,
   type LifecycleStoreCommitResult,
+  type ObsOverlayConnectionRecord,
+  type ObsOverlayConnectionStore,
   type RoleSnapshotPublisher,
   type RealtimeAccessGrant,
   type RealtimeAccessGrantStore,
@@ -99,6 +101,9 @@ const acceptedVoteRecoveryRowSchema = z
       .passthrough(),
   })
   .passthrough();
+const viewerSessionPointsRowSchema = z
+  .object({ session_points: z.number().int().nonnegative().max(100_000) })
+  .passthrough();
 const hostedBoardSessionRowSchema = z
   .object({
     session_id: z.string().min(1).max(128),
@@ -113,6 +118,16 @@ const twitchChannelSessionRowSchema = z
     broadcaster_id: z.string().min(1).max(128),
     status: z.enum(["offline", "preparing", "live", "ended"]),
     revision: z.number().int().nonnegative(),
+  })
+  .passthrough();
+const obsOverlayConnectionRowSchema = z
+  .object({
+    broadcaster_id: z.string().min(1).max(128),
+    grant_id: z.string().min(1).max(128),
+    issued_at: z.iso.datetime({ offset: true }),
+    last_seen_at: z.iso.datetime({ offset: true }).nullable(),
+    last_session_id: z.string().min(1).max(128).nullable(),
+    revoked_at: z.iso.datetime({ offset: true }).nullable(),
   })
   .passthrough();
 
@@ -333,6 +348,17 @@ export class SupabaseChatXptDataApi {
     return data;
   }
 
+  async loadViewerSessionPoints(sessionId: string, voterKey: string): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("viewer_session_points")
+      .select("session_points")
+      .eq("session_id", sessionId)
+      .eq("voter_key", voterKey)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
+  }
+
   async persistRoleSnapshots(views: RoleViewModels): Promise<void> {
     const { error } = await this.client.rpc("persist_role_snapshots", {
       p_session_id: views.streamer.envelope.sessionId,
@@ -382,6 +408,75 @@ export class SupabaseChatXptDataApi {
       .in("status", ["preparing", "live"])
       .order("updated_at", { ascending: false })
       .limit(1)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
+  }
+
+  async replaceObsOverlayConnection(
+    input: Omit<ObsOverlayConnectionRecord, "lastSeenAt" | "lastSessionId" | "revokedAt">,
+  ): Promise<unknown> {
+    const issuedAt = new Date(input.issuedAt).toISOString();
+    const { data, error } = await this.client
+      .from("obs_overlay_connections")
+      .upsert(
+        {
+          broadcaster_id: input.broadcasterId,
+          grant_id: input.grantId,
+          issued_at: issuedAt,
+          last_seen_at: null,
+          last_session_id: null,
+          revoked_at: null,
+          updated_at: issuedAt,
+        },
+        { onConflict: "broadcaster_id" },
+      )
+      .select("broadcaster_id, grant_id, issued_at, last_seen_at, last_session_id, revoked_at")
+      .single();
+    throwIfError(error);
+    return data;
+  }
+
+  async loadObsOverlayConnection(broadcasterId: string): Promise<unknown | null> {
+    const { data, error } = await this.client
+      .from("obs_overlay_connections")
+      .select("broadcaster_id, grant_id, issued_at, last_seen_at, last_session_id, revoked_at")
+      .eq("broadcaster_id", broadcasterId)
+      .maybeSingle();
+    throwIfError(error);
+    return data;
+  }
+
+  async touchObsOverlayConnection(
+    broadcasterId: string,
+    grantId: string,
+    sessionId: string | null,
+    seenAt: number,
+  ): Promise<unknown | null> {
+    const timestamp = new Date(seenAt).toISOString();
+    const { data, error } = await this.client
+      .from("obs_overlay_connections")
+      .update({ last_seen_at: timestamp, last_session_id: sessionId, updated_at: timestamp })
+      .eq("broadcaster_id", broadcasterId)
+      .eq("grant_id", grantId)
+      .is("revoked_at", null)
+      .select("broadcaster_id, grant_id, issued_at, last_seen_at, last_session_id, revoked_at")
+      .maybeSingle();
+    throwIfError(error);
+    return data;
+  }
+
+  async revokeObsOverlayConnection(
+    broadcasterId: string,
+    revokedAt: number,
+  ): Promise<unknown | null> {
+    const timestamp = new Date(revokedAt).toISOString();
+    const { data, error } = await this.client
+      .from("obs_overlay_connections")
+      .update({ revoked_at: timestamp, updated_at: timestamp })
+      .eq("broadcaster_id", broadcasterId)
+      .is("revoked_at", null)
+      .select("broadcaster_id, grant_id, issued_at, last_seen_at, last_session_id, revoked_at")
       .maybeSingle();
     throwIfError(error);
     return data;
@@ -610,18 +705,20 @@ export class SupabaseViewerRecoveryReader implements ViewerRecoveryReader {
   constructor(private readonly api: SupabaseChatXptDataApi) {}
 
   async readViewerRecovery(input: ViewerRecoveryReadInput): Promise<ViewerRecoveryState> {
-    const raw = await this.api.loadViewerAcceptedVote(
-      input.sessionId,
-      input.questCycleId,
-      input.voterKey,
-    );
+    const [raw, rawPoints] = await Promise.all([
+      this.api.loadViewerAcceptedVote(input.sessionId, input.questCycleId, input.voterKey),
+      this.api.loadViewerSessionPoints(input.sessionId, input.voterKey),
+    ]);
+    const sessionPoints = rawPoints === null
+      ? 0
+      : viewerSessionPointsRowSchema.parse(rawPoints).session_points;
     if (raw === null) {
       return viewerRecoveryStateSchema.parse({
         sessionId: input.sessionId,
         questCycleId: input.questCycleId,
         acceptedCandidateId: null,
         acceptedAt: null,
-        sessionPoints: 0,
+        sessionPoints,
         sourceMode: null,
       });
     }
@@ -631,7 +728,7 @@ export class SupabaseViewerRecoveryReader implements ViewerRecoveryReader {
       questCycleId: input.questCycleId,
       acceptedCandidateId: row.candidate_id,
       acceptedAt: Date.parse(row.accepted_at),
-      sessionPoints: 0,
+      sessionPoints,
       sourceMode: row.payload.sourceMode,
     });
   }
@@ -787,6 +884,65 @@ export class SupabaseTwitchChannelSessionDirectory implements TwitchChannelSessi
   }
 }
 
+function obsOverlayConnectionRecord(row: z.infer<typeof obsOverlayConnectionRowSchema>) {
+  return {
+    broadcasterId: row.broadcaster_id,
+    grantId: row.grant_id,
+    issuedAt: Date.parse(row.issued_at),
+    lastSeenAt: row.last_seen_at === null ? null : Date.parse(row.last_seen_at),
+    lastSessionId: row.last_session_id,
+    revokedAt: row.revoked_at === null ? null : Date.parse(row.revoked_at),
+  } satisfies ObsOverlayConnectionRecord;
+}
+
+export class SupabaseObsOverlayConnectionStore implements ObsOverlayConnectionStore {
+  constructor(private readonly api: SupabaseChatXptDataApi) {}
+
+  async replaceObsOverlayConnection(
+    input: Omit<ObsOverlayConnectionRecord, "lastSeenAt" | "lastSessionId" | "revokedAt">,
+  ): Promise<ObsOverlayConnectionRecord> {
+    return obsOverlayConnectionRecord(
+      obsOverlayConnectionRowSchema.parse(await this.api.replaceObsOverlayConnection(input)),
+    );
+  }
+
+  async findObsOverlayConnection(
+    broadcasterId: string,
+  ): Promise<ObsOverlayConnectionRecord | null> {
+    const raw = await this.api.loadObsOverlayConnection(broadcasterId);
+    return raw === null
+      ? null
+      : obsOverlayConnectionRecord(obsOverlayConnectionRowSchema.parse(raw));
+  }
+
+  async touchObsOverlayConnection(
+    broadcasterId: string,
+    grantId: string,
+    sessionId: string | null,
+    seenAt: number,
+  ): Promise<ObsOverlayConnectionRecord | null> {
+    const raw = await this.api.touchObsOverlayConnection(
+      broadcasterId,
+      grantId,
+      sessionId,
+      seenAt,
+    );
+    return raw === null
+      ? null
+      : obsOverlayConnectionRecord(obsOverlayConnectionRowSchema.parse(raw));
+  }
+
+  async revokeObsOverlayConnection(
+    broadcasterId: string,
+    revokedAt: number,
+  ): Promise<ObsOverlayConnectionRecord | null> {
+    const raw = await this.api.revokeObsOverlayConnection(broadcasterId, revokedAt);
+    return raw === null
+      ? null
+      : obsOverlayConnectionRecord(obsOverlayConnectionRowSchema.parse(raw));
+  }
+}
+
 const realtimeAccessGrantRowSchema = z
   .object({
     principal_id: z.uuid(),
@@ -926,6 +1082,7 @@ export function createSupabasePersistenceRuntime(
   const snapshots = new SupabaseRoleSnapshotPublisher(api);
   const hostedBoardSessions = new SupabaseHostedBoardSessionDirectory(api);
   const twitchChannelSessions = new SupabaseTwitchChannelSessionDirectory(api);
+  const obsOverlayConnections = new SupabaseObsOverlayConnectionStore(api);
   const dueVotes = new SupabaseDueVoteCycleReader(api);
   return {
     mode: "supabase",
@@ -934,6 +1091,7 @@ export function createSupabasePersistenceRuntime(
     lifecycle: new SupabaseSessionLifecycleStore(api, sessions),
     hostedBoardSessions,
     twitchChannelSessions,
+    obsOverlayConnections,
     candidates: new SupabaseCandidateBatchRepository(api),
     audiencePointers: new EphemeralAudiencePointerAggregateRepository(),
     acceptedVotes,

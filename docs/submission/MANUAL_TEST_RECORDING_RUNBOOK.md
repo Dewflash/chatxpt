@@ -1,149 +1,260 @@
-# Manual Test And Recording Runbook
+# Final Studio Live Test and Recording Runbook
 
-**Date:** 2026-08-09  
-**Purpose:** Give the project owner one clean local test flow to record, while keeping fixture, local, and real external evidence claims separate.
+**Updated:** 2026-08-21
+**Purpose:** Prove the final one-Studio ChatXPT product with real Twitch activity, real OBS Virtual Camera gameplay, real viewer participation, and a real OBS Browser Source while keeping automated, fixture, local, and external evidence separate.
+
+## What this test must prove
+
+The final test is not a tour of unrelated pages. It is one uninterrupted working segment:
+
+```text
+saved streamer profile + Twitch connection + OBS Virtual Camera Minecraft
+-> current gameplay and audience understanding
+-> one suitable private cue
+-> exactly three validated sidequests
+-> two viewers vote through the best available Twitch/fallback surfaces
+-> one authoritative winner reaches OBS
+-> progress and a terminal result update Studio, viewers, rewards, and overlay
+-> one controlled failure recovers without fabricated state
+```
+
+Every material feature must complete the proof chain in `docs/research/PRODUCT-VALIDATION.md`: targeted pain, best supporting evidence, and the built response visibly working. Automated tests prove source behaviour; this run proves the external product path.
+
+## Product surfaces
+
+ChatXPT Studio is one app. Its internal pages are navigation destinations, not five separate products or five required browser tabs.
+
+| Surface | How to open it | Test purpose |
+| --- | --- | --- |
+| ChatXPT Studio | `http://localhost:3000/studio` | Primary streamer setup, status, gameplay, analytics, quests, preferences, settings, and Test Lab |
+| Persistent Game Capture | Open **Gameplay Engine -> Open capture controls** or **Test Lab -> Run live capture check** | Keeps OBS Virtual Camera capture running while the streamer navigates Studio |
+| Twitch Extension viewer | Open the installed panel in Twitch Local or Hosted Test | Primary viewer identity and voting proof; direct `/viewer.html` access does not create Twitch identity |
+| Second viewer | Separate browser profile, private window, or second device in Twitch Local/Hosted Test | Same-session multi-viewer and private-recovery proof |
+| Hosted Quest Board | Use the authorised link issued for the current session | First participation fallback; do not invent a room or treat a static page as authorised proof |
+| Twitch chat | Team-controlled channel | Real aggregate chat intelligence and final `1`/`2`/`3` voting fallback |
+| OBS Browser Source | Generate the key-free session URL in **Studio -> Test Lab** | Public voting/winner/active/progress/result output; never record or expose the fragment token |
+
+Diagnostic routes may reproduce failures or fixtures, but they do not replace this product run and must never be presented as live evidence.
+
+## Required people and equipment
+
+- Streamer machine with ChatXPT, OBS Studio, and owned vanilla Minecraft Java Survival using the default HUD.
+- Twitch broadcaster account with the ChatXPT Extension in Local or Hosted Test.
+- Viewer A and Viewer B in isolated Twitch/browser sessions.
+- One raw-game OBS scene for ChatXPT capture with no ChatXPT overlay inside it.
+- One broadcast scene with Minecraft below the ChatXPT Browser Source overlay.
+- Screen recording that can show Studio and OBS without exposing credentials, access tokens, private viewer identity, or the overlay fragment grant.
+
+If a required external resource is unavailable, mark the affected row `NOT RUN`; do not substitute a fixture and call it live.
 
 ## Preflight
 
-1. Confirm the repository state. For product proof, prefer merged `main` or the final submission branch after the docs patch lands. Record the exact branch and commit shown by Git.
+1. Record the exact release candidate:
 
    ```bash
    git status --short --branch
-   git rev-parse --short HEAD
+   git rev-parse HEAD
    npm run check
+   ```
+
+2. Start ChatXPT from that exact commit:
+
+   ```bash
    npm run dev
    ```
 
-2. Open these pages:
+3. Confirm server-only Twitch, Supabase, and optional provider values are configured without displaying them. The provider may remain unavailable because the credential-free path is mandatory.
+4. Upload or serve `release/chatxpt-twitch-extension-finals.zip` through Twitch Local or Hosted Test and configure the deployed ChatXPT EBS origin.
+5. In OBS, confirm the raw-game source does not contain the ChatXPT overlay. This prevents recursive analysis.
+6. Open only Studio initially. Open the persistent capture tab, Twitch viewer sessions, and OBS Browser Source when the corresponding step calls for them.
+7. Start recording before the first Twitch connection or live-status transition.
 
-   | Surface | URL | What to show |
-   | --- | --- | --- |
-   | Studio / canonical harness | `http://localhost:3000/diagnostics/ui-harness` | Shared fixture session, revision, streamer/viewer/overlay view models, command envelopes |
-   | Viewer Extension voter | `http://localhost:3000/viewer.html` | Local Twitch Extension-style viewer route shows the current three quests and accepts a demo vote |
-   | OBS overlay | `http://localhost:3000/overlay` | Broadcast overlay route responds and can be added as an OBS browser source |
-   | Deployment health | `http://localhost:3000/api/health/deployment` | Local persistence/realtime status, with unavailable cloud services labelled honestly |
+## One uninterrupted final test
 
-3. Start screen recording before the first page interaction.
+### 1. One Studio, saved identity, and readiness
 
-## Five-Minute Demo Plan
+1. Open `/studio` and show the single navigation.
+2. Connect Twitch through Studio OAuth. Confirm the verified channel/game state appears without entering a channel ID, game ID, or server setup key.
+3. Confirm Studio says it is waiting for Twitch rather than presenting a manual **Start Session** action. Go live on Twitch and confirm Studio changes to live automatically.
+4. Open **Profile & Defaults**.
+5. Save a clearly recognisable test configuration:
+   - game: Minecraft;
+   - one named stream preset;
+   - a distinctive but safe intensity/creativity balance;
+   - one preferred quest style;
+   - one forbidden quest style that can be checked later;
+   - one accessibility constraint;
+   - a small keyword watchlist used in the chat step.
+6. Reload Studio and confirm the saved values return without reconnecting Twitch.
+7. On Home, confirm Twitch, Game Capture, viewer participation, and Broadcast Overlay readiness are separate and honest. Stop the Twitch stream at the end and confirm ChatXPT ends the mapped session automatically.
 
-Use this plan when the project owner and Joel record the final short video. Joel owns the narration/run-of-show draft, acts as the viewer during the live run-through, and may make practical editing decisions needed to keep the video clear and under five minutes.
+**Pass:** One Studio owns setup and the saved configuration returns after reload.
+**Fail:** A second full Studio is required, readiness claims a missing service is ready, or saved safety/accessibility data disappears.
 
-| Time | Segment | What to show | Role 2 action |
-| --- | --- | --- | --- |
-| 0:00-0:25 | Product promise | ChatXPT turns gameplay state, viewer activity, and streamer preferences into safe sidequests viewers choose in real time. | Keep this to one plain-language line; no architecture lecture. |
-| 0:25-0:55 | First setup | OBS has the game/screen source and ChatXPT Browser Source overlay at `http://localhost:3000/overlay`, with the overlay above gameplay in Sources. | Script the one-time setup line: once OBS is configured, future streams reuse the saved scene. |
-| 0:55-1:25 | Streamer Studio/control room | Open `http://localhost:3000/`, show live screen analysis, stream automation settings, streamer settings/context, and exactly three generated quests. | Call out only the signals visible on screen, such as motion/visual-change/tempo/confidence/chat; unsupported gameplay facts stay unknown. |
-| 1:25-2:30 | Live run-through | Project owner plays vanilla Minecraft while ChatXPT samples the selected screen/window, generates three context-appropriate sidequests, and starts a short vote. | Open the viewer Extension screen at `/viewer.html` and submit one vote within the voting window. |
-| 2:30-3:15 | Viewer vote and overlay | Show the vote count update, activate or auto-show the winning quest, and show the OBS overlay updating for the broadcast. | Confirm the viewer action is the vote shown on screen; if chat cannot connect, label the fallback honestly. |
-| 3:15-4:15 | Analytics and quest generator | Explain that ChatXPT combines broad gameplay activity, audience signals, streamer boundaries, and deterministic safety/validation to choose appropriate quests. | Keep the analysis explanation practical: what changed, why the quest fits, what is still prototype-level. |
-| 4:15-5:00 | Outcome and close | Complete/fail the quest, show status/reward/history or the relevant local state, and close with the reusable workflow. | End with the future-stream line: open OBS, start stream, play, viewers vote, overlay updates. |
+### 2. Real Minecraft Game Capture and gameplay understanding
 
-### Joel Handoff Wording
+1. In OBS, start the raw Minecraft scene and OBS Virtual Camera.
+2. From Studio, open the persistent Game Capture tab and select OBS Virtual Camera.
+3. Keep the capture tab open. Return to **Gameplay Engine**.
+4. Exercise distinguishable owned-game periods:
+   - quiet/standing still;
+   - exploration/movement;
+   - inventory or menu;
+   - safe combat or visible damage if practical;
+   - recovery/quiet after the action.
+5. On Gameplay Engine, verify:
+   - frames processed, analysis rate, last frame, processing latency, and coverage move;
+   - the stream-period timeline changes only for accepted evidence;
+   - gameplay tempo is separate from Stream vibe and Audience mood;
+   - supported facts appear as observed/inferred with freshness and confidence;
+   - ambiguous health, hunger, hostile, biome, damage-cause, or exact activity facts remain unknown instead of being guessed;
+   - raw frames retained remains zero.
 
-Joel should prepare the exact script and step-by-step capture process for the five-minute video. He can make executive video decisions on shot order, transitions, what to trim, which screen best explains the quest generator, and how to keep the story understandable under time pressure. The required story is:
+**Pass:** Real frames cross the capture boundary and at least universal activity plus one supported Minecraft fact change truthfully.
+**Fail:** Metrics remain static, a fixture is shown as live, the overlay is recursively analysed, or an unsupported exact fact is asserted.
 
-1. Explain the app, OBS overlay, and Streamer Studio.
-2. Show first-time setup: open OBS, add/connect ChatXPT overlay/browser sources, and configure once.
-3. Show future-stream setup: OBS remembers the same sources, so the streamer opens OBS and starts.
-4. Run through the intended live loop: the streamer plays, ChatXPT silently assesses the selected screen/window and viewer activity, then generates sidequest options without constant streamer clicking.
-5. Start a short vote around 30 seconds into the run-through.
-6. Joel joins as the viewer and actually votes in the Extension-style viewer screen within that window.
-7. Show the winning quest on the OBS overlay.
-8. Finish with analytics and quest-generator discussion under the five-minute limit.
+### 3. Real Twitch activity and Live Analytics
 
-The script must stay honest: local Extension-style viewer voting, real local screen sampling, real Twitch-chat messages, and real OBS Browser Source rendering may be shown when exercised; fixture, manual, local-only, or unavailable behaviour must be labelled as such.
+Use pre-agreed harmless messages so the result can be checked without leading the product toward unsafe content.
 
-### Required Video Contents
+1. Viewer A sends two messages containing one watchlist term and one proposed topic.
+2. Viewer B independently mentions the same proposed topic using different wording.
+3. Send a short energetic burst, then allow a quiet interval.
+4. Let Viewer A become inactive long enough for the current-session lifecycle to change, then send one new message.
+5. Open **Live Analytics** and verify:
+   - Audience mood changes only when enough evidence exists;
+   - previous mood and previous message rate remain distinguishable from current state;
+   - keywords and repeated topics reflect qualifying messages;
+   - one person or repeated spam is not labelled community consensus;
+   - active/new/returning/recently inactive participants are current-session aggregates;
+   - Stream vibe still names the selected streamer preset/style rather than duplicating Audience mood;
+   - raw messages, usernames, and persistent viewer profiles are absent.
 
-Use this screen-by-screen checklist when deciding the final edit. Keep setup clips short; spend the time on the live loop.
+**Pass:** Planned multi-participant changes produce the expected privacy-safe aggregate transitions.
+**Fail:** Mood/vibe are conflated, one participant becomes consensus, identities leak, or the displayed state cannot be tied to current-session evidence.
 
-| # | Content | Screen/source to capture | Notes for Joel |
-| --- | --- | --- | --- |
-| 1 | Explain the app | Short slide/title card or the app home/control-room screen | One sentence: ChatXPT turns stream context and viewer input into safe sidequests. |
-| 2 | Show the OBS overlay | Project owner's screen in OBS | The ChatXPT Browser Source should sit above the gameplay/screen source. |
-| 3 | Show Streamer Studio/control room | Project owner's screen at `http://localhost:3000/` | Show live screen analysis, stream automation settings, streamer context, generated quests, and vote controls. |
-| 4 | Show first setup | Project owner's OBS screen | Add/select game capture and `http://localhost:3000/overlay` once. |
-| 5 | Show future stream setup | Same OBS scene as #4 | Explain that OBS remembers the scene, so future streams start from the saved setup. Do not spend extra time if nothing changes. |
-| 6 | Show viewer joining | Joel's screen on the Twitch stream/viewer page | This is the viewer perspective that proves someone else can watch and participate. |
-| 7 | Show quests auto-generating and appearing on stream | Project owner's control room and OBS overlay, then Role 2's view of the stream | The intended flow is passive: streamer plays, ChatXPT samples context, three quests appear. If a click is still needed in the prototype, label it as prototype/demo control. |
-| 8 | Show Joel voting | Joel's screen at `http://localhost:3000/viewer.html` | Vote within the short window, ideally around 30 seconds into the run-through. Twitch chat `1`/`2`/`3` is only the fallback/comment-ingestion proof. |
-| 9 | Show chosen quest on overlay | Project owner's OBS overlay and Role 2's stream view | Confirm the selected quest is visible in the broadcast overlay. |
-| 10 | Discuss analytics | Simple local screen, preferably `http://localhost:3000/` | Point to visible motion, visual-change, tempo, confidence, chat, and vote signals; keep unsupported gameplay facts as `unknown`. |
-| 11 | Discuss quest generator | The generated quest cards on `http://localhost:3000/`; use `/diagnostics/ui-harness` only if needed | Explain why the three quests fit the stream context and safety boundaries. Avoid deep implementation detail. |
+### 4. Private cue and exactly three validated sidequests
 
-Joel should turn this into a shot list with exact transitions, narration, and who shares which screen. The core edit should feel like one smooth story: first-time setup once, future streams reuse it, streamer plays, ChatXPT prepares quests, viewer votes, overlay updates, then analytics and quest-generation reasoning close the loop.
+1. Continue Minecraft until ChatXPT identifies a suitable, non-disruptive moment.
+2. Open the private streamer Live Director view or Live Quests.
+3. Inspect the cue reason and source-labelled context.
+4. Turn the cue into a vote or request a proposal through the authorised flow.
+5. Confirm the official proposal contains exactly three options—not two, four, or a partial loading batch.
+6. For each option, check:
+   - it is understandable in one glance;
+   - it is distinct from the other two;
+   - it fits Minecraft or uses honest game-neutral wording;
+   - it does not contradict a current known fact;
+   - it respects the saved forbidden type and accessibility constraint;
+   - it is safe, non-wagering, and feasible within the current stream.
+7. Exercise manual approval. If an option is unsuitable, reject it and record why instead of forcing the demo forward.
 
-## Recording Script
+**Pass:** One suitable moment yields exactly three safe, distinct, context-compatible options through the authoritative path.
+**Fail:** A partial batch reaches viewers, an option relies on an unknown/contradicted fact, or the saved hard boundary is ignored.
 
-1. Show the GitHub/repository state or terminal output:
-   - branch and commit being recorded;
-   - PRs #124-#129 are merged and all PRs are closed/merged;
-   - `npm run check` passed on merged `main` at `efd81ce`, and passed again on the current commit if rerun for this recording;
-   - app is running at `http://localhost:3000`.
+### 5. Two viewers, private acknowledgement, and one tally
 
-2. Open `/diagnostics/ui-harness`.
-   - Show the fixture/diagnostic labels.
-   - Show the single session/cycle/revision.
-   - Show exactly three quest options.
-   - Show the streamer, viewer, and overlay panels using the same fixture state.
+1. Open the installed Twitch Extension for Viewer A and Viewer B in isolated sessions.
+2. Confirm both see the same three options and voting deadline.
+3. Viewer A selects and confirms one option. Viewer B selects and confirms another.
+4. Verify each viewer receives only their own accepted choice and session points state.
+5. Attempt a duplicate or late vote and confirm it is rejected without changing the tally.
+6. Reconnect one viewer and confirm permitted personal state and the shared cycle recover.
+7. If the Extension is unavailable, exercise the hosted Quest Board; if that is unavailable, exercise `1`/`2`/`3` Twitch-chat voting. Record which surface actually accepted each vote.
 
-3. Exercise one allowed command in the harness.
-   - If the UI exposes command controls, use one normal command and one stale/invalid command path.
-   - Narrate that this proves the browser-safe command envelope and typed rejection path, not live Twitch authority.
+**Pass:** Two viewers share one authoritative tally while private receipts remain private, and the fallback does not create separate vote authority.
+**Fail:** Tally/winner differs between viewers, another viewer's personal state leaks, or a fallback produces an independent result.
 
-4. Open `/viewer.html`.
-   - Show that the local Twitch Extension-style viewer route renders the current quest vote.
-   - State that the registered Twitch Extension must still be configured/uploaded separately before claiming real in-Twitch Extension evidence.
+### 6. Real OBS payoff, progress, result, and rewards
 
-5. Open `/overlay`.
-   - Show that OBS can load this URL as a browser source.
-   - If OBS is open, add or select a Browser Source pointing to `http://localhost:3000/overlay`.
+1. In **Studio -> Test Lab**, generate the current session's OBS Browser Source URL.
+2. Add the complete URL to OBS without exposing its fragment token in the recording.
+3. Close the vote through the authorised time/control path.
+4. Show the same winner in Studio, both viewer sessions, and the real OBS Browser Source.
+5. Activate the winning sidequest.
+6. Update progress through a permitted real/manual path. Do not claim automatic completion unless the predicate-bearing evidence path is actually demonstrated.
+7. Mark one honest terminal result: succeeded, failed, cancelled, skipped, or expired.
+8. Verify result, non-monetary session points, community hype, and overlay state update consistently.
+9. Confirm the public overlay contains no private cue rationale, raw chat, usernames, provider detail, personal vote, or personal points.
 
-6. Open `/api/health/deployment`.
-   - Show `deployment: local`.
-   - Show in-memory persistence is ready.
-   - Show cloud realtime is configured or unavailable honestly.
+**Pass:** The same cycle and winner reach Studio, two viewers, persistence/realtime when configured, and OBS; progress and one terminal result propagate without privacy leakage.
+**Fail:** Any surface disagrees, OBS is only a browser preview rather than a real Browser Source, or private data appears publicly.
 
-7. Optional legacy walkthrough:
-   - Open `http://localhost:3000/`.
-   - Generate sidequests.
-   - Confirm exactly three options.
-   - Ask the viewer to vote on `/viewer.html`; connect Twitch chat to the broadcaster channel if available to show real comments and the fallback `1`/`2`/`3` path.
-   - Activate a winning quest.
-   - Show overlay updates.
-   - Complete or fail the quest.
-   - Label this as local prototype proof. Only claim real Twitch voting or real screen sampling when the recording visibly exercises those live inputs.
+### 7. Current-stream override and controlled recovery
 
-## Claims This Recording Can Support
+1. In **Stream Settings** or Twitch Live Config, apply an unmistakable temporary intensity/creativity override.
+2. Confirm the current stream changes while saved defaults remain unchanged.
+3. Reset to saved defaults and confirm the temporary value disappears.
+4. Run one controlled recovery case:
+   - disable the optional model provider and confirm algorithmic/deterministic continuation on the same real inputs; or
+   - stop/restart OBS Virtual Camera and confirm live capture readiness drops then recovers; or
+   - disconnect/reconnect a viewer and confirm state recovery.
+5. Exercise skip or cancellation with confirmation, then begin another cycle and confirm the old confirmation cannot carry into it.
 
-- Local prototype runs from the recorded branch/commit.
-- Shared contract fixtures render for Studio/viewer/overlay.
-- Exactly three options are represented in the local diagnostic flow.
-- Browser-safe routes and deployment health endpoint respond.
-- Credential-free local persistence works for development.
-- The system distinguishes fixture/local evidence from live Twitch/OBS/cloud evidence.
-- If exercised on camera, the local control room can sample a selected screen/window, publish three quests to the local Extension-style viewer route, receive a viewer vote back into Studio, optionally connect to Twitch chat as an anonymous comment/fallback reader, and update the local OBS overlay route.
+**Pass:** The override is reversible and the selected failure becomes visible, honest, recoverable, and non-destructive.
+**Fail:** Saved defaults are overwritten, Studio keeps claiming a lost input is live, provider failure stops the credential-free workflow, or stale confirmation affects a new cycle.
 
-## Claims This Recording Cannot Support Alone
+### 8. End the session
 
-- Real Twitch chat ingestion, unless the recording visibly connects to the broadcaster channel and shows live chat messages becoming votes.
-- Twitch Extension JWT identity verification.
-- Real OBS Virtual Camera frame extraction. The visible local screen/window sampler is evidence only for the source actually selected and recorded.
-- Real Supabase cloud realtime/persistence.
-- Real Vercel deployment.
-- Two external viewer sessions voting against the same authoritative cloud revision.
-- Public Twitch Extension review readiness.
+1. End ChatXPT from Home.
+2. Verify the ended state is visible and no page continues to claim an active session.
+3. Do not present the current-session Live Analytics screen as implemented post-stream analytics or history; that capability remains deferred.
 
-## Real External Test Add-On
+## Per-feature evidence record
 
-If Twitch and OBS are ready, record a second short clip:
+Record `PASS`, `FAIL`, or `NOT RUN` for every row. A source or automated test result cannot be substituted for a missing live result.
 
-1. Start OBS with a raw game scene and no recursive ChatXPT overlay in the analysed capture source.
-2. In Studio, generate the session-scoped **OBS Browser Source** URL and paste that complete `/obs-overlay` URL into OBS. Do not record or expose the fragment token.
-3. Start a Twitch test stream or local Twitch Extension test mode.
-4. Open one broadcaster/studio browser and two isolated viewer browsers.
-5. Submit one vote from each viewer path available.
-6. Show the same session/cycle/revision and winning quest across Studio, both viewers, and OBS.
-7. Show whether Supabase/Vercel are actually involved or whether the run is local-only.
-8. Save the recording and record its limitations in `docs/evidence/manifest.json` before using it as evidence.
+| Feature | Required artifact or observation | Result |
+| --- | --- | --- |
+| One Studio/setup | Recording of OAuth/readiness/navigation plus saved profile reload |  |
+| Gameplay Engine | Real OBS Virtual Camera recording with moving processing metrics and known/unknown facts |  |
+| Live Analytics | Planned two-participant chat sequence and aggregate state transitions |  |
+| Live Quests | Cue evidence and exactly-three review, including restrictions check |  |
+| Profile & presets | Reload/new-session persistence and forbidden/accessibility enforcement |  |
+| Stream Settings/Live Config | Apply/reset current-stream override and one lifecycle control |  |
+| Viewer participation | Two isolated viewers, private receipts, duplicate/late rejection, reconnect |  |
+| Participation fallback | Hosted board or Twitch-chat vote on the same authoritative cycle |  |
+| OBS overlay | Real OBS Browser Source showing winner, active, progress, result, reconnect |  |
+| Rewards | Viewer-private session points plus public community hype after result |  |
+| Recovery/fallback | Provider, capture, token, or viewer recovery without fabricated state |  |
+| Ended state | Session ends consistently; no post-stream analytics overclaim |  |
+
+For every passed row, retain the exact branch/commit, input source, interaction, timestamp, artifact reference, reviewer, evidence class, and limitation in `docs/evidence/manifest.json`. Keep recordings outside Git if they contain gameplay identity, account details, chat identity, or tokens.
+
+## Five-minute final edit
+
+The complete run may be longer than five minutes. Cut it into this judge-visible sequence without changing its chronology or hiding failures:
+
+| Time | Segment | Minimum visible proof |
+| --- | --- | --- |
+| 0:00-0:25 | Pain and promise | Playing, understanding chat, and operating interactions compete for attention; ChatXPT closes that loop without claiming to create viewers |
+| 0:25-0:55 | One-time setup | One Studio, Twitch connected, saved Minecraft preset, OBS raw-game source and Browser Source |
+| 0:55-1:35 | Real understanding | Minecraft through OBS Virtual Camera; processing metrics, current period, supported facts, honest unknowns |
+| 1:35-2:05 | Audience understanding | Real planned Twitch messages update mood, rate, keywords/topics, and participant aggregates |
+| 2:05-2:45 | Three quests | One source-supported cue becomes exactly three safe options with streamer review |
+| 2:45-3:35 | Viewer agency | Two viewers vote; private acknowledgement and one shared tally/winner |
+| 3:35-4:20 | Broadcast payoff | Winner, active quest, progress, result, points/hype appear through real OBS and viewer surfaces |
+| 4:20-5:00 | Control and resilience | Current-stream override/reset plus one provider/capture/viewer recovery; close on the honest limitation boundary |
+
+## Claims the final run may support
+
+Only when visibly executed and recorded:
+
+- Real OBS Virtual Camera gameplay reaches ChatXPT's extraction boundary.
+- Real Twitch activity produces privacy-safe current-session aggregates.
+- Exactly three validated quests are proposed from current supported context.
+- Two viewers participate in one authoritative cycle with private acknowledgement.
+- The winning quest, progress, and result reach a real OBS Browser Source.
+- Saved streamer boundaries persist and current-stream overrides are reversible.
+- Missing provider or interrupted capture/viewer state recovers without fabricated facts.
+
+## Claims it must not make
+
+- ChatXPT is proven to increase retention, revenue, subscriptions, growth, or product-market fit.
+- Twitch/OBS/Extension source code or fixtures alone prove a live integration.
+- ChatXPT understands every game, mod, HUD, biome, mob, health value, damage cause, or objective.
+- Exactly three is research-proven as the optimal number of choices.
+- Audience mood is the same as the streamer-selected Stream vibe.
+- A current-session returning participant is a persistent cross-stream viewer profile.
+- Manual progress demonstrates automatic predicate-based completion.
+- Current-session Live Analytics is post-stream analytics/history.

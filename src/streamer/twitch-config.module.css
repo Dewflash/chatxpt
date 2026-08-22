@@ -196,13 +196,15 @@
 }
 
 .manualProgress label,
-.disabledRange {
+.disabledRange,
+.quickIntensity {
   display: grid;
   gap: var(--cx-space-sm);
 }
 
 .manualProgress label > span,
-.disabledRange > span {
+.disabledRange > span,
+.quickIntensity > span {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -211,14 +213,16 @@
 }
 
 .manualProgress input,
-.disabledRange input {
+.disabledRange input,
+.quickIntensity input {
   width: 100%;
   min-height: 2.75rem;
   accent-color: var(--cx-color-primary);
 }
 
 .manualProgress output,
-.disabledRange output {
+.disabledRange output,
+.quickIntensity output {
   color: var(--cx-color-primary);
   font-variant-numeric: tabular-nums;
 }

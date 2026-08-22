@@ -31,6 +31,32 @@ const chatNotificationSchema = z
   })
   .passthrough();
 
+const streamOnlineNotificationSchema = z
+  .object({
+    subscription: z.object({ type: z.literal("stream.online") }).passthrough(),
+    event: z
+      .object({
+        id: z.string().trim().min(1).max(128),
+        broadcaster_user_id: z.string().trim().min(1).max(128),
+        broadcaster_user_name: z.string().trim().min(1).max(128),
+        started_at: z.iso.datetime({ offset: true }),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+const streamOfflineNotificationSchema = z
+  .object({
+    subscription: z.object({ type: z.literal("stream.offline") }).passthrough(),
+    event: z
+      .object({
+        broadcaster_user_id: z.string().trim().min(1).max(128),
+        broadcaster_user_name: z.string().trim().min(1).max(128),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
 export type TwitchEventSubMessageType = z.infer<typeof eventSubMessageTypeSchema>;
 
 export type TwitchEventSubPayload =
@@ -41,6 +67,18 @@ export type TwitchEventSubPayload =
       readonly chatterId: string;
       readonly messageId: string;
       readonly text: string;
+    }
+  | {
+      readonly kind: "stream-online";
+      readonly streamId: string;
+      readonly broadcasterId: string;
+      readonly displayName: string;
+      readonly startedAt: number;
+    }
+  | {
+      readonly kind: "stream-offline";
+      readonly broadcasterId: string;
+      readonly displayName: string;
     }
   | { readonly kind: "revocation" | "ignored"; readonly subscriptionType: string | null };
 
@@ -142,15 +180,38 @@ export function parseTwitchEventSubMessage(
   if (messageType.data === "revocation") {
     return { kind: "revocation", subscriptionType };
   }
-  const parsed = chatNotificationSchema.safeParse(body);
-  if (!parsed.success) return { kind: "ignored", subscriptionType };
-  return {
-    kind: "chat-message",
-    broadcasterId: parsed.data.event.broadcaster_user_id,
-    chatterId: parsed.data.event.chatter_user_id,
-    messageId: parsed.data.event.message_id,
-    text: parsed.data.event.message.text,
-  };
+  if (subscriptionType === "channel.chat.message") {
+    const parsed = chatNotificationSchema.safeParse(body);
+    if (!parsed.success) return { kind: "ignored", subscriptionType };
+    return {
+      kind: "chat-message",
+      broadcasterId: parsed.data.event.broadcaster_user_id,
+      chatterId: parsed.data.event.chatter_user_id,
+      messageId: parsed.data.event.message_id,
+      text: parsed.data.event.message.text,
+    };
+  }
+  if (subscriptionType === "stream.online") {
+    const parsed = streamOnlineNotificationSchema.safeParse(body);
+    if (!parsed.success) return { kind: "ignored", subscriptionType };
+    return {
+      kind: "stream-online",
+      streamId: parsed.data.event.id,
+      broadcasterId: parsed.data.event.broadcaster_user_id,
+      displayName: parsed.data.event.broadcaster_user_name,
+      startedAt: Date.parse(parsed.data.event.started_at),
+    };
+  }
+  if (subscriptionType === "stream.offline") {
+    const parsed = streamOfflineNotificationSchema.safeParse(body);
+    if (!parsed.success) return { kind: "ignored", subscriptionType };
+    return {
+      kind: "stream-offline",
+      broadcasterId: parsed.data.event.broadcaster_user_id,
+      displayName: parsed.data.event.broadcaster_user_name,
+    };
+  }
+  return { kind: "ignored", subscriptionType };
 }
 
 export function pseudonymizeTwitchChatViewer(

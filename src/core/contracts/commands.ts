@@ -9,7 +9,12 @@ import {
 } from "./common";
 import { streamerQuestActionSchema } from "./quests";
 import { participationSourceModeSchema } from "./participation";
-import { directorCueActionSchema } from "./signals";
+import { streamPresetSchema } from "./profile";
+import {
+  audienceSnapshotSchema,
+  directorCueActionSchema,
+  gameplaySnapshotSchema,
+} from "./signals";
 
 const commandEnvelopeFields = {
   contractVersion: contractVersionSchema,
@@ -137,6 +142,7 @@ const streamerGameProfilePatchSchema = z
 const profileRestrictionListPatchSchema = z.array(z.string().trim().min(1).max(160)).max(64);
 const profileQuestTypeListPatchSchema = z.array(z.string().trim().min(1).max(80)).max(32);
 const profileAccessibilityListPatchSchema = z.array(z.string().trim().min(1).max(160)).max(32);
+const profileKeywordWatchlistPatchSchema = z.array(z.string().trim().min(1).max(80)).max(32);
 
 export const streamerProfileSettingsCommandSchema = z
   .object({
@@ -149,6 +155,9 @@ export const streamerProfileSettingsCommandSchema = z
     preferredQuestTypes: profileQuestTypeListPatchSchema.optional(),
     forbiddenQuestTypes: profileQuestTypeListPatchSchema.optional(),
     accessibilityNeeds: profileAccessibilityListPatchSchema.optional(),
+    keywordWatchlist: profileKeywordWatchlistPatchSchema.optional(),
+    streamPresets: z.array(streamPresetSchema).min(1).max(24).optional(),
+    selectedPresetId: identifierSchema.nullable().optional(),
     voting: streamerVotingPreferencesPatchSchema.optional(),
     rewards: streamerRewardPreferencesPatchSchema.optional(),
   })
@@ -161,6 +170,9 @@ export const streamerProfileSettingsCommandSchema = z
       command.preferredQuestTypes,
       command.forbiddenQuestTypes,
       command.accessibilityNeeds,
+      command.keywordWatchlist,
+      command.streamPresets,
+      command.selectedPresetId,
     ].filter((value) => value !== undefined).length;
     const votingChangeCount = Object.keys(command.voting ?? {}).length;
     const rewardChangeCount = Object.keys(command.rewards ?? {}).length;
@@ -192,21 +204,29 @@ export const streamerSessionOverrideCommandSchema = z
     questCycleId: z.null(),
     type: z.literal("streamer.session-override"),
     action: z.enum(["apply", "clear"]),
+    presetId: identifierSchema.nullable().default(null),
     experiencePatch: z.record(z.string().trim().min(1).max(80), z.number().min(0).max(1)).default({}),
   })
   .strict()
   .superRefine((command, context) => {
-    if (command.action === "apply" && Object.keys(command.experiencePatch).length === 0) {
+    if (
+      command.action === "apply" &&
+      command.presetId === null &&
+      Object.keys(command.experiencePatch).length === 0
+    ) {
       context.addIssue({
         code: "custom",
-        message: "Applying a session override requires at least one setting",
+        message: "Applying a session override requires a preset or at least one setting",
         path: ["experiencePatch"],
       });
     }
-    if (command.action === "clear" && Object.keys(command.experiencePatch).length > 0) {
+    if (
+      command.action === "clear" &&
+      (command.presetId !== null || Object.keys(command.experiencePatch).length > 0)
+    ) {
       context.addIssue({
         code: "custom",
-        message: "Clearing a session override must not include setting values",
+        message: "Clearing a session override must not include a preset or setting values",
         path: ["experiencePatch"],
       });
     }
@@ -259,6 +279,22 @@ export const systemLiveDirectorContextCommandSchema = z
   })
   .strict();
 
+export const systemAudienceSnapshotCommandSchema = z
+  .object({
+    ...commandEnvelopeFields,
+    type: z.literal("system.audience-snapshot-ready"),
+    snapshot: audienceSnapshotSchema,
+  })
+  .strict();
+
+export const systemGameplaySnapshotCommandSchema = z
+  .object({
+    ...commandEnvelopeFields,
+    type: z.literal("system.gameplay-snapshot-ready"),
+    snapshot: gameplaySnapshotSchema,
+  })
+  .strict();
+
 export const systemLiveDirectorCueCommandSchema = z
   .object({
     ...commandEnvelopeFields,
@@ -293,6 +329,8 @@ export const commandEnvelopeSchema = z
     streamerProfileSettingsCommandSchema,
     streamerSessionOverrideCommandSchema,
     streamerLiveDirectorIntentCommandSchema,
+    systemAudienceSnapshotCommandSchema,
+    systemGameplaySnapshotCommandSchema,
     systemLiveDirectorContextCommandSchema,
     systemLiveDirectorCueCommandSchema,
     streamerLiveDirectorCueCommandSchema,
@@ -311,6 +349,8 @@ export const commandEnvelopeSchema = z
       "streamer.profile-settings": ["broadcaster"],
       "streamer.session-override": ["broadcaster"],
       "streamer.live-director-intent": ["broadcaster"],
+      "system.audience-snapshot-ready": ["system"],
+      "system.gameplay-snapshot-ready": ["system"],
       "system.live-director-context-ready": ["system"],
       "system.live-director-cue-ready": ["system"],
       "streamer.live-director-cue": ["broadcaster", "moderator"],
@@ -339,6 +379,8 @@ export type StreamerSessionOverrideCommand = z.infer<typeof streamerSessionOverr
 export type StreamerLiveDirectorIntentCommand = z.infer<
   typeof streamerLiveDirectorIntentCommandSchema
 >;
+export type SystemAudienceSnapshotCommand = z.infer<typeof systemAudienceSnapshotCommandSchema>;
+export type SystemGameplaySnapshotCommand = z.infer<typeof systemGameplaySnapshotCommandSchema>;
 export type SystemLiveDirectorContextCommand = z.infer<
   typeof systemLiveDirectorContextCommandSchema
 >;

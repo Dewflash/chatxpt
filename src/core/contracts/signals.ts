@@ -121,11 +121,25 @@ export const gameplayFrameObservationSchema = z
   })
   .strict();
 
+export const gameplayCaptureMetricsSchema = z
+  .object({
+    observedAt: timestampSchema,
+    framesProcessed: z.number().int().nonnegative(),
+    processingCoverage: z.number().min(0).max(1),
+    cadenceFps: z.number().nonnegative().max(120).nullable(),
+    lastLatencyMs: z.number().int().nonnegative().max(120_000).nullable(),
+    droppedFrames: z.number().int().nonnegative().nullable(),
+    ocrStatus: z.enum(["ready", "not-required", "unavailable", "unknown"]),
+    normalizedFactCount: z.number().int().nonnegative(),
+  })
+  .strict();
+
 export const gameplaySnapshotSchema = z
   .object({
     envelope: contractEnvelopeSchema,
     capabilities: gameplayCapabilitiesSchema,
     signals: z.array(namedSignalSchema).max(128),
+    captureMetrics: gameplayCaptureMetricsSchema.nullable().optional(),
   })
   .strict()
   .superRefine((snapshot, context) => {
@@ -780,6 +794,7 @@ export type NamedSignal = z.infer<typeof namedSignalSchema>;
 export type GameplayCapabilities = z.infer<typeof gameplayCapabilitiesSchema>;
 export type GameplayFrameObservation = z.infer<typeof gameplayFrameObservationSchema>;
 export type GameplaySnapshot = z.infer<typeof gameplaySnapshotSchema>;
+export type GameplayCaptureMetrics = z.infer<typeof gameplayCaptureMetricsSchema>;
 export type AudienceEvent = z.infer<typeof audienceEventSchema>;
 export type AudienceSnapshot = z.infer<typeof audienceSnapshotSchema>;
 export type LiveContextSourceClass = z.infer<typeof liveContextSourceClassSchema>;
