@@ -325,6 +325,25 @@
   gap: var(--cx-space-md);
 }
 
+.statusTitle {
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cx-space-md);
+}
+
+.statusTitle h2,
+.statusTitle h3 {
+  min-width: 0;
+  margin: 0;
+}
+
+.statusTitle > :last-child {
+  flex: 0 0 auto;
+}
+
 .profileForm {
   display: grid;
   gap: var(--cx-space-md);

@@ -465,30 +465,38 @@ function HealthStrip({ view, readiness }: {
   return (
     <CardGrid className={styles.grid}>
       <Card className={styles.card}>
-        <StatusBadge tone={twitch.tone}>{twitch.badge}</StatusBadge>
-        <h3>Twitch</h3>
+        <div className={styles.statusTitle}>
+          <h3>Twitch</h3>
+          <StatusBadge tone={twitch.tone}>{twitch.badge}</StatusBadge>
+        </div>
         <p>{twitch.detail}</p>
         {twitch.state === "available"
           ? <AvailabilityAction availability={twitch} />
           : <a href="/api/twitch/oauth/start">Connect Twitch</a>}
       </Card>
       <Card className={styles.card}>
-        <StatusBadge tone={obs.tone}>{obs.badge}</StatusBadge>
-        <h3>Game Capture</h3>
+        <div className={styles.statusTitle}>
+          <h3>Game Capture</h3>
+          <StatusBadge tone={obs.tone}>{obs.badge}</StatusBadge>
+        </div>
         <p>{obs.detail}</p>
         {obs.state === "available"
           ? <AvailabilityAction availability={obs} />
           : <a href="/studio/gameplay">{obs.nextStep}</a>}
       </Card>
       <Card className={styles.card}>
-        <StatusBadge tone={voting.tone}>{voting.badge}</StatusBadge>
-        <h3>Viewer Voting</h3>
+        <div className={styles.statusTitle}>
+          <h3>Viewer Voting</h3>
+          <StatusBadge tone={voting.tone}>{voting.badge}</StatusBadge>
+        </div>
         <p>{voting.detail}</p>
         <AvailabilityAction availability={voting} />
       </Card>
       <Card className={styles.card}>
-        <StatusBadge tone={overlay.tone}>{overlay.badge}</StatusBadge>
-        <h3>Broadcast Overlay</h3>
+        <div className={styles.statusTitle}>
+          <h3>Broadcast Overlay</h3>
+          <StatusBadge tone={overlay.tone}>{overlay.badge}</StatusBadge>
+        </div>
         <p>{overlay.detail}</p>
         <AvailabilityAction availability={overlay} />
       </Card>
@@ -600,10 +608,12 @@ function HomeStatePanel({
   return (
     <section className={styles.readyHero} data-mode={mode} aria-labelledby="home-state-heading">
       <div className={styles.homeSummary}>
-        <span className={styles.sectionLabel}>Live Director</span>
-        <StatusBadge tone={mode === "live" || mode === "ready" ? "success" : mode === "cannot-connect" || mode === "reconnecting" ? "warning" : "neutral"}>
-          {copy.badge}
-        </StatusBadge>
+        <div className={styles.statusTitle}>
+          <span className={styles.sectionLabel}>Live Director</span>
+          <StatusBadge tone={mode === "live" || mode === "ready" ? "success" : mode === "cannot-connect" || mode === "reconnecting" ? "warning" : "neutral"}>
+            {copy.badge}
+          </StatusBadge>
+        </div>
         <h2 id="home-state-heading">{copy.title}</h2>
         <p>{copy.detail}</p>
         <div className={styles.actions}>
@@ -670,10 +680,12 @@ function HomeQuestSummary({ view }: { readonly view: StreamerViewModel }) {
     <article className={styles.engagementCard}>
       <div className={styles.panelHeading}>
         <div>
-          <StatusBadge tone={cycle.status === "voting" ? "info" : cycle.status === "active" ? "success" : "neutral"}>
-            {titleCase(cycle.status)}
-          </StatusBadge>
-          <h2>Live Quests</h2>
+          <div className={styles.statusTitle}>
+            <h2>Live Quests</h2>
+            <StatusBadge tone={cycle.status === "voting" ? "info" : cycle.status === "active" ? "success" : "neutral"}>
+              {titleCase(cycle.status)}
+            </StatusBadge>
+          </div>
         </div>
         <a href="/studio/live-quests">Open quests</a>
       </div>
@@ -712,7 +724,7 @@ function HomeChatSummary({ view, readiness }: {
   return (
     <article className={styles.engagementCard}>
       <div className={styles.panelHeading}>
-        <div><StatusBadge tone={presentation.tone}>{presentation.badge}</StatusBadge><h2>Chat Analytics</h2></div>
+        <div><div className={styles.statusTitle}><h2>Chat Analytics</h2><StatusBadge tone={presentation.tone}>{presentation.badge}</StatusBadge></div></div>
         <a href="/studio/live-analytics">Open analytics</a>
       </div>
       <div className={styles.chatVibe}>
@@ -794,7 +806,7 @@ function LiveHomeDashboard({ view, readiness, pending, onCommand, commandFactory
     <div className={styles.liveHome}>
       <article className={styles.currentStream}>
         <div className={styles.currentStreamHeader}>
-          <div><span className={styles.sectionLabel}>Live Director</span><StatusBadge tone="success">Live</StatusBadge><h2>{resolveCurrentStreamGame(view.profile, view.session.currentGame)?.gameName ?? "Current stream"}</h2><small>{preset?.name ?? "Saved defaults"} · {formatElapsed(view.session.startedAt, view.envelope.receivedAt)}</small></div>
+          <div><div className={styles.statusTitle}><span className={styles.sectionLabel}>Live Director</span><StatusBadge tone="success">Live</StatusBadge></div><h2>{resolveCurrentStreamGame(view.profile, view.session.currentGame)?.gameName ?? "Current stream"}</h2><small>{preset?.name ?? "Saved defaults"} · {formatElapsed(view.session.startedAt, view.envelope.receivedAt)}</small></div>
           <HomeControlButton label="End ChatXPT session" disabledLabel="End unavailable" disabled={!canEnd} pending={pending} onClick={() => onCommand?.(buildSetupCommand(view, "session", "end-session", commandFactory))} />
         </div>
         <div className={styles.directorReading}>

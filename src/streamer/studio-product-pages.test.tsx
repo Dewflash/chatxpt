@@ -69,6 +69,11 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("What your stream sees");
     expect(html).toContain("Viewer Voting");
     expect(html).toContain("Broadcast Overlay");
+    expect(html).toContain("Live Director</span><span");
+    expect(html).toContain("<h3>Twitch</h3><span");
+    expect(html).toContain("<h3>Game Capture</h3><span");
+    expect(html).toContain("<h3>Viewer Voting</h3><span");
+    expect(html).toContain("<h3>Broadcast Overlay</h3><span");
     expect(html).not.toContain("fixture");
     expect(html).not.toContain("Fixture");
     expect(html).not.toContain("tester");
