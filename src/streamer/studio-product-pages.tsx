@@ -1335,7 +1335,6 @@ function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
               <option value="deterministic-fallback">Deterministic fallback</option>
               <option value="ai-model">AI model</option>
             </select>
-            <small>Presentation only. Quest generation still uses deterministic fallback.</small>
           </label>
         </div>
       </section>

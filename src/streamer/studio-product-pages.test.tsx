@@ -524,7 +524,7 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("Generation status");
     expect(html).toContain("Select AI model");
     expect(html).toContain("AI model");
-    expect(html).toContain("Presentation only. Quest generation still uses deterministic fallback.");
+    expect(html).not.toContain("Presentation only.");
     expect(html).not.toContain("AI enabled · Preview only");
     expect(html).toContain("Mode: Automatic");
   });
