@@ -280,6 +280,27 @@ describe("ObsOverlayApplication", () => {
     const studioView = await studio.read(started.grant, null);
     expect(studioView.view.questCycle.status).toBe("voting");
     expect(studioView.view.envelope.revision).toBe(result.view.envelope.revision);
+
+    const publicInstallation = await overlay.issueInstallation(
+      "channel-1",
+      "https://chatxpt.example",
+      {},
+    );
+    const publicToken = new URLSearchParams(
+      new URL(publicInstallation.descriptor.url).hash.slice(1),
+    ).get("overlayAccessToken");
+    if (publicToken === null) throw new Error("Expected a public overlay token");
+    const publicOverlay = await overlay.read(
+      `Bearer ${publicToken}`,
+      { broadcasterId: "channel-1", sessionId: null },
+    );
+    expect(publicOverlay).toMatchObject({
+      envelope: { revision: result.view.envelope.revision },
+      questCycle: {
+        status: "voting",
+        options: proposed.view.questCycle.options.map(({ candidateId }) => ({ candidateId })),
+      },
+    });
     await expect(overlay.executeLiveDirectorCommand(
       `Bearer ${token}`,
       "channel-1",

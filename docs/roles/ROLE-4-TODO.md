@@ -34,6 +34,8 @@ separate required initiative that must not block or alter the golden demo flow.
 
 The 23 August live pass preserves the compact deterministic label without an evidence-free claim and removes unsupported negative-chat wording from Positive Commentary. Live Analytics and Live Quests were exercised with authorised Twitch chat, real OBS capture, and a validated three-option local-algorithmic batch. A follow-up now renders up to three ranked automatic chat topics from the current audience snapshot, falls back to the accepted Live Director pointer for older snapshots, and avoids duplicating an exact watchlist match; the new multi-topic behavior is fixture/component-verified only.
 
+The local contingency is now explicit in Live Quests: `Generate 3 local quests` remains available for an idle preparing/live session, explains that gameplay tracking, Twitch chat, and an AI provider are not required, and tells Automatic streamers that publication opens viewer voting and updates the stream overlay. The command still creates a normal Role 1 request, Role 3 validates exactly three safe fallback candidates, and Role 5/OBS receive only the authoritative public projection. Focused component/server coverage passes; a new owner-operated browser/OBS interaction is not claimed by this text-only UI verification.
+
 ## Decisions Role 4 may make without Role 1 within the accepted build plan
 
 - Streamer information architecture and interaction details

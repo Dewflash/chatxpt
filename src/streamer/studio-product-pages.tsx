@@ -1264,16 +1264,21 @@ function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
           </div>
           <div className={styles.questStatusActions}>
             {cycle?.status === "idle" ? (
-              <button
-                type="button"
-                className={styles.primaryAction}
-                disabled={pending || !canGenerateFallback}
-                onClick={() => {
-                  if (view !== null) onCommand?.(buildQuestGenerationCommand(view, commandFactory));
-                }}
-              >
-                {pending ? "Generating fallback…" : "Generate quest now"}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className={styles.primaryAction}
+                  disabled={pending || !canGenerateFallback}
+                  onClick={() => {
+                    if (view !== null) onCommand?.(buildQuestGenerationCommand(view, commandFactory));
+                  }}
+                >
+                  {pending ? "Generating local quests…" : "Generate 3 local quests"}
+                </button>
+                <small className={styles.questFallbackHint}>
+                  Works without game-state tracking, Twitch chat, or an AI provider.
+                </small>
+              </>
             ) : null}
             {view?.emergencyPaused ? <button type="button" className={styles.primaryAction} disabled={pending || onCommand === undefined} onClick={() => onCommand?.(buildEmergencyClearCommand(view, commandFactory))}>Clear emergency pause</button> : cycle?.availableStreamerActions.includes("emergency-pause") ? <button type="button" className={styles.dangerAction} disabled={pending || onCommand === undefined} onClick={() => sendAction("emergency-pause")}>Pause new quests</button> : null}
           </div>
@@ -1282,6 +1287,11 @@ function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
 
       <section id="recommendations" className={styles.recommendationsPanel} aria-labelledby="recommendations-heading">
         <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Recommendations</span><h2 id="recommendations-heading">Exactly three official choices</h2></div><span className={styles.softLabel}>{deterministicFallback ? "Deterministic fallback" : cycle?.options.length === 3 ? `${totalVotes} votes` : "Waiting for validation"}</span></div>
+        {deterministicFallback ? (
+          <Notice tone="info" title="Local deterministic fallback">
+            These three quests came from the safe local library and do not depend on gameplay tracking, Twitch chat, or an AI provider. {manualQuestSelection ? "Select one and start it directly." : "Push all three to open viewer voting and update the stream overlay."}
+          </Notice>
+        ) : null}
         {deterministicFallback && view?.session.status !== "live" ? (
           <Notice tone="warning" title="Start the stream before opening the vote">
             You can review the fallback now. Viewer voting becomes available after the broadcaster session is live.

@@ -462,7 +462,7 @@ describe("StudioProductPageSurface", () => {
     expect(html).not.toContain("disabled=\"\"");
   });
 
-  it("shows Generate quest now while the authoritative cycle is idle", () => {
+  it("offers three local quests while the authoritative cycle is idle", () => {
     const base = createFixtureUiGatewaySnapshot().views.streamer;
     const view = {
       ...base,
@@ -487,7 +487,8 @@ describe("StudioProductPageSurface", () => {
       onCommand: () => undefined,
     }));
 
-    expect(html).toContain("Generate quest now");
+    expect(html).toContain("Generate 3 local quests");
+    expect(html).toContain("Works without game-state tracking, Twitch chat, or an AI provider.");
   });
 
   it("labels an immediate fallback as deterministic and evidence-free", () => {
@@ -515,7 +516,9 @@ describe("StudioProductPageSurface", () => {
 
     expect(html).toContain("Deterministic fallback");
     expect(html).not.toContain("Deterministic fallback shown");
-    expect(html).not.toContain("without gameplay or audience evidence");
+    expect(html).toContain("Local deterministic fallback");
+    expect(html).toContain("do not depend on gameplay tracking, Twitch chat, or an AI provider");
+    expect(html).toContain("Push all three to open viewer voting and update the stream overlay.");
     expect(html).toContain("Why these were recommended");
     expect(html).toContain("Provider output becomes official only after deterministic validation.");
     expect(html).toContain("Generation status");

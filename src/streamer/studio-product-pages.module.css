@@ -1466,6 +1466,13 @@
   justify-items: center;
 }
 
+.questFallbackHint {
+  max-width: 18rem;
+  color: var(--cx-color-text-muted);
+  line-height: 1.4;
+  text-align: center;
+}
+
 .questCards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
