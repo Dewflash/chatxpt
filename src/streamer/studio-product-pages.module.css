@@ -1484,6 +1484,74 @@
   gap: var(--cx-space-sm);
 }
 
+.voteResultsPanel {
+  display: grid;
+  gap: var(--cx-space-md);
+  padding: var(--cx-space-lg);
+  border: 1px solid var(--cx-color-border);
+  border-radius: var(--cx-radius-lg);
+  background: var(--cx-color-surface);
+}
+
+.voteResultsPanel h2,
+.voteResultsPanel p {
+  margin: 0;
+}
+
+.voteResultsPanel > p {
+  color: var(--cx-color-text-muted);
+}
+
+.voteResultList {
+  display: grid;
+  gap: var(--cx-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.voteResultList li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--cx-space-md);
+  padding: var(--cx-space-md);
+  border: 1px solid var(--cx-color-border);
+  border-radius: var(--cx-radius-md);
+  background: var(--cx-color-surface-raised);
+}
+
+.voteResultList li.winningVoteResult {
+  border-color: var(--cx-color-success);
+  background: var(--cx-color-success-soft);
+}
+
+.voteResultIdentity,
+.voteResultCount {
+  display: grid;
+  gap: var(--cx-space-xs);
+}
+
+.voteResultIdentity small,
+.voteResultCount small {
+  color: var(--cx-color-text-muted);
+}
+
+.voteResultIdentity progress {
+  width: 100%;
+  height: 0.45rem;
+  accent-color: var(--cx-color-primary);
+}
+
+.winningVoteResult .voteResultIdentity progress {
+  accent-color: var(--cx-color-success);
+}
+
+.voteResultCount {
+  min-width: 5.5rem;
+  text-align: right;
+}
+
 .questCard,
 .selectedQuest {
   min-width: 0;
@@ -2056,6 +2124,17 @@
   .questLeader,
   .chatVibe {
     grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .voteResultList li {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .voteResultCount {
+    grid-column: 2;
+    grid-template-columns: auto auto;
+    justify-content: space-between;
+    text-align: left;
   }
 
   .questLeader > strong,

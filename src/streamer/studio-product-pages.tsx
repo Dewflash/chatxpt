@@ -1170,6 +1170,46 @@ function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
     ? manualProgressDraft.value
     : serverManualProgress;
   const totalVotes = cycle?.voteTallies.reduce((sum, tally) => sum + tally.votes, 0) ?? 0;
+  const finalVoteOptions = cycle !== null &&
+      cycle.status !== "voting" &&
+      cycle.options.length === 3 &&
+      cycle.voteTallies.length === 3
+    ? cycle.options.map((option) => {
+        const votes = cycle.voteTallies.find(
+          (tally) => tally.candidateId === option.candidateId,
+        )?.votes ?? 0;
+        return {
+          option,
+          votes,
+          share: totalVotes === 0 ? 0 : Math.round((votes / totalVotes) * 100),
+          isWinner: option.candidateId === cycle.activeCandidateId,
+        };
+      })
+    : [];
+  const finalVoteWinner = finalVoteOptions.find(({ isWinner }) => isWinner) ?? null;
+  const highestFinalVoteCount = finalVoteOptions.reduce(
+    (highest, result) => Math.max(highest, result.votes),
+    0,
+  );
+  const tiedFinalLeaderCount = highestFinalVoteCount === 0
+    ? 0
+    : finalVoteOptions.filter(({ votes }) => votes === highestFinalVoteCount).length;
+  const finalVoteBadge = finalVoteOptions.length === 0
+    ? "Waiting for vote to close"
+    : finalVoteWinner === null
+      ? "No winner"
+      : tiedFinalLeaderCount > 1
+        ? "Tie resolved"
+        : "Winner confirmed";
+  const finalVoteDetail = finalVoteOptions.length === 0
+    ? "The winner and all three authoritative vote totals will remain visible here after voting closes."
+    : finalVoteWinner === null
+      ? totalVotes === 0
+        ? "Voting closed with no accepted votes, so no quest was activated."
+        : "Voting ended without an activated winner."
+      : tiedFinalLeaderCount > 1
+        ? `${finalVoteWinner.option.title} won after ChatXPT resolved a ${tiedFinalLeaderCount}-way tie.`
+        : `${finalVoteWinner.option.title} won with ${finalVoteWinner.votes} of ${totalVotes} votes.`;
   const deterministicFallback = cycle?.options.length === 3 && cycle.options.every(
     (option) => option.generation.method === "deterministic-fallback",
   );
@@ -1355,7 +1395,33 @@ function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
         {cycle?.status === "active" && cycle.completionRule?.mode === "manual" && view !== null ? <label className={styles.compactField}>Manual progress: {Math.round(manualProgress * 100)}%<input type="range" min="0" max="1" step="0.05" value={manualProgress} disabled={pending || onCommand === undefined} onChange={(event) => setManualProgressDraft({ cycleId, serverValue: serverManualProgress, value: Number(event.currentTarget.value) })} /><button type="button" className={styles.secondaryButton} disabled={pending || onCommand === undefined || manualProgress === serverManualProgress} onClick={() => onCommand?.(buildQuestProgressCommand(view, manualProgress, commandFactory))}>Update progress</button></label> : null}
       </article>
 
-      <PageSectionCard title="Results" badge={cycle?.result === null || cycle === null ? "No result yet" : titleCase(cycle.result.outcome)} badgeTone={cycle?.result?.outcome === "succeeded" ? "success" : cycle?.result === null || cycle === null ? "neutral" : "warning"} detail={cycle?.result === null || cycle === null ? "The authoritative result appears here after success, failure, cancellation, skip, or expiry." : `${cycle.result.reason} · ${cycle.result.rewardPointsAwarded} points awarded.`} />
+      <article id="results" className={styles.voteResultsPanel}>
+        <div className={styles.panelHeading}>
+          <div><span className={styles.sectionLabel}>Voting result</span><h2>Final tally</h2></div>
+          <StatusBadge tone={finalVoteWinner === null ? "neutral" : "success"}>{finalVoteBadge}</StatusBadge>
+        </div>
+        <p>{finalVoteDetail}</p>
+        {finalVoteOptions.length > 0 ? (
+          <ol className={styles.voteResultList}>
+            {finalVoteOptions.map(({ option, votes, share, isWinner }, index) => (
+              <li key={option.candidateId} className={isWinner ? styles.winningVoteResult : undefined}>
+                <span className={styles.questNumber}>{index + 1}</span>
+                <span className={styles.voteResultIdentity}>
+                  <small>{isWinner ? "Winner" : `Option ${index + 1}`}</small>
+                  <strong>{option.title}</strong>
+                  <progress aria-label={`${option.title} vote share`} max={Math.max(totalVotes, 1)} value={votes} />
+                </span>
+                <span className={styles.voteResultCount}>
+                  <strong>{votes} {votes === 1 ? "vote" : "votes"}</strong>
+                  <small>{share}%</small>
+                </span>
+              </li>
+            ))}
+          </ol>
+        ) : null}
+      </article>
+
+      <PageSectionCard id="quest-outcome" title="Quest outcome" badge={cycle?.result === null || cycle === null ? "No result yet" : titleCase(cycle.result.outcome)} badgeTone={cycle?.result?.outcome === "succeeded" ? "success" : cycle?.result === null || cycle === null ? "neutral" : "warning"} detail={cycle?.result === null || cycle === null ? "The authoritative quest outcome appears here after success, failure, cancellation, skip, or expiry." : `${cycle.result.reason} · ${cycle.result.rewardPointsAwarded} points awarded.`} />
     </div>
   );
 }

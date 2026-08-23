@@ -623,6 +623,85 @@ describe("StudioProductPageSurface", () => {
     expect(manualHtml).not.toContain("Push quests now");
   });
 
+  it("keeps the final three-option vote tally visible after the winner activates", () => {
+    const view = contractFixtureUiX06RoleViewCatalog["r5.quest.active-manual-progress.v1"].streamer;
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-quests",
+      view,
+    }));
+    const resultPanel = html.slice(html.indexOf('id="results"'), html.indexOf('id="quest-outcome"'));
+
+    expect(resultPanel).toContain("Voting result");
+    expect(resultPanel).toContain("Final tally");
+    expect(resultPanel).toContain("Winner confirmed");
+    expect(resultPanel).toContain("Hold Your Ground won with 2 of 3 votes.");
+    expect(resultPanel).toContain("2 votes");
+    expect(resultPanel).toContain("67%");
+    expect(resultPanel).toContain("1 vote");
+    expect(resultPanel).toContain("33%");
+    expect(resultPanel).toContain("0 votes");
+    expect(resultPanel).toContain("0%");
+    expect(html).toContain("Quest outcome");
+  });
+
+  it("labels a resolved final-vote tie without hiding any option totals", () => {
+    const base = contractFixtureUiX06RoleViewCatalog["r5.quest.active-manual-progress.v1"].streamer;
+    const winningOption = base.questCycle.options[1];
+    const view = {
+      ...base,
+      questCycle: {
+        ...base.questCycle,
+        activeCandidateId: winningOption.candidateId,
+        voteTallies: [
+          { candidateId: base.questCycle.options[0].candidateId, votes: 2 },
+          { candidateId: winningOption.candidateId, votes: 2 },
+          { candidateId: base.questCycle.options[2].candidateId, votes: 1 },
+        ],
+      },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-quests",
+      view,
+    }));
+    const resultPanel = html.slice(html.indexOf('id="results"'), html.indexOf('id="quest-outcome"'));
+
+    expect(resultPanel).toContain("Tie resolved");
+    expect(resultPanel).toContain("Caster Mode won after ChatXPT resolved a 2-way tie.");
+    expect(resultPanel.match(/2 votes/gu)).toHaveLength(2);
+    expect(resultPanel).toContain("1 vote");
+  });
+
+  it("shows an explicit no-winner final tally when a vote closes at zero", () => {
+    const base = contractFixtureUiX06RoleViewCatalog["r5.quest.active-manual-progress.v1"].streamer;
+    const view = {
+      ...base,
+      questCycle: {
+        ...base.questCycle,
+        status: "cancelled" as const,
+        activeCandidateId: null,
+        availableStreamerActions: [],
+        voteTallies: base.questCycle.options.map(({ candidateId }) => ({ candidateId, votes: 0 })),
+        progress: null,
+        completionRule: null,
+        result: {
+          outcome: "cancelled" as const,
+          occurredAt: base.questCycle.startsAt ?? 0,
+          reason: "Voting closed without an accepted vote.",
+          rewardPointsAwarded: 0,
+        },
+      },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-quests",
+      view,
+    }));
+    const resultPanel = html.slice(html.indexOf('id="results"'), html.indexOf('id="quest-outcome"'));
+
+    expect(resultPanel).toContain("No winner");
+    expect(resultPanel).toContain("Voting closed with no accepted votes, so no quest was activated.");
+    expect(resultPanel.match(/0 votes/gu)).toHaveLength(3);
+  });
+
   it.each(pages)("renders the required ICP-01 sections for %s", (page) => {
     const html = renderToStaticMarkup(h(StudioProductPageSurface, {
       page,
