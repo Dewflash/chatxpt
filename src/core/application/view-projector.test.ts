@@ -120,6 +120,39 @@ describe("CanonicalViewProjector overlay up next", () => {
     expect(projected.overlay.upNext).not.toHaveProperty("desiredAudienceInvolvement");
   });
 
+  it("turns numeric gameplay intensity into viewer-safe activity copy", () => {
+    const projected = new CanonicalViewProjector().project({
+      ...projectorInput(),
+      gameplay: {
+        ...contractFixtureGameplaySnapshot,
+        signals: [
+          {
+            signalId: "fixture-activity",
+            kind: "activity-intensity",
+            observation: {
+              status: "known" as const,
+              value: 0.0012,
+              provenance: {
+                source: "test-fixture" as const,
+                method: "contract-fixture",
+                confidence: 0.72,
+                observedAt: contractFixtureEnvelope.occurredAt,
+                receivedAt: contractFixtureEnvelope.receivedAt,
+                evidenceClass: "fixture" as const,
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    expect(projected.viewer.publicContext).toMatchObject({
+      gameplayStatus: "quiet",
+      explainer: "Gameplay currently looks quiet.",
+    });
+    expect(projected.overlay.publicContext?.gameplayStatus).toBe("quiet");
+  });
+
   it("treats universal Generic capture as compatible with explicit Generic stream context", () => {
     const intent = contractFixtureLiveDirectorState.declaredIntent;
     expect(intent.status).toBe("known");

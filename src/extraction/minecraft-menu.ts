@@ -330,20 +330,30 @@ function scoreDeathOverlay(input: {
 }): number {
   const redDeathTint =
     input.full.redPixelRatio >= 0.02 && input.full.warmPixelRatio >= 0.15 ? 0.28 : 0;
+  // Drowning and other strongly blue scenes turn Minecraft's red death wash
+  // purple after capture. Keep the tint as supporting evidence only: the
+  // centered death title and paired respawn controls are still required to
+  // cross the classification threshold.
+  const purpleDeathTint =
+    input.full.bluePixelRatio >= 0.12 &&
+    input.full.darkPixelRatio >= 0.03 &&
+    input.full.lumaStandardDeviation >= 0.06
+      ? 0.22
+      : 0;
   const centeredTitle =
     input.title.edgeDensity >= 0.05 &&
     input.title.brightPixelRatio >= 0.025 &&
-    input.title.horizontalRepeatScore >= 0.9
-      ? 0.3
+    input.title.horizontalRepeatScore >= 0.8
+      ? 0.34
       : 0;
   const pairedButtons =
     input.buttons.edgeDensity >= 0.045 &&
     input.buttons.darkPixelRatio >= 0.55 &&
     input.buttons.horizontalRepeatScore >= 0.94
-      ? 0.28
+      ? 0.32
       : 0;
   const quietTintedHud = input.lower.edgeDensity < 0.02 && input.lower.warmPixelRatio >= 0.2 ? 0.14 : 0;
-  return Math.min(1, redDeathTint + centeredTitle + pairedButtons + quietTintedHud);
+  return Math.min(1, Math.max(redDeathTint, purpleDeathTint) + centeredTitle + pairedButtons + quietTintedHud);
 }
 
 export function detectMinecraftMenuState(frame: SampledPixelFrame): MinecraftHudFact<MinecraftMenuState> {
@@ -372,11 +382,23 @@ export function detectMinecraftMenuState(frame: SampledPixelFrame): MinecraftHud
   const pauseScore = Math.max(scorePauseOverlay({ center, buttonStack, lower }), adaptivePauseScore);
   const deathScore = scoreDeathOverlay({ full, lower, title: deathTitle, buttons: deathButtons });
 
-  if (deathScore >= 0.68) {
+  // A real pause menu has three or more centred button bands. Prefer that
+  // stronger geometry over colour tint because blue/purple gameplay behind
+  // a translucent pause menu can otherwise resemble a drowning death wash.
+  if (adaptivePauseScore >= 0.78) {
+    return knownMenuState(
+      "pause",
+      adaptivePauseScore,
+      "A centered Minecraft-like pause menu structure was detected.",
+      ["minecraft-pause-adaptive-button-stack"],
+    );
+  }
+
+  if (deathScore >= 0.64) {
     return knownMenuState(
       "death",
       deathScore,
-      "A red-tinted Minecraft death screen with centered title and respawn controls was detected.",
+      "A tinted Minecraft death screen with centered title and respawn controls was detected.",
       [full.regionId, deathTitle.regionId, deathButtons.regionId],
     );
   }

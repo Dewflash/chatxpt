@@ -197,7 +197,14 @@ function publicGameplayStatus(input: ViewModelProjectionInput): string | null {
     ],
     input.envelope.receivedAt,
   );
-  return raw === null ? null : String(raw).trim().slice(0, 160) || null;
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    const intensity = Math.max(0, Math.min(1, raw <= 1 ? raw : raw / 5));
+    if (intensity <= 0.25) return "quiet";
+    if (intensity >= 0.67) return "active";
+    return "transition";
+  }
+  if (typeof raw !== "string") return null;
+  return raw.trim().slice(0, 160) || null;
 }
 
 function projectPublicContext(input: ViewModelProjectionInput): PublicViewerContext {

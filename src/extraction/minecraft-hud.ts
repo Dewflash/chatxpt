@@ -1341,12 +1341,13 @@ function estimateArmorValue(input: {
   readonly confidence: number;
   readonly confirmedVitalsConfidence: number;
 }): MinecraftHudFact<number> {
-  const ratios = Array.from({ length: 10 }, (_, slotIndex) =>
+  const slots = Array.from({ length: 10 }, (_, slotIndex) =>
     measureRegionVisualFeatures(
       input.frame,
       fastSlotRegion(`${input.region.regionId}-slot-${slotIndex + 1}`, input.region, slotIndex, 10),
-    ).silverPixelRatio,
+    ),
   );
+  const ratios = slots.map((features) => features.silverPixelRatio);
   const reference = Math.max(...ratios);
   if (reference < 0.018 && input.confirmedVitalsConfidence >= 0.65) {
     return knownHudFact(
@@ -1366,6 +1367,30 @@ function estimateArmorValue(input: {
       [input.region.regionId],
     );
   }
+  const slotWidth = input.region.width / 10;
+  const exteriorSilver = Math.max(
+    measureRegionVisualFeatures(
+      input.frame,
+      dynamicRegion(
+        "minecraft-armor-left-exterior",
+        input.region.x - slotWidth,
+        input.region.y,
+        slotWidth,
+        input.region.height,
+      ),
+    ).silverPixelRatio,
+    measureRegionVisualFeatures(
+      input.frame,
+      dynamicRegion(
+        "minecraft-armor-right-exterior",
+        input.region.x + input.region.width,
+        input.region.y,
+        slotWidth,
+        input.region.height,
+      ),
+    ).silverPixelRatio,
+  );
+  const contained = exteriorSilver < Math.max(0.015, reference * 0.7);
   const fullThreshold = Math.max(0.015, reference * 0.66);
   const halfThreshold = Math.max(0.008, reference * 0.24);
   let value = 0;
@@ -1392,6 +1417,18 @@ function estimateArmorValue(input: {
       [input.region.regionId],
     );
   }
+  const repeatedIconStructure =
+    slots.filter(
+      (features) =>
+        features.edgeDensity >= 0.06 && features.lumaStandardDeviation >= 0.06,
+    ).length >= 2;
+  if (!contained || value < 2 || !repeatedIconStructure) {
+    return unknownHudFact(
+      "Silver pixels were present above the hearts, but they did not form a contained repeated Minecraft armor row.",
+      input.confidence,
+      [input.region.regionId],
+    );
+  }
   return knownHudFact(
     Math.max(0, Math.min(10, value)),
     Math.max(input.confidence, 0.72 + 0.28 * Math.min(1, reference / 0.18)),
@@ -1406,10 +1443,58 @@ function airFacts(input: {
   readonly confidence: number;
 }): Pick<MinecraftHudFacts, "airBubbles" | "submerged"> {
   const bandFeatures = measureRegionVisualFeatures(input.frame, input.region);
-  if (input.confidence < 0.68 || bandFeatures.bluePixelRatio < 0.04) {
+  const slotFeatures = Array.from({ length: 10 }, (_, slotIndex) =>
+    measureRegionVisualFeatures(
+      input.frame,
+      fastSlotRegion(`${input.region.regionId}-slot-${slotIndex + 1}`, input.region, slotIndex, 10),
+    ),
+  );
+  const blueRatios = slotFeatures.map((features) => features.bluePixelRatio);
+  const reference = Math.max(...blueRatios);
+  const occupiedThreshold = Math.max(0.02, reference * 0.45);
+  const occupied = slotFeatures.map((features, index) =>
+    blueRatios[index] >= occupiedThreshold &&
+    features.edgeDensity >= 0.06 &&
+    features.lumaStandardDeviation >= 0.06,
+  );
+  const firstEmpty = occupied.findIndex((value) => !value);
+  const filledCount = firstEmpty === -1 ? 10 : firstEmpty;
+  const patternMatches = occupied.filter((value, index) => value === (index < filledCount)).length;
+  const outsideWidth = Math.max(input.region.width / 10, 2 / input.frame.width);
+  const exteriorBlue = Math.max(
+    measureRegionVisualFeatures(
+      input.frame,
+      dynamicRegion(
+        "minecraft-air-left-exterior",
+        input.region.x - outsideWidth,
+        input.region.y,
+        outsideWidth,
+        input.region.height,
+      ),
+    ).bluePixelRatio,
+    measureRegionVisualFeatures(
+      input.frame,
+      dynamicRegion(
+        "minecraft-air-right-exterior",
+        input.region.x + input.region.width,
+        input.region.y,
+        outsideWidth,
+        input.region.height,
+      ),
+    ).bluePixelRatio,
+  );
+  const contained = exteriorBlue < Math.max(0.025, reference * 0.7);
+  if (
+    input.confidence < 0.68 ||
+    bandFeatures.bluePixelRatio < 0.04 ||
+    reference < 0.06 ||
+    filledCount < 2 ||
+    patternMatches < 8 ||
+    !contained
+  ) {
     return {
       airBubbles: unknownHudFact(
-        "The air-bubble band did not meet the confidence threshold.",
+        "The air-bubble band did not show a contained left-filled run of repeated icons.",
         input.confidence,
         [input.region.regionId],
       ),
@@ -1420,29 +1505,12 @@ function airFacts(input: {
       ),
     };
   }
-  const blueRatios = Array.from({ length: 10 }, (_, slotIndex) =>
-    measureRegionVisualFeatures(
-      input.frame,
-      fastSlotRegion(`${input.region.regionId}-slot-${slotIndex + 1}`, input.region, slotIndex, 10),
-    ).bluePixelRatio,
+  const airBubbles = knownHudFact(
+    filledCount,
+    input.confidence,
+    "Ten Minecraft-like air slots were measured above the hunger band.",
+    [input.region.regionId],
   );
-  const reference = Math.max(...blueRatios);
-  const airBubbles = reference < 0.02
-    ? unknownHudFact<number>(
-        "An air-bubble row is visible, but filled bubbles are not distinct enough to count.",
-        input.confidence,
-        [input.region.regionId],
-      )
-    : knownHudFact(
-        blueRatios.reduce((total, ratio) => {
-          if (ratio >= Math.max(0.014, reference * 0.5)) return total + 1;
-          if (ratio >= Math.max(0.006, reference * 0.2)) return total + 0.5;
-          return total;
-        }, 0),
-        input.confidence,
-        "Ten Minecraft-like air slots were measured above the hunger band.",
-        [input.region.regionId],
-      );
   return {
     airBubbles,
     submerged: knownHudFact(

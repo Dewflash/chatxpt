@@ -686,6 +686,20 @@ describe("Minecraft vanilla and modded HUD capability detection", () => {
     });
   });
 
+  it("does not treat textured night scenery extending past the HUD row as equipped armor", () => {
+    const textured = minecraftHudFrame();
+    paintNormalizedBox(
+      textured,
+      { x: 0.28, y: 0.80, width: 0.24, height: 0.065 },
+      (x, y) => (x + y) % 2 === 0 ? [76, 92, 148] : [18, 28, 58],
+    );
+
+    expect(fingerprintMinecraftHud(textured, minecraftJavaGameProfile).facts.armorPoints).toMatchObject({
+      status: "known",
+      value: 0,
+    });
+  });
+
   it("detects the independent air row without confusing it with hunger or armor", () => {
     const fingerprint = fingerprintMinecraftHud(submergedMinecraftFrame(), minecraftJavaGameProfile);
 
@@ -694,6 +708,19 @@ describe("Minecraft vanilla and modded HUD capability detection", () => {
     expect(fingerprint.facts.airBubbles).toMatchObject({ status: "known", value: 7 });
     expect(fingerprint.facts.hungerShanks).toMatchObject({ status: "known", value: 10 });
     expect(fingerprint.facts.armorPoints).toMatchObject({ status: "known", value: 0 });
+  });
+
+  it("does not treat blue textured rain scenery extending past the air row as submersion", () => {
+    const rainy = minecraftHudFrame();
+    paintNormalizedBox(
+      rainy,
+      { x: 0.48, y: 0.80, width: 0.24, height: 0.065 },
+      (x, y) => (x + y) % 2 === 0 ? [54, 112, 184] : [14, 30, 64],
+    );
+
+    const fingerprint = fingerprintMinecraftHud(rainy, minecraftJavaGameProfile);
+    expect(fingerprint.facts.submerged).toMatchObject({ status: "unknown", value: null });
+    expect(fingerprint.facts.airBubbles).toMatchObject({ status: "unknown", value: null });
   });
 
   it("keeps universal signals but withholds calibrated facts for hidden or modified HUDs", () => {

@@ -143,6 +143,23 @@ function uniformlyDimmed(frame: SampledPixelFrame, factor: number): SampledPixel
   return { width: frame.width, height: frame.height, rgba };
 }
 
+function drowningDeathFrame(): SampledPixelFrame {
+  const frame = frameFromPixel((x, y) => {
+    const texture = (x * 5 + y * 7) % 42;
+    return [72 + texture, 38 + Math.floor(texture / 2), 118 + texture];
+  });
+  paintBox(frame, { x: 0.28, y: 0.2, width: 0.44, height: 0.22 }, (x, y) =>
+    x % 7 === 0 || y % 5 === 0 ? [245, 245, 245] : [65, 28, 25],
+  );
+  paintBox(frame, { x: 0.3, y: 0.49, width: 0.4, height: 0.18 }, (x, y) =>
+    x % 18 === 0 || y % 7 === 0 ? [190, 190, 190] : [22, 18, 18],
+  );
+  paintBox(frame, { x: 0.2, y: 0.68, width: 0.6, height: 0.22 }, (x, y) =>
+    (x + y) % 9 === 0 ? [112, 82, 136] : [48, 28, 74],
+  );
+  return frame;
+}
+
 function brightSnowGameplayFrame(): SampledPixelFrame {
   const frame = frameFromPixel((x, y) => {
     if (y < 14) return [165, 205, 245];
@@ -229,6 +246,14 @@ describe("Minecraft menu-state detector", () => {
 
   it("detects the red-tinted death title and respawn controls", () => {
     expect(detectMinecraftMenuState(deathFrame())).toMatchObject({
+      status: "known",
+      value: "death",
+    });
+  });
+
+  it("detects a purple-tinted drowning death screen", () => {
+    const frame = drowningDeathFrame();
+    expect(detectMinecraftMenuState(frame)).toMatchObject({
       status: "known",
       value: "death",
     });
