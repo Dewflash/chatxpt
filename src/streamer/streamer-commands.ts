@@ -291,6 +291,18 @@ export function buildQuestGenerationCommand(
   });
 }
 
+export function buildLiveIntelligenceQuestGenerationCommand(
+  view: StreamerViewModel,
+  factory: StreamerCommandFactory = defaultStreamerCommandFactory,
+): StreamerQuestGenerationCommand {
+  return streamerQuestGenerationCommandSchema.parse({
+    ...metadata(view, factory, "quest-generation-live-intelligence"),
+    questCycleId: view.questCycle.envelope.questCycleId,
+    type: "streamer.quest-generation",
+    mode: "live-intelligence",
+  });
+}
+
 export function buildQuestProgressCommand(
   view: StreamerViewModel,
   requestedValue: number,

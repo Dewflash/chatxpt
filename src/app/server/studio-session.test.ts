@@ -1,14 +1,17 @@
 import { createHmac } from "node:crypto";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { createAlgorithmicCandidateStrategy, createValidatingCandidateProvider } from "@/ai";
 import {
   CONTRACT_VERSION,
+  candidateBatchSchema,
   gameplaySnapshotSchema,
   streamerLiveDirectorIntentCommandSchema,
   streamerProfileSettingsCommandSchema,
   streamerQuestGenerationCommandSchema,
   streamerServiceCommandSchema,
+  type CandidateProvider,
 } from "@/core";
 import { contractFixtureGameplaySnapshot } from "@/core/testing";
 import { createMemoryPersistenceRuntime } from "@/realtime";
@@ -40,13 +43,14 @@ function twitchJwt(role: "broadcaster" | "viewer", channelId = "channel-1"): str
 function application(
   environment: Record<string, string | undefined> = {},
   now: () => number = () => NOW,
+  candidateProvider?: CandidateProvider,
 ) {
   let id = 0;
   const persistence = createMemoryPersistenceRuntime();
   return {
     persistence,
     application: new StudioSessionApplication({
-      runtime: new ChatXptServerRuntime({ persistence, clock: { now } }),
+      runtime: new ChatXptServerRuntime({ persistence, clock: { now }, candidateProvider }),
       setupKey: SETUP_KEY,
       extensionSecret: EXTENSION_SECRET,
       environment: {
@@ -140,6 +144,85 @@ describe("StudioSessionApplication", () => {
       candidate.sourceSignalIds.length === 0,
     )).toBe(true);
     expect(result.message).toContain("No gameplay or audience evidence was used");
+  });
+
+  it("routes a Studio live-intelligence request through the candidate provider and validator", async () => {
+    const algorithmic = createValidatingCandidateProvider(createAlgorithmicCandidateStrategy());
+    const generate = vi.fn(async (...args: Parameters<CandidateProvider["generate"]>) => {
+      const batch = await algorithmic.generate(...args);
+      return candidateBatchSchema.parse({
+        ...batch,
+        candidates: batch.candidates.map((candidate) => ({
+          ...candidate,
+          generation: {
+            ...candidate.generation,
+            method: "ai-provider",
+            provider: "test-ai-provider",
+          },
+        })),
+      });
+    });
+    const context = application({}, () => NOW, { generate });
+    const started = await context.application.start(SETUP_KEY, {
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "brawl-stars",
+      gameName: "Brawl Stars",
+    });
+    await ingestGameplaySnapshot(context, started);
+    const current = await context.application.read(started.grant, null);
+    const command = streamerQuestGenerationCommandSchema.parse({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: current.view.session.sessionId,
+      questCycleId: current.view.questCycle.envelope.questCycleId,
+      commandId: "manual-live-intelligence-1",
+      correlationId: "manual-live-intelligence-1",
+      expectedRevision: current.view.envelope.revision,
+      issuedAt: NOW,
+      actor: { kind: "broadcaster", actorId: "channel-1" },
+      type: "streamer.quest-generation",
+      mode: "live-intelligence",
+    });
+
+    const result = await context.application.execute(started.grant, null, command);
+
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(generate.mock.calls[0]?.[0].intelligence.gameplay.signals.length).toBeGreaterThan(0);
+    expect(result.view.questCycle.status).toBe("proposed");
+    expect(result.view.questCycle.options).toHaveLength(3);
+    expect(result.view.questCycle.options.every(
+      ({ generation }) => generation.method === "ai-provider",
+    )).toBe(true);
+    expect(result.message).toContain("AI-generated quests passed deterministic validation");
+  });
+
+  it("does not call the candidate provider without a current Gameplay Capture snapshot", async () => {
+    const generate = vi.fn<CandidateProvider["generate"]>();
+    const context = application({}, () => NOW, { generate });
+    const started = await context.application.start(SETUP_KEY, {
+      channelId: "channel-1",
+      displayName: "Streamer One",
+      gameId: "brawl-stars",
+      gameName: "Brawl Stars",
+    });
+    const command = streamerQuestGenerationCommandSchema.parse({
+      contractVersion: CONTRACT_VERSION,
+      sessionId: started.view.session.sessionId,
+      questCycleId: started.view.questCycle.envelope.questCycleId,
+      commandId: "manual-live-intelligence-no-capture",
+      correlationId: "manual-live-intelligence-no-capture",
+      expectedRevision: started.view.envelope.revision,
+      issuedAt: NOW,
+      actor: { kind: "broadcaster", actorId: "channel-1" },
+      type: "streamer.quest-generation",
+      mode: "live-intelligence",
+    });
+
+    await expect(context.application.execute(started.grant, null, command)).rejects.toMatchObject({
+      code: "unavailable-capability",
+      message: expect.stringContaining("Gameplay Capture"),
+    });
+    expect(generate).not.toHaveBeenCalled();
   });
 
   it("creates and resumes a Twitch-verified session without the diagnostic setup key", async () => {
