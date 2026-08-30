@@ -662,27 +662,64 @@ export class StudioSessionApplication {
     this.assertCommandActor(parsedCommand.data, authorized);
     let currentState = authorized.state;
     if (parsedCommand.data.type === "streamer.quest-generation") {
-      const maxFallbackAttempts = 20;
-      for (let attempt = 0; attempt < maxFallbackAttempts; attempt += 1) {
-        const fallback = await this.dependencies.runtime.requestDeterministicFallbackProposal(
-          currentState,
-          new StudioProjectionContext(this.now),
-          {
-            commandId: parsedCommand.data.commandId,
-            correlationId: parsedCommand.data.correlationId,
-            issuedAt: parsedCommand.data.issuedAt,
-          },
-        );
-        if (fallback.ok) {
+      const liveIntelligence = parsedCommand.data.mode === "live-intelligence";
+      if (liveIntelligence) {
+        currentState = await this.hydrateGameplay(currentState);
+        const capturedAt = currentState.gameplay?.envelope.occurredAt;
+        if (
+          capturedAt !== undefined &&
+          (this.now() - capturedAt > GAMEPLAY_CAPTURE_STALE_AFTER_MS || capturedAt > this.now() + 5_000)
+        ) {
+          throw new StudioSessionApplicationError(
+            "unavailable-capability",
+            "Gameplay Capture is stale. Reopen Gameplay Engine before generating with live intelligence.",
+            true,
+          );
+        }
+      }
+      const maxGenerationAttempts = liveIntelligence ? 1 : 20;
+      for (let attempt = 0; attempt < maxGenerationAttempts; attempt += 1) {
+        const proposal = liveIntelligence
+          ? await this.dependencies.runtime.requestLiveIntelligenceProposal(
+              currentState,
+              new StudioProjectionContext(this.now),
+              {
+                commandId: parsedCommand.data.commandId,
+                correlationId: parsedCommand.data.correlationId,
+                issuedAt: parsedCommand.data.issuedAt,
+              },
+            )
+          : await this.dependencies.runtime.requestDeterministicFallbackProposal(
+              currentState,
+              new StudioProjectionContext(this.now),
+              {
+                commandId: parsedCommand.data.commandId,
+                correlationId: parsedCommand.data.correlationId,
+                issuedAt: parsedCommand.data.issuedAt,
+              },
+            );
+        if (proposal.ok) {
+          const methods = new Set(
+            proposal.receipt.state.questCycle.options.map(({ generation }) => generation.method),
+          );
+          const message = !liveIntelligence
+            ? "Three deterministic fallback quests are ready for review. No gameplay or audience evidence was used."
+            : methods.size === 1 && methods.has("ai-provider")
+              ? "Three AI-generated quests passed deterministic validation and are ready for review."
+              : methods.size === 1 && methods.has("algorithmic")
+                ? "Three live-intelligence quests are ready for review. The credential-free algorithmic route was used because provider AI was unavailable or disabled."
+                : "Three live-intelligence quests passed deterministic validation and are ready for review. Studio shows the actual generation route for this batch.";
           return {
-            ...(await this.surfaceState(fallback.receipt.state, authorized.twitchVerified)),
-            outcome: fallback.outcome,
-            message:
-              "Three deterministic fallback quests are ready for review. No gameplay or audience evidence was used.",
+            ...(await this.surfaceState(proposal.receipt.state, authorized.twitchVerified)),
+            outcome: proposal.outcome,
+            message,
           };
         }
-        if (fallback.error.code !== "stale-revision" || attempt === maxFallbackAttempts - 1) {
-          throw commandError(fallback.error.code, fallback.error.message, fallback.error.retryable);
+        if (proposal.error.code !== "stale-revision" || attempt === maxGenerationAttempts - 1) {
+          const message = liveIntelligence && proposal.error.code === "stale-revision"
+            ? "Live intelligence was generated, but the session changed before it could be committed. Try once more with the current gameplay snapshot."
+            : proposal.error.message;
+          throw commandError(proposal.error.code, message, proposal.error.retryable);
         }
         currentState = await this.loadSession(currentState.session.sessionId);
         if (currentState.session.broadcasterId !== authorized.state.session.broadcasterId) {
@@ -694,7 +731,7 @@ export class StudioSessionApplication {
       }
       throw new StudioSessionApplicationError(
         "dependency-unavailable",
-        "Studio could not generate fallback quests while live gameplay was updating",
+        "Studio could not generate quests while live gameplay was updating",
         true,
       );
     }

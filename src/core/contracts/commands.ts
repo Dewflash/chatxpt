@@ -44,7 +44,7 @@ export const streamerQuestGenerationCommandSchema = z
     ...commandEnvelopeFields,
     questCycleId: identifierSchema,
     type: z.literal("streamer.quest-generation"),
-    mode: z.literal("deterministic-fallback"),
+    mode: z.enum(["live-intelligence", "deterministic-fallback"]),
   })
   .strict();
 

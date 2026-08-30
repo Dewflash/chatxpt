@@ -18,6 +18,7 @@ import {
   buildCurrentStreamGameCommand,
   buildLiveDirectorCueCommand,
   buildLiveDirectorIntentCommand,
+  buildLiveIntelligenceQuestGenerationCommand,
   buildProfileSettingsCommand,
   buildQuestCommand,
   buildQuestGenerationCommand,
@@ -217,6 +218,23 @@ describe("Role 4 streamer command builders", () => {
       actor: { kind: "broadcaster" },
       type: "streamer.quest-generation",
       mode: "deterministic-fallback",
+    });
+  });
+
+  it("builds the broadcaster-only live-intelligence generation command", () => {
+    const command = buildLiveIntelligenceQuestGenerationCommand(
+      contractFixtureStreamerView,
+      factory,
+    );
+
+    expect(streamerQuestGenerationCommandSchema.safeParse(command).success).toBe(true);
+    expect(commandEnvelopeSchema.safeParse(command).success).toBe(true);
+    expect(command).toMatchObject({
+      commandId: "test-quest-generation-live-intelligence",
+      questCycleId: contractFixtureStreamerView.questCycle.envelope.questCycleId,
+      actor: { kind: "broadcaster" },
+      type: "streamer.quest-generation",
+      mode: "live-intelligence",
     });
   });
 

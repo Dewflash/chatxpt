@@ -487,8 +487,42 @@ describe("StudioProductPageSurface", () => {
       onCommand: () => undefined,
     }));
 
+    expect(html).toContain("Generate with live intelligence");
+    expect(html).toContain("Uses current game and audience context; provider AI is attempted server-side when configured.");
     expect(html).toContain("Generate 3 local quests");
     expect(html).toContain("Works without game-state tracking, Twitch chat, or an AI provider.");
+    expect(html).not.toContain("Select AI model");
+  });
+
+  it("requires Gameplay Capture for live intelligence while keeping the local route available", () => {
+    const base = createFixtureUiGatewaySnapshot().views.streamer;
+    const view = {
+      ...base,
+      session: { ...base.session, status: "preparing" as const },
+      gameplay: null,
+      questCycle: {
+        ...base.questCycle,
+        status: "idle" as const,
+        options: [],
+        activeCandidateId: null,
+        availableStreamerActions: [],
+        voteTallies: [],
+        startsAt: null,
+        endsAt: null,
+        progress: null,
+        completionRule: null,
+        result: null,
+      },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-quests",
+      view,
+      onCommand: () => undefined,
+    }));
+
+    expect(html).toContain("Start Gameplay Capture to use current game and audience context.");
+    expect(html).toMatch(/disabled=""[^>]*>Generate with live intelligence/);
+    expect(html).toContain(">Generate 3 local quests");
   });
 
   it("labels an immediate fallback as deterministic and evidence-free", () => {
@@ -514,7 +548,6 @@ describe("StudioProductPageSurface", () => {
       view,
     }));
 
-    expect(html).toContain("Deterministic fallback");
     expect(html).not.toContain("Deterministic fallback shown");
     expect(html).toContain("Local deterministic fallback");
     expect(html).toContain("do not depend on gameplay tracking, Twitch chat, or an AI provider");
@@ -522,11 +555,39 @@ describe("StudioProductPageSurface", () => {
     expect(html).toContain("Why these were recommended");
     expect(html).toContain("Provider output becomes official only after deterministic validation.");
     expect(html).toContain("Generation status");
-    expect(html).toContain("Select AI model");
-    expect(html).toContain("AI model");
+    expect(html).toContain("Fallback active");
+    expect(html).not.toContain("Select AI model");
     expect(html).not.toContain("Presentation only.");
     expect(html).not.toContain("AI enabled · Preview only");
     expect(html).toContain("Mode: Automatic");
+  });
+
+  it("shows the actual provider-neutral AI route for a validated batch", () => {
+    const base = createFixtureUiGatewaySnapshot().views.streamer;
+    const view = {
+      ...base,
+      questCycle: {
+        ...base.questCycle,
+        status: "proposed" as const,
+        options: base.questCycle.options.map((option) => ({
+          ...option,
+          generation: {
+            ...option.generation,
+            method: "ai-provider" as const,
+            provider: "server-provider",
+          },
+        })),
+      },
+    };
+    const html = renderToStaticMarkup(h(StudioProductPageSurface, {
+      page: "live-quests",
+      view,
+    }));
+
+    expect(html).toContain("AI intelligence active");
+    expect(html).toContain("Provider-neutral AI candidate generation is active.");
+    expect(html).not.toContain("server-provider");
+    expect(html).not.toContain("Preview only");
   });
 
   it("shows compact quest status with the effective profile and game boundaries", () => {

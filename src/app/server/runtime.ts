@@ -417,6 +417,155 @@ export class ChatXptServerRuntime {
     );
   }
 
+  async requestLiveIntelligenceProposal(
+    state: AuthoritativeSessionState,
+    projectionContext: ProjectionContextResolver,
+    input: {
+      readonly commandId: string;
+      readonly correlationId: string;
+      readonly issuedAt: number;
+    },
+  ): Promise<OrchestratorResult> {
+    const unavailable = (message: string): OrchestratorResult => ({
+      ok: false,
+      error: domainErrorSchema.parse({
+        code: "unavailable-capability",
+        message,
+        retryable: false,
+      }),
+    });
+    if (state.session.status !== "preparing" && state.session.status !== "live") {
+      return unavailable("Live-intelligence generation is available only for a preparing or live session");
+    }
+    if (state.questCycle.status !== "idle") {
+      return unavailable("Finish or clear the current quest cycle before generating another proposal");
+    }
+    if (state.emergencyPaused) {
+      return unavailable("Clear emergency pause before generating live-intelligence quests");
+    }
+    if (state.gameplay === null) {
+      return unavailable("Gameplay Capture must report a current snapshot before live-intelligence generation");
+    }
+
+    const existing = await this.persistence.sessions.findReceipt(input.commandId);
+    if (existing !== null) {
+      return {
+        ok: true,
+        outcome: "duplicate",
+        receipt: existing,
+        views: null,
+        delivery: "not-republished",
+      };
+    }
+
+    const now = this.clock.now();
+    const envelope = {
+      contractVersion: CONTRACT_VERSION,
+      sessionId: state.session.sessionId,
+      questCycleId: state.questCycle.envelope.questCycleId,
+      messageId: `manual-live-intelligence-${randomUUID()}`,
+      correlationId: input.correlationId,
+      revision: state.session.revision,
+      occurredAt: now,
+      receivedAt: now,
+      source: "studio" as const,
+      evidenceClass: state.questCycle.envelope.evidenceClass,
+    };
+    const gameplay = {
+      ...state.gameplay,
+      envelope: {
+        ...state.gameplay.envelope,
+        sessionId: envelope.sessionId,
+        questCycleId: envelope.questCycleId,
+        revision: envelope.revision,
+      },
+    };
+    const audience =
+      state.audience !== null &&
+      state.audience.envelope.sessionId === envelope.sessionId &&
+      state.audience.envelope.questCycleId === envelope.questCycleId &&
+      state.audience.envelope.evidenceClass === envelope.evidenceClass
+        ? {
+            ...state.audience,
+            envelope: {
+              ...state.audience.envelope,
+              revision: envelope.revision,
+            },
+          }
+        : {
+            envelope,
+            sampleSize: 0,
+            signals: [],
+          };
+    const intelligence = intelligenceSnapshotSchema.safeParse({
+      envelope,
+      gameplay,
+      audience,
+    });
+    if (!intelligence.success) {
+      return {
+        ok: false,
+        error: domainErrorSchema.parse({
+          code: "validation",
+          message: "Live-intelligence context is not canonical",
+          retryable: false,
+        }),
+      };
+    }
+
+    const actor = {
+      kind: "system" as const,
+      actorId: "role1-manual-live-intelligence",
+      expiresAt: null,
+      moderatorForBroadcasterIds: [],
+      voterKey: null,
+      participationModes: [],
+    };
+    const coordinator = new Role1InterventionCoordinator(
+      {
+        decide: ({ intelligence: currentIntelligence }) => ({
+          shouldPropose: true,
+          score: 1,
+          reasons: ["streamer-requested"],
+          evidenceSignalIds: [
+            ...currentIntelligence.gameplay.signals,
+            ...currentIntelligence.audience.signals,
+          ].map(({ signalId }) => signalId),
+        }),
+      },
+      this.candidateProvider,
+      new DefaultCandidateAssembler(),
+      this.persistence.candidates,
+      {
+        execute: (command) => this.execute(command, actor, projectionContext),
+      },
+      () => this.clock.now(),
+    );
+    const effectiveState: AuthoritativeSessionState = {
+      ...state,
+      profile: resolveEffectiveStreamerProfile(
+        state.profile,
+        state.sessionOverride,
+        state.session.currentGame,
+      ),
+    };
+    const result = await coordinator.run({
+      state: effectiveState,
+      intelligence: intelligence.data,
+      recentQuests: state.recentQuests ?? [],
+      candidateInputEnvelope: envelope,
+      commandId: input.commandId,
+      correlationId: input.correlationId,
+      systemActorId: actor.actorId,
+      issuedAt: input.issuedAt,
+    });
+    if (!result.ok) return { ok: false, error: result.error };
+    if (result.outcome === "denied") {
+      return unavailable("Live-intelligence generation was not requested");
+    }
+    return result.orchestrator;
+  }
+
   async requestEligibleCycleProposal(
     state: AuthoritativeSessionState,
     projectionContext: ProjectionContextResolver,

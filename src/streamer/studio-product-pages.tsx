@@ -16,6 +16,7 @@ import {
   type StreamerViewModel,
 } from "../core";
 import { summarizeGameplayHealth } from "./gameplay-health";
+import { summarizeQuestGeneration } from "./quest-generation-health";
 import {
   readinessAvailability,
   unavailableAvailability,
@@ -25,6 +26,7 @@ import {
   buildCurrentGameProfileSettingsCommand,
   buildProfileSettingsCommand,
   buildEmergencyClearCommand,
+  buildLiveIntelligenceQuestGenerationCommand,
   buildQuestGenerationCommand,
   buildQuestCommand,
   buildQuestProgressCommand,
@@ -1141,9 +1143,7 @@ function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
   readonly commandFactory: StreamerCommandFactory;
 }) {
   const cycle = view?.questCycle ?? null;
-  const [modelPreviewSelection, setModelPreviewSelection] = useState<
-    "deterministic-fallback" | "ai-model"
-  >("deterministic-fallback");
+  const generation = summarizeQuestGeneration(cycle?.options ?? []);
   const active = cycle?.options.find((option) => option.candidateId === cycle.activeCandidateId) ?? null;
   const [selectedCandidateDraft, setSelectedCandidateId] = useState<string | null>(null);
   const selectedCandidateId = cycle?.options.some(
@@ -1248,6 +1248,7 @@ function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
     (view.session.status === "preparing" || view.session.status === "live") &&
     !view.emergencyPaused &&
     onCommand !== undefined;
+  const canGenerateLiveIntelligence = canGenerateFallback && view?.gameplay !== null;
   const actionLabels = {
     approve: manualQuestSelection ? "Start selected quest" : "Push quests now",
     reject: "Reject all quests",
@@ -1305,19 +1306,42 @@ function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
           <div className={styles.questStatusActions}>
             {cycle?.status === "idle" ? (
               <>
-                <button
-                  type="button"
-                  className={styles.primaryAction}
-                  disabled={pending || !canGenerateFallback}
-                  onClick={() => {
-                    if (view !== null) onCommand?.(buildQuestGenerationCommand(view, commandFactory));
-                  }}
-                >
-                  {pending ? "Generating local quests…" : "Generate 3 local quests"}
-                </button>
-                <small className={styles.questFallbackHint}>
-                  Works without game-state tracking, Twitch chat, or an AI provider.
-                </small>
+                <div className={styles.questGenerationOption}>
+                  <button
+                    type="button"
+                    className={styles.primaryAction}
+                    disabled={pending || !canGenerateLiveIntelligence}
+                    onClick={() => {
+                      if (view !== null) {
+                        onCommand?.(
+                          buildLiveIntelligenceQuestGenerationCommand(view, commandFactory),
+                        );
+                      }
+                    }}
+                  >
+                    {pending ? "Generating quests…" : "Generate with live intelligence"}
+                  </button>
+                  <small className={styles.questGenerationHint}>
+                    {view === null || view.gameplay === null
+                      ? "Start Gameplay Capture to use current game and audience context."
+                      : "Uses current game and audience context; provider AI is attempted server-side when configured."}
+                  </small>
+                </div>
+                <div className={styles.questGenerationOption}>
+                  <button
+                    type="button"
+                    className={styles.secondaryButton}
+                    disabled={pending || !canGenerateFallback}
+                    onClick={() => {
+                      if (view !== null) onCommand?.(buildQuestGenerationCommand(view, commandFactory));
+                    }}
+                  >
+                    {pending ? "Generating quests…" : "Generate 3 local quests"}
+                  </button>
+                  <small className={styles.questGenerationHint}>
+                    Works without game-state tracking, Twitch chat, or an AI provider.
+                  </small>
+                </div>
               </>
             ) : null}
             {view?.emergencyPaused ? <button type="button" className={styles.primaryAction} disabled={pending || onCommand === undefined} onClick={() => onCommand?.(buildEmergencyClearCommand(view, commandFactory))}>Clear emergency pause</button> : cycle?.availableStreamerActions.includes("emergency-pause") ? <button type="button" className={styles.dangerAction} disabled={pending || onCommand === undefined} onClick={() => sendAction("emergency-pause")}>Pause new quests</button> : null}
@@ -1326,7 +1350,7 @@ function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
       </article>
 
       <section id="recommendations" className={styles.recommendationsPanel} aria-labelledby="recommendations-heading">
-        <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Recommendations</span><h2 id="recommendations-heading">Exactly three official choices</h2></div><span className={styles.softLabel}>{deterministicFallback ? "Deterministic fallback" : cycle?.options.length === 3 ? `${totalVotes} votes` : "Waiting for validation"}</span></div>
+        <div className={styles.panelHeading}><div><span className={styles.sectionLabel}>Recommendations</span><h2 id="recommendations-heading">Exactly three official choices</h2></div><span className={styles.softLabel}>{cycle?.options.length === 3 ? generation.label : "Waiting for validation"}</span></div>
         {deterministicFallback ? (
           <Notice tone="info" title="Local deterministic fallback">
             These three quests came from the safe local library and do not depend on gameplay tracking, Twitch chat, or an AI provider. {manualQuestSelection ? "Select one and start it directly." : "Push all three to open viewer voting and update the stream overlay."}
@@ -1358,24 +1382,13 @@ function LiveQuestsPage({ view, pending, onCommand, commandFactory }: {
             <p>{!manualQuestSelection && cycle?.status === "proposed" ? "Automatic mode sends all three validated options to viewers. No streamer candidate pick is used." : cycle?.options.find((option) => option.candidateId === selectedCandidateId)?.rationale ?? "Select a validated recommendation to see its private streamer rationale."}</p>
             <small>Provider output becomes official only after deterministic validation.</small>
           </div>
-          <label className={styles.questModelSelector}>
+          <div className={styles.questGenerationStatus}>
             <span className={styles.questModelStatus}>
               <small>Generation status</small>
-              <StatusBadge tone={modelPreviewSelection === "ai-model" ? "info" : "neutral"}>
-                {modelPreviewSelection === "ai-model" ? "AI enabled · Preview only" : "Deterministic fallback"}
-              </StatusBadge>
+              <StatusBadge tone={generation.tone}>{generation.label}</StatusBadge>
             </span>
-            <span className={styles.sectionLabel}>Select AI model</span>
-            <select
-              value={modelPreviewSelection}
-              onChange={(event) => setModelPreviewSelection(
-                event.currentTarget.value === "ai-model" ? "ai-model" : "deterministic-fallback",
-              )}
-            >
-              <option value="deterministic-fallback">Deterministic fallback</option>
-              <option value="ai-model">AI model</option>
-            </select>
-          </label>
+            <p>{generation.detail}</p>
+          </div>
         </div>
       </section>
 

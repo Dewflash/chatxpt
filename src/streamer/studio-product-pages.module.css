@@ -1460,13 +1460,22 @@
 }
 
 .questStatusActions {
-  min-width: 12rem;
+  min-width: 18rem;
   align-self: center;
   justify-self: end;
-  justify-items: center;
+  justify-items: stretch;
 }
 
-.questFallbackHint {
+.questGenerationOption {
+  display: grid;
+  gap: var(--cx-space-xs);
+}
+
+.questGenerationOption > button {
+  width: 100%;
+}
+
+.questGenerationHint {
   max-width: 18rem;
   color: var(--cx-color-text-muted);
   line-height: 1.4;
@@ -1624,7 +1633,7 @@
   color: var(--cx-color-text-muted);
 }
 
-.questModelSelector {
+.questGenerationStatus {
   min-width: 0;
   display: grid;
   align-content: start;
@@ -1636,23 +1645,8 @@
   font-weight: var(--cx-font-weight-medium);
 }
 
-.questModelSelector select {
-  width: 100%;
-  min-height: 2.5rem;
-  padding: 0 0.75rem;
-  border: 1px solid var(--cx-color-border);
-  border-radius: var(--cx-radius-md);
-  color: var(--cx-color-text);
-  background: var(--cx-color-surface-raised);
-  font: inherit;
-}
-
-.questModelSelector select:focus-visible {
-  outline: none;
-  box-shadow: var(--cx-focus-ring);
-}
-
-.questModelSelector > small {
+.questGenerationStatus > p {
+  margin: 0;
   line-height: 1.4;
 }
 
@@ -2071,7 +2065,7 @@
     grid-template-columns: 1fr;
   }
 
-  .questModelSelector {
+  .questGenerationStatus {
     padding-top: var(--cx-space-md);
     padding-left: 0;
     border-top: 1px solid var(--cx-color-border);
